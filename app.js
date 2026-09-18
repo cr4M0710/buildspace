@@ -114,6 +114,8 @@ function renderPostList(list) {
 }
 
 function renderTopLevel() {
+  if (window.Protect) window.Protect.removeShareButton();
+  document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = "";
   const cards = [
     { id: "neueste", href: "#/neueste", label: "Neueste", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
@@ -143,6 +145,8 @@ function renderTopLevel() {
 }
 
 function renderNeueste() {
+  if (window.Protect) window.Protect.removeShareButton();
+  document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><span class="current">Neueste</span>`;
   const recent = posts.filter((p) => isWithinLast30Days(p.date));
   content.innerHTML = `
@@ -158,6 +162,16 @@ function renderFolder(id) {
     renderTopLevel();
     return;
   }
+  if (window.Protect) {
+    window.Protect.removeShareButton();
+    window.Protect.guard(id, () => renderFolderUnlocked(id));
+  } else {
+    renderFolderUnlocked(id);
+  }
+}
+
+function renderFolderUnlocked(id) {
+  const folder = folderStructure[id];
   breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><span class="current">${folder.label}</span>`;
 
   if (!folder.subfolders.length) {
@@ -166,32 +180,32 @@ function renderFolder(id) {
       <h1 class="section-label">${folder.label}</h1>
       ${renderPostList(list)}
     `;
-    return;
+  } else {
+    const subCards = folder.subfolders.map((sf) => ({
+      href: `#/${id}/${sf.id}`,
+      label: sf.label,
+      count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length
+    }));
+
+    content.innerHTML = `
+      <h1 class="section-label">${folder.label}</h1>
+      <div class="folder-grid">
+        ${subCards
+          .map(
+            (c) => `
+          <a class="folder-card" href="${c.href}">
+            <span class="folder-icon" style="--tile-accent:${folder.color}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
+            </span>
+            <h2>${c.label}</h2>
+            <span class="folder-count">${c.count} Beitrag${c.count === 1 ? "" : "e"}</span>
+          </a>`
+          )
+          .join("")}
+      </div>
+    `;
   }
-
-  const subCards = folder.subfolders.map((sf) => ({
-    href: `#/${id}/${sf.id}`,
-    label: sf.label,
-    count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length
-  }));
-
-  content.innerHTML = `
-    <h1 class="section-label">${folder.label}</h1>
-    <div class="folder-grid">
-      ${subCards
-        .map(
-          (c) => `
-        <a class="folder-card" href="${c.href}">
-          <span class="folder-icon" style="--tile-accent:${folder.color}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
-          </span>
-          <h2>${c.label}</h2>
-          <span class="folder-count">${c.count} Beitrag${c.count === 1 ? "" : "e"}</span>
-        </a>`
-        )
-        .join("")}
-    </div>
-  `;
+  if (window.Protect) window.Protect.addShareButton(id);
 }
 
 function renderSubfolder(id, subId) {
@@ -200,6 +214,16 @@ function renderSubfolder(id, subId) {
     renderTopLevel();
     return;
   }
+  if (window.Protect) {
+    window.Protect.removeShareButton();
+    window.Protect.guard(id, () => renderSubfolderUnlocked(id, subId));
+  } else {
+    renderSubfolderUnlocked(id, subId);
+  }
+}
+
+function renderSubfolderUnlocked(id, subId) {
+  const folder = folderStructure[id];
   const sub = folder.subfolders.find((s) => s.id === subId);
   const label = sub ? sub.label : subId;
   breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><a href="#/${id}">${folder.label}</a><span class="sep">›</span><span class="current">${label}</span>`;
@@ -209,6 +233,7 @@ function renderSubfolder(id, subId) {
     <h1 class="section-label">${folder.label} — ${label}</h1>
     ${renderPostList(list)}
   `;
+  if (window.Protect) window.Protect.addShareButton(id);
 }
 
 function render() {

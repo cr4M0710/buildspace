@@ -119,4 +119,12 @@ const posts = [
     subcategory: null,
     url: "nachtwache.html"
    },
+   {
+    title: "Zahlen-Werkstatt",
+    excerpt: "Lernspiel zu natürlichen Zahlen (Jg. 5): Lesen & Schreiben, Stellenwerte, Runden, Zahlenstrahl und mehr — für bis zu 4 Lernende gleichzeitig, mit automatischer Niveau-Anpassung.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "zahlen-werkstatt.html"
+   },
 ];

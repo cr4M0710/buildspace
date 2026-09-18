@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Zahlen-Werkstatt – Lernspiel Natürliche Zahlen</title>
+<style>
+  :root{
+    --bg:#EAF1E6;
+    --paper:#FFFFFF;
+    --line:#D7E4D1;
+    --ink:#1B2B22;
+    --ink-soft:#41523F;
+    --accent:#2F6F4F;
+    --accent-dark:#1F5138;
+    --warm:#D8641F;
+    --warm-dark:#B14F16;
+    --bad:#C23B3B;
+    --bad-bg:#FBE7E5;
+    --good:#2F6F4F;
+    --good-bg:#E3F1E7;
+    --radius:16px;
+    --shadow:0 3px 0 rgba(27,43,34,.18);
+    --p1:#2461A6; --p1-bg:#E4EEF8;
+    --p2:#C8501B; --p2-bg:#FBEAE0;
+    --p3:#A6791E; --p3-bg:#F6EEDB;
+    --p4:#6C4A9C; --p4-bg:#EFE8F5;
+    --font-head: "Segoe UI Semibold", "Segoe UI", "Verdana", sans-serif;
+    --font-body: "Segoe UI", Verdana, Tahoma, sans-serif;
+    --font-num: "Consolas", "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#132018;
+      --paper:#1B2A21;
+      --line:#2B3F32;
+      --ink:#EAF1E6;
+      --ink-soft:#B7C7B7;
+      --bad-bg:#3A2323;
+      --good-bg:#20362A;
+      --shadow:0 3px 0 rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#132018; --paper:#1B2A21; --line:#2B3F32; --ink:#EAF1E6; --ink-soft:#B7C7B7;
+    --bad-bg:#3A2323; --good-bg:#20362A; --shadow:0 3px 0 rgba(0,0,0,.4);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--font-body);
+    overflow:hidden;
+  }
+  button{ font-family:inherit; cursor:pointer; }
+  input{ font-family:inherit; }
+  :focus-visible{ outline:3px solid var(--warm); outline-offset:2px; }
+
+  #app{ height:100vh; width:100vw; display:flex; flex-direction:column; }
+
+  /* ---------- Bildschirme ---------- */
+  .screen{ display:none; flex:1; min-height:0; }
+  .screen.active{ display:flex; }
+
+  .center-wrap{
+    flex:1; display:flex; align-items:center; justify-content:center; padding:24px;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .sign{
+    background:var(--paper); border-radius:24px; box-shadow:var(--shadow);
+    padding:40px 48px; max-width:820px; width:100%; text-align:center;
+    border:2px solid var(--line);
+  }
+  .sign h1{
+    font-family:var(--font-head); font-weight:800; font-size:clamp(28px,4vw,44px);
+    margin:0 0 6px; color:var(--accent-dark); letter-spacing:.3px;
+  }
+  .sign .subtitle{ color:var(--ink-soft); font-size:18px; margin:0 0 28px; }
+  .bigbtn-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:8px; }
+  .bigbtn{
+    background:var(--accent); color:#fff; border:none; border-radius:14px;
+    padding:22px 16px; font-size:22px; font-weight:700; font-family:var(--font-head);
+    box-shadow:0 4px 0 var(--accent-dark); transition:transform .06s;
+  }
+  .bigbtn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--accent-dark); }
+  .bigbtn .n{ display:block; font-size:34px; font-family:var(--font-num); }
+  .bigbtn.secondary{ background:var(--warm); box-shadow:0 4px 0 var(--warm-dark); }
+  .bigbtn.secondary:active{ box-shadow:0 1px 0 var(--warm-dark); }
+
+  .setup-box{ text-align:left; }
+  .setup-box h2{ font-family:var(--font-head); font-size:20px; margin:18px 0 10px; color:var(--accent-dark); }
+  .topic-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
+  .topic-chip{
+    display:flex; align-items:center; gap:8px; background:var(--paper);
+    border:2px solid var(--line); border-radius:12px; padding:10px 12px;
+    font-size:15px; font-weight:600; text-align:left; color:var(--ink);
+  }
+  .topic-chip .icon{ font-size:20px; }
+  .topic-chip[aria-pressed="true"]{ background:var(--good-bg); border-color:var(--accent); color:var(--accent-dark); }
+  .level-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .level-chip{
+    background:var(--paper); border:2px solid var(--line); border-radius:12px;
+    padding:10px 18px; font-weight:700; font-size:15px; color:var(--ink);
+  }
+  .level-chip[aria-pressed="true"]{ background:var(--accent); border-color:var(--accent-dark); color:#fff; }
+  .setup-actions{ display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:12px; flex-wrap:wrap;}
+  .linklike{ background:none; border:none; color:var(--ink-soft); text-decoration:underline; font-size:15px; padding:8px; }
+
+  /* ---------- Spielbildschirm ---------- */
+  #screen-game{ flex-direction:column; }
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 18px; background:var(--paper); border-bottom:2px solid var(--line);
+  }
+  #topbar h1{ font-family:var(--font-head); font-size:19px; margin:0; color:var(--accent-dark); }
+  #topbar .actions{ display:flex; gap:8px; }
+  .smallbtn{
+    background:var(--paper); border:2px solid var(--line); border-radius:10px;
+    padding:8px 14px; font-size:14px; font-weight:600; color:var(--ink);
+  }
+  .smallbtn:hover{ border-color:var(--accent); }
+
+  #players-grid{
+    flex:1; min-height:0; display:grid; gap:10px; padding:10px;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  #players-grid.players-1{ grid-template-columns:1fr; }
+  #players-grid.players-2{ grid-template-columns:1fr 1fr; }
+  #players-grid.players-3{ grid-template-columns:1fr 1fr 1fr; }
+  #players-grid.players-4{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+  @media (max-width:900px){
+    #players-grid.players-2, #players-grid.players-3{ grid-template-columns:1fr; grid-auto-rows:1fr; }
+    #players-grid.players-4{ grid-template-columns:1fr; grid-template-rows:repeat(4,1fr); }
+  }
+
+  .panel{
+    background:var(--paper); border-radius:var(--radius); border:2px solid var(--line);
+    display:flex; flex-direction:column; min-height:0; overflow:hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel-head{
+    display:flex; align-items:center; gap:10px; padding:10px 14px;
+    color:#fff; flex-wrap:wrap;
+  }
+  .panel-head .badge{ font-size:20px; line-height:1; }
+  .panel-head .pname{ font-family:var(--font-head); font-weight:700; font-size:16px; flex:1; }
+  .panel-head .stat{ font-family:var(--font-num); font-size:14px; background:rgba(255,255,255,.22); border-radius:8px; padding:3px 8px; }
+
+  .panel-body{ flex:1; min-height:0; display:flex; flex-direction:column; padding:12px 14px; overflow-y:auto; gap:8px; }
+  .topic-tag{ font-size:13px; font-weight:700; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  .qprompt{ font-size:16px; font-weight:600; margin:2px 0 0; }
+  .qdisplay{
+    font-family:var(--font-num); font-weight:700; font-size:clamp(20px,2.6vw,30px);
+    background:var(--bg); border:2px solid var(--line); border-radius:12px;
+    padding:10px 14px; text-align:center; white-space:pre-wrap; line-height:1.3;
+  }
+  .answer-area{ display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
+  .text-input-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .num-input{
+    font-family:var(--font-num); font-size:20px; padding:10px 12px; border-radius:10px;
+    border:2px solid var(--line); width:100%; max-width:260px; background:var(--paper); color:var(--ink);
+  }
+  .field-label{ font-size:14px; font-weight:600; color:var(--ink-soft); min-width:96px; }
+
+  .choice-grid{ display:flex; gap:10px; flex-wrap:wrap; }
+  .opt-btn{
+    background:var(--paper); border:2px solid var(--line); border-radius:12px;
+    padding:12px 18px; font-size:17px; font-weight:700; min-height:52px; color:var(--ink);
+  }
+  .opt-btn.correct{ background:var(--good-bg); border-color:var(--good); color:var(--accent-dark); }
+  .opt-btn.wrong{ background:var(--bad-bg); border-color:var(--bad); color:var(--bad); }
+  .opt-btn:disabled{ opacity:.55; }
+
+  .match-cols{ display:flex; gap:14px; }
+  .match-col{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .match-btn{
+    background:var(--paper); border:2px solid var(--line); border-radius:10px;
+    padding:10px; font-size:15px; font-weight:600; min-height:48px; color:var(--ink);
+  }
+  .match-btn.selected{ border-color:var(--warm); background:var(--p2-bg); }
+  .match-btn.matched{ background:var(--good-bg); border-color:var(--good); color:var(--accent-dark); }
+  .match-btn.flash-wrong{ background:var(--bad-bg); border-color:var(--bad); }
+  .match-btn:disabled{ opacity:.7; }
+
+  .pv-row{ display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; }
+  .pv-col{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:44px; }
+  .pv-code{ font-size:12px; font-weight:700; color:var(--ink-soft); }
+  .pv-input{
+    width:40px; height:44px; text-align:center; font-family:var(--font-num); font-size:18px;
+    border-radius:8px; border:2px solid var(--line); font-weight:700;
+  }
+  .pv-input.correct{ border-color:var(--good); background:var(--good-bg); }
+  .pv-input.wrong{ border-color:var(--bad); background:var(--bad-bg); }
+
+  .order-pool{ display:flex; gap:8px; flex-wrap:wrap; }
+  .order-num{
+    background:var(--paper); border:2px solid var(--line); border-radius:10px;
+    padding:10px 14px; font-family:var(--font-num); font-weight:700; font-size:16px;
+  }
+  .order-num:disabled{ opacity:.35; }
+  .order-seq{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; min-height:44px; }
+  .order-slot{
+    min-width:64px; height:40px; border:2px dashed var(--line); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-num);
+    font-weight:700; font-size:15px; background:var(--bg);
+  }
+  .order-arrow{ color:var(--ink-soft); font-weight:700; }
+
+  .nline-wrap{ padding:20px 6px 8px; }
+  .nline-track{ position:relative; height:6px; background:var(--line); border-radius:3px; margin:0 10px; }
+  .nline-tick{
+    position:absolute; top:-18px; width:36px; height:40px; transform:translateX(-50%);
+    background:transparent; border:none; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  }
+  .nline-tick .mark{ width:3px; height:12px; background:var(--ink-soft); border-radius:2px; }
+  .nline-tick .lab{ font-family:var(--font-num); font-size:11px; color:var(--ink-soft); margin-top:2px; white-space:nowrap; }
+  .nline-tick.hit .mark{ background:var(--good); width:5px; }
+  .nline-tick.miss .mark{ background:var(--bad); width:5px; }
+  .nline-tick.reveal .mark{ background:var(--good); width:5px; }
+
+  .cards-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .card-btn{
+    background:var(--paper); border:2px solid var(--line); border-radius:10px;
+    width:46px; height:52px; font-family:var(--font-num); font-weight:800; font-size:20px;
+  }
+  .card-btn:disabled{ opacity:.3; }
+  .cards-build{
+    font-family:var(--font-num); font-size:22px; font-weight:800; letter-spacing:2px;
+    min-height:44px; border:2px solid var(--line); border-radius:10px; padding:6px 10px;
+    background:var(--bg); display:flex; align-items:center;
+  }
+
+  .est-box{ position:relative; width:100%; max-width:420px; aspect-ratio:4/3; background:var(--bg); border:2px solid var(--line); border-radius:12px; margin:0 auto; overflow:hidden; }
+  .est-cell-highlight{ position:absolute; background:rgba(216,100,31,.22); border:2px solid var(--warm); }
+  .est-dot{ position:absolute; width:6px; height:6px; border-radius:50%; background:var(--ink); transform:translate(-50%,-50%); }
+  .est-gridline{ position:absolute; background:var(--line); }
+
+  .ms-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:260px; margin:0 auto; }
+  .ms-cell{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-num); font-weight:800; font-size:20px; border-radius:8px;
+    background:var(--bg); border:2px solid var(--line);
+  }
+  .ms-cell input{
+    width:70%; height:70%; text-align:center; font-family:var(--font-num); font-size:18px; font-weight:800;
+    border-radius:6px; border:2px solid var(--warm);
+  }
+  .ms-const{ text-align:center; font-weight:700; margin-top:6px; color:var(--ink-soft); font-size:14px; }
+
+  .dict-controls{ display:flex; gap:8px; flex-wrap:wrap; }
+  .reveal-num{ font-family:var(--font-num); font-size:28px; font-weight:800; text-align:center; padding:6px; }
+
+  .footer-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:auto; padding-top:8px; }
+  .hint-btn{
+    background:var(--warm); color:#fff; border:none; border-radius:10px; padding:10px 16px;
+    font-weight:700; font-size:14px; box-shadow:0 3px 0 var(--warm-dark);
+  }
+  .hint-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--warm-dark); }
+  .check-btn{
+    background:var(--accent); color:#fff; border:none; border-radius:10px; padding:10px 20px;
+    font-weight:700; font-size:15px; box-shadow:0 3px 0 var(--accent-dark);
+  }
+  .check-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--accent-dark); }
+  .next-btn{
+    background:var(--accent-dark); color:#fff; border:none; border-radius:10px; padding:10px 20px;
+    font-weight:700; font-size:15px; box-shadow:0 3px 0 #10301F;
+  }
+  .hint-box{
+    background:var(--p3-bg); border:2px solid var(--p3); border-radius:10px; padding:8px 10px;
+    font-size:13.5px; color:var(--ink); display:none;
+  }
+  .hint-box.show{ display:block; }
+  .feedback{ font-weight:700; font-size:14.5px; padding:8px 10px; border-radius:10px; display:none; }
+  .feedback.show{ display:block; }
+  .feedback.good{ background:var(--good-bg); color:var(--accent-dark); }
+  .feedback.bad{ background:var(--bad-bg); color:var(--bad); }
+  .feedback.info{ background:var(--p1-bg); color:var(--p1); }
+
+  @media (prefers-reduced-motion: reduce){
+    .bigbtn, .hint-btn, .check-btn{ transition:none; }
+  }
+</style>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- START -->
+  <div id="screen-start" class="screen active">
+    <div class="center-wrap">
+      <div class="sign">
+        <h1>Zahlen-Werkstatt</h1>
+        <p class="subtitle">Natürliche Zahlen spielerisch üben — Jahrgang 5</p>
+        <h2 style="font-family:var(--font-head); font-size:17px; color:var(--ink-soft); margin:0 0 12px;">Wie viele Lernende spielen mit?</h2>
+        <div class="bigbtn-grid">
+          <button class="bigbtn" data-players="1"><span class="n">1</span>Spieler</button>
+          <button class="bigbtn" data-players="2"><span class="n">2</span>Spieler</button>
+          <button class="bigbtn" data-players="3"><span class="n">3</span>Spieler</button>
+          <button class="bigbtn" data-players="4"><span class="n">4</span>Spieler</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="screen-setup" class="screen">
+    <div class="center-wrap">
+      <div class="sign setup-box" style="max-width:760px;">
+        <h1 style="font-size:26px;">Themen & Niveau wählen</h1>
+        <h2>Themen (mind. 1 auswählen)</h2>
+        <div class="topic-grid" id="topic-grid"></div>
+        <h2>Start-Niveau</h2>
+        <div class="level-row" id="level-row">
+          <button class="level-chip" data-level="1">Einsteiger</button>
+          <button class="level-chip" data-level="2">Mittel</button>
+          <button class="level-chip" data-level="3">Profi</button>
+          <button class="level-chip" data-level="0" aria-pressed="true">Automatisch</button>
+        </div>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin-top:6px;">„Automatisch“ startet einfach und passt sich dem Können jedes Kindes laufend an. Bei den anderen Optionen startet jede*r auf der gewählten Stufe — die Anpassung läuft danach trotzdem weiter.</p>
+        <div class="setup-actions">
+          <button class="linklike" id="btn-back-start">← Zurück</button>
+          <button class="bigbtn" id="btn-start-game" style="padding:14px 28px; font-size:18px;">Los geht's! 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="screen">
+    <div id="topbar">
+      <h1>🔧 Zahlen-Werkstatt</h1>
+      <div class="actions">
+        <button class="smallbtn" id="btn-change-topics">Themen ändern</button>
+        <button class="smallbtn" id="btn-restart">Neu starten</button>
+      </div>
+    </div>
+    <div id="players-grid"></div>
+  </div>
+
+</div>
+<script>
+'use strict';
+/* ==========================================================================
+   ZAHLEN-WERKSTATT — Lernspiel "Natürliche Zahlen" (Jahrgang 5)
+   Reine Vanilla-JS-Engine, keine externen Abhängigkeiten.
+   ========================================================================== */
+
+/* -------------------------- Zufalls-Helfer -------------------------- */
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function choice(arr) { return arr[randInt(0, arr.length - 1)]; }
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function uniqueDigits(count, allowZero) {
+  const pool = allowZero ? [0,1,2,3,4,5,6,7,8,9] : [1,2,3,4,5,6,7,8,9];
+  const shuffled = shuffle(pool);
+  return shuffled.slice(0, count);
+}
+
+/* -------------------------- Zahl -> Worte (Deutsch) -------------------------- */
+const EINER = ['null','eins','zwei','drei','vier','fünf','sechs','sieben','acht','neun'];
+const ZEHNER = ['','zehn','zwanzig','dreißig','vierzig','fünfzig','sechzig','siebzig','achtzig','neunzig'];
+const TEENS = ['zehn','elf','zwölf','dreizehn','vierzehn','fünfzehn','sechzehn','siebzehn','achtzehn','neunzehn'];
+
+function zweistelligToWords(n) {
+  if (n < 10) return EINER[n];
+  if (n < 20) return TEENS[n - 10];
+  const z = Math.floor(n / 10), e = n % 10;
+  if (e === 0) return ZEHNER[z];
+  return (e === 1 ? 'ein' : EINER[e]) + 'und' + ZEHNER[z];
+}
+function dreistelligToWords(n) {
+  let s = '';
+  const h = Math.floor(n / 100), rest = n % 100;
+  if (h > 0) s += (h === 1 ? 'ein' : EINER[h]) + 'hundert';
+  if (rest > 0) s += zweistelligToWords(rest);
+  return s;
+}
+function numberToWordsDE(n) {
+  if (n === 0) return 'null';
+  const groups = [
+    { val: 1000000000, sing: 'Milliarde', plur: 'Milliarden' },
+    { val: 1000000, sing: 'Million', plur: 'Millionen' },
+    { val: 1000, sing: 'tausend', plur: 'tausend' },
+  ];
+  let rem = n, out = '';
+  for (const g of groups) {
+    const count = Math.floor(rem / g.val);
+    if (count > 0) {
+      if (g.val >= 1000000) {
+        out += (count === 1 ? 'eine ' + g.sing : dreistelligToWords(count) + ' ' + g.plur) + ' ';
+      } else {
+        out += (count === 1 ? 'ein' : dreistelligToWords(count)) + g.sing;
+      }
+      rem -= count * g.val;
+    }
+  }
+  if (rem > 0) out += dreistelligToWords(rem);
+  return out.trim();
+}
+function normalizeWordAnswer(s) {
+  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/* -------------------------- Formatierung -------------------------- */
+function formatNumber(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+function parseNumberInput(s) {
+  if (typeof s !== 'string') return NaN;
+  const cleaned = s.replace(/[\s.]/g, '').trim();
+  if (!/^-?\d+$/.test(cleaned)) return NaN;
+  return parseInt(cleaned, 10);
+}
+
+/* -------------------------- Stellenwerte -------------------------- */
+const PLACE_TABLE = [
+  { code: 'E', name: 'Einer', exp: 0 },
+  { code: 'Z', name: 'Zehner', exp: 1 },
+  { code: 'H', name: 'Hunderter', exp: 2 },
+  { code: 'T', name: 'Tausender', exp: 3 },
+  { code: 'ZT', name: 'Zehntausender', exp: 4 },
+  { code: 'HT', name: 'Hunderttausender', exp: 5 },
+  { code: 'M', name: 'Millionen', exp: 6 },
+  { code: 'ZM', name: 'Zehnmillionen', exp: 7 },
+  { code: 'HM', name: 'Hundertmillionen', exp: 8 },
+];
+function placesForNumber(n) {
+  const s = String(n);
+  const len = s.length;
+  const places = [];
+  for (let i = 0; i < len; i++) {
+    const exp = len - 1 - i;
+    const place = PLACE_TABLE[exp] || { code: '?', name: '?', exp };
+    places.push({ code: place.code, name: place.name, digit: Number(s[i]) });
+  }
+  return places;
+}
+function roundToPlace(n, exp) {
+  const p = Math.pow(10, exp);
+  const rem = n % p;
+  const base = n - rem;
+  return rem >= p / 2 ? base + p : base;
+}
+
+/* -------------------------- Namen-Pool (für Textaufgaben) -------------------------- */
+const NAME_POOL = ['Mia', 'Ben', 'Lina', 'Finn', 'Emma', 'Noah', 'Lea', 'Paul', 'Zoe', 'Leon', 'Amara', 'Kofi', 'Sude', 'Elif', 'Mert'];
+
+/* ==========================================================================
+   AUFGABEN-GENERATOREN
+   Jede Funktion erhält "level" (1|2|3) und liefert ein Question-Objekt:
+   { topic, level, type, prompt, hint, payload, explain(correct) }
+   ========================================================================== */
+
+function digitRangeForLevel(level) {
+  // [minDigits, maxDigits]
+  if (level === 1) return [2, 4];
+  if (level === 2) return [5, 6];
+  return [7, 9];
+}
+function randomNumberForLevel(level, opts) {
+  opts = opts || {};
+  const [lo, hi] = digitRangeForLevel(level);
+  const digits = randInt(lo, hi);
+  const min = Math.pow(10, digits - 1);
+  const max = Math.pow(10, digits) - 1;
+  let n = randInt(min, max);
+  if (opts.roundish && digits > 4) {
+    // gelegentlich "rundere" Zahlen für bessere Lesbarkeit bei Wort-Aufgaben
+    const cut = Math.pow(10, randInt(1, Math.min(3, digits - 2)));
+    n = Math.round(n / cut) * cut;
+  }
+  return n;
+}
+
+/* ---- 1) Zahlen lesen & schreiben ---- */
+function genLesenSchreibenMatch(level) {
+  const count = level === 1 ? 3 : 4;
+  const nums = [];
+  while (nums.length < count) {
+    const n = randomNumberForLevel(level, { roundish: true });
+    if (!nums.includes(n)) nums.push(n);
+  }
+  const pairs = nums.map((n, i) => ({ id: 'p' + i, left: formatNumber(n), right: numberToWordsDE(n) }));
+  return {
+    topic: 'lesen-schreiben', level, type: 'match',
+    prompt: 'Ordne jede Zahl ihrem Wort zu:',
+    display: '',
+    hint: 'Achte auf die Wortteile "...tausend" und "...hundert" — sie verraten die Größenordnung.',
+    payload: { pairs },
+    explain: () => `Richtige Paare: ${pairs.map(p => `${p.left} = ${p.right}`).join(' · ')}.`,
+  };
+}
+function genLesenSchreibenText(level) {
+  const n = randomNumberForLevel(level, { roundish: Math.random() < 0.4 });
+  const toWords = Math.random() < 0.5;
+  if (toWords) {
+    return {
+      topic: 'lesen-schreiben', level, type: 'text', answerKind: 'words',
+      prompt: `Schreibe diese Zahl in Worten:`,
+      display: formatNumber(n),
+      hint: 'Zerlege die Zahl in Gruppen: Millionen, Tausender, Hunderter-Rest. Jede Gruppe wird wie eine dreistellige Zahl gesprochen (z. B. "zwei" + "hundert" + "drei").',
+      payload: { mode: 'digits-to-words', n },
+      checkFn(answer) {
+        const correct = numberToWordsDE(n);
+        return normalizeWordAnswer(answer) === normalizeWordAnswer(correct);
+      },
+      correctAnswerText: numberToWordsDE(n),
+      explain: () => `Richtig geschrieben: „${numberToWordsDE(n)}“.`,
+    };
+  } else {
+    const words = numberToWordsDE(n);
+    const wordsDisplay = words.charAt(0).toUpperCase() + words.slice(1);
+    return {
+      topic: 'lesen-schreiben', level, type: 'text', answerKind: 'number',
+      prompt: `Schreibe diese Zahl in Ziffern:`,
+      display: `„${wordsDisplay}“`,
+      hint: 'Suche zuerst die großen Wortteile: "...tausend" und "...Million(en)" — das zeigt dir die Größenordnung der Zahl.',
+      payload: { mode: 'words-to-digits', n },
+      checkFn(answer) {
+        const v = parseNumberInput(answer);
+        return v === n;
+      },
+      correctAnswerText: formatNumber(n),
+      explain: () => `Richtig: ${formatNumber(n)}.`,
+    };
+  }
+}
+function genLesenSchreiben(level) {
+  return Math.random() < 0.3 ? genLesenSchreibenMatch(level) : genLesenSchreibenText(level);
+}
+
+/* ---- 2) Stellenwerte zerlegen (Stellenwerttafel) ---- */
+function genStellenwerteMatch(level) {
+  const n = randomNumberForLevel(level);
+  const places = placesForNumber(n);
+  const count = Math.min(places.length, level === 1 ? 3 : 4);
+  const chosen = shuffle(places).slice(0, count);
+  const pairs = chosen.map((p, i) => ({ id: 'sp' + i, left: p.code, right: p.name }));
+  return {
+    topic: 'stellenwerte', level, type: 'match',
+    prompt: 'Ordne jede Abkürzung dem richtigen Stellenwertnamen zu:',
+    display: `(zur Zahl ${formatNumber(n)})`,
+    hint: 'E = Einer, Z = Zehner, H = Hunderter — danach beginnt bei der nächsten Gruppe (Tausender, Millionen, …) wieder E, Z, H.',
+    payload: { pairs },
+    explain: () => `Richtige Zuordnung: ${pairs.map(p => `${p.left} = ${p.right}`).join(' · ')}.`,
+  };
+}
+function genStellenwertePlaceValue(level) {
+  const n = randomNumberForLevel(level);
+  const places = placesForNumber(n);
+  return {
+    topic: 'stellenwerte', level, type: 'placevalue',
+    prompt: 'Trage jede Ziffer in die passende Stellenwert-Spalte ein:',
+    display: formatNumber(n),
+    hint: 'Beginne von rechts (Einer) und zähle die Spalten: E, Z, H, T, ZT, HT, M, ZM, HM.',
+    payload: { n, places },
+    explain: () => `Die Zahl ${formatNumber(n)} zerlegt sich in: ` +
+      places.map(p => `${p.digit} ${p.name}`).join(', ') + '.',
+  };
+}
+function genStellenwerte(level) {
+  return Math.random() < 0.35 ? genStellenwerteMatch(level) : genStellenwertePlaceValue(level);
+}
+
+/* ---- 3) Vorgänger & Nachfolger ---- */
+function genNachbarzahlen(level) {
+  const [lo, hi] = digitRangeForLevel(level);
+  const digits = randInt(lo, hi);
+  const min = Math.pow(10, digits - 1);
+  const max = Math.pow(10, digits) - 1;
+  let n = randInt(Math.max(min, min + 1), Math.max(min + 1, max - 1));
+  // bei höheren Stufen öfter "kritische" Übergänge (z.B. ...000 oder ...999) erzwingen
+  if (level >= 2 && Math.random() < 0.5) {
+    const cut = Math.pow(10, randInt(1, digits - 1));
+    n = Math.round(n / cut) * cut;
+    if (Math.random() < 0.5 && n > min) n -= 1; // erzeugt z.B. ...999 Fälle
+    if (n <= min) n = min + 1;
+    if (n >= max) n = max - 1;
+  }
+  return {
+    topic: 'nachbarzahlen', level, type: 'text2',
+    prompt: 'Gib Vorgänger und Nachfolger dieser Zahl an:',
+    display: formatNumber(n),
+    hint: 'Vorgänger = Zahl minus 1. Nachfolger = Zahl plus 1. Achte auf Zehner-, Hunderter- oder Tausenderübergänge!',
+    payload: {
+      fields: [
+        { key: 'vor', label: 'Vorgänger', correct: n - 1 },
+        { key: 'nach', label: 'Nachfolger', correct: n + 1 },
+      ],
+    },
+    explain: () => `Vorgänger: ${formatNumber(n - 1)} · Nachfolger: ${formatNumber(n + 1)}.`,
+  };
+}
+
+/* ---- 4) Vergleichen & Ordnen ---- */
+function genVergleichenOrdnen(level) {
+  if (level === 1) {
+    const [lo, hi] = digitRangeForLevel(level);
+    const digits = randInt(lo, hi);
+    const min = Math.pow(10, digits - 1), max = Math.pow(10, digits) - 1;
+    let a = randInt(min, max), b = randInt(min, max);
+    if (Math.random() < 0.15) b = a; // gelegentlich Gleichheit
+    const symbol = a < b ? '<' : (a > b ? '>' : '=');
+    return {
+      topic: 'vergleichen-ordnen', level, type: 'choice',
+      prompt: 'Welches Zeichen passt?',
+      display: `${formatNumber(a)}  ___  ${formatNumber(b)}`,
+      hint: 'Vergleiche zuerst die Anzahl der Ziffern, dann von links nach rechts Ziffer für Ziffer.',
+      payload: {
+        options: [{ id: 'lt', label: '<' }, { id: 'gt', label: '>' }, { id: 'eq', label: '=' }],
+        correctId: symbol === '<' ? 'lt' : (symbol === '>' ? 'gt' : 'eq'),
+      },
+      explain: () => `${formatNumber(a)} ${symbol} ${formatNumber(b)}.`,
+    };
+  } else {
+    const [lo, hi] = digitRangeForLevel(level);
+    const count = level === 2 ? 5 : 6;
+    const nums = [];
+    while (nums.length < count) {
+      const digits = randInt(lo, hi);
+      const min = Math.pow(10, digits - 1), max = Math.pow(10, digits) - 1;
+      const v = randInt(min, max);
+      if (!nums.includes(v)) nums.push(v);
+    }
+    const sorted = nums.slice().sort((x, y) => x - y);
+    return {
+      topic: 'vergleichen-ordnen', level, type: 'order',
+      prompt: 'Ordne die Zahlen der Größe nach — vom kleinsten zum größten:',
+      display: '',
+      hint: 'Vergleiche zunächst, welche Zahl die wenigsten Ziffern hat — die ist meist am kleinsten.',
+      payload: { pool: shuffle(nums), correctOrder: sorted },
+      explain: () => `Richtige Reihenfolge: ${sorted.map(formatNumber).join(' < ')}.`,
+    };
+  }
+}
+
+/* ---- 5) Runden ---- */
+const ROUND_CODES_BY_LEVEL = {
+  1: ['Z', 'H'],
+  2: ['T', 'ZT'],
+  3: ['HT', 'M', 'ZM'],
+};
+function genRundenBerechnen(level) {
+  const code = choice(ROUND_CODES_BY_LEVEL[level]);
+  const place = PLACE_TABLE.find(p => p.code === code);
+  const digits = randInt(place.exp + 2, place.exp + 4);
+  const min = Math.pow(10, digits - 1), max = Math.pow(10, digits) - 1;
+  const n = randInt(min, max);
+  const result = roundToPlace(n, place.exp);
+  return {
+    topic: 'runden', level, type: 'text', answerKind: 'number',
+    prompt: `Runde die Zahl auf ${place.name} (${place.code}):`,
+    display: formatNumber(n),
+    hint: `Schau dir die Ziffer rechts neben der ${place.name}-Stelle an: 0–4 → abrunden, 5–9 → aufrunden.`,
+    payload: { n, exp: place.exp },
+    checkFn(answer) { return parseNumberInput(answer) === result; },
+    correctAnswerText: formatNumber(result),
+    explain: () => `Gerundet auf ${place.name}: ${formatNumber(result)}.`,
+  };
+}
+function genRundenSzenario(level) {
+  const expsByLevel = { 1: [1, 2], 2: [2, 3], 3: [3, 4] };
+  const exp = choice(expsByLevel[level]);
+  const step = Math.pow(10, exp);
+  const half = step / 2;
+  const kMin = Math.max(1, Math.pow(10, Math.max(0, exp - 1)));
+  const k = randInt(kMin, kMin * 9);
+  const R = k * step;
+  const low = R - half, high = R + half - 1;
+  const c1 = randInt(low, R - 1);
+  const c2 = randInt(R, high);
+  let wrong;
+  if (Math.random() < 0.5) wrong = randInt(Math.max(0, low - half), low - 1);
+  else wrong = randInt(high + 1, high + half);
+  const place = PLACE_TABLE.find(p => p.exp === exp);
+  const names = shuffle(NAME_POOL).slice(0, 3);
+  const values = shuffle([c1, c2, wrong]);
+  const wrongIdx = values.indexOf(wrong);
+  const options = names.map((nm, i) => ({ id: 'n' + i, label: `${nm}: „${formatNumber(values[i])}“` }));
+  return {
+    topic: 'runden', level, type: 'choice',
+    prompt: `Auf einem Sportfest werden ${formatNumber(R)} Besucher gemeldet — gerundet auf ${place.name.toLowerCase()}. Drei Kinder raten, wie viele es genau sein könnten. Wer hat auf keinen Fall recht?`,
+    display: '',
+    hint: `Gerundet auf ${place.name} ergibt ${formatNumber(R)}. Das kann nur eine Zahl zwischen ${formatNumber(low)} und ${formatNumber(high)} sein.`,
+    payload: { options, correctId: 'n' + wrongIdx },
+    explain: () => `${names[wrongIdx]} liegt außerhalb von ${formatNumber(low)}–${formatNumber(high)} und kann daher nicht stimmen.`,
+  };
+}
+function genRunden(level) {
+  return (level >= 2 && Math.random() < 0.35) ? genRundenSzenario(level) : genRundenBerechnen(level);
+}
+
+/* ---- 6) Zahlenstrahl ---- */
+function genZahlenstrahl(level) {
+  const configs = {
+    1: { min: 0, max: 100, step: 10 },
+    2: { min: 0, max: 5000, step: 500 },
+    3: { min: choice([0, 1000, 10000]), max: null, step: null },
+  };
+  let cfg = configs[level];
+  if (level === 3) {
+    const width = choice([50, 100, 500]);
+    cfg = { min: cfg.min, max: cfg.min + width * 10, step: width };
+  }
+  const ticks = [];
+  for (let v = cfg.min; v <= cfg.max; v += cfg.step) ticks.push(v);
+  const readMode = Math.random() < 0.5;
+  const tickIndex = randInt(1, ticks.length - 2);
+  const target = ticks[tickIndex];
+  if (readMode) {
+    return {
+      topic: 'zahlenstrahl', level, type: 'text', answerKind: 'number',
+      prompt: 'Auf welche Zahl zeigt der Pfeil?',
+      display: '',
+      hint: 'Zähle in gleichmäßigen Schritten von einer beschrifteten Zahl aus zum Pfeil.',
+      payload: { mode: 'read', min: cfg.min, max: cfg.max, step: cfg.step, markAt: target },
+      checkFn(answer) { return parseNumberInput(answer) === target; },
+      correctAnswerText: formatNumber(target),
+      explain: () => `Der Pfeil zeigt auf ${formatNumber(target)}.`,
+    };
+  } else {
+    return {
+      topic: 'zahlenstrahl', level, type: 'numberline',
+      prompt: `Tippe auf die Stelle für die Zahl ${formatNumber(target)}:`,
+      display: '',
+      hint: 'Zähle die Schritte zwischen den beschrifteten Zahlen ab.',
+      payload: { mode: 'place', min: cfg.min, max: cfg.max, step: cfg.step, target },
+      explain: () => `${formatNumber(target)} liegt genau hier auf dem Zahlenstrahl.`,
+    };
+  }
+}
+
+/* ---- 7) Schriftlich addieren ---- */
+function genAddieren(level) {
+  const digitsFor = { 1: [3, 4], 2: [4, 5], 3: [5, 6] }[level];
+  const count = level === 1 ? 2 : (level === 2 ? randInt(2, 3) : 3);
+  const nums = [];
+  for (let i = 0; i < count; i++) {
+    const d = randInt(digitsFor[0], digitsFor[1]);
+    nums.push(randInt(Math.pow(10, d - 1), Math.pow(10, d) - 1));
+  }
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return {
+    topic: 'addieren', level, type: 'text', answerKind: 'number',
+    prompt: 'Berechne schriftlich (rechne wie im Heft, Stelle unter Stelle):',
+    display: nums.map(formatNumber).join('  +  '),
+    hint: 'Schreibe die Zahlen stellengerecht untereinander (Einer unter Einer, Zehner unter Zehner …) und addiere spaltenweise mit Übertrag.',
+    payload: { nums },
+    checkFn(answer) { return parseNumberInput(answer) === sum; },
+    correctAnswerText: formatNumber(sum),
+    explain: () => `${nums.map(formatNumber).join(' + ')} = ${formatNumber(sum)}.`,
+  };
+}
+
+/* ---- 8) Schriftlich subtrahieren ---- */
+function genSubtrahieren(level) {
+  const digits = { 1: randInt(3, 4), 2: randInt(4, 5), 3: randInt(5, 6) }[level];
+  const minuend = randInt(Math.pow(10, digits - 1) + 10, Math.pow(10, digits) - 1);
+  let subtrahend = randInt(Math.pow(10, digits - 1), minuend - 1);
+  if (level >= 2 && Math.random() < 0.5) {
+    // erzwinge einen Übertrag durch eine Null im Subtrahenden-Bereich (macht Aufgabe anspruchsvoller)
+    subtrahend = Math.max(1, subtrahend - (subtrahend % 100) - randInt(1, 9));
+  }
+  const diff = minuend - subtrahend;
+  return {
+    topic: 'subtrahieren', level, type: 'text', answerKind: 'number',
+    prompt: 'Berechne schriftlich (Ergänzungsverfahren oder Abziehverfahren):',
+    display: `${formatNumber(minuend)}  −  ${formatNumber(subtrahend)}`,
+    hint: 'Schreibe beide Zahlen stellengerecht untereinander. Reicht eine Ziffer oben nicht aus, leihe dir von der nächsten Stelle.',
+    payload: { minuend, subtrahend },
+    checkFn(answer) { return parseNumberInput(answer) === diff; },
+    correctAnswerText: formatNumber(diff),
+    explain: () => `${formatNumber(minuend)} − ${formatNumber(subtrahend)} = ${formatNumber(diff)}.`,
+  };
+}
+
+/* ---- 9) Mengen mit Rastern schätzen ---- */
+function genSchaetzen(level) {
+  const cfg = {
+    1: { cols: 4, rows: 3, min: 40, max: 90, tol: 0.30 },
+    2: { cols: 6, rows: 4, min: 90, max: 220, tol: 0.22 },
+    3: { cols: 8, rows: 5, min: 220, max: 500, tol: 0.16 },
+  }[level];
+  const total = randInt(cfg.min, cfg.max);
+  const cells = cfg.cols * cfg.rows;
+  // Punkte zufällig auf Zellen verteilen (leichte Unregelmäßigkeit wie in echten Bildern)
+  const counts = new Array(cells).fill(0);
+  for (let i = 0; i < total; i++) counts[randInt(0, cells - 1)]++;
+  const dots = [];
+  for (let c = 0; c < cells; c++) {
+    const col = c % cfg.cols, row = Math.floor(c / cfg.cols);
+    for (let k = 0; k < counts[c]; k++) {
+      dots.push({
+        x: (col + 0.12 + Math.random() * 0.76) / cfg.cols,
+        y: (row + 0.12 + Math.random() * 0.76) / cfg.rows,
+      });
+    }
+  }
+  const sampleCell = randInt(0, cells - 1);
+  const sampleCount = counts[sampleCell];
+  return {
+    topic: 'schaetzen', level, type: 'estimate',
+    prompt: 'Schätze die Gesamtzahl der Punkte mit der Rastermethode:',
+    display: '',
+    hint: `Ein Feld hat ${sampleCount} Punkte. Multipliziere das mit der Anzahl aller Felder (${cells}) für eine grobe Schätzung.`,
+    payload: { cols: cfg.cols, rows: cfg.rows, dots, sampleCell, sampleCount, total, tol: cfg.tol },
+    explain: () => `Es waren genau ${total} Punkte. Deine Schätzung über „Feld × Anzahl Felder“ muss nicht exakt sein — nur ungefähr stimmen.`,
+  };
+}
+
+/* ---- 10) Zahlenkärtchen ---- */
+function genZahlenkaerttchen(level) {
+  const count = level === 1 ? randInt(4, 5) : (level === 2 ? randInt(5, 6) : randInt(6, 7));
+  const allowZero = Math.random() < 0.6;
+  let digits, task, tries = 0;
+  const tasksByLevel = {
+    1: ['max', 'min'],
+    2: ['max', 'min', 'max-even', 'max-odd'],
+    3: ['max', 'min', 'max-even', 'max-odd', 'closest'],
+  };
+  do {
+    digits = uniqueDigits(count, allowZero);
+    task = choice(tasksByLevel[level]);
+    tries++;
+    if (task === 'max-even' && !digits.some(d => d % 2 === 0)) continue;
+    if (task === 'max-odd' && !digits.some(d => d % 2 === 1)) continue;
+    break;
+  } while (tries < 20);
+
+  const digitStrs = digits.map(String);
+  function bestArrangement(strs, taskName, target) {
+    function permute(arr) {
+      if (arr.length <= 1) return [arr];
+      const res = [];
+      for (let i = 0; i < arr.length; i++) {
+        const rest = arr.slice(0, i).concat(arr.slice(i + 1));
+        for (const p of permute(rest)) res.push([arr[i], ...p]);
+      }
+      return res;
+    }
+    const perms = permute(strs).map(p => p.join(''))
+      .filter(s => s[0] !== '0' || strs.every(d => d === '0'));
+    const uniq = [...new Set(perms)];
+    switch (taskName) {
+      case 'max': return uniq.reduce((a, b) => (BigInt(a) > BigInt(b) ? a : b));
+      case 'min': return uniq.reduce((a, b) => (BigInt(a) < BigInt(b) ? a : b));
+      case 'max-even': {
+        const c = uniq.filter(s => Number(s[s.length - 1]) % 2 === 0);
+        return c.reduce((a, b) => (BigInt(a) > BigInt(b) ? a : b));
+      }
+      case 'max-odd': {
+        const c = uniq.filter(s => Number(s[s.length - 1]) % 2 === 1);
+        return c.reduce((a, b) => (BigInt(a) > BigInt(b) ? a : b));
+      }
+      case 'closest': {
+        let best = uniq[0], bd = Math.abs(Number(uniq[0]) - target);
+        for (const s of uniq) {
+          const d = Math.abs(Number(s) - target);
+          if (d < bd) { bd = d; best = s; }
+        }
+        return best;
+      }
+    }
+  }
+  let target = null;
+  if (task === 'closest') {
+    const magnitude = Math.pow(10, count - 1);
+    target = randInt(magnitude, magnitude * 9);
+  }
+  const solution = bestArrangement(digitStrs, task, target);
+  const taskLabels = {
+    max: 'die größtmögliche Zahl',
+    min: 'die kleinstmögliche Zahl',
+    'max-even': 'die größtmögliche gerade Zahl',
+    'max-odd': 'die größtmögliche ungerade Zahl',
+    closest: `die Zahl, die möglichst nahe an ${target !== null ? formatNumber(target) : ''} liegt`,
+  };
+  return {
+    topic: 'zahlenkaerttchen', level, type: 'cards',
+    prompt: `Lege mit allen Zahlenkärtchen ${taskLabels[task]}:`,
+    display: '',
+    hint: task === 'min'
+      ? 'Die kleinste Ziffer (ungleich 0, falls vorhanden) kommt an die erste Stelle.'
+      : (task.startsWith('max') ? 'Sortiere die Ziffern der Größe nach — die größte zuerst.' : 'Probiere aus, welche große Ziffer vorne die Zielzahl am besten trifft.'),
+    payload: { digits: digitStrs, task, target, solution },
+    explain: () => `Eine richtige Lösung ist: ${solution.split('').join(' ')} (${formatNumber(Number(solution))}).`,
+  };
+}
+
+/* ---- 11) Zahlendiktat ---- */
+function genZahlendiktat(level) {
+  const n = randomNumberForLevel(level);
+  return {
+    topic: 'zahlendiktat', level, type: 'dictation', answerKind: 'number',
+    prompt: 'Höre (oder präge dir) die Zahl gut ein und schreibe sie in Ziffern:',
+    display: '',
+    hint: 'Wenn du die Zahl gehört/gesehen hast: Denke an die Größenordnung (Tausender? Millionen?) und schreibe von links nach rechts.',
+    payload: { n, spoken: formatNumber(n) },
+    checkFn(answer) { return parseNumberInput(answer) === n; },
+    correctAnswerText: formatNumber(n),
+    explain: () => `Die diktierte Zahl war ${formatNumber(n)}.`,
+  };
+}
+
+/* ---- 12) Zahlenquadrat (Bonus) ---- */
+const LOSHU = [[2, 7, 6], [9, 5, 1], [4, 3, 8]];
+const PERMS3 = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+function genZahlenquadrat(level) {
+  const a = level === 1 ? 1 : randInt(1, level === 2 ? 2 : 3);
+  const b = randInt(0, level === 1 ? 5 : 15);
+  const grid = LOSHU.map(row => row.map(x => a * x + b));
+  const constant = a * 15 + 3 * b;
+  const blankCount = level === 1 ? 2 : (level === 2 ? 3 : 4);
+  const perm = choice(PERMS3);
+  let blanks = perm.map((c, r) => ({ r, c }));
+  if (blankCount === 2) blanks = blanks.slice(0, 2);
+  if (blankCount === 4) {
+    // vierte Lücke: eine weitere Zelle, deren Zeile UND Spalte noch je maximal 1 Lücke hat
+    const used = new Set(blanks.map(p => p.r + '-' + p.c));
+    outer:
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (!used.has(r + '-' + c)) {
+          const rowBlanks = blanks.filter(p => p.r === r).length;
+          const colBlanks = blanks.filter(p => p.c === c).length;
+          if (rowBlanks === 0 || colBlanks === 0) { blanks.push({ r, c }); break outer; }
+        }
+      }
+    }
+  }
+  return {
+    topic: 'zahlenquadrat', level, type: 'magicsquare',
+    prompt: `Fülle die Lücken so, dass jede Zeile, jede Spalte und beide Diagonalen die Summe ${constant} ergeben:`,
+    display: '',
+    hint: 'Kennst du zwei von drei Zahlen einer Reihe, ziehst du ihre Summe von der Zielsumme ab — der Rest ist die fehlende Zahl.',
+    payload: { grid, constant, blanks },
+    explain: () => `Die vollständige Lösung: ${grid.map(r => r.join(' | ')).join('  ///  ')}.`,
+  };
+}
+
+/* -------------------------- Themen-Register -------------------------- */
+const TOPICS = [
+  { id: 'lesen-schreiben', label: 'Zahlen lesen & schreiben', icon: '🔤', gen: genLesenSchreiben },
+  { id: 'stellenwerte', label: 'Stellenwerttafel', icon: '🧮', gen: genStellenwerte },
+  { id: 'nachbarzahlen', label: 'Vorgänger & Nachfolger', icon: '↔️', gen: genNachbarzahlen },
+  { id: 'vergleichen-ordnen', label: 'Vergleichen & Ordnen', icon: '📏', gen: genVergleichenOrdnen },
+  { id: 'runden', label: 'Runden', icon: '🎯', gen: genRunden },
+  { id: 'zahlenstrahl', label: 'Zahlenstrahl', icon: '📈', gen: genZahlenstrahl },
+  { id: 'addieren', label: 'Schriftlich addieren', icon: '➕', gen: genAddieren },
+  { id: 'subtrahieren', label: 'Schriftlich subtrahieren', icon: '➖', gen: genSubtrahieren },
+  { id: 'schaetzen', label: 'Mengen schätzen', icon: '🔢', gen: genSchaetzen },
+  { id: 'zahlenkaerttchen', label: 'Zahlenkärtchen', icon: '🃏', gen: genZahlenkaerttchen },
+  { id: 'zahlendiktat', label: 'Zahlendiktat', icon: '🔊', gen: genZahlendiktat },
+  { id: 'zahlenquadrat', label: 'Zahlenquadrat (Bonus)', icon: '⭐', gen: genZahlenquadrat },
+];
+
+function generateQuestion(topicId, level) {
+  const topic = TOPICS.find(t => t.id === topicId);
+  return topic.gen(level);
+}
+
+/* Export für Node-Tests (im Browser ignoriert, da "module" dort undefined ist) */
+
+
+'use strict';
+/* ==========================================================================
+   ENGINE: Rendering, Spielerzustand, Adaptivität, Bildschirm-Navigation
+   Setzt auf den in game.js definierten Funktionen/TOPICS auf.
+   ========================================================================== */
+
+const MAX_ATTEMPTS = 2;
+const PLAYER_STYLES = [
+  { key: 'p1', icon: '●', name: 'Spieler 1' },
+  { key: 'p2', icon: '■', name: 'Spieler 2' },
+  { key: 'p3', icon: '▲', name: 'Spieler 3' },
+  { key: 'p4', icon: '★', name: 'Spieler 4' },
+];
+
+const state = {
+  numPlayers: 1,
+  enabledTopics: new Set(TOPICS.map(t => t.id)),
+  startLevel: 0, // 0 = automatisch (Start bei 1)
+  players: [],
+  hasTTS: (typeof window !== 'undefined' && 'speechSynthesis' in window),
+};
+
+/* -------------------------- Bildschirm-Navigation -------------------------- */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* -------------------------- Setup-Bildschirm aufbauen -------------------------- */
+function buildTopicGrid() {
+  const grid = document.getElementById('topic-grid');
+  grid.innerHTML = '';
+  TOPICS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'topic-chip';
+    btn.type = 'button';
+    btn.setAttribute('aria-pressed', state.enabledTopics.has(t.id) ? 'true' : 'false');
+    btn.dataset.topic = t.id;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'icon';
+    iconSpan.textContent = t.icon;
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = t.label;
+    btn.appendChild(iconSpan);
+    btn.appendChild(labelSpan);
+    btn.addEventListener('click', () => {
+      if (state.enabledTopics.has(t.id)) {
+        if (state.enabledTopics.size > 1) state.enabledTopics.delete(t.id);
+      } else {
+        state.enabledTopics.add(t.id);
+      }
+      btn.setAttribute('aria-pressed', state.enabledTopics.has(t.id) ? 'true' : 'false');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function wireLevelRow() {
+  const row = document.getElementById('level-row');
+  row.querySelectorAll('.level-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      row.querySelectorAll('.level-chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
+      state.startLevel = Number(btn.dataset.level);
+    });
+  });
+}
+
+/* -------------------------- Spieler-Objekt -------------------------- */
+function createPlayer(index) {
+  const style = PLAYER_STYLES[index];
+  return {
+    id: index,
+    key: style.key,
+    icon: style.icon,
+    name: style.name,
+    level: state.startLevel === 0 ? 1 : state.startLevel,
+    score: 0,
+    streakCorrect: 0,
+    streakWrong: 0,
+    lastTopic: null,
+    current: null,
+    attemptsWrong: 0,
+    hintUsed: false,
+    solved: false,
+    els: {},
+  };
+}
+
+function pickTopicFor(player) {
+  const enabled = TOPICS.filter(t => state.enabledTopics.has(t.id));
+  if (enabled.length === 1) return enabled[0].id;
+  let pool = enabled.filter(t => t.id !== player.lastTopic);
+  if (pool.length === 0) pool = enabled;
+  return choice(pool).id;
+}
+
+/* -------------------------- Panel-Grundgerüst -------------------------- */
+function buildPlayerPanel(player) {
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.id = 'panel-' + player.id;
+
+  const head = document.createElement('div');
+  head.className = 'panel-head';
+  head.style.background = `var(--${player.key})`;
+  head.innerHTML = `
+    <span class="badge" aria-hidden="true">${player.icon}</span>
+    <span class="pname"></span>
+    <span class="stat stat-level"></span>
+    <span class="stat stat-score"></span>
+  `;
+  panel.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'panel-body';
+  body.innerHTML = `
+    <div class="topic-tag"><span class="topic-icon"></span><span class="topic-label"></span></div>
+    <p class="qprompt"></p>
+    <div class="qdisplay" style="display:none;"></div>
+    <div class="answer-area"></div>
+    <div class="hint-box"></div>
+    <div class="feedback" aria-live="polite"></div>
+    <div class="footer-row">
+      <button class="hint-btn" type="button">💡 Tipp</button>
+      <button class="check-btn" type="button" style="display:none;">Prüfen</button>
+      <button class="next-btn" type="button" style="display:none;">Weiter →</button>
+    </div>
+  `;
+  panel.appendChild(body);
+
+  player.els = {
+    panel,
+    pname: head.querySelector('.pname'),
+    statLevel: head.querySelector('.stat-level'),
+    statScore: head.querySelector('.stat-score'),
+    topicIcon: body.querySelector('.topic-icon'),
+    topicLabel: body.querySelector('.topic-label'),
+    prompt: body.querySelector('.qprompt'),
+    display: body.querySelector('.qdisplay'),
+    answerArea: body.querySelector('.answer-area'),
+    hintBox: body.querySelector('.hint-box'),
+    feedback: body.querySelector('.feedback'),
+    hintBtn: body.querySelector('.hint-btn'),
+    checkBtn: body.querySelector('.check-btn'),
+    nextBtn: body.querySelector('.next-btn'),
+  };
+
+  player.els.hintBtn.addEventListener('click', () => showHint(player));
+  player.els.checkBtn.addEventListener('click', () => runCheck(player));
+  player.els.nextBtn.addEventListener('click', () => nextQuestion(player));
+
+  return panel;
+}
+
+function refreshHeader(player) {
+  player.els.pname.textContent = player.name;
+  player.els.statLevel.textContent = 'Stufe ' + player.level;
+  player.els.statScore.textContent = '⭐ ' + player.score;
+}
+
+/* -------------------------- Frage rendern -------------------------- */
+const EXPLICIT_CHECK_TYPES = new Set(['text', 'text2', 'placevalue', 'order', 'cards', 'magicsquare', 'dictation', 'estimate']);
+
+function nextQuestion(player) {
+  const topicId = pickTopicFor(player);
+  player.lastTopic = topicId;
+  const topic = TOPICS.find(t => t.id === topicId);
+  const q = generateQuestion(topicId, player.level);
+  player.current = q;
+  player.attemptsWrong = 0;
+  player.hintUsed = false;
+  player.solved = false;
+
+  refreshHeader(player);
+  player.els.topicIcon.textContent = topic.icon;
+  player.els.topicLabel.textContent = topic.label;
+  player.els.prompt.textContent = q.prompt;
+  if (q.display) {
+    player.els.display.style.display = '';
+    player.els.display.textContent = q.display;
+  } else {
+    player.els.display.style.display = 'none';
+    player.els.display.textContent = '';
+  }
+  player.els.hintBox.classList.remove('show');
+  player.els.hintBox.textContent = '';
+  player.els.feedback.classList.remove('show', 'good', 'bad', 'info');
+  player.els.feedback.textContent = '';
+  player.els.answerArea.innerHTML = '';
+  player.els.nextBtn.style.display = 'none';
+  player.els.checkBtn.style.display = EXPLICIT_CHECK_TYPES.has(q.type) ? '' : 'none';
+  player.els.checkBtn.disabled = false;
+  player.els.hintBtn.disabled = false;
+
+  const renderer = RENDERERS[q.type];
+  renderer(player.els.answerArea, q, player);
+}
+
+function showHint(player) {
+  player.hintUsed = true;
+  player.els.hintBox.textContent = '💡 ' + player.current.hint;
+  player.els.hintBox.classList.add('show');
+}
+
+function setFeedback(player, kind, text) {
+  player.els.feedback.className = 'feedback show ' + kind;
+  player.els.feedback.textContent = text;
+}
+
+function lockAnswerArea(player) {
+  player.els.answerArea.querySelectorAll('button, input').forEach(el => el.disabled = true);
+  player.els.checkBtn.style.display = 'none';
+  player.els.hintBtn.disabled = true;
+}
+
+function finishQuestion(player, wasCorrectFinal) {
+  player.solved = true;
+  lockAnswerArea(player);
+  player.els.nextBtn.style.display = '';
+
+  let points = 0;
+  if (wasCorrectFinal) {
+    const perfect = !player.hintUsed && player.attemptsWrong === 0;
+    points = perfect ? player.level * 10 : player.level * 5;
+    player.score += points;
+    player.streakWrong = 0;
+    if (perfect) {
+      player.streakCorrect++;
+      if (player.streakCorrect >= 3 && player.level < 3) {
+        player.level++;
+        player.streakCorrect = 0;
+        setFeedback(player, 'good', `Super gemacht! (+${points} Punkte) 🎉 Level-Aufstieg: Stufe ${player.level}!`);
+      } else {
+        setFeedback(player, 'good', `Richtig! (+${points} Punkte) 🎉`);
+      }
+    } else {
+      player.streakCorrect = 0;
+      setFeedback(player, 'good', `Richtig! (+${points} Punkte)`);
+    }
+  } else {
+    player.streakCorrect = 0;
+    player.streakWrong++;
+    setFeedback(player, 'bad', '👀 ' + player.current.explain());
+    if (player.streakWrong >= 2 && player.level > 1) {
+      player.level--;
+      player.streakWrong = 0;
+      player.els.feedback.textContent += ` Wir üben kurz auf Stufe ${player.level} weiter.`;
+    }
+  }
+  refreshHeader(player);
+}
+
+function runCheck(player) {
+  const q = player.current;
+  const ok = ANSWER_GETTERS[q.type](player, q);
+  if (ok) {
+    finishQuestion(player, true);
+  } else {
+    player.attemptsWrong++;
+    if (player.attemptsWrong >= MAX_ATTEMPTS) {
+      finishQuestion(player, false);
+    } else {
+      setFeedback(player, 'bad', 'Das passt noch nicht — versuch es noch einmal! Ein Tipp kann helfen.');
+    }
+  }
+}
+
+/* Für auto-auswertende Typen (choice/match/numberline) direkt aus dem Interaktions-Handler aufgerufen */
+function autoEvaluate(player, isCorrect) {
+  if (isCorrect) {
+    finishQuestion(player, true);
+  } else {
+    player.attemptsWrong++;
+    if (player.attemptsWrong >= MAX_ATTEMPTS) {
+      finishQuestion(player, false);
+    } else {
+      setFeedback(player, 'bad', 'Noch nicht ganz richtig — versuch es noch einmal!');
+    }
+  }
+}
+
+/* ==========================================================================
+   RENDERER + ANSWER-GETTER je Aufgabentyp
+   ========================================================================== */
+const RENDERERS = {};
+const ANSWER_GETTERS = {};
+
+/* ---- text ---- */
+RENDERERS.text = (container, q) => {
+  const row = document.createElement('div');
+  row.className = 'text-input-row';
+  const input = document.createElement('input');
+  input.className = 'num-input';
+  input.type = 'text';
+  input.inputMode = q.answerKind === 'words' ? 'text' : 'numeric';
+  input.autocomplete = 'off';
+  input.setAttribute('data-role', 'text-answer');
+  input.placeholder = q.answerKind === 'words' ? 'in Worten schreiben …' : 'Zahl eingeben …';
+  row.appendChild(input);
+  container.appendChild(row);
+  input.focus();
+};
+ANSWER_GETTERS.text = (player, q) => {
+  const input = player.els.answerArea.querySelector('[data-role="text-answer"]');
+  return q.checkFn(input.value);
+};
+
+/* ---- text2 ---- */
+RENDERERS.text2 = (container, q) => {
+  q.payload.fields.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'text-input-row';
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = f.label + ':';
+    const input = document.createElement('input');
+    input.className = 'num-input';
+    input.type = 'text';
+    input.inputMode = 'numeric';
+    input.setAttribute('data-key', f.key);
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+};
+ANSWER_GETTERS.text2 = (player, q) => {
+  return q.payload.fields.every(f => {
+    const input = player.els.answerArea.querySelector(`[data-key="${f.key}"]`);
+    return parseNumberInput(input.value) === f.correct;
+  });
+};
+
+/* ---- choice ---- */
+RENDERERS.choice = (container, q, player) => {
+  const grid = document.createElement('div');
+  grid.className = 'choice-grid';
+  q.payload.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.type = 'button';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', () => {
+      const correct = opt.id === q.payload.correctId;
+      if (correct) {
+        btn.classList.add('correct');
+        grid.querySelectorAll('button').forEach(b => b.disabled = true);
+      } else {
+        btn.classList.add('wrong');
+        btn.disabled = true;
+      }
+      autoEvaluate(player, correct);
+      if (!correct && player.attemptsWrong >= MAX_ATTEMPTS) {
+        const rightBtn = [...grid.querySelectorAll('button')].find((b, i) => q.payload.options[i].id === q.payload.correctId);
+        if (rightBtn) rightBtn.classList.add('correct');
+        grid.querySelectorAll('button').forEach(b => b.disabled = true);
+      }
+    });
+    grid.appendChild(btn);
+  });
+  container.appendChild(grid);
+};
+ANSWER_GETTERS.choice = null; // auto-evaluiert
+
+/* ---- match ---- */
+RENDERERS.match = (container, q, player) => {
+  const pairs = q.payload.pairs;
+  const cols = document.createElement('div');
+  cols.className = 'match-cols';
+  const leftCol = document.createElement('div');
+  leftCol.className = 'match-col';
+  const rightCol = document.createElement('div');
+  rightCol.className = 'match-col';
+  const rightShuffled = shuffle(pairs);
+  let selectedLeftId = null;
+  let matchedCount = 0;
+
+  function leftBtnFor(id) { return leftCol.querySelector(`[data-id="${id}"]`); }
+  function rightBtnFor(id) { return rightCol.querySelector(`[data-id="${id}"]`); }
+
+  pairs.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'match-btn';
+    btn.type = 'button';
+    btn.textContent = p.left;
+    btn.dataset.id = p.id;
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('matched')) return;
+      leftCol.querySelectorAll('.match-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedLeftId = p.id;
+    });
+    leftCol.appendChild(btn);
+  });
+
+  rightShuffled.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'match-btn';
+    btn.type = 'button';
+    btn.textContent = p.right;
+    btn.dataset.id = p.id;
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('matched') || selectedLeftId === null) return;
+      const isCorrect = selectedLeftId === p.id;
+      if (isCorrect) {
+        btn.classList.remove('selected');
+        btn.classList.add('matched');
+        btn.disabled = true;
+        const lb = leftBtnFor(selectedLeftId);
+        lb.classList.remove('selected');
+        lb.classList.add('matched');
+        lb.disabled = true;
+        matchedCount++;
+        selectedLeftId = null;
+        if (matchedCount === pairs.length) {
+          autoEvaluate(player, true);
+        }
+      } else {
+        player.attemptsWrong++;
+        btn.classList.add('flash-wrong');
+        const lb = leftBtnFor(selectedLeftId);
+        lb.classList.add('flash-wrong');
+        setTimeout(() => {
+          btn.classList.remove('flash-wrong');
+          lb.classList.remove('flash-wrong', 'selected');
+        }, 450);
+        selectedLeftId = null;
+        setFeedback(player, 'bad', 'Das gehört nicht zusammen — probier es weiter!');
+      }
+    });
+    rightCol.appendChild(btn);
+  });
+
+  cols.appendChild(leftCol);
+  cols.appendChild(rightCol);
+  container.appendChild(cols);
+};
+ANSWER_GETTERS.match = null; // auto-evaluiert
+
+/* ---- placevalue ---- */
+RENDERERS.placevalue = (container, q) => {
+  const row = document.createElement('div');
+  row.className = 'pv-row';
+  q.payload.places.forEach((p, i) => {
+    const col = document.createElement('div');
+    col.className = 'pv-col';
+    const code = document.createElement('div');
+    code.className = 'pv-code';
+    code.textContent = p.code;
+    const input = document.createElement('input');
+    input.className = 'pv-input';
+    input.maxLength = 1;
+    input.inputMode = 'numeric';
+    input.dataset.idx = i;
+    col.appendChild(code);
+    col.appendChild(input);
+    row.appendChild(col);
+  });
+  container.appendChild(row);
+};
+ANSWER_GETTERS.placevalue = (player, q) => {
+  const inputs = [...player.els.answerArea.querySelectorAll('.pv-input')];
+  let allCorrect = true;
+  inputs.forEach((input, i) => {
+    const correctDigit = q.payload.places[i].digit;
+    const val = parseNumberInput(input.value);
+    const ok = val === correctDigit;
+    input.classList.remove('correct', 'wrong');
+    input.classList.add(ok ? 'correct' : 'wrong');
+    if (!ok) allCorrect = false;
+  });
+  return allCorrect;
+};
+
+/* ---- order ---- */
+RENDERERS.order = (container, q) => {
+  const wrap = document.createElement('div');
+  const poolDiv = document.createElement('div');
+  poolDiv.className = 'order-pool';
+  const seqDiv = document.createElement('div');
+  seqDiv.className = 'order-seq';
+  seqDiv.style.marginTop = '8px';
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'smallbtn';
+  resetBtn.type = 'button';
+  resetBtn.textContent = '↺ Zurücksetzen';
+  resetBtn.style.marginTop = '8px';
+
+  const seq = [];
+  function renderSeq() {
+    seqDiv.innerHTML = '';
+    q.payload.pool.forEach((_, i) => {
+      const slot = document.createElement('span');
+      slot.className = 'order-slot';
+      slot.textContent = seq[i] !== undefined ? formatNumber(seq[i]) : '?';
+      seqDiv.appendChild(slot);
+      if (i < q.payload.pool.length - 1) {
+        const arrow = document.createElement('span');
+        arrow.className = 'order-arrow';
+        arrow.textContent = '<';
+        seqDiv.appendChild(arrow);
+      }
+    });
+  }
+  q.payload.pool.forEach(n => {
+    const btn = document.createElement('button');
+    btn.className = 'order-num';
+    btn.type = 'button';
+    btn.textContent = formatNumber(n);
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      seq.push(n);
+      btn.disabled = true;
+      renderSeq();
+    });
+    poolDiv.appendChild(btn);
+  });
+  resetBtn.addEventListener('click', () => {
+    seq.length = 0;
+    poolDiv.querySelectorAll('button').forEach(b => b.disabled = false);
+    renderSeq();
+  });
+  renderSeq();
+  wrap.appendChild(poolDiv);
+  wrap.appendChild(seqDiv);
+  wrap.appendChild(resetBtn);
+  container.appendChild(wrap);
+  container._seq = seq;
+};
+ANSWER_GETTERS.order = (player, q) => {
+  const seq = player.els.answerArea._seq;
+  if (seq.length !== q.payload.correctOrder.length) return false;
+  return seq.every((v, i) => v === q.payload.correctOrder[i]);
+};
+
+/* ---- numberline ---- */
+RENDERERS.numberline = (container, q, player) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'nline-wrap';
+  const track = document.createElement('div');
+  track.className = 'nline-track';
+  const { min, max, step, target } = q.payload;
+  const ticks = [];
+  for (let v = min; v <= max; v += step) ticks.push(v);
+  let answered = false;
+  ticks.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'nline-tick';
+    btn.type = 'button';
+    const pct = ((v - min) / (max - min)) * 100;
+    btn.style.left = pct + '%';
+    btn.innerHTML = '<span class="mark"></span><span class="lab">' + formatNumber(v) + '</span>';
+    btn.addEventListener('click', () => {
+      if (answered) return;
+      const isCorrect = v === target;
+      btn.classList.add(isCorrect ? 'hit' : 'miss');
+      if (isCorrect) {
+        answered = true;
+        autoEvaluate(player, true);
+      } else {
+        player.attemptsWrong++;
+        if (player.attemptsWrong >= MAX_ATTEMPTS) {
+          answered = true;
+          const correctBtn = [...track.querySelectorAll('.nline-tick')].find((b, i) => ticks[i] === target);
+          if (correctBtn) correctBtn.classList.add('reveal');
+          autoEvaluate(player, false);
+        } else {
+          setFeedback(player, 'bad', 'Noch nicht ganz die richtige Stelle — versuch es noch einmal!');
+        }
+      }
+    });
+    track.appendChild(btn);
+  });
+  wrap.appendChild(track);
+  container.appendChild(wrap);
+};
+ANSWER_GETTERS.numberline = null; // auto-evaluiert
+
+/* ---- cards ---- */
+RENDERERS.cards = (container, q) => {
+  const row = document.createElement('div');
+  row.className = 'cards-row';
+  const build = document.createElement('div');
+  build.className = 'cards-build';
+  build.style.marginTop = '8px';
+  const undoBtn = document.createElement('button');
+  undoBtn.className = 'smallbtn';
+  undoBtn.type = 'button';
+  undoBtn.textContent = '⌫ Rückgängig';
+  undoBtn.style.marginTop = '8px';
+
+  const built = [];
+  const btns = [];
+  function renderBuild() { build.textContent = built.length ? built.join(' ') : '–'; }
+  q.payload.digits.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'card-btn';
+    btn.type = 'button';
+    btn.textContent = d;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      built.push(d);
+      btn.disabled = true;
+      renderBuild();
+    });
+    btns.push(btn);
+    row.appendChild(btn);
+  });
+  undoBtn.addEventListener('click', () => {
+    if (!built.length) return;
+    const last = built.pop();
+    const btn = btns.find(b => b.disabled && b.textContent === last);
+    if (btn) btn.disabled = false;
+    renderBuild();
+  });
+  renderBuild();
+  container.appendChild(row);
+  container.appendChild(build);
+  container.appendChild(undoBtn);
+  container._built = built;
+};
+ANSWER_GETTERS.cards = (player, q) => {
+  const built = player.els.answerArea._built;
+  return built.join('') === q.payload.solution;
+};
+
+/* ---- estimate ---- */
+RENDERERS.estimate = (container, q) => {
+  const { cols, rows, dots, sampleCell, sampleCount } = q.payload;
+  const box = document.createElement('div');
+  box.className = 'est-box';
+  for (let c = 1; c < cols; c++) {
+    const line = document.createElement('div');
+    line.className = 'est-gridline';
+    line.style.left = (c / cols * 100) + '%';
+    line.style.top = '0'; line.style.width = '1px'; line.style.height = '100%';
+    box.appendChild(line);
+  }
+  for (let r = 1; r < rows; r++) {
+    const line = document.createElement('div');
+    line.className = 'est-gridline';
+    line.style.top = (r / rows * 100) + '%';
+    line.style.left = '0'; line.style.height = '1px'; line.style.width = '100%';
+    box.appendChild(line);
+  }
+  const col = sampleCell % cols, row = Math.floor(sampleCell / cols);
+  const hl = document.createElement('div');
+  hl.className = 'est-cell-highlight';
+  hl.style.left = (col / cols * 100) + '%';
+  hl.style.top = (row / rows * 100) + '%';
+  hl.style.width = (100 / cols) + '%';
+  hl.style.height = (100 / rows) + '%';
+  box.appendChild(hl);
+  dots.forEach(d => {
+    const dot = document.createElement('div');
+    dot.className = 'est-dot';
+    dot.style.left = (d.x * 100) + '%';
+    dot.style.top = (d.y * 100) + '%';
+    box.appendChild(dot);
+  });
+  const info = document.createElement('p');
+  info.style.fontSize = '13.5px';
+  info.style.color = 'var(--ink-soft)';
+  info.style.margin = '6px 0 0';
+  info.textContent = `Markiertes Feld: ${sampleCount} Punkte · insgesamt ${cols * rows} Felder`;
+  const row2 = document.createElement('div');
+  row2.className = 'text-input-row';
+  const input = document.createElement('input');
+  input.className = 'num-input';
+  input.type = 'text';
+  input.inputMode = 'numeric';
+  input.setAttribute('data-role', 'estimate-answer');
+  input.placeholder = 'geschätzte Gesamtzahl';
+  row2.appendChild(input);
+  container.appendChild(box);
+  container.appendChild(info);
+  container.appendChild(row2);
+};
+ANSWER_GETTERS.estimate = (player, q) => {
+  const input = player.els.answerArea.querySelector('[data-role="estimate-answer"]');
+  const v = parseNumberInput(input.value);
+  if (Number.isNaN(v)) return false;
+  const { total, tol } = q.payload;
+  return Math.abs(v - total) <= Math.max(3, total * tol);
+};
+
+/* ---- dictation ---- */
+RENDERERS.dictation = (container, q) => {
+  const controls = document.createElement('div');
+  controls.className = 'dict-controls';
+  const speakBtn = document.createElement('button');
+  speakBtn.className = 'smallbtn';
+  speakBtn.type = 'button';
+  speakBtn.textContent = '🔊 Vorlesen';
+  const showBtn = document.createElement('button');
+  showBtn.className = 'smallbtn';
+  showBtn.type = 'button';
+  showBtn.textContent = '👁️ Kurz anzeigen';
+  const revealDiv = document.createElement('div');
+  revealDiv.className = 'reveal-num';
+  revealDiv.style.visibility = 'hidden';
+  revealDiv.textContent = q.payload.spoken;
+
+  speakBtn.addEventListener('click', () => {
+    if (state.hasTTS) {
+      try {
+        const utter = new SpeechSynthesisUtterance(String(q.payload.n));
+        utter.lang = 'de-DE';
+        utter.rate = 0.85;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utter);
+      } catch (e) { /* stilles Fallback */ }
+    }
+  });
+  showBtn.addEventListener('click', () => {
+    revealDiv.style.visibility = 'visible';
+    setTimeout(() => { revealDiv.style.visibility = 'hidden'; }, 2500);
+  });
+
+  controls.appendChild(speakBtn);
+  controls.appendChild(showBtn);
+  const row = document.createElement('div');
+  row.className = 'text-input-row';
+  const input = document.createElement('input');
+  input.className = 'num-input';
+  input.type = 'text';
+  input.inputMode = 'numeric';
+  input.setAttribute('data-role', 'text-answer');
+  input.placeholder = 'Zahl eingeben …';
+  row.appendChild(input);
+
+  container.appendChild(controls);
+  container.appendChild(revealDiv);
+  container.appendChild(row);
+};
+ANSWER_GETTERS.dictation = (player, q) => {
+  const input = player.els.answerArea.querySelector('[data-role="text-answer"]');
+  return q.checkFn(input.value);
+};
+
+/* ---- magicsquare ---- */
+RENDERERS.magicsquare = (container, q) => {
+  const { grid, constant, blanks } = q.payload;
+  const gridDiv = document.createElement('div');
+  gridDiv.className = 'ms-grid';
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'ms-cell';
+      const isBlank = blanks.some(b => b.r === r && b.c === c);
+      if (isBlank) {
+        const input = document.createElement('input');
+        input.dataset.r = r; input.dataset.c = c;
+        input.inputMode = 'numeric';
+        cell.appendChild(input);
+      } else {
+        cell.textContent = grid[r][c];
+      }
+      gridDiv.appendChild(cell);
+    }
+  }
+  const constDiv = document.createElement('div');
+  constDiv.className = 'ms-const';
+  constDiv.textContent = 'Zielsumme je Reihe: ' + constant;
+  container.appendChild(gridDiv);
+  container.appendChild(constDiv);
+};
+ANSWER_GETTERS.magicsquare = (player, q) => {
+  const { grid, blanks } = q.payload;
+  const inputs = player.els.answerArea.querySelectorAll('.ms-grid input');
+  let allCorrect = true;
+  inputs.forEach(input => {
+    const r = Number(input.dataset.r), c = Number(input.dataset.c);
+    const val = parseNumberInput(input.value);
+    const ok = val === grid[r][c];
+    input.style.borderColor = ok ? 'var(--good)' : 'var(--bad)';
+    if (!ok) allCorrect = false;
+  });
+  return allCorrect;
+};
+
+/* -------------------------- Spielstart -------------------------- */
+function startGame() {
+  state.players = [];
+  const grid = document.getElementById('players-grid');
+  grid.innerHTML = '';
+  grid.className = 'players-' + state.numPlayers;
+  for (let i = 0; i < state.numPlayers; i++) {
+    const player = createPlayer(i);
+    state.players.push(player);
+    grid.appendChild(buildPlayerPanel(player));
+    refreshHeader(player);
+    nextQuestion(player);
+  }
+  showScreen('screen-game');
+}
+
+/* -------------------------- Ereignisse verdrahten -------------------------- */
+function initApp() {
+  buildTopicGrid();
+  wireLevelRow();
+
+  document.querySelectorAll('[data-players]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.numPlayers = Number(btn.dataset.players);
+      showScreen('screen-setup');
+    });
+  });
+  document.getElementById('btn-back-start').addEventListener('click', () => showScreen('screen-start'));
+  document.getElementById('btn-start-game').addEventListener('click', () => {
+    if (state.enabledTopics.size === 0) return;
+    startGame();
+  });
+  document.getElementById('btn-change-topics').addEventListener('click', () => showScreen('screen-setup'));
+  document.getElementById('btn-restart').addEventListener('click', () => showScreen('screen-start'));
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+}
+
+
+</script>
+</body>
+</html>
