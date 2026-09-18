@@ -38,5 +38,13 @@ const posts = [
     category: "freizeit",
     subcategory: null,
     url: "posts/beispiel-freizeit.html"
-  }
+  },
+   {
+    title: "Minigolf - Winkel - Jg. 6",
+    excerpt: "Spielerisch Winkel lernen",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "minigolf-winkel.html"
+   },
 ];
