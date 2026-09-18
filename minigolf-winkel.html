@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Winkel-Minigolf & Poolbillard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --grass-dark:#1b4332;
+  --grass:#2d6a4f;
+  --grass-light:#74c69d;
+  --sky:#eaf6f6;
+  --ink:#0f2a1d;
+  --card:#ffffff;
+  --card-line:#e3efe9;
+  --flag:#e4572e;
+  --flag-dark:#c23f1c;
+  --muted:#5b7267;
+
+  --spitz:#2f9e6b;
+  --recht:#2e6099;
+  --stumpf:#e08a2b;
+  --gestreckt:#d64545;
+  --nullw:#8b98a3;
+  --ueberstumpf:#8854c0;
+}
+body.theme-billard{
+  --grass:#1f6f5c;
+  --grass-dark:#2b1710;
+  --grass-light:#2f9e6b;
+  --flag:#c98a2b;
+  --flag-dark:#a06f1f;
+  --bg-inner:#e8d9c0;
+}
+body.theme-neutral{
+  --grass:#4a5a63;
+  --grass-dark:#232c30;
+  --grass-light:#6b7d86;
+  --flag:#3d7a75;
+  --flag-dark:#2c5a56;
+  --bg-inner:#eef2f3;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  color:var(--ink);
+  background:radial-gradient(circle at 50% 0%, var(--bg-inner,#cdeee2) 0%, var(--grass) 55%, var(--grass-dark) 100%);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;}
+.screen{
+  min-height:100vh;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.screen.active{display:flex;}
+.card{
+  background:var(--card);
+  border-radius:22px;
+  padding:32px;
+  width:100%;
+  max-width:480px;
+  box-shadow:0 18px 40px rgba(15,42,29,0.35);
+}
+.card h1{font-size:30px;margin:0 0 4px;color:var(--grass-dark);}
+.card .sub{color:var(--muted);margin:0 0 22px;font-size:15px;line-height:1.5;}
+label.field{display:block;margin-bottom:16px;}
+label.field span{display:block;font-weight:600;font-size:13px;margin-bottom:6px;color:var(--muted);}
+input[type=text]{
+  width:100%;padding:12px 14px;border-radius:12px;border:2px solid var(--card-line);
+  font-size:16px;font-family:'Inter',sans-serif;
+}
+input[type=text]:focus{outline:none;border-color:var(--recht);}
+.btn{
+  display:block;width:100%;padding:14px;border-radius:14px;font-weight:700;
+  font-size:16px;font-family:'Baloo 2',sans-serif;letter-spacing:.3px;
+  transition:transform .08s ease;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--flag);color:#fff;}
+.btn-primary:hover{background:var(--flag-dark);}
+.btn-secondary{background:var(--sky);color:var(--grass-dark);margin-top:10px;border:2px solid var(--card-line);}
+.btn-ghost{background:transparent;color:var(--muted);text-decoration:underline;padding:8px;margin-top:6px;}
+.tabs{display:flex;gap:8px;margin-bottom:20px;background:var(--sky);padding:5px;border-radius:14px;}
+.tab{flex:1;text-align:center;padding:10px;border-radius:10px;font-weight:700;font-family:'Baloo 2',sans-serif;color:var(--muted);background:transparent;}
+.tab.active{background:var(--card);color:var(--grass-dark);box-shadow:0 2px 6px rgba(0,0,0,.08);}
+.pane{display:none;}
+.pane.active{display:block;}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.diff-grid.two-col{grid-template-columns:1fr 1fr;}
+.diff-opt{padding:12px 6px;border-radius:12px;border:2px solid var(--card-line);text-align:center;background:#fff;}
+.diff-opt b{display:block;font-family:'Baloo 2',sans-serif;font-size:14px;}
+.diff-opt small{color:var(--muted);font-size:11px;}
+.diff-opt.selected{border-color:var(--recht);background:#eaf1fb;}
+.range-row{display:flex;align-items:center;gap:12px;}
+.range-row input[type=range]{flex:1;}
+.range-val{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:20px;color:var(--recht);min-width:34px;text-align:center;}
+.room-code{
+  font-family:'Baloo 2',sans-serif;font-size:40px;font-weight:800;letter-spacing:6px;
+  text-align:center;background:var(--sky);border-radius:14px;padding:14px;margin-bottom:16px;color:var(--grass-dark);
+}
+.player-list{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px;}
+.player-list li{
+  display:flex;align-items:center;gap:10px;background:var(--sky);border-radius:12px;padding:10px 12px;font-weight:600;
+}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--spitz);flex-shrink:0;}
+.host-badge{margin-left:auto;font-size:11px;background:var(--flag);color:#fff;padding:3px 8px;border-radius:8px;font-family:'Baloo 2',sans-serif;}
+
+/* game screen */
+#screen-game{padding:0;align-items:stretch;}
+.game-wrap{width:100%;min-height:100vh;display:flex;flex-direction:column;}
+.hud{
+  display:flex;align-items:center;gap:14px;padding:10px 16px;background:rgba(15,42,29,.55);
+  color:#fff;font-family:'Baloo 2',sans-serif;backdrop-filter:blur(4px);flex-wrap:wrap;
+}
+.hud .pill{background:rgba(255,255,255,.15);padding:6px 12px;border-radius:20px;font-size:13px;}
+.hud .pill b{font-size:15px;}
+.hud .spacer{flex:1;}
+.canvas-area{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:10px;}
+#course{background:linear-gradient(160deg,#3f8f5f,#245c3d);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:100%;max-width:800px;height:auto;aspect-ratio:800/450;touch-action:none;display:block;}
+.aim-readout{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  background:rgba(255,255,255,.92);padding:6px 14px;border-radius:20px;font-family:'Baloo 2',sans-serif;
+  font-weight:700;font-size:14px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+.waiting-panel{
+  position:absolute;top:10px;left:10px;right:10px;z-index:5;
+  background:rgba(255,255,255,.95);border-radius:14px;padding:10px 16px;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.waiting-panel h2{margin:0;font-size:15px;color:var(--grass-dark);font-family:'Baloo 2',sans-serif;}
+.waiting-panel p{margin:0;font-size:12px;color:var(--muted);}
+.mini-scoreboard{list-style:none;padding:0;margin:0 0 0 auto;display:flex;gap:8px;flex-wrap:wrap;}
+.mini-scoreboard li{display:flex;gap:5px;font-weight:600;font-size:12px;background:var(--sky);padding:4px 10px;border-radius:10px;border-bottom:none;}
+.power-panel{
+  position:absolute;left:0;right:0;bottom:0;display:none;justify-content:center;padding:12px;z-index:6;pointer-events:none;
+}
+.power-panel-inner{
+  pointer-events:auto;background:rgba(255,255,255,.97);border-radius:18px;padding:16px 20px;
+  width:100%;max-width:360px;box-shadow:0 10px 24px rgba(0,0,0,.3);text-align:center;
+}
+.power-panel-title{font-family:'Baloo 2',sans-serif;font-weight:700;color:var(--grass-dark);margin-bottom:10px;font-size:14px;}
+.power-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.power-row input[type=range]{flex:1;}
+.power-value{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px;color:var(--recht);min-width:48px;}
+
+/* quiz modal */
+.quiz-overlay{
+  position:fixed;inset:0;background:rgba(10,25,18,.55);display:none;
+  align-items:flex-start;justify-content:center;z-index:50;padding-top:3vh;
+}
+.quiz-overlay.active{display:flex;}
+.quiz-sheet{
+  background:#fff;width:100%;max-width:560px;border-radius:20px;padding:22px 24px;
+  box-shadow:0 14px 34px rgba(0,0,0,.35);max-height:93vh;overflow-y:auto;
+}
+.quiz-tag{display:inline-block;font-family:'Baloo 2',sans-serif;font-size:12px;font-weight:700;color:#fff;background:var(--recht);padding:4px 10px;border-radius:8px;margin-bottom:10px;}
+.quiz-sheet h3{margin:0 0 14px;font-size:20px;color:var(--grass-dark);}
+.angle-svg-wrap{display:flex;justify-content:center;margin-bottom:16px;}
+.angle-svg-wrap svg{max-width:100%;height:auto;display:block;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+.opt-btn{
+  padding:13px 8px;border-radius:12px;border:2px solid var(--card-line);background:#fbfdfc;font-weight:700;
+  font-family:'Baloo 2',sans-serif;font-size:14px;color:var(--ink);
+}
+.opt-btn:hover{border-color:var(--recht);}
+.opt-btn.correct{background:#e6f6ec;border-color:var(--spitz);color:#1c6b45;}
+.opt-btn.wrong{background:#fbe9e7;border-color:var(--gestreckt);color:#a33131;}
+.est-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.est-row input[type=range]{flex:1;min-width:120px;}
+.est-number-input{width:80px;padding:10px 6px;border-radius:10px;border:2px solid var(--card-line);font-size:18px;font-family:'Baloo 2',sans-serif;text-align:center;}
+.est-number-input:focus{outline:none;border-color:var(--recht);}
+.est-deg-symbol{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:16px;color:var(--muted);}
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.mc-item{border:2px solid var(--card-line);border-radius:14px;padding:8px;text-align:center;background:#fbfdfc;}
+.mc-item.clickable{cursor:pointer;}
+.mc-item.correct{border-color:var(--spitz);background:#e6f6ec;}
+.mc-item.wrong{border-color:var(--gestreckt);background:#fbe9e7;}
+.mc-item .mc-svg-wrap svg{max-width:100%;height:auto;}
+.mc-item label{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;cursor:pointer;}
+.mc-item input[type=checkbox]{width:18px;height:18px;}
+.mc-caption{font-size:10px;color:var(--muted);margin-top:2px;}
+.feedback-box{margin-top:14px;padding:14px;border-radius:12px;font-size:14px;line-height:1.5;display:none;}
+.feedback-box.show{display:block;}
+.feedback-box.ok{background:#e6f6ec;color:#1c6b45;}
+.feedback-box.bad{background:#fbe9e7;color:#a33131;}
+.feedback-box.hint{display:none;background:#fff7e0;color:#8a6d1f;margin-top:10px;}
+.feedback-box.hint.show{display:block;}
+.feedback-box b{font-family:'Baloo 2',sans-serif;}
+.quiz-footer{
+  position:sticky;bottom:0;left:0;right:0;display:none;
+  margin:14px -24px -22px -24px;border-radius:0 0 20px 20px;
+  padding:14px 24px calc(14px + env(safe-area-inset-bottom,0px));
+  background:#fff;box-shadow:0 -6px 14px rgba(0,0,0,.1);z-index:2;
+}
+#hint-btn{margin-top:2px;}
+#quiz-continue-btn{background:#2f9e6b;color:#fff;}
+#quiz-continue-btn:hover{background:#25835a;}
+
+/* results */
+.results-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
+.results-table th,.results-table td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--card-line);font-size:14px;}
+.results-table th{color:var(--muted);font-size:12px;text-transform:none;}
+.self-assess{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:8px;}
+.self-assess li{display:flex;align-items:center;gap:10px;background:var(--sky);border-radius:10px;padding:8px 10px;font-size:13px;}
+.self-assess .bar-bg{flex:1;height:10px;background:#dce9e2;border-radius:6px;overflow:hidden;}
+.self-assess .bar-fill{height:100%;border-radius:6px;}
+.chip{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+@media (max-width:480px){
+  .card{padding:24px 20px;}
+  .room-code{font-size:32px;letter-spacing:4px;}
+}
+</style>
+</head>
+<body>
+
+<!-- START -->
+<div class="screen active" id="screen-start">
+  <div class="card">
+    <h1 id="start-title">⛳ Winkel-Minigolf</h1>
+    <p class="sub" id="start-subtitle">Lerne Winkelarten kennen und spiele gegeneinander – vor jedem Zug wartet eine Mathe-Aufgabe.</p>
+    <label class="field"><span>Dein Name</span>
+      <input type="text" id="inp-name" maxlength="14" placeholder="z. B. Mia">
+    </label>
+    <div class="tabs">
+      <button class="tab active" id="tab-create" onclick="switchTab('create')">Raum erstellen</button>
+      <button class="tab" id="tab-join" onclick="switchTab('join')">Raum beitreten</button>
+    </div>
+
+    <div class="pane active" id="pane-create">
+      <label class="field"><span>Spielmodus</span>
+        <div class="diff-grid two-col" id="mode-grid">
+          <div class="diff-opt selected" data-mode="golf" onclick="selectMode('golf')"><b>⛳ Minigolf</b><small>Ball einlochen</small></div>
+          <div class="diff-opt" data-mode="billard" onclick="selectMode('billard')"><b>🎱 Poolbillard</b><small>Kugel versenken</small></div>
+        </div>
+      </label>
+      <label class="field"><span id="holes-label">Anzahl Bahnen (1–10)</span>
+        <div class="range-row">
+          <input type="range" id="inp-holes" min="1" max="10" value="6" oninput="document.getElementById('val-holes').textContent=this.value">
+          <div class="range-val" id="val-holes">6</div>
+        </div>
+      </label>
+      <label class="field"><span>Lochgröße</span>
+        <div class="diff-grid" id="holesize-grid">
+          <div class="diff-opt" data-holesize="gross" onclick="selectHoleSize('gross')"><b>Leicht</b><small>großes Loch</small></div>
+          <div class="diff-opt selected" data-holesize="mittel" onclick="selectHoleSize('mittel')"><b>Mittel</b><small>mittleres Loch</small></div>
+          <div class="diff-opt" data-holesize="klein" onclick="selectHoleSize('klein')"><b>Schwer</b><small>kleines Loch</small></div>
+        </div>
+      </label>
+      <label class="field"><span>Schwierigkeit</span>
+        <div class="diff-grid" id="diff-grid">
+          <div class="diff-opt" data-diff="basis" onclick="selectDiff('basis')"><b>Basis</b><small>4 Winkelarten</small></div>
+          <div class="diff-opt selected" data-diff="profi" onclick="selectDiff('profi')"><b>Profi</b><small>+ Nullwinkel</small></div>
+          <div class="diff-opt" data-diff="experte" onclick="selectDiff('experte')"><b>Experte</b><small>+ überstumpf</small></div>
+        </div>
+      </label>
+      <button class="btn btn-primary" onclick="createRoom()">Raum erstellen</button>
+    </div>
+
+    <div class="pane" id="pane-join">
+      <label class="field"><span>Raum-Code</span>
+        <input type="text" id="inp-code" maxlength="5" placeholder="z. B. K7QX" style="text-transform:uppercase;">
+      </label>
+      <button class="btn btn-primary" onclick="joinRoom()">Beitreten</button>
+    </div>
+    <p class="sub" id="start-error" style="color:#a33131;display:none;"></p>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="screen-lobby">
+  <div class="card">
+    <h1>Warteraum</h1>
+    <p class="sub" id="lobby-sub">Teile den Code mit deiner Klasse.</p>
+    <div class="room-code" id="lobby-code">— — — —</div>
+    <ul class="player-list" id="lobby-players"></ul>
+    <button class="btn btn-primary" id="btn-start-game" onclick="hostStartGame()" style="display:none;">Spiel starten</button>
+    <p class="sub" id="lobby-wait-msg" style="display:none;">Warte, bis der Host das Spiel startet …</p>
+    <button class="btn btn-ghost" onclick="location.reload()">Zurück</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="screen-game">
+  <div class="game-wrap">
+    <div class="hud">
+      <div class="pill" id="hud-hole-pill">Bahn <b id="hud-hole">1/6</b></div>
+      <div class="pill" id="hud-theme-pill">🌳 Park</div>
+      <div class="pill">Am Zug: <b id="hud-turn">—</b></div>
+      <div class="pill">Schwierigkeit: <b id="hud-diff">Profi</b></div>
+      <div class="pill">Lochgröße: <b id="hud-holesize">Mittel</b></div>
+      <div class="spacer"></div>
+      <div class="pill">Deine Schläge: <b id="hud-strokes">0</b></div>
+    </div>
+    <div class="canvas-area" id="canvas-area">
+      <canvas id="course" width="800" height="450"></canvas>
+      <div class="aim-readout" id="aim-readout"></div>
+      <div class="waiting-panel" id="waiting-panel" style="display:none;">
+        <h2 id="waiting-title">Warten …</h2>
+        <p id="waiting-text">Ein anderer Spieler ist am Zug.</p>
+        <ul class="mini-scoreboard" id="waiting-scoreboard"></ul>
+      </div>
+      <div class="power-panel" id="power-panel">
+        <div class="power-panel-inner">
+          <div class="power-panel-title">Richtung gesetzt – jetzt Kraft wählen</div>
+          <div class="power-row">
+            <input type="range" id="power-slider" min="5" max="100" value="55" oninput="updatePowerPreview()">
+            <div class="power-value" id="power-value">55%</div>
+          </div>
+          <button class="btn btn-primary" onclick="fireShot()">Schlagen! ⛳</button>
+          <button class="btn btn-ghost" onclick="resetAimDirection()">↺ Richtung neu wählen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ MODAL -->
+<div class="quiz-overlay" id="quiz-overlay">
+  <div class="quiz-sheet">
+    <span class="quiz-tag" id="quiz-tag">FRAGE</span>
+    <h3 id="quiz-question">Frage</h3>
+    <div class="angle-svg-wrap" id="quiz-svg-wrap"></div>
+    <div id="quiz-body"></div>
+    <button class="btn btn-ghost" id="hint-btn" onclick="toggleHint()">💡 Tipp anzeigen</button>
+    <div class="feedback-box hint" id="hint-box"></div>
+    <div class="feedback-box" id="quiz-feedback"></div>
+    <div class="quiz-footer" id="quiz-footer">
+      <button class="btn btn-primary" id="quiz-continue-btn" onclick="proceedToShot()">Weiter ⛳</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLE SUMMARY -->
+<div class="screen" id="screen-holesummary">
+  <div class="card">
+    <h1>⛳ Geschafft!</h1>
+    <p class="sub" id="holesum-sub">Zwischenstand dieser Bahn.</p>
+    <table class="results-table" id="holesum-table"></table>
+    <button class="btn btn-primary" id="holesum-continue-btn" style="display:none;" onclick="hostContinueAfterHole()">Nächste Bahn ⛳</button>
+    <p class="sub" id="holesum-wait" style="display:none;">Warte, bis der Host weitermacht …</p>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="card" style="max-width:560px;">
+    <h1>🏆 Ergebnis</h1>
+    <p class="sub">Endstand nach allen Bahnen. Punkte = (richtige Antworten × 10) − Schläge gesamt.</p>
+    <table class="results-table" id="results-table"></table>
+    <h3 style="margin:0 0 10px;color:var(--grass-dark);">Deine Selbsteinschätzung</h3>
+    <ul class="self-assess" id="self-assess-list"></ul>
+    <button class="btn btn-secondary" onclick="location.reload()">Neues Spiel</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* ================= CONSTANTS & META ================= */
+const W = 800, H = 450;
+const BALL_R = 9;
+const WINKEL_META = {
+  nullw:      {label:'Nullwinkel',        plural:'Nullwinkel',         hex:'#8b98a3', desc:'0° – beide Schenkel liegen genau aufeinander.'},
+  spitz:      {label:'spitzer Winkel',    plural:'spitze Winkel',      hex:'#2f9e6b', desc:'größer als 0° und kleiner als 90°.'},
+  recht:      {label:'rechter Winkel',    plural:'rechte Winkel',      hex:'#2e6099', desc:'genau 90° – wie eine Zimmerecke.'},
+  stumpf:     {label:'stumpfer Winkel',   plural:'stumpfe Winkel',     hex:'#e08a2b', desc:'größer als 90° und kleiner als 180°.'},
+  gestreckt:  {label:'gestreckter Winkel',plural:'gestreckte Winkel',  hex:'#d64545', desc:'genau 180° – eine gerade Linie.'},
+  ueberstumpf:{label:'überstumpfer Winkel',plural:'überstumpfe Winkel',hex:'#8854c0', desc:'größer als 180° und kleiner als 360°.'}
+};
+const DIFF_SETTINGS = {
+  basis:   {types:['spitz','recht','stumpf','gestreckt'], messenChance:0.20, label:'Basis'},
+  profi:   {types:['nullw','spitz','recht','stumpf','gestreckt'], messenChance:0.30, label:'Profi'},
+  experte: {types:['nullw','spitz','recht','stumpf','gestreckt','ueberstumpf'], messenChance:0.48, label:'Experte'}
+};
+const TOLERANCE = {
+  basis:   {schaetzen:20, messen:15},
+  profi:   {schaetzen:15, messen:10},
+  experte: {schaetzen:10, messen:6}
+};
+const HOLE_CAP_STROKES = 8;  // maximale Schläge pro Bahn/Tisch, bevor automatisch weitergegeben wird
+const HOLE_SIZES = {
+  klein:  {label:'Schwer', golf:12, billard:17},
+  mittel: {label:'Mittel', golf:15, billard:20},
+  gross:  {label:'Leicht', golf:18, billard:23}
+};
+const MAX_SPEED = 26, FRICTION = 0.985, MIN_SPEED = 0.04, CAPTURE_SPEED = 1.6;
+
+const COURSE_THEMES = [
+  {name:'Park',      emoji:'🌳', bg:['#3f8f5f','#245c3d'], obstacle:'#8a5a34', obstacleBorder:'#5c3a20', accent:'#2f9e6b'},
+  {name:'Wüste',     emoji:'🏜️', bg:['#e2b566','#c9954a'], obstacle:'#a85a32', obstacleBorder:'#7a3f20', accent:'#e08a2b'},
+  {name:'Ozean',     emoji:'🌊', bg:['#3aa0c9','#1f6f96'], obstacle:'#e8dcb5', obstacleBorder:'#b9a877', accent:'#2e6099'},
+  {name:'Winter',    emoji:'❄️', bg:['#d7ecf5','#a8cbe0'], obstacle:'#7ea6c4', obstacleBorder:'#4f7896', accent:'#2e6099'},
+  {name:'Vulkan',    emoji:'🌋', bg:['#5a2a2a','#2b1414'], obstacle:'#241414', obstacleBorder:'#0d0808', accent:'#d64545'},
+  {name:'Weltraum',  emoji:'🪐', bg:['#241b4e','#0d0a24'], obstacle:'#5b5b7a', obstacleBorder:'#34334a', accent:'#8854c0'}
+];
+function themeForHole(idx){ return COURSE_THEMES[idx % COURSE_THEMES.length]; }
+
+function classify(deg){
+  if(deg<=0.01) return 'nullw';
+  if(deg<90-0.01) return 'spitz';
+  if(Math.abs(deg-90)<0.01) return 'recht';
+  if(deg<180-0.01) return 'stumpf';
+  if(Math.abs(deg-180)<0.01) return 'gestreckt';
+  if(deg<360-0.01) return 'ueberstumpf';
+  return 'nullw';
+}
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ================= APP STATE ================= */
+let myId = null, myName = '';
+let isHost = false;
+let peer = null;
+let conns = {}; // host: id->conn ; client: {host:conn}
+let roomCode = '';
+let state = null; // canonical game state (host owns source of truth)
+let localQuiz = null; // active quiz data on the client currently playing
+let localPhysics = null; // running physics sim for active player
+let awaitingShotConfirmation = false; // verhindert erneutes Zielen, bevor der Zugwechsel bestätigt ist
+let sinkAnim = null; // active "ball drops into hole/pocket" animation
+let liveShotFrameCounter = 0; // drosselt Live-Positionsupdates für Zuschauer
+
+/* ================= UI: START SCREEN ================= */
+let selectedDiff = 'profi';
+let selectedHoleSize = 'mittel';
+function selectHoleSize(s){
+  selectedHoleSize = s;
+  document.querySelectorAll('#holesize-grid .diff-opt').forEach(el=>el.classList.toggle('selected', el.dataset.holesize===s));
+}
+let selectedMode = 'golf';
+function switchTab(which){
+  document.getElementById('tab-create').classList.toggle('active', which==='create');
+  document.getElementById('tab-join').classList.toggle('active', which==='join');
+  document.getElementById('pane-create').classList.toggle('active', which==='create');
+  document.getElementById('pane-join').classList.toggle('active', which==='join');
+  if(which==='join'){
+    document.getElementById('start-title').textContent = 'Winkelspiele';
+    document.getElementById('start-subtitle').textContent = 'Gib den Raum-Code ein, den dir dein Lehrer oder Mitspieler gegeben hat.';
+    document.body.classList.remove('theme-billard');
+    document.body.classList.add('theme-neutral');
+    document.title = 'Winkelspiele';
+  } else {
+    document.body.classList.remove('theme-neutral');
+    selectMode(selectedMode);
+  }
+}
+function selectDiff(d){
+  selectedDiff = d;
+  document.querySelectorAll('#diff-grid .diff-opt').forEach(el=>el.classList.toggle('selected', el.dataset.diff===d));
+}
+function applyModeTheme(mode){
+  document.body.classList.remove('theme-neutral');
+  document.body.classList.toggle('theme-billard', mode==='billard');
+  document.title = mode==='billard' ? 'Winkel-Poolbillard' : 'Winkel-Minigolf';
+}
+function selectMode(m){
+  selectedMode = m;
+  document.querySelectorAll('#mode-grid .diff-opt').forEach(el=>el.classList.toggle('selected', el.dataset.mode===m));
+  document.getElementById('holes-label').textContent = m==='billard' ? 'Anzahl Tische (1–10)' : 'Anzahl Bahnen (1–10)';
+  document.getElementById('start-title').textContent = m==='billard' ? '🎱 Winkel-Poolbillard' : '⛳ Winkel-Minigolf';
+  document.getElementById('start-subtitle').textContent = m==='billard'
+    ? 'Lerne Winkelarten kennen und spiele gegeneinander Poolbillard – vor jedem Stoß wartet eine Mathe-Aufgabe.'
+    : 'Lerne Winkelarten kennen und spiele gegeneinander Minigolf – vor jedem Zug wartet eine Mathe-Aufgabe.';
+  applyModeTheme(m);
+}
+function showError(msg){
+  const e = document.getElementById('start-error');
+  e.textContent = msg; e.style.display = 'block';
+}
+function genCode(){
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for(let i=0;i<4;i++) c += letters[Math.floor(Math.random()*letters.length)];
+  return c;
+}
+
+function createRoom(){
+  myName = (document.getElementById('inp-name').value || 'Host').trim().slice(0,14);
+  if(!myName){ showError('Bitte gib deinen Namen ein.'); return; }
+  isHost = true;
+  roomCode = genCode();
+  peer = new Peer('mgw-' + roomCode);
+  peer.on('open', id=>{
+    myId = id;
+    state = {
+      phase:'lobby',
+      mode: selectedMode,
+      holeCount: parseInt(document.getElementById('inp-holes').value,10),
+      difficulty: selectedDiff,
+      holeSize: selectedHoleSize,
+      players: [{id:myId, name:myName, isHost:true, connected:true,
+        totalStrokes:0, sunkHoles:0, mathStats:{}}],
+      turnOrder: [myId],
+      currentHoleIndex: 0,
+      turnPointer: 0,
+      holeState: null,
+      connWaitCount:0
+    };
+    document.getElementById('lobby-code').textContent = roomCode;
+    document.getElementById('lobby-sub').textContent = 'Teile diesen Code mit deiner Klasse.';
+    document.getElementById('btn-start-game').style.display='block';
+    document.getElementById('lobby-wait-msg').style.display='none';
+    goTo('screen-lobby');
+    renderLobby();
+  });
+  peer.on('connection', conn=>{
+    conns[conn.peer] = conn;
+    conn.on('data', data=>handleHostMessage(conn, data));
+    conn.on('close', ()=>{
+      const p = state.players.find(p=>p.id===conn.peer);
+      if(p) p.connected = false;
+      renderLobby(); broadcastState();
+    });
+  });
+  peer.on('error', err=>{ showError('Verbindungsfehler: '+err.type); });
+}
+
+function joinRoom(){
+  myName = (document.getElementById('inp-name').value || 'Spieler').trim().slice(0,14);
+  const code = (document.getElementById('inp-code').value || '').trim().toUpperCase();
+  if(!myName){ showError('Bitte gib deinen Namen ein.'); return; }
+  if(code.length<4){ showError('Bitte gib einen gültigen Raum-Code ein.'); return; }
+  isHost = false;
+  roomCode = code;
+  peer = new Peer();
+  peer.on('open', id=>{
+    myId = id;
+    const conn = peer.connect('mgw-'+code, {reliable:true});
+    conns.host = conn;
+    conn.on('open', ()=>{
+      conn.send({type:'join', name: myName, id: myId});
+      document.getElementById('lobby-code').textContent = code;
+      document.getElementById('lobby-sub').textContent = 'Du bist beigetreten. Warte auf den Host.';
+      document.getElementById('lobby-wait-msg').style.display='block';
+      goTo('screen-lobby');
+    });
+    conn.on('data', data=>handleClientMessage(data));
+    conn.on('error', ()=>showError('Konnte den Raum nicht erreichen.'));
+  });
+  peer.on('error', err=>{ showError('Der Raum wurde nicht gefunden.'); });
+}
+
+/* ================= NETWORK MESSAGE HANDLING ================= */
+function handleHostMessage(conn, data){
+  if(data.type==='join'){
+    if(state.players.length>=6){ conn.send({type:'full'}); return; }
+    if(state.phase!=='lobby'){ conn.send({type:'full'}); return; }
+    state.players.push({id:data.id, name:data.name, isHost:false, connected:true,
+      totalStrokes:0, sunkHoles:0, mathStats:{}});
+    state.turnOrder.push(data.id);
+    renderLobby();
+    broadcastState();
+  } else if(data.type==='answer'){
+    recordAnswer(data.playerId, data.angleType, data.correct);
+    broadcastState();
+  } else if(data.type==='shotResult'){
+    applyShotResult(data.playerId, data.strokesDelta, data.outcome);
+  } else if(data.type==='liveShot'){
+    // an alle ANDEREN Clients weiterreichen, damit sie live mitverfolgen können
+    Object.entries(conns).forEach(([id,c])=>{ if(id!==conn.peer && c && c.open) c.send({type:'liveShot', payload:data.payload}); });
+    updateSpectateView(data.payload);
+  }
+}
+function handleClientMessage(data){
+  if(data.type==='state'){
+    state = data.state;
+    render();
+  } else if(data.type==='full'){
+    showError('Der Raum ist voll oder das Spiel läuft schon.');
+  } else if(data.type==='liveShot'){
+    updateSpectateView(data.payload);
+  }
+}
+function broadcastState(){
+  if(!isHost) return;
+  const payload = {type:'state', state};
+  Object.values(conns).forEach(c=>{ if(c && c.open) c.send(payload); });
+  render();
+}
+function sendLiveShot(payload){
+  if(isHost){
+    const msg = {type:'liveShot', payload};
+    Object.values(conns).forEach(c=>{ if(c && c.open) c.send(msg); });
+  } else if(conns.host && conns.host.open){
+    conns.host.send({type:'liveShot', payload});
+  }
+}
+function updateSpectateView(payload){
+  spectateBall = payload;
+  if(!state) return;
+  if(currentTurnId()!==myId){ drawCourse(); }
+}
+function currentTurnId(){ return state.turnOrder[state.turnPointer]; }
+
+/* ================= LOBBY RENDER ================= */
+function renderLobby(){
+  if(!state) return;
+  const ul = document.getElementById('lobby-players');
+  ul.innerHTML = '';
+  state.players.forEach(p=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="dot" style="background:${p.connected? '#2f9e6b':'#c23f1c'}"></span>${p.name}${p.isHost?'<span class="host-badge">Host</span>':''}`;
+    ul.appendChild(li);
+  });
+}
+
+function hostStartGame(){
+  if(!isHost) return;
+  state.holeCount = parseInt(document.getElementById('inp-holes').value,10);
+  state.difficulty = selectedDiff;
+  state.holeSize = selectedHoleSize;
+  state.mode = selectedMode;
+  state.currentHoleIndex = 0;
+  state.turnPointer = 0;
+  state.players.forEach(p=>{ p.totalStrokes=0; p.sunkHoles=0; p.mathStats={}; });
+  startHole(0);
+  broadcastState();
+  goTo('screen-game');
+}
+
+/* ================= COURSE / TABLE GENERATION (deterministic, same on every client) ================= */
+function generateCourse(holeIndex, mode, holeSize){
+  const theme = themeForHole(holeIndex);
+  const sizes = HOLE_SIZES[holeSize] || HOLE_SIZES.klein;
+  if(mode==='billard'){
+    const rnd = mulberry32(holeIndex*613 + 7);
+    const table = {x:70, y:60, w:660, h:330};
+    const pocketR = sizes.billard;
+    const pockets = [
+      {x:table.x,            y:table.y,            r:pocketR},
+      {x:table.x+table.w/2,  y:table.y-3,           r:pocketR},
+      {x:table.x+table.w,    y:table.y,             r:pocketR},
+      {x:table.x,            y:table.y+table.h,     r:pocketR},
+      {x:table.x+table.w/2,  y:table.y+table.h+3,   r:pocketR},
+      {x:table.x+table.w,    y:table.y+table.h,     r:pocketR}
+    ];
+    const cueStart = {x:table.x+70, y:table.y+table.h/2};
+    let objX, objY, tries=0;
+    do{
+      objX = table.x+150+rnd()*(table.w-260);
+      objY = table.y+30+rnd()*(table.h-60);
+      tries++;
+    } while(pockets.some(p=>Math.hypot(objX-p.x,objY-p.y)<60) && tries<30);
+    return {mode:'billard', table, pockets, cueStart, objectStart:{x:objX,y:objY}, theme};
+  }
+  const rnd = mulberry32(holeIndex*977 + 13);
+  const obstacleCount = Math.min(1 + Math.floor(holeIndex/1.2), 8);
+  const tee = {x:55, y:H/2};
+  const hole = {x:W-60, y: 60 + rnd()*(H-120)};
+  const obstacles = [];
+  for(let i=0;i<obstacleCount;i++){
+    const ow = 24 + rnd()*90, oh = 24 + rnd()*90;
+    const ox = 180 + rnd()*(W-380);
+    const oy = 30 + rnd()*(H-60-oh);
+    if(Math.hypot(ox-tee.x, oy-tee.y) < 90) continue;
+    if(Math.hypot(ox-hole.x, oy-hole.y) < 90) continue;
+    obstacles.push({x:ox,y:oy,w:ow,h:oh});
+  }
+  return {mode:'golf', tee, hole, holeRadius:sizes.golf, obstacles, par: 3 + Math.floor(holeIndex/3), theme};
+}
+
+function isRoundFinished(playerId){
+  const b = state.holeState.balls[playerId];
+  if(state.mode==='billard') return b.objSunk || b.strokes>=HOLE_CAP_STROKES;
+  return b.sunk || b.strokes>=HOLE_CAP_STROKES;
+}
+
+function startHole(idx){
+  state.currentHoleIndex = idx;
+  state.turnPointer = 0;
+  const course = generateCourse(idx, state.mode, state.holeSize);
+  state.holeState = { course, balls:{} };
+  state.players.forEach(p=>{
+    if(state.mode==='billard'){
+      state.holeState.balls[p.id] = {cueX:course.cueStart.x, cueY:course.cueStart.y,
+        objX:course.objectStart.x, objY:course.objectStart.y, objSunk:false, strokes:0};
+    } else {
+      state.holeState.balls[p.id] = {x:course.tee.x, y:course.tee.y, strokes:0, sunk:false};
+    }
+    p.holeCorrect = 0;
+    p.holeAnswered = 0;
+  });
+  state.phase = 'quiz';
+}
+
+/* ================= TURN / QUIZ / SHOT FLOW (host authoritative) ================= */
+function allSunkOrCapped(){
+  return state.players.every(p=>isRoundFinished(p.id));
+}
+function advanceTurn(){
+  let tries=0;
+  do{
+    state.turnPointer = (state.turnPointer+1) % state.turnOrder.length;
+    tries++;
+  } while(tries<=state.turnOrder.length && isRoundFinished(currentTurnId()));
+
+  if(allSunkOrCapped()){
+    enterHoleSummary();
+  } else {
+    state.phase = 'quiz';
+  }
+}
+function enterHoleSummary(){
+  state.holeSummary = state.players.map(p=>({
+    id:p.id, name:p.name,
+    strokes: state.holeState.balls[p.id].strokes,
+    correct: p.holeCorrect||0,
+    answered: p.holeAnswered||0
+  }));
+  state.phase = 'holeSummary';
+}
+function hostContinueAfterHole(){
+  if(!isHost) return;
+  const next = state.currentHoleIndex+1;
+  if(next>=state.holeCount){
+    state.phase = 'results';
+  } else {
+    startHole(next);
+  }
+  broadcastState();
+}
+function recordAnswer(playerId, angleType, correct){
+  const p = state.players.find(pl=>pl.id===playerId);
+  if(!p) return;
+  if(!p.mathStats[angleType]) p.mathStats[angleType] = {correct:0,total:0};
+  p.mathStats[angleType].total++;
+  if(correct) p.mathStats[angleType].correct++;
+  p.holeAnswered = (p.holeAnswered||0) + 1;
+  p.holeCorrect = (p.holeCorrect||0) + (correct?1:0);
+}
+function applyShotResult(playerId, strokesDelta, outcome){
+  if(!isHost) return;
+  const b = state.holeState.balls[playerId];
+  if(!b) return;
+  b.strokes += strokesDelta;
+  let success = false;
+  if(state.mode==='billard'){
+    b.cueX = outcome.cueX; b.cueY = outcome.cueY;
+    b.objX = outcome.objX; b.objY = outcome.objY;
+    if(outcome.objSunk){ b.objSunk = true; success = true; }
+  } else {
+    b.x = outcome.x; b.y = outcome.y;
+    if(outcome.sunk){ b.sunk = true; success = true; }
+  }
+  const p = state.players.find(pl=>pl.id===playerId);
+  if(p){
+    p.totalStrokes += strokesDelta;
+    if(success) p.sunkHoles += 1;
+  }
+  advanceTurn();
+  broadcastState();
+}
+
+function reportAnswer(angleType, correct){
+  if(isHost){ recordAnswer(myId, angleType, correct); broadcastState(); }
+  else { conns.host.send({type:'answer', playerId:myId, angleType, correct}); }
+}
+function reportShot(strokesDelta, outcome){
+  if(isHost){ applyShotResult(myId, strokesDelta, outcome); }
+  else { conns.host.send({type:'shotResult', playerId:myId, strokesDelta, outcome}); }
+}
+
+/* ================= MAIN RENDER DISPATCH ================= */
+function goTo(screenId){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+}
+let lastSpectateTurnId = null;
+let spectateBall = null; // zuletzt bekannte Live-Position des aktiven Spielers (für Zuschauer)
+
+function render(){
+  if(!state) return;
+  applyModeTheme(state.mode);
+  if(state.phase==='lobby'){ renderLobby(); goTo('screen-lobby'); return; }
+  if(state.phase==='holeSummary'){ renderHoleSummary(); goTo('screen-holesummary'); return; }
+  if(state.phase==='results'){ renderResults(); goTo('screen-results'); return; }
+
+  goTo('screen-game');
+  if(currentTurnId()!==lastSpectateTurnId){
+    spectateBall = null; // neuer Spieler ist dran -> alte Live-Position verwerfen
+    lastSpectateTurnId = currentTurnId();
+  }
+  const theme = state.holeState.course.theme;
+  document.getElementById('hud-hole-pill').innerHTML = (state.mode==='billard'?'Tisch ':'Bahn ') +
+    '<b>'+(state.currentHoleIndex+1)+'/'+state.holeCount+'</b>';
+  document.getElementById('hud-theme-pill').textContent = theme.emoji+' '+theme.name;
+  document.getElementById('hud-diff').textContent = DIFF_SETTINGS[state.difficulty].label;
+  document.getElementById('hud-holesize').textContent = (HOLE_SIZES[state.holeSize]||HOLE_SIZES.klein).label;
+  const turnPlayer = state.players.find(p=>p.id===currentTurnId());
+  document.getElementById('hud-turn').textContent = turnPlayer ? turnPlayer.name : '—';
+  const myBall = state.holeState.balls[myId];
+  document.getElementById('hud-strokes').textContent = myBall ? myBall.strokes : 0;
+
+  const amActive = currentTurnId()===myId;
+  document.getElementById('waiting-panel').style.display = amActive ? 'none' : 'flex';
+  document.getElementById('course').style.display = 'block'; // Feld bleibt für Zuschauer sichtbar
+
+  if(!amActive){
+    awaitingShotConfirmation = false;
+    document.getElementById('waiting-title').textContent = (turnPlayer?turnPlayer.name:'Ein Spieler') + ' ist dran';
+    document.getElementById('waiting-text').textContent = 'Du siehst live mit.';
+    const sb = document.getElementById('waiting-scoreboard');
+    sb.innerHTML='';
+    [...state.players].sort((a,b)=>a.totalStrokes-b.totalStrokes).forEach(p=>{
+      const li=document.createElement('li');
+      li.innerHTML = `<span>${p.name}</span><span>${p.totalStrokes} Schläge</span>`;
+      sb.appendChild(li);
+    });
+    document.getElementById('power-panel').style.display='none';
+    closeQuiz();
+    drawCourse();
+    return;
+  }
+
+  if(state.phase==='quiz'){
+    if(!localQuiz || localQuiz.forHole!==state.currentHoleIndex || localQuiz.forStrokeCount!==myBall.strokes){
+      openQuiz();
+    }
+  } else {
+    closeQuiz();
+  }
+  drawCourse();
+}
+
+/* ================= HOLE SUMMARY RENDER ================= */
+function renderHoleSummary(){
+  document.getElementById('holesum-sub').textContent =
+    (state.mode==='billard'?'Tisch ':'Bahn ')+(state.currentHoleIndex+1)+' von '+state.holeCount+' – Zwischenstand';
+  const tbl = document.getElementById('holesum-table');
+  let html = '<tr><th>Name</th><th>Schläge</th><th>Richtige Antworten</th></tr>';
+  (state.holeSummary||[]).forEach(r=>{
+    html += `<tr><td>${r.name}</td><td>${r.strokes}</td><td>${r.correct}/${r.answered}</td></tr>`;
+  });
+  tbl.innerHTML = html;
+  const isLast = (state.currentHoleIndex+1)>=state.holeCount;
+  const btn = document.getElementById('holesum-continue-btn');
+  btn.textContent = isLast ? 'Zur Endauswertung 🏆' : (state.mode==='billard'?'Nächster Tisch 🎱':'Nächste Bahn ⛳');
+  btn.style.display = isHost? 'block':'none';
+  document.getElementById('holesum-wait').style.display = isHost? 'none':'block';
+}
+
+/* ================= RESULTS RENDER ================= */
+function combinedScore(p){
+  const totalCorrect = Object.values(p.mathStats||{}).reduce((s,v)=>s+v.correct,0);
+  return totalCorrect*10 - p.totalStrokes;
+}
+function renderResults(){
+  const tbl = document.getElementById('results-table');
+  const rows = [...state.players].sort((a,b)=>combinedScore(b)-combinedScore(a));
+  let html = '<tr><th>Platz</th><th>Name</th><th>Schläge</th><th>Richtige Antworten</th><th>Punkte</th></tr>';
+  rows.forEach((p,i)=>{
+    const totalCorrect = Object.values(p.mathStats||{}).reduce((s,v)=>s+v.correct,0);
+    html += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.totalStrokes}</td><td>${totalCorrect}</td><td><b>${combinedScore(p)}</b></td></tr>`;
+  });
+  tbl.innerHTML = html;
+
+  const me = state.players.find(p=>p.id===myId) || state.players[0];
+  const list = document.getElementById('self-assess-list');
+  list.innerHTML = '';
+  Object.keys(WINKEL_META).forEach(key=>{
+    const st = me.mathStats[key];
+    if(!st || st.total===0) return;
+    const pct = Math.round(100*st.correct/st.total);
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="chip" style="background:${WINKEL_META[key].hex}"></span>
+      <span style="min-width:130px;">${WINKEL_META[key].label}</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${WINKEL_META[key].hex}"></div></div>
+      <span>${st.correct}/${st.total}</span>`;
+    list.appendChild(li);
+  });
+  if(list.innerHTML===''){
+    list.innerHTML = '<li>Keine Fragen beantwortet.</li>';
+  }
+}
+
+/* ================= WINKEL-DIAGRAMM (Kreis + farbig markierter Sektor) ================= */
+const NEUTRAL_WEDGE_COLOR = '#93a9a0'; // kräftigerer, gut sichtbarer Kontrast vor der Antwort
+function buildAngleSVG(deg, opts){
+  opts = opts||{};
+  const showScale = !!opts.scale;
+  const size = opts.size || (showScale ? 280 : 220);
+  const cx = size/2, cy = size/2;
+  const r = showScale ? size*0.32 : size*0.37;
+  const rot = opts.rotation || 0;
+  const arcColor = opts.color || NEUTRAL_WEDGE_COLOR;
+
+  function pt(angleDeg, radius){
+    const rad = angleDeg * Math.PI/180;
+    return [cx + radius*Math.cos(rad), cy - radius*Math.sin(rad)];
+  }
+  const a1 = rot, a2 = rot + deg;
+  const steps = Math.max(2, Math.round(deg/4) || 2);
+  const wedgePts = [`${cx},${cy}`];
+  for(let i=0;i<=steps;i++){
+    const ang = a1 + (deg*i/steps);
+    const [x,y] = pt(ang, r);
+    wedgePts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  const [p1x,p1y] = pt(a1, r);
+  const [p2x,p2y] = pt(a2, r);
+
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f4f9f6" stroke="#dce9e2" stroke-width="1.5"/>`;
+  if(showScale){
+    for(let d=0; d<360; d+=10){
+      const major = d%30===0;
+      const [ix,iy] = pt(rot+d, r-(major?11:5));
+      const [ox,oy] = pt(rot+d, r);
+      svg += `<line x1="${ix.toFixed(1)}" y1="${iy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="#5b7267" stroke-width="${major?1.8:1}"/>`;
+      if(major){
+        const [tx,ty] = pt(rot+d, r+17);
+        svg += `<text x="${tx.toFixed(1)}" y="${(ty+3).toFixed(1)}" font-size="11" fill="#2e6099" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600">${d}</text>`;
+      }
+    }
+  }
+  svg += `<polygon points="${wedgePts.join(' ')}" fill="${arcColor}" fill-opacity="0.97" stroke="${arcColor}" stroke-width="2.5"/>`;
+  svg += `<line x1="${cx}" y1="${cy}" x2="${p1x.toFixed(1)}" y2="${p1y.toFixed(1)}" stroke="#0f2a1d" stroke-width="4" stroke-linecap="round"/>`;
+  svg += `<line x1="${cx}" y1="${cy}" x2="${p2x.toFixed(1)}" y2="${p2y.toFixed(1)}" stroke="#0f2a1d" stroke-width="4" stroke-linecap="round"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="5" fill="#0f2a1d"/>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+/* ================= FRAGEN-AUSWAHL: fairer "Ziehsack" statt reinem Zufall ================= */
+let typeBag = [], typeBagDiff = null;
+function drawTypeFromBag(diff){
+  if(typeBagDiff !== diff || typeBag.length===0){
+    typeBag = DIFF_SETTINGS[diff].types.slice();
+    for(let i=typeBag.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [typeBag[i],typeBag[j]] = [typeBag[j],typeBag[i]];
+    }
+    typeBagDiff = diff;
+  }
+  return typeBag.pop();
+}
+function degreeForType(t, diff){
+  switch(t){
+    case 'nullw': return 0;
+    case 'spitz': return Math.round(diff==='basis'? 10+Math.random()*70 : 5+Math.random()*83);
+    case 'recht': return 90;
+    case 'stumpf': return Math.round(diff==='basis'? 100+Math.random()*70 : 95+Math.random()*83);
+    case 'gestreckt': return 180;
+    case 'ueberstumpf': return Math.round(190+Math.random()*160);
+    default: return 45;
+  }
+}
+function pickDistinctTypes(diff, exclude, count){
+  const pool = DIFF_SETTINGS[diff].types.filter(t=>t!==exclude);
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const out = [];
+  for(let i=0;i<count;i++) out.push(pool[i % pool.length]);
+  return out;
+}
+function pickQKind(diff){
+  if(Math.random() < DIFF_SETTINGS[diff].messenChance) return 'messen';
+  const rest = ['erkennen','schaetzen','mc_single','mc_multi'];
+  return rest[Math.floor(Math.random()*rest.length)];
+}
+
+/* ================= TIPPS: Denkanstöße statt Lösungsverrat ================= */
+const HINT_POOLS = {
+  erkennen: [
+    'Tipp: Vergleiche den Winkel mit einer Zimmerecke (90°) – ist er kleiner, genauso groß oder größer?',
+    'Tipp: Eine gerade Linie ist komplett flach. Wie weit ist der Winkel davon entfernt – eher nah dran oder ganz anders?',
+    'Tipp: Ein sehr spitzer Winkel sieht aus wie ein schmaler Pfeil, ein stumpfer wirkt schon fast flach gedrückt.'
+  ],
+  schaetzen: [
+    'Tipp: Schätze zuerst grob: kleiner, gleich groß oder größer als 90°?',
+    'Tipp: Ein rechter Winkel (90°) passt genau in eine Zimmerecke – nutze ihn als Vergleichsmaßstab.',
+    'Tipp: Teile den Winkel in deiner Vorstellung in gleich große Stücke auf und zähle sie ab.'
+  ],
+  messen: [
+    'Tipp: Starte am 0°-Strich und zähle die kleinen Striche bis zum zweiten Schenkel.',
+    'Tipp: Die dick beschrifteten Striche liegen alle 30° auseinander – orientiere dich zuerst daran.',
+    'Tipp: Schau erst grob (0°, 90°, 180°, 270°), dann erst genauer dazwischen.'
+  ],
+  mc_single: [
+    'Tipp: Prüfe jeden Winkel einzeln – passt er eher zu „kleiner als 90°“, „genau 90°“ oder „größer als 90°“?',
+    'Tipp: Schließe zuerst die Winkel aus, die eindeutig nicht passen.'
+  ],
+  mc_multi: [
+    'Tipp: Es kann mehr als eine richtige Antwort geben – prüfe wirklich jeden Winkel für sich.',
+    'Tipp: Schließe zuerst die Winkel aus, die eindeutig nicht passen, und schau dir den Rest genauer an.'
+  ]
+};
+function pickHint(qKind){
+  const pool = HINT_POOLS[qKind] || HINT_POOLS.erkennen;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ================= QUIZ AUFBAU ================= */
+function openQuiz(){
+  awaitingShotConfirmation = false;
+  const diff = state.difficulty;
+  const qKind = pickQKind(diff);
+
+  const tagEl = document.getElementById('quiz-tag');
+  const qEl = document.getElementById('quiz-question');
+  const svgWrap = document.getElementById('quiz-svg-wrap');
+  const body = document.getElementById('quiz-body');
+  const fb = document.getElementById('quiz-feedback');
+  fb.className='feedback-box'; fb.innerHTML='';
+  const contBtn = document.getElementById('quiz-continue-btn');
+  document.getElementById('quiz-footer').style.display='none';
+  contBtn.textContent = state.mode==='billard' ? 'Weiter zum Stoß 🎱' : 'Weiter zum Schlag ⛳';
+  const hintBox = document.getElementById('hint-box');
+  hintBox.className='feedback-box hint'; hintBox.textContent='';
+  document.getElementById('hint-btn').style.display='block';
+
+  if(qKind==='erkennen' || qKind==='schaetzen' || qKind==='messen'){
+    const type = drawTypeFromBag(diff);
+    const deg = degreeForType(type, diff);
+    const rotation = qKind==='messen' ? 0 : Math.floor(Math.random()*360);
+    localQuiz = {kindGroup:'single', forHole: state.currentHoleIndex, forStrokeCount: state.holeState.balls[myId].strokes,
+      deg, type, qKind, rotation, hint: pickHint(qKind), answered:false};
+
+    svgWrap.innerHTML = buildAngleSVG(deg, {rotation, color:NEUTRAL_WEDGE_COLOR, scale: qKind==='messen'});
+    svgWrap.style.display = 'flex';
+
+    if(qKind==='erkennen'){
+      tagEl.textContent='WINKELART ERKENNEN';
+      qEl.textContent='Welche Winkelart ist das?';
+      const options = new Set([type]);
+      const types = DIFF_SETTINGS[diff].types;
+      while(options.size<Math.min(4, types.length)){ options.add(types[Math.floor(Math.random()*types.length)]); }
+      const optArr = [...options].sort(()=>Math.random()-0.5);
+      let html = '<div class="opt-grid">';
+      optArr.forEach(o=>{ html += `<button class="opt-btn" onclick="answerErkennen('${o}')" id="opt-${o}">${WINKEL_META[o].label}</button>`; });
+      html += '</div>';
+      body.innerHTML = html;
+    } else if(qKind==='schaetzen'){
+      const tol = TOLERANCE[diff].schaetzen;
+      tagEl.textContent='WINKEL SCHÄTZEN';
+      qEl.textContent='Wie groß ist dieser Winkel ungefähr? (±'+tol+'° zählen als richtig)';
+      body.innerHTML = `
+        <div class="est-row">
+          <input type="range" min="0" max="360" value="180" id="est-slider" oninput="syncEstFromSlider(this.value)">
+          <input type="number" min="0" max="360" id="est-number" value="180" class="est-number-input" oninput="syncEstFromNumber(this.value)">
+          <span class="est-deg-symbol">Grad</span>
+        </div>
+        <button class="btn btn-primary" onclick="answerSchaetzen()">Antwort abgeben</button>
+      `;
+    } else {
+      tagEl.textContent='WINKEL MESSEN';
+      qEl.textContent='Nutze die Gradskala am Kreisrand. Welche Gradzahl zeigt der markierte Winkel?';
+      body.innerHTML = `
+        <div class="est-row">
+          <input type="number" min="0" max="360" id="measure-number" placeholder="z. B. 120" class="est-number-input" style="flex:1;min-width:100px;">
+          <span class="est-deg-symbol">Grad</span>
+        </div>
+        <button class="btn btn-primary" onclick="answerMessen()">Antwort abgeben</button>
+      `;
+    }
+  } else {
+    // mc_single / mc_multi: 4 kleine Winkel, gefragt wird nach einer Zielwinkelart
+    svgWrap.style.display = 'none';
+    svgWrap.innerHTML = '';
+    const targetType = drawTypeFromBag(diff);
+    let items;
+    if(qKind==='mc_single'){
+      const correctIdx = Math.floor(Math.random()*4);
+      const distractors = pickDistinctTypes(diff, targetType, 3);
+      let dIdx = 0;
+      items = [0,1,2,3].map(i=>{
+        if(i===correctIdx) return {type:targetType, deg:degreeForType(targetType,diff), match:true};
+        const t = distractors[dIdx++];
+        return {type:t, deg:degreeForType(t,diff), match:false};
+      });
+    } else {
+      const correctCount = 1 + Math.floor(Math.random()*4); // 1..4
+      items = [];
+      for(let i=0;i<correctCount;i++) items.push({type:targetType, deg:degreeForType(targetType,diff), match:true});
+      const otherTypes = DIFF_SETTINGS[diff].types.filter(t=>t!==targetType);
+      for(let i=items.length;i<4;i++){
+        const t = otherTypes.length? otherTypes[Math.floor(Math.random()*otherTypes.length)] : targetType;
+        items.push({type:t, deg:degreeForType(t,diff), match:t===targetType});
+      }
+      for(let i=items.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [items[i],items[j]]=[items[j],items[i]]; }
+    }
+    localQuiz = {kindGroup:'multi', forHole: state.currentHoleIndex, forStrokeCount: state.holeState.balls[myId].strokes,
+      qKind, targetType, items, hint: pickHint(qKind), answered:false};
+
+    tagEl.textContent = qKind==='mc_single' ? 'EINFACHAUSWAHL' : 'MEHRFACHAUSWAHL';
+    qEl.textContent = qKind==='mc_single'
+      ? `Welcher der folgenden Winkel ist ein ${WINKEL_META[targetType].label}?`
+      : `Welche der folgenden Winkel sind ${WINKEL_META[targetType].plural}? (1 bis 4 können richtig sein)`;
+
+    let html = '<div class="mc-grid">';
+    items.forEach((it,i)=>{
+      const rotation = Math.floor(Math.random()*360);
+      const svg = buildAngleSVG(it.deg, {rotation, color:NEUTRAL_WEDGE_COLOR, size:130});
+      if(qKind==='mc_single'){
+        html += `<div class="mc-item clickable" id="mc-item-${i}" onclick="answerMcSingle(${i})">
+          <div class="mc-svg-wrap">${svg}</div>
+        </div>`;
+      } else {
+        html += `<div class="mc-item" id="mc-item-${i}">
+          <div class="mc-svg-wrap">${svg}</div>
+          <label><input type="checkbox" id="mc-check-${i}"> auswählen</label>
+        </div>`;
+      }
+    });
+    html += '</div>';
+    if(qKind==='mc_multi'){
+      html += '<button class="btn btn-primary" onclick="answerMcMulti()">Auswahl prüfen</button>';
+    }
+    body.innerHTML = html;
+  }
+
+  document.getElementById('quiz-overlay').classList.add('active');
+}
+function toggleHint(){
+  const box = document.getElementById('hint-box');
+  if(box.classList.contains('show')){ box.classList.remove('show'); }
+  else { box.textContent = localQuiz.hint; box.classList.add('show'); }
+}
+function syncEstFromSlider(v){ document.getElementById('est-number').value = v; }
+function syncEstFromNumber(v){
+  let n = parseInt(v,10);
+  if(isNaN(n)) return;
+  n = Math.max(0, Math.min(360, n));
+  document.getElementById('est-slider').value = n;
+}
+function closeQuiz(){ document.getElementById('quiz-overlay').classList.remove('active'); }
+
+function finishQuiz(correct, feedbackHtml){
+  const fb = document.getElementById('quiz-feedback');
+  fb.className = 'feedback-box show ' + (correct?'ok':'bad');
+  fb.innerHTML = feedbackHtml;
+  document.getElementById('quiz-footer').style.display='flex';
+  document.getElementById('hint-btn').style.display='none';
+  document.getElementById('hint-box').classList.remove('show');
+}
+function showFeedback(correct, extraText){
+  const meta = WINKEL_META[localQuiz.type];
+  finishQuiz(correct, `<b>${correct? 'Richtig! ':'Nicht ganz. '}</b>Der Winkel ist ${localQuiz.deg}° groß – ein <b>${meta.label}</b> (${meta.desc})${extraText? ' '+extraText:''}`);
+  document.getElementById('quiz-svg-wrap').innerHTML = buildAngleSVG(localQuiz.deg, {rotation: localQuiz.rotation, color: meta.hex, scale: localQuiz.qKind==='messen', size:150});
+  reportAnswer(localQuiz.type, correct);
+}
+function answerErkennen(choice){
+  if(localQuiz.answered) return;
+  localQuiz.answered = true;
+  const correct = choice===localQuiz.type;
+  document.getElementById('opt-'+choice).classList.add(correct?'correct':'wrong');
+  if(!correct) document.getElementById('opt-'+localQuiz.type).classList.add('correct');
+  showFeedback(correct);
+}
+function answerSchaetzen(){
+  if(localQuiz.answered) return;
+  const raw = document.getElementById('est-number').value;
+  if(raw==='') return;
+  localQuiz.answered = true;
+  const val = Math.max(0, Math.min(360, parseInt(raw,10)));
+  const tol = TOLERANCE[state.difficulty].schaetzen;
+  const correct = Math.abs(val-localQuiz.deg) <= tol;
+  showFeedback(correct, `Du hast ${val}° eingegeben.`);
+}
+function answerMessen(){
+  if(localQuiz.answered) return;
+  const raw = document.getElementById('measure-number').value;
+  if(raw==='') return;
+  localQuiz.answered = true;
+  const val = Math.max(0, Math.min(360, parseInt(raw,10)));
+  const tol = TOLERANCE[state.difficulty].messen;
+  const correct = Math.abs(val-localQuiz.deg) <= tol;
+  showFeedback(correct, `Du hast ${val}° abgelesen.`);
+}
+function answerMcSingle(i){
+  if(localQuiz.answered) return;
+  localQuiz.answered = true;
+  const correct = localQuiz.items[i].match;
+  localQuiz.items.forEach((it,idx)=>{
+    const el = document.getElementById('mc-item-'+idx);
+    if(it.match) el.classList.add('correct');
+    else if(idx===i) el.classList.add('wrong');
+  });
+  const meta = WINKEL_META[localQuiz.targetType];
+  finishQuiz(correct, `<b>${correct?'Richtig! ':'Nicht ganz. '}</b>Der markierte Winkel war ${correct?'':'nicht '}ein <b>${meta.label}</b> (${meta.desc})`);
+  reportAnswer(localQuiz.targetType, correct);
+}
+function answerMcMulti(){
+  if(localQuiz.answered) return;
+  localQuiz.answered = true;
+  let allCorrect = true;
+  localQuiz.items.forEach((it,idx)=>{
+    const cb = document.getElementById('mc-check-'+idx);
+    const checked = cb.checked;
+    cb.disabled = true;
+    const el = document.getElementById('mc-item-'+idx);
+    if(checked === it.match){
+      if(it.match) el.classList.add('correct');
+    } else {
+      allCorrect = false;
+      el.classList.add('wrong');
+    }
+  });
+  const meta = WINKEL_META[localQuiz.targetType];
+  finishQuiz(allCorrect, `<b>${allCorrect?'Richtig! ':'Nicht ganz. '}</b>Grün markiert sind alle ${meta.plural} in dieser Auswahl, rot markiert sind Fehler in deiner Auswahl.`);
+  reportAnswer(localQuiz.targetType, allCorrect);
+}
+function proceedToShot(){
+  closeQuiz();
+  state.phase='shot';
+  render();
+}
+
+/* ================= EINLOCH-/VERSENK-ANIMATION ================= */
+function playSinkAnimation(x, y, color, isObject, onDone){
+  const duration = 22;
+  let frame = 0;
+  function step(){
+    frame++;
+    const t = Math.min(1, frame/duration);
+    const ease = t*t;
+    sinkAnim = {
+      x: x, y: y, // Zielposition steht schon fest (Golf: Lochmitte, Billard: Taschenmitte)
+      scale: 1-t,
+      alpha: 1-t*0.85,
+      color, isObject
+    };
+    drawCourse();
+    if(t<1){ requestAnimationFrame(step); }
+    else { sinkAnim = null; drawCourse(); onDone(); }
+  }
+  step();
+}
+
+/* ================= GEMEINSAME ZIEL-VISUALISIERUNG (Ziehen zum Schlagen/Stoßen) ================= */
+function getActiveBallPos(activePlayerId){
+  const b = state.holeState.balls[activePlayerId];
+  return state.mode==='billard' ? {x:b.cueX, y:b.cueY} : {x:b.x, y:b.y};
+}
+function currentAimDirection(){
+  if(aimStage==='direction' && dragging && dragCurrent){
+    const ball = getActiveBallPos(myId);
+    const dx = dragCurrent.x-ball.x, dy = dragCurrent.y-ball.y;
+    const len = Math.hypot(dx,dy);
+    if(len<1) return {x:0,y:0,ready:false};
+    return {x:dx/len, y:dy/len, ready: len>=10};
+  }
+  if(aimStage==='power' && lockedDir){
+    return {x:lockedDir.x, y:lockedDir.y, ready:true};
+  }
+  return null;
+}
+function drawAimOverlay(ctx, ballPos){
+  const ro = document.getElementById('aim-readout');
+  const dir = currentAimDirection();
+  if(!dir || !dir.ready){ ro.style.display='none'; return; }
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.setLineDash([5,5]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ballPos.x,ballPos.y); ctx.lineTo(ballPos.x+70,ballPos.y); ctx.stroke();
+  ctx.setLineDash([]);
+  const shotDeg = ((Math.atan2(-dir.y,dir.x))*180/Math.PI+360)%360;
+  const relDeg = shotDeg>180 ? 360-shotDeg : shotDeg;
+  const cls = classify(Math.round(relDeg));
+  ctx.strokeStyle = WINKEL_META[cls].hex; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(ballPos.x,ballPos.y); ctx.lineTo(ballPos.x+dir.x*90, ballPos.y+dir.y*90); ctx.stroke();
+  ro.style.display='block';
+  const suffix = aimStage==='power'
+    ? ' · Kraft '+(document.getElementById('power-slider')?document.getElementById('power-slider').value:'—')+'%'
+    : ' · loslassen zum Bestätigen';
+  ro.textContent = Math.round(relDeg)+'° zur Horizontalen – '+WINKEL_META[cls].label+suffix;
+  ro.style.color = WINKEL_META[cls].hex;
+}
+
+/* ================= ZIEL-VISUALISIERUNG: POOLBILLARD (mit Bande/Zielkugel-Vorschau) ================= */
+function drawBillardAimOverlay(ctx, ball, obj, objAlreadySunk){
+  const ro = document.getElementById('aim-readout');
+  const dir = currentAimDirection();
+  if(!dir || !dir.ready){ ro.style.display='none'; return; }
+
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.setLineDash([5,5]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ball.x,ball.y); ctx.lineTo(ball.x+70,ball.y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const table = state.holeState.course.table;
+  const minX=table.x+BALL_R, maxX=table.x+table.w-BALL_R, minY=table.y+BALL_R, maxY=table.y+table.h-BALL_R;
+  let tWall = Infinity;
+  if(dir.x>0.0001) tWall = Math.min(tWall,(maxX-ball.x)/dir.x);
+  if(dir.x<-0.0001) tWall = Math.min(tWall,(minX-ball.x)/dir.x);
+  if(dir.y>0.0001) tWall = Math.min(tWall,(maxY-ball.y)/dir.y);
+  if(dir.y<-0.0001) tWall = Math.min(tWall,(minY-ball.y)/dir.y);
+
+  let tObj = Infinity;
+  if(!objAlreadySunk){
+    const fx = ball.x-obj.x, fy = ball.y-obj.y;
+    const bq = 2*(fx*dir.x+fy*dir.y);
+    const cq = fx*fx+fy*fy-(2*BALL_R)*(2*BALL_R);
+    const disc = bq*bq-4*cq;
+    if(disc>=0){
+      const t = (-bq-Math.sqrt(disc))/2;
+      if(t>0) tObj = t;
+    }
+  }
+
+  const tEnd = Math.min(tWall, tObj);
+  const ex = ball.x+dir.x*tEnd, ey = ball.y+dir.y*tEnd;
+
+  const shotDeg = ((Math.atan2(-dir.y,dir.x))*180/Math.PI+360)%360;
+  const relDeg = shotDeg>180 ? 360-shotDeg : shotDeg;
+  const cls = classify(Math.round(relDeg));
+  ctx.strokeStyle = WINKEL_META[cls].hex; ctx.lineWidth=3; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(ball.x,ball.y); ctx.lineTo(ex,ey); ctx.stroke();
+
+  if(tObj<tWall && tObj<Infinity){
+    const contactX = ball.x+dir.x*tObj, contactY = ball.y+dir.y*tObj;
+    ctx.beginPath(); ctx.arc(contactX, contactY, BALL_R, 0, 7);
+    ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    const nx = obj.x-contactX, ny = obj.y-contactY;
+    const nlen = Math.hypot(nx,ny) || 1;
+    const onx = nx/nlen, ony = ny/nlen;
+    ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(214,69,69,0.9)'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(obj.x,obj.y); ctx.lineTo(obj.x+onx*70, obj.y+ony*70); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ro.style.display='block';
+  const suffix = aimStage==='power'
+    ? ' · Kraft '+(document.getElementById('power-slider')?document.getElementById('power-slider').value:'—')+'%'
+    : ' · loslassen zum Bestätigen';
+  ro.textContent = Math.round(relDeg)+'° zur Horizontalen – '+WINKEL_META[cls].label+suffix;
+  ro.style.color = WINKEL_META[cls].hex;
+}
+
+/* ================= RENDERING: MINIGOLF ================= */
+function drawGolfCourse(){
+  const c = document.getElementById('course');
+  const ctx = c.getContext('2d');
+  const hs = state.holeState;
+  const th = hs.course.theme;
+  const amActive = currentTurnId()===myId;
+  ctx.clearRect(0,0,W,H);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, th.bg[0]); grad.addColorStop(1, th.bg[1]);
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<W;i+=40){
+    ctx.fillStyle = (i/40)%2===0? 'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)';
+    ctx.fillRect(i,0,40,H);
+  }
+  ctx.fillStyle = th.obstacle;
+  hs.course.obstacles.forEach(o=>{
+    ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.strokeStyle = th.obstacleBorder; ctx.lineWidth=2; ctx.strokeRect(o.x,o.y,o.w,o.h);
+  });
+  ctx.beginPath(); ctx.arc(hs.course.hole.x, hs.course.hole.y, hs.course.holeRadius, 0, 7);
+  ctx.fillStyle='#0b1b12'; ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(hs.course.hole.x, hs.course.hole.y-4); ctx.lineTo(hs.course.hole.x, hs.course.hole.y-46); ctx.stroke();
+  ctx.fillStyle=th.accent; ctx.beginPath();
+  ctx.moveTo(hs.course.hole.x, hs.course.hole.y-46); ctx.lineTo(hs.course.hole.x+22, hs.course.hole.y-39); ctx.lineTo(hs.course.hole.x, hs.course.hole.y-32); ctx.fill();
+
+  let ball;
+  if(amActive){ ball = localPhysics || hs.balls[myId]; }
+  else if(spectateBall && spectateBall.mode==='golf'){ ball = {x:spectateBall.x, y:spectateBall.y}; }
+  else { ball = hs.balls[currentTurnId()]; }
+
+  if(sinkAnim){
+    ctx.save(); ctx.globalAlpha = Math.max(0,sinkAnim.alpha);
+    ctx.beginPath(); ctx.arc(sinkAnim.x, sinkAnim.y, 8*Math.max(0.1,sinkAnim.scale), 0, 7);
+    ctx.fillStyle = sinkAnim.color; ctx.fill(); ctx.restore();
+  } else {
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, 8, 0, 7);
+    ctx.fillStyle='#ffffff'; ctx.fill(); ctx.strokeStyle='#0f2a1d'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  if(amActive) drawAimOverlay(ctx, ball);
+}
+
+/* ================= RENDERING: POOLBILLARD ================= */
+function drawBillardTable(){
+  const c = document.getElementById('course');
+  const ctx = c.getContext('2d');
+  const hs = state.holeState;
+  const cs = hs.course;
+  const th = cs.theme;
+  const amActive = currentTurnId()===myId;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#6b4226';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = th.bg[1];
+  ctx.fillRect(cs.table.x, cs.table.y, cs.table.w, cs.table.h);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth=2;
+  ctx.strokeRect(cs.table.x, cs.table.y, cs.table.w, cs.table.h);
+  cs.pockets.forEach(p=>{
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
+    ctx.fillStyle = '#0a0a0a'; ctx.fill();
+  });
+
+  let b, objAlreadySunk;
+  if(amActive){
+    b = localPhysics || {cueX:hs.balls[myId].cueX, cueY:hs.balls[myId].cueY, objX:hs.balls[myId].objX, objY:hs.balls[myId].objY};
+    objAlreadySunk = hs.balls[myId].objSunk;
+  } else if(spectateBall && spectateBall.mode==='billard'){
+    b = {cueX:spectateBall.cueX, cueY:spectateBall.cueY, objX:spectateBall.objX, objY:spectateBall.objY};
+    objAlreadySunk = hs.balls[currentTurnId()].objSunk;
+  } else {
+    const ab = hs.balls[currentTurnId()];
+    b = {cueX:ab.cueX, cueY:ab.cueY, objX:ab.objX, objY:ab.objY};
+    objAlreadySunk = ab.objSunk;
+  }
+
+  if(!objAlreadySunk && !(sinkAnim && sinkAnim.isObject)){
+    ctx.beginPath(); ctx.arc(b.objX, b.objY, BALL_R, 0, 7);
+    ctx.fillStyle = '#d64545'; ctx.fill(); ctx.strokeStyle='#7a1f1f'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  if(!(sinkAnim && !sinkAnim.isObject)){
+    ctx.beginPath(); ctx.arc(b.cueX, b.cueY, BALL_R, 0, 7);
+    ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle='#0f2a1d'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  if(sinkAnim){
+    ctx.save(); ctx.globalAlpha = Math.max(0,sinkAnim.alpha);
+    ctx.beginPath(); ctx.arc(sinkAnim.x, sinkAnim.y, BALL_R*Math.max(0.1,sinkAnim.scale), 0, 7);
+    ctx.fillStyle = sinkAnim.color; ctx.fill(); ctx.restore();
+  }
+
+  if(amActive) drawBillardAimOverlay(ctx, {x:b.cueX, y:b.cueY}, {x:b.objX, y:b.objY}, objAlreadySunk);
+}
+
+function drawCourse(){
+  if(state.mode==='billard') drawBillardTable();
+  else drawGolfCourse();
+}
+function drawCourseWithBall(x,y){
+  localPhysics = {...localPhysics, x, y};
+  drawCourse();
+}
+function drawCourseWithBillardBalls(cueX,cueY,objX,objY){
+  localPhysics = {...localPhysics, cueX,cueY,objX,objY};
+  drawCourse();
+}
+
+/* ================= CANVAS-EINGABE: SCHRITT 1 RICHTUNG, SCHRITT 2 KRAFT ================= */
+let dragging=false, dragCurrent=null;
+let aimStage=null; // null | 'direction' | 'power'
+let lockedDir=null; // {x,y} Einheitsvektor, sobald die Richtung bestätigt ist
+function getCanvasScale(){
+  const c = document.getElementById('course');
+  const rect = c.getBoundingClientRect();
+  return {sx: W/rect.width, sy: H/rect.height, rect};
+}
+function handleAimStart(pointerPos){
+  if(!state || currentTurnId()!==myId || state.phase!=='shot' || localPhysics || aimStage==='power' || awaitingShotConfirmation) return;
+  dragging = true; aimStage = 'direction';
+  dragCurrent = pointerPos;
+  drawCourse();
+}
+function handleAimMove(pointerPos){
+  if(!dragging || aimStage!=='direction') return;
+  dragCurrent = pointerPos; drawCourse();
+}
+function handleAimEnd(){
+  if(!dragging || aimStage!=='direction') return;
+  const dir = currentAimDirection();
+  dragging = false;
+  if(!dir || !dir.ready){ aimStage = null; drawCourse(); return; }
+  lockedDir = {x:dir.x, y:dir.y};
+  aimStage = 'power';
+  showPowerPanel();
+  drawCourse();
+}
+function showPowerPanel(){
+  document.getElementById('power-panel').style.display='flex';
+  updatePowerPreview();
+}
+function hidePowerPanel(){
+  document.getElementById('power-panel').style.display='none';
+}
+function updatePowerPreview(){
+  const el = document.getElementById('power-value');
+  const slider = document.getElementById('power-slider');
+  if(el && slider) el.textContent = slider.value+'%';
+  drawCourse();
+}
+function resetAimDirection(){
+  aimStage = null; lockedDir = null; dragging = false;
+  hidePowerPanel();
+  drawCourse();
+}
+function fireShot(){
+  if(aimStage!=='power' || !lockedDir) return;
+  const slider = document.getElementById('power-slider');
+  const powerPct = slider ? parseInt(slider.value,10) : 55;
+  const power = Math.max(0.05, Math.min(1, (powerPct||55)/100));
+  const dir = lockedDir;
+  const ball = state.holeState.balls[myId];
+  aimStage = null; lockedDir = null;
+  hidePowerPanel();
+  if(state.mode==='billard'){
+    localPhysics = {cueX:ball.cueX, cueY:ball.cueY, cueVX:dir.x*power*MAX_SPEED, cueVY:dir.y*power*MAX_SPEED,
+      objX:ball.objX, objY:ball.objY, objVX:0, objVY:0};
+    requestAnimationFrame(physicsStepBillard);
+  } else {
+    localPhysics = {x:ball.x, y:ball.y, vx:dir.x*power*MAX_SPEED, vy:dir.y*power*MAX_SPEED};
+    requestAnimationFrame(physicsStepGolf);
+  }
+  drawCourse();
+}
+function attachCanvasEvents(){
+  const c = document.getElementById('course');
+  function pos(e){
+    const {sx,sy,rect} = getCanvasScale();
+    const cx = (e.touches? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches? e.touches[0].clientY : e.clientY) - rect.top;
+    return {x:cx*sx, y:cy*sy};
+  }
+  c.addEventListener('mousedown', e=>handleAimStart(pos(e)));
+  c.addEventListener('mousemove', e=>handleAimMove(pos(e)));
+  window.addEventListener('mouseup', ()=>handleAimEnd());
+  c.addEventListener('touchstart', e=>handleAimStart(pos(e)), {passive:true});
+  c.addEventListener('touchmove', e=>handleAimMove(pos(e)), {passive:true});
+  c.addEventListener('touchend', ()=>handleAimEnd());
+}
+
+/* ================= PHYSIK: MINIGOLF ================= */
+function physicsStepGolf(){
+  if(!localPhysics) return;
+  const hs = state.holeState;
+  let {x,y,vx,vy} = localPhysics;
+  const speed0 = Math.hypot(vx,vy);
+  const substeps = Math.max(1, Math.ceil(speed0/4));
+  for(let s=0; s<substeps; s++){
+    x += vx/substeps; y += vy/substeps;
+    if(x<10){x=10;vx=-vx;} if(x>W-10){x=W-10;vx=-vx;}
+    if(y<10){y=10;vy=-vy;} if(y>H-10){y=H-10;vy=-vy;}
+    hs.course.obstacles.forEach(o=>{
+      if(x>o.x-8 && x<o.x+o.w+8 && y>o.y-8 && y<o.y+o.h+8){
+        const overlapL=(x)-(o.x-8), overlapR=(o.x+o.w+8)-x, overlapT=(y)-(o.y-8), overlapB=(o.y+o.h+8)-y;
+        const minO = Math.min(overlapL,overlapR,overlapT,overlapB);
+        if(minO===overlapL||minO===overlapR){ vx=-vx; } else { vy=-vy; }
+      }
+    });
+  }
+  vx*=FRICTION; vy*=FRICTION;
+  localPhysics = {x,y,vx,vy};
+  const speed = Math.hypot(vx,vy);
+  const distToHole = Math.hypot(x-hs.course.hole.x, y-hs.course.hole.y);
+  // Nur bei kontrolliertem Tempo wird eingelocht. Ist der Ball zu schnell, rollt er einfach weiter/darüber -
+  // kein Abprallen am Lochrand.
+  const sunk = distToHole < hs.course.holeRadius && speed < CAPTURE_SPEED;
+  drawCourseWithBall(x,y);
+  liveShotFrameCounter++;
+  if(liveShotFrameCounter % 2 === 0){ sendLiveShot({mode:'golf', x, y}); }
+  if(sunk){
+    const strokesBefore = hs.balls[myId].strokes;
+    localPhysics = null; awaitingShotConfirmation = true;
+    sendLiveShot({mode:'golf', x:hs.course.hole.x, y:hs.course.hole.y});
+    playSinkAnimation(hs.course.hole.x, hs.course.hole.y, '#ffffff', false, ()=>{
+      reportShot(1, {sunk:true, x:hs.course.hole.x, y:hs.course.hole.y});
+    });
+  } else if(speed<MIN_SPEED){
+    localPhysics = null; awaitingShotConfirmation = true;
+    sendLiveShot({mode:'golf', x, y});
+    reportShot(1, {sunk:false, x, y});
+  } else {
+    requestAnimationFrame(physicsStepGolf);
+  }
+}
+
+/* ================= PHYSIK: POOLBILLARD (Queball + Zielkugel) ================= */
+function resolveBallCollision(a, b){
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const dist=Math.hypot(dx,dy);
+  const minDist = BALL_R*2;
+  if(dist<minDist && dist>0.0001){
+    const nx=dx/dist, ny=dy/dist;
+    const overlap = minDist-dist;
+    a.x -= nx*overlap/2; a.y -= ny*overlap/2;
+    b.x += nx*overlap/2; b.y += ny*overlap/2;
+    const rvx=b.vx-a.vx, rvy=b.vy-a.vy;
+    const velAlongNormal = rvx*nx+rvy*ny;
+    if(velAlongNormal<0){
+      a.vx += velAlongNormal*nx; a.vy += velAlongNormal*ny;
+      b.vx -= velAlongNormal*nx; b.vy -= velAlongNormal*ny;
+    }
+  }
+}
+function bounceInTable(p, v, table){
+  if(p.x<table.x+BALL_R){ p.x=table.x+BALL_R; v.x=-v.x; }
+  if(p.x>table.x+table.w-BALL_R){ p.x=table.x+table.w-BALL_R; v.x=-v.x; }
+  if(p.y<table.y+BALL_R){ p.y=table.y+BALL_R; v.y=-v.y; }
+  if(p.y>table.y+table.h-BALL_R){ p.y=table.y+table.h-BALL_R; v.y=-v.y; }
+}
+function physicsStepBillard(){
+  if(!localPhysics) return;
+  const hs = state.holeState;
+  const table = hs.course.table;
+  let {cueX,cueY,cueVX,cueVY,objX,objY,objVX,objVY} = localPhysics;
+  const speed0 = Math.max(Math.hypot(cueVX,cueVY), Math.hypot(objVX,objVY));
+  const substeps = Math.max(1, Math.ceil(speed0/4));
+  for(let s=0; s<substeps; s++){
+    cueX += cueVX/substeps; cueY += cueVY/substeps;
+    objX += objVX/substeps; objY += objVY/substeps;
+    const cp={x:cueX,y:cueY}, cv={x:cueVX,y:cueVY};
+    bounceInTable(cp,cv,table); cueX=cp.x;cueY=cp.y;cueVX=cv.x;cueVY=cv.y;
+    const op={x:objX,y:objY}, ov={x:objVX,y:objVY};
+    bounceInTable(op,ov,table); objX=op.x;objY=op.y;objVX=ov.x;objVY=ov.y;
+    const a={x:cueX,y:cueY,vx:cueVX,vy:cueVY}, b={x:objX,y:objY,vx:objVX,vy:objVY};
+    resolveBallCollision(a,b);
+    cueX=a.x;cueY=a.y;cueVX=a.vx;cueVY=a.vy;
+    objX=b.x;objY=b.y;objVX=b.vx;objVY=b.vy;
+  }
+  cueVX*=FRICTION; cueVY*=FRICTION; objVX*=FRICTION; objVY*=FRICTION;
+  localPhysics = {cueX,cueY,cueVX,cueVY,objX,objY,objVX,objVY};
+
+  const cueSpeed = Math.hypot(cueVX,cueVY), objSpeed = Math.hypot(objVX,objVY);
+  let objSunk=false, cueSunk=false;
+  hs.course.pockets.forEach(p=>{
+    if(!objSunk && Math.hypot(objX-p.x,objY-p.y)<p.r) objSunk=true;
+    if(!cueSunk && Math.hypot(cueX-p.x,cueY-p.y)<p.r) cueSunk=true;
+  });
+
+  drawCourseWithBillardBalls(cueX,cueY,objX,objY);
+  liveShotFrameCounter++;
+  if(liveShotFrameCounter % 2 === 0){ sendLiveShot({mode:'billard', cueX, cueY, objX, objY}); }
+
+  const bothSlow = cueSpeed<MIN_SPEED && objSpeed<MIN_SPEED;
+  if(objSunk){
+    localPhysics = null; awaitingShotConfirmation = true;
+    const pocket = hs.course.pockets.find(p=>Math.hypot(objX-p.x,objY-p.y)<p.r) || {x:objX,y:objY};
+    playSinkAnimation(pocket.x, pocket.y, '#d64545', true, ()=>{
+      if(cueSunk){
+        reportShot(2, {objSunk:true, cueX:hs.course.cueStart.x, cueY:hs.course.cueStart.y, objX:pocket.x, objY:pocket.y});
+      } else {
+        reportShot(1, {objSunk:true, cueX, cueY, objX:pocket.x, objY:pocket.y});
+      }
+    });
+  } else if(cueSunk){
+    localPhysics = null; awaitingShotConfirmation = true;
+    const pocket = hs.course.pockets.find(p=>Math.hypot(cueX-p.x,cueY-p.y)<p.r) || {x:cueX,y:cueY};
+    playSinkAnimation(pocket.x, pocket.y, '#b34747', false, ()=>{
+      reportShot(2, {objSunk:false, cueX:hs.course.cueStart.x, cueY:hs.course.cueStart.y, objX, objY});
+    });
+  } else if(bothSlow){
+    localPhysics = null; awaitingShotConfirmation = true;
+    reportShot(1, {objSunk:false, cueX, cueY, objX, objY});
+  } else {
+    requestAnimationFrame(physicsStepBillard);
+  }
+}
+
+/* boot */
+window.addEventListener('load', ()=>{ attachCanvasEvents(); });
+</script>
+</body>
+</html>
