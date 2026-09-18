@@ -143,4 +143,28 @@ const posts = [
     subcategory: "mathematik",
     url: "bruch-quiz-fussball.html"
    },
+   {
+    title: "Prozent-Rennen",
+    excerpt: "Lernspiel zur Prozentrechnung (Grundwert, Prozentsatz, Prozentwert) im Wettrennen — für 1 bis 4 Lernende am selben Gerät, drei Schwierigkeitsstufen.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "prozent-rennen.html"
+   },
+   {
+    title: "Gleichungs-Duell",
+    excerpt: "Lineare Gleichungen nach x auflösen, vom einfachen Rechenschritt bis zu x auf beiden Seiten — für 1 bis 4 Lernende am selben Gerät.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "gleichungs-duell.html"
+   },
+   {
+    title: "Flächen-Fuchs",
+    excerpt: "Umfang und Fläche von Rechteck, Quadrat, Dreieck und Kreis berechnen, mit beschrifteten Figuren — für 1 bis 4 Lernende am selben Gerät.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "flaechen-fuchs.html"
+   },
 ];
