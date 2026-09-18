@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#C30606">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="hsg-logo.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Strafenkasse">
+<title>Strafenkasse · HSG Wettenberg M2</title>
+<style>
+  :root {
+    --rot: #C30606;
+    --rot-dunkel: #9B0505;
+    --gruen: #16a34a;
+    --bg: #f4f4f5;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --rand: #e5e7eb;
+    --rand-stark: #d1d5db;
+    --feld: #ffffff;
+    --chip: #ffffff;
+    --zebra: #f7f7f8;
+    --icon-bg: #f3f4f6;
+    --radius: 14px;
+    --schatten: 0 1px 4px rgba(0,0,0,.08);
+  }
+  /* Dark: greift bei System-Dunkel (außer explizit "hell") und immer bei "dunkel" */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="hell"]) {
+      --rot: #ef4444;
+      --rot-dunkel: #b91c1c;
+      --gruen: #22c55e;
+      --bg: #111114;
+      --card: #1c1c20;
+      --text: #f3f4f6;
+      --muted: #9aa0aa;
+      --rand: #2c2c33;
+      --rand-stark: #3a3a42;
+      --feld: #26262c;
+      --chip: #26262c;
+      --zebra: #232329;
+      --icon-bg: #2a2a31;
+      --schatten: 0 1px 4px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dunkel"] {
+    --rot: #ef4444;
+    --rot-dunkel: #b91c1c;
+    --gruen: #22c55e;
+    --bg: #111114;
+    --card: #1c1c20;
+    --text: #f3f4f6;
+    --muted: #9aa0aa;
+    --rand: #2c2c33;
+    --rand-stark: #3a3a42;
+    --feld: #26262c;
+    --chip: #26262c;
+    --zebra: #232329;
+    --icon-bg: #2a2a31;
+    --schatten: 0 1px 4px rgba(0,0,0,.45);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+    transition: background .2s, color .2s;
+  }
+  svg { display: block; }
+
+  /* ---------- Header ---------- */
+  header {
+    background: linear-gradient(135deg, #C30606 0%, #9B0505 100%);
+    color: #fff;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+    padding-left: calc(14px + env(safe-area-inset-left));
+    padding-right: calc(14px + env(safe-area-inset-right));
+    position: sticky; top: 0; z-index: 20;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    display: flex; align-items: center; gap: 11px;
+  }
+  .logo-badge {
+    background: #fff; border-radius: 12px; padding: 5px;
+    width: 46px; height: 46px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  .logo-badge img { width: 100%; height: 100%; object-fit: contain; }
+  .kopf-text { flex: 1; min-width: 0; }
+  header h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .sub { font-size: .72rem; opacity: .85; margin-top: 1px; }
+  .kopf-btn {
+    flex-shrink: 0; width: 38px; height: 38px; border: 0; border-radius: 10px;
+    background: rgba(255,255,255,.16); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kopf-btn:active { background: rgba(255,255,255,.28); }
+  .kopf-btn svg { width: 21px; height: 21px; }
+  #sync-btn.aus { opacity: .65; }
+  #sync-btn.ok { color: #b7f7c8; }
+  #sync-btn.laedt { color: #fde68a; }
+  #sync-btn.laedt svg { animation: dreh 1s linear infinite; }
+  #sync-btn.ausstehend { color: #fde68a; }
+  #sync-btn.fehler { color: #fecaca; }
+  @keyframes dreh { to { transform: rotate(360deg); } }
+
+  /* ---------- Bottom-Nav ---------- */
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    background: var(--card);
+    border-top: 1px solid var(--rand);
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button {
+    flex: 1; min-width: 0; border: 0; background: none; cursor: pointer;
+    padding: 10px 0 9px; position: relative;
+    font-size: .66rem; font-weight: 600; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-family: inherit; white-space: nowrap; letter-spacing: -.1px;
+  }
+  nav button svg { width: 23px; height: 23px; }
+  nav button.aktiv { color: var(--rot); }
+  nav button.aktiv::before {
+    content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 3px;
+    background: var(--rot); border-radius: 0 0 3px 3px;
+  }
+
+  main { padding: 16px 14px 20px; max-width: 640px; margin: 0 auto; }
+  main { padding-left: calc(14px + env(safe-area-inset-left)); padding-right: calc(14px + env(safe-area-inset-right)); }
+  .tab { display: none; }
+  .tab.aktiv { display: block; }
+
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 22px 2px 10px; }
+  h2:first-child { margin-top: 4px; }
+
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--schatten); padding: 6px 14px; margin-bottom: 10px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    border: 0; border-radius: 12px; cursor: pointer;
+    font-family: inherit; font-size: .95rem; font-weight: 700;
+    padding: 13px 18px; width: 100%;
+    background: var(--rot); color: #fff;
+    transition: transform .05s;
+  }
+  .btn svg { width: 18px; height: 18px; }
+  .btn:active { transform: scale(.97); }
+  .btn.sekundaer { background: var(--card); color: var(--text); border: 1.5px solid var(--rand-stark); }
+  .btn.gruen { background: var(--gruen); color: #fff; }
+  .btn.klein { width: auto; padding: 9px 14px; font-size: .82rem; border-radius: 10px; }
+  .btn.klein svg { width: 16px; height: 16px; }
+  .btn.gefahr { background: var(--card); color: var(--rot); border: 1.5px solid var(--rot); }
+
+  /* ---------- Such-/Sortierleiste ---------- */
+  .werkzeug { display: flex; gap: 8px; margin-bottom: 10px; }
+  .suchwrap { position: relative; flex: 1; }
+  .such-ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .such-ico svg { width: 17px; height: 17px; }
+  .suchfeld {
+    width: 100%; padding: 11px 14px 11px 37px;
+    border: 1.5px solid var(--rand-stark); border-radius: 12px;
+    font-size: .95rem; font-family: inherit; background: var(--feld); color: var(--text);
+  }
+  .suchfeld:focus { outline: 2px solid var(--rot); border-color: var(--rot); }
+  .suchfeld { padding-right: 38px; }
+  .suchfeld::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  .such-clear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border: 0; padding: 0; background: var(--icon-bg); color: var(--muted); border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .suchwrap.hat-text .such-clear { display: flex; }
+  .such-clear:active { transform: translateY(-50%) scale(.9); }
+  .such-clear svg { width: 15px; height: 15px; }
+  select.sort {
+    border: 1.5px solid var(--rand-stark); border-radius: 12px;
+    background: var(--feld); color: var(--text);
+    font-family: inherit; font-size: .85rem; font-weight: 600;
+    padding: 0 30px 0 12px; max-width: 46%;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  select.sort:focus { outline: 2px solid var(--rot); border-color: var(--rot); }
+  .filter-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; font-weight: 600; color: var(--text); cursor: pointer; padding: 2px 2px; }
+  .filter-toggle input { width: 18px; height: 18px; accent-color: var(--rot); }
+
+  /* Erinnerungs-Banner */
+  .banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1.5px solid var(--rot); border-radius: 12px; padding: 11px 12px; margin-bottom: 12px; box-shadow: var(--schatten); }
+  .banner .b-links { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .banner .b-links > span { color: var(--rot); flex-shrink: 0; display: flex; }
+  .banner svg { width: 19px; height: 19px; }
+  .banner-txt { font-size: .86rem; line-height: 1.35; }
+  .banner-akt { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .banner-akt .btn.klein { padding: 8px 12px; }
+
+  /* Statistik */
+  .stat-num { font-size: 1.5rem; font-weight: 800; margin-top: 3px; }
+  .rang { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--rand); }
+  .rang:last-child { border-bottom: 0; }
+  .rang .pos { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: var(--icon-bg); color: var(--muted); font-size: .72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .rang .pos.g1 { background: #fde68a; color: #92400e; }
+  .rang .pos.g2 { background: #e5e7eb; color: #374151; }
+  .rang .pos.g3 { background: #fed7aa; color: #9a3412; }
+  .rang .nam { flex: 1; min-width: 0; font-size: .92rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rang .val { font-weight: 800; font-size: .95rem; white-space: nowrap; }
+  .rang .sub { font-size: .72rem; color: var(--muted); font-weight: 600; }
+  .balken-zeile { padding: 8px 2px; border-bottom: 1px solid var(--rand); }
+  .balken-zeile:last-child { border-bottom: 0; }
+  .balken-kopf { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: 5px; }
+  .balken-kopf .b-nam { font-weight: 600; }
+  .balken-kopf .b-val { color: var(--muted); font-weight: 700; white-space: nowrap; }
+  .balken-spur { height: 8px; background: var(--icon-bg); border-radius: 5px; overflow: hidden; }
+  .balken-fill { height: 100%; background: var(--rot); border-radius: 5px; }
+
+  /* Strafen-Grid */
+  .strafen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .strafe-btn {
+    background: var(--card); border: 1.5px solid var(--rand); border-radius: var(--radius);
+    padding: 13px 12px; cursor: pointer; text-align: left; color: var(--text);
+    font-family: inherit;
+    box-shadow: var(--schatten);
+    display: flex; flex-direction: column; gap: 4px;
+    transition: transform .05s;
+  }
+  .strafe-btn:active { transform: scale(.96); }
+  .strafe-btn .name { font-size: .85rem; font-weight: 600; line-height: 1.25; }
+  .strafe-btn .preis { font-size: 1.05rem; font-weight: 800; color: var(--rot); }
+
+  /* Spieler-Chips */
+  .chip-werkzeug { display: flex; gap: 8px; align-items: center; margin-bottom: 9px; }
+  .chip-werkzeug .suchwrap { flex: 1; }
+  .mini-link { background: none; border: 0; color: var(--rot); font-weight: 700; font-size: .8rem; cursor: pointer; font-family: inherit; padding: 6px 4px; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; max-height: 42vh; overflow-y: auto; }
+  .chip {
+    border: 1.5px solid var(--rand-stark); background: var(--chip); border-radius: 999px;
+    padding: 9px 15px; font-size: .9rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; color: var(--text);
+  }
+  .chip.gewaehlt { background: var(--rot); border-color: var(--rot); color: #fff; }
+
+  /* ---------- Listen ---------- */
+  .zeile {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 2px; border-bottom: 1px solid var(--rand);
+  }
+  .zeile:last-child { border-bottom: 0; }
+  .zeile .haupt { font-weight: 600; font-size: .95rem; }
+  .zeile .haupt small { color: var(--muted); font-weight: 600; }
+  .zeile .detail { font-size: .76rem; color: var(--muted); margin-top: 1px; }
+  .zeile .betrag { font-weight: 800; font-size: 1rem; white-space: nowrap; }
+  .betrag.offen { color: var(--rot); }
+  .betrag.plus { color: var(--gruen); }
+  .zeile .aktionen { display: flex; gap: 6px; align-items: center; }
+  .icon-btn {
+    border: 0; background: var(--icon-bg); border-radius: 9px; cursor: pointer;
+    width: 34px; height: 34px; flex-shrink: 0; color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:active { transform: scale(.92); }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn.rot { color: var(--rot); }
+  .punkt { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .punkt.rot { background: var(--rot); }
+  .punkt.gruen { background: var(--gruen); }
+  .punkt.grau { background: var(--muted); }
+
+  /* Übersicht Kennzahlen */
+  .kennzahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .kennzahl { background: var(--card); border-radius: var(--radius); box-shadow: var(--schatten); padding: 14px; }
+  .kennzahl .label { font-size: .7rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+  .kennzahl .wert { font-size: 1.5rem; font-weight: 800; margin-top: 3px; }
+  .kennzahl.rot .wert { color: var(--rot); }
+  .kennzahl.gruen .wert { color: var(--gruen); }
+
+  .share-leiste { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+  .kennzahlen.drei { grid-template-columns: repeat(3, 1fr); }
+  .kennzahlen.drei .kennzahl { padding: 11px 8px; }
+  .kennzahlen.drei .label { font-size: .6rem; }
+  .kennzahlen.drei .wert { font-size: 1.12rem; }
+  .kennzahl.aus .wert { color: #d9822b; }
+  .kasse-split { font-size: .8rem; color: var(--muted); text-align: center; margin: -2px 2px 14px; }
+  .kasse-split b { color: var(--text); font-weight: 700; }
+
+  /* Team-Ansicht (nur Lesen) */
+  body.nur-lesen #nav-erfassen, body.nur-lesen #nav-verwalten { display: none; }
+  body.nur-lesen .zeile .aktionen .icon-btn { display: none; }
+  body.nur-lesen .mb-banner { display: none !important; }
+  .lese-hinweis { display: none; }
+  body.nur-lesen .lese-hinweis { display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--card); border: 1px solid var(--rand); border-radius: 10px; padding: 9px 12px; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
+  body.nur-lesen .lese-hinweis svg { width: 16px; height: 16px; }
+
+  /* ---------- Modal ---------- */
+  .modal-hg {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,.5);
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-hg.offen { display: flex; }
+  .modal {
+    background: var(--card); color: var(--text); width: 100%; max-width: 640px;
+    border-radius: 20px 20px 0 0;
+    padding: 8px 18px calc(20px + env(safe-area-inset-bottom));
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-kopf { position: sticky; top: 0; z-index: 5; background: var(--card); margin: 0 -18px 10px; padding: 10px 18px 6px; }
+  .modal-griff { width: 42px; height: 5px; border-radius: 3px; background: var(--rand-stark); margin: 0 auto; }
+  .modal-x { position: absolute; top: 6px; right: 12px; width: 34px; height: 34px; border: 0; background: var(--icon-bg); color: var(--text); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-x:active { transform: scale(.9); }
+  .modal-x svg { width: 18px; height: 18px; }
+  .modal { transition: transform .2s; }
+  .modal h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 14px; }
+  .modal .feld { margin-bottom: 13px; }
+  .modal label { display: block; font-size: .76rem; font-weight: 700; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; padding: 12px; border: 1.5px solid var(--rand-stark); border-radius: 11px;
+    font-size: 1rem; font-family: inherit; background: var(--feld); color: var(--text);
+  }
+  .modal textarea { font-size: .85rem; }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { outline: 2px solid var(--rot); border-color: var(--rot); }
+  .modal .knoepfe { display: flex; gap: 9px; margin-top: 18px; }
+  .modal .detail-liste { max-height: 46vh; overflow-y: auto; margin-bottom: 6px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: calc(88px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; border-radius: 12px;
+    padding: 11px 16px; font-size: .88rem; font-weight: 600;
+    display: none; align-items: center; gap: 14px; z-index: 60;
+    box-shadow: 0 4px 16px rgba(0,0,0,.3); max-width: calc(100vw - 28px);
+  }
+  #toast.offen { display: flex; }
+  #toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toast button { background: none; border: 0; color: #ffb4b4; font-weight: 800; font-size: .88rem; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+
+  .leer { text-align: center; color: var(--muted); font-size: .9rem; padding: 26px 10px; }
+  .hinweis { font-size: .78rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+  .code-box { background: var(--feld); border: 1.5px solid var(--rand); border-radius: 10px; padding: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .74rem; white-space: pre-wrap; word-break: break-word; color: var(--text); margin: 6px 0; }
+  .sync-status { display: flex; align-items: center; gap: 8px; font-size: .85rem; font-weight: 600; margin-bottom: 4px; }
+  .sync-status .punkt { margin: 0; }
+  a { color: var(--rot); }
+
+  /* ---------- Druck (PDF) ---------- */
+  #druckbereich { display: none; }
+  @media print {
+    body > *:not(#druckbereich) { display: none !important; }
+    body { background: #fff; padding: 0; }
+    #druckbereich { display: block; font-size: 11pt; padding: 10mm; color: #000; }
+    #druckbereich h1 { font-size: 16pt; color: #C30606; margin-bottom: 2mm; }
+    #druckbereich .datum { color: #555; margin-bottom: 6mm; font-size: 10pt; }
+    #druckbereich h2 { font-size: 12pt; color: #000; margin: 6mm 0 2mm; text-transform: none; letter-spacing: 0; }
+    #druckbereich table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
+    #druckbereich th, #druckbereich td { text-align: left; padding: 1.6mm 2mm; border-bottom: .3pt solid #bbb; font-size: 9.5pt; }
+    #druckbereich th { background: #f0f0f0; font-weight: 700; }
+    #druckbereich td.r, #druckbereich th.r { text-align: right; white-space: nowrap; }
+    #druckbereich .summe td { font-weight: 800; border-top: 1pt solid #000; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge"><img id="kopf-logo" alt="HSG Wettenberg"></div>
+  <div class="kopf-text">
+    <h1>Strafenkasse Männer 2</h1>
+    <div class="sub">HSG Wettenberg</div>
+  </div>
+  <button class="kopf-btn" id="team-btn" title="Team wechseln" onclick="App.profilModal()"></button>
+  <button class="kopf-btn aus" id="sync-btn" title="Cloud-Sync" onclick="App.syncKnopf()"></button>
+  <button class="kopf-btn" id="theme-btn" title="Design wechseln" onclick="App.themeWechseln()"></button>
+</header>
+
+<main>
+
+  <div class="lese-hinweis" id="lese-hinweis"></div>
+
+  <!-- ============ TAB: ERFASSEN ============ -->
+  <section id="tab-erfassen" class="tab aktiv">
+    <div class="mb-banner"></div>
+
+    <h2>Buchungen</h2>
+    <button class="btn gruen" onclick="App.zahlungModal()">Einzahlung erfassen (Spieler zahlt)</button>
+    <div style="height:9px"></div>
+    <button class="btn sekundaer" onclick="App.sammelZahlungModal()">Sammel-Einzahlung (mehrere auf einmal)</button>
+    <div style="height:9px"></div>
+    <button class="btn sekundaer" onclick="App.auslageModal()">Spieler hat vorgelegt</button>
+    <div style="height:9px"></div>
+    <button class="btn sekundaer" onclick="App.monatsbeitragModal()">Monatsbeitrag abrechnen</button>
+    <div style="height:9px"></div>
+    <button class="btn sekundaer" onclick="App.kasseModal()">Kasse: Ausgabe / Einnahme</button>
+
+    <h2>Strafe erfassen</h2>
+    <button class="btn sekundaer" onclick="App.sonstigeStrafeModal()">Sonstige Strafe (freier Betrag)</button>
+    <div style="height:10px"></div>
+    <div class="werkzeug" id="erfassen-werkzeug">
+      <div class="suchwrap"><span class="such-ico" id="ico-such-erfassen"></span>
+        <input type="search" id="strafen-suche" class="suchfeld" placeholder="Strafe suchen …" oninput="App.rendernErfassen()"></div>
+    </div>
+    <div id="strafen-grid" class="strafen-grid"></div>
+    <div class="hinweis" id="katalog-leer-hinweis" style="display:none">Noch keine Strafen im Katalog. Lege unter „Verwalten“ deinen Strafenkatalog an.</div>
+  </section>
+
+  <!-- ============ TAB: ÜBERSICHT ============ -->
+  <section id="tab-uebersicht" class="tab">
+    <div class="mb-banner"></div>
+    <div class="kennzahlen drei">
+      <div class="kennzahl rot"><div class="label">Offene Strafen</div><div class="wert" id="kz-offen">0 €</div></div>
+      <div class="kennzahl gruen"><div class="label">Kassenstand</div><div class="wert" id="kz-kasse">0 €</div></div>
+      <div class="kennzahl aus"><div class="label">Kassenausgaben</div><div class="wert" id="kz-ausgaben">0 €</div></div>
+    </div>
+    <div class="kasse-split" id="kasse-split"></div>
+
+    <h2>Stand teilen</h2>
+    <div class="share-leiste">
+      <button class="btn klein" onclick="App.teilenWhatsApp()">Teilen</button>
+      <button class="btn klein sekundaer" onclick="App.teilenBild()">Als Bild</button>
+      <button class="btn klein sekundaer" onclick="App.teilenPdf()">Als PDF</button>
+    </div>
+
+    <h2>Offene Beträge pro Spieler</h2>
+    <div class="werkzeug">
+      <div class="suchwrap"><span class="such-ico" id="ico-such-ueb"></span>
+        <input type="search" id="ueb-suche" class="suchfeld" placeholder="Spieler suchen …" oninput="App.rendernUebersicht()"></div>
+      <select class="sort" id="ueb-sort" onchange="App.uiSet('sortUeb', this.value)">
+        <option value="offen-ab">Offen ↓</option>
+        <option value="offen-auf">Offen ↑</option>
+        <option value="name-az">Name A–Z</option>
+        <option value="name-za">Name Z–A</option>
+      </select>
+    </div>
+    <div style="margin:0 2px 10px"><label class="filter-toggle"><input type="checkbox" id="ueb-nuroffen" onchange="App.uiSet('nurOffen', this.checked)"> Nur Spieler mit offenem Betrag</label></div>
+    <div class="card" id="uebersicht-liste"></div>
+  </section>
+
+  <!-- ============ TAB: HISTORIE ============ -->
+  <section id="tab-historie" class="tab">
+    <h2>Alle Buchungen</h2>
+    <div class="werkzeug">
+      <div class="suchwrap"><span class="such-ico" id="ico-such-hist"></span>
+        <input type="search" id="hist-suche" class="suchfeld" placeholder="Suchen (Name, Strafe, Notiz) …" oninput="App.rendernHistorie()"></div>
+      <select class="sort" id="hist-sort" onchange="App.uiSet('sortHist', this.value)">
+        <option value="datum-neu">Neueste</option>
+        <option value="datum-alt">Älteste</option>
+        <option value="betrag-ab">Betrag ↓</option>
+        <option value="betrag-auf">Betrag ↑</option>
+      </select>
+    </div>
+    <div class="werkzeug">
+      <select class="sort" id="hist-typ" style="max-width:none;flex:1" onchange="App.uiSet('filterHistTyp', this.value)">
+        <option value="alle">Alle Buchungen</option>
+        <option value="strafe">Nur Strafen</option>
+        <option value="zahlung">Nur Einzahlungen</option>
+        <option value="kasse">Nur Kasse (Ein/Aus)</option>
+      </select>
+    </div>
+    <div class="card" id="historie-liste"></div>
+  </section>
+
+  <!-- ============ TAB: STATISTIK ============ -->
+  <section id="tab-statistik" class="tab">
+    <div class="kennzahlen">
+      <div class="kennzahl"><div class="label">Strafen gesamt</div><div class="wert" id="st-summe">0 €</div></div>
+      <div class="kennzahl"><div class="label">Anzahl Strafen</div><div class="wert" id="st-anzahl">0</div></div>
+    </div>
+    <h2>Statistik teilen</h2>
+    <div class="share-leiste">
+      <button class="btn klein" onclick="App.teilenStatistik()">Teilen</button>
+      <button class="btn klein sekundaer" onclick="App.statistikPdf()">Als PDF</button>
+    </div>
+    <h2>Rangliste – wer zahlt am meisten</h2>
+    <div class="card" id="st-rangliste"></div>
+    <h2>Häufigste Strafen</h2>
+    <div class="card" id="st-strafen"></div>
+    <h2>Strafen pro Monat</h2>
+    <div class="card" id="st-monate"></div>
+  </section>
+
+  <!-- ============ TAB: VERWALTEN ============ -->
+  <section id="tab-verwalten" class="tab">
+    <h2>Team</h2>
+    <div class="card" style="padding:14px">
+      <div class="hinweis" id="profil-info" style="margin-top:0"></div>
+      <button class="btn sekundaer" onclick="App.profilModal()" style="width:100%;margin-top:9px">Team wechseln</button>
+    </div>
+
+    <h2>Verein / Mannschaft</h2>
+    <button class="btn sekundaer" onclick="App.einstellungenModal()">Name &amp; PayPal ändern</button>
+    <div class="hinweis" id="einstellungen-info"></div>
+
+    <h2>Cloud-Sync</h2>
+    <div class="card" style="padding:14px">
+      <div class="sync-status" id="sync-status-text"><span class="punkt grau"></span>Nicht eingerichtet</div>
+      <div class="hinweis" id="sync-hinweis" style="margin-top:2px">Richte den Sync ein, damit mehrere Kassenwarte denselben Stand sehen.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px">
+        <button class="btn klein sekundaer" onclick="App.syncModal()">Einrichten</button>
+        <button class="btn klein sekundaer" id="sync-jetzt-btn" onclick="App.syncJetzt()" style="display:none">Jetzt synchronisieren</button>
+      </div>
+      <button class="btn klein sekundaer" id="team-link-btn" onclick="App.teamAnsichtLink()" style="display:none;width:100%;margin-top:9px">Team-Ansicht teilen (nur Lesen)</button>
+    </div>
+
+    <h2>Spieler</h2>
+    <div class="werkzeug">
+      <div class="suchwrap"><span class="such-ico" id="ico-such-sp"></span>
+        <input type="search" id="sp-suche" class="suchfeld" placeholder="Spieler suchen …" oninput="App.rendernVerwalten()"></div>
+    </div>
+    <div class="card" id="spieler-liste"></div>
+    <button class="btn sekundaer" onclick="App.spielerModal()">Spieler hinzufügen</button>
+
+    <h2>Strafenkatalog</h2>
+    <div class="werkzeug">
+      <div class="suchwrap"><span class="such-ico" id="ico-such-kat"></span>
+        <input type="search" id="kat-suche" class="suchfeld" placeholder="Strafe suchen …" oninput="App.rendernVerwalten()"></div>
+      <select class="sort" id="kat-sort" onchange="App.uiSet('sortKat', this.value)">
+        <option value="name-az">Name A–Z</option>
+        <option value="name-za">Name Z–A</option>
+        <option value="betrag-ab">Betrag ↓</option>
+        <option value="betrag-auf">Betrag ↑</option>
+      </select>
+    </div>
+    <div class="card" id="katalog-liste"></div>
+    <button class="btn sekundaer" onclick="App.katalogModal()">Strafe hinzufügen</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+      <button class="btn klein sekundaer" onclick="App.katalogExportModal()">Katalog exportieren</button>
+      <button class="btn klein sekundaer" onclick="App.katalogImportModal()">Katalog importieren</button>
+    </div>
+
+    <h2>Monatsbeitrags-Erinnerung</h2>
+    <label class="filter-toggle"><input type="checkbox" id="mb-erinnerung" onchange="App.uiSet('mbErinnerungAus', !this.checked)"> Monatliche Erinnerung anzeigen</label>
+    <div class="hinweis">Erinnert am Monatsanfang ans Abrechnen. Das Abrechnen selbst findest du jetzt unter „Erfassen → Monatsbeitrag abrechnen“.</div>
+
+    <h2>Datensicherung</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <button class="btn klein sekundaer" onclick="App.exportieren()">Backup speichern</button>
+      <button class="btn klein sekundaer" onclick="document.getElementById('import-datei').click()">Backup laden</button>
+    </div>
+    <input type="file" id="import-datei" accept=".json" style="display:none" onchange="App.importieren(event)">
+    <div class="hinweis">Ohne Cloud-Sync liegen die Daten nur auf diesem Gerät. Speichere dann regelmäßig ein Backup (z.&nbsp;B. in deine Cloud), besonders vor Browser-/Handywechsel.</div>
+  </section>
+
+</main>
+
+<nav>
+  <button id="nav-erfassen" class="aktiv" onclick="App.tab('erfassen')"></button>
+  <button id="nav-uebersicht" onclick="App.tab('uebersicht')"></button>
+  <button id="nav-statistik" onclick="App.tab('statistik')"></button>
+  <button id="nav-historie" onclick="App.tab('historie')"></button>
+  <button id="nav-verwalten" onclick="App.tab('verwalten')"></button>
+</nav>
+
+<!-- Generisches Modal -->
+<div class="modal-hg" id="modal-hg" onclick="if(event.target===this)App.modalZu()">
+  <div class="modal" id="modal-inhalt"></div>
+</div>
+
+<div id="toast"><span id="toast-text"></span><button id="toast-aktion"></button></div>
+
+<div id="druckbereich"></div>
+
+<script>
+'use strict';
+
+const LOGO = 'data:image/png;base64,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';
+
+// ---------- Mehrere Teams (Profile) ----------
+// Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync
+// (jeweils eigene localStorage-Schlüssel, siehe SPEICHER_KEY/UI_KEY/SYNC_KEY unten).
+// Weiteres Team ergänzen: einfach einen neuen Eintrag in PROFILE hinzufügen.
+const PROFIL_KEY = 'hsg-aktives-profil';
+const PROFILE = {
+  m2: {
+    id: 'm2', titel: 'Strafenkasse Männer 2', verein: 'HSG Wettenberg', paypal: 'nick-stroh@t-online.de',
+    seedHistorie: true,
+    spieler: [
+      'Christian Bernhardt', 'Christoph Spieler', 'Daniel Schmitz', 'Duck', 'Erik Szabo',
+      'Jonas Schneider', 'Julian Haak', 'Julian Ruppert', 'Konstantin Wolf', 'Linus Müller',
+      'Linus Zorn', 'Luis Valentin', 'Lukas Friedl', 'Marc Stroh', 'Mats Nees',
+      'Mirko Schulcz', 'Moritz Kemper', 'Moritz Wegener', 'Nick Stroh', 'Nils Becker', 'Noah Kemper',
+      'Olaf Kleinschmidt', 'Sascha Kreutz', 'Sascha Möbus', 'Sascha Puhl', 'Simon Bogner',
+      'Simon Brück', 'Simon Wingefeld', 'Steffen Gerisch', 'Tobias Henkel', 'Valentin Quurck',
+    ],
+  },
+  m1: {
+    id: 'm1', titel: 'Strafenkasse Männer 1', verein: 'HSG Wettenberg', paypal: '',
+    seedHistorie: false,
+    spieler: [
+      'Aron Weise', 'Dragan Nenad', 'Fabian Weide', 'Felix Kreutz', 'Finn Stoppel',
+      'Florian Hartmann', 'Jan Becker', 'Jan Hämmerle', 'Jan Reuschling', 'Jannis Merz',
+      'Johannes Schwarz', 'Jonas Müller', 'Kai Olbert', 'Luca Weber', 'Lucy Weingarten',
+      'Lukas Drommershausen', 'Marc Stroh', 'Mats Nees', 'Sebastian Kneissl', 'Tim Anhäuser',
+      'Timo Stephan', 'Tom Warnke', 'Tristan Schnepp',
+    ],
+  },
+};
+function ermittleAktivesProfil() {
+  try { const p = localStorage.getItem(PROFIL_KEY); return (p && PROFILE[p]) ? p : 'm2'; }
+  catch (e) { return 'm2'; }
+}
+const PROFIL_ID = ermittleAktivesProfil();
+const PROFIL = PROFILE[PROFIL_ID];
+
+const SPEICHER_KEY = `hsg-${PROFIL_ID}-strafenkasse-v1`;
+const UI_KEY = `hsg-${PROFIL_ID}-ui-v1`;
+const SYNC_KEY = `hsg-${PROFIL_ID}-sync-v1`;
+// Standard-Branding (nur beim allerersten Start je Team; danach in der App unter „Verwalten → Verein / Mannschaft“ änderbar)
+const STD_TITEL = PROFIL.titel;
+const STD_VEREIN = PROFIL.verein;
+const STD_PAYPAL = PROFIL.paypal;
+
+// ---------- Inline-SVG-Icons (keine Emojis) ----------
+const S = (inner, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw||2}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const ICON = {
+  erfassen: S('<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>'),
+  uebersicht: S('<line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>', 2.2),
+  historie: S('<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>'),
+  statistik: S('<circle cx="12" cy="9" r="6"/><polyline points="9 14.5 7.5 21 12 18 16.5 21 15 14.5"/>'),
+  glocke: S('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'),
+  x: S('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  team: S('<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  verwalten: S('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  edit: S('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
+  del: S('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>'),
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>',
+  such: S('<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+  sun: S('<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7" y2="7"/><line x1="17" y1="17" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7" y2="17"/><line x1="17" y1="7" x2="19.1" y2="4.9"/>'),
+  moon: S('<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'),
+  auto: S('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>'),
+  cloud: S('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>'),
+  cloudAus: S('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="3" y1="3" x2="21" y2="21"/>'),
+  cloudOk: S('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="9 13.5 11 15.5 15 11" stroke-width="2"/>'),
+};
+
+// ---------- Spielerliste des aktiven Teams (siehe PROFILE oben) ----------
+const SPIELER_VERSION = 3;
+const STANDARD_SPIELER = PROFIL.spieler;
+function standardSpieler() {
+  return STANDARD_SPIELER.map(name => ({ id: neueId(), name, aktiv: true }));
+}
+
+// ---------- Strafenkatalog HSG Wettenberg Männer 2 (aus SpielerPlus übernommen) ----------
+const KATALOG_VERSION = 3;
+const STANDARD_KATALOG = [
+  { name: 'App nicht abgemeldet',                          betrag: 2 },
+  { name: 'Bierdienst nicht erfüllt',                      betrag: 30 },
+  { name: 'Trainer bei Ansprache unterbrochen',            betrag: 2.5 },
+  { name: 'Strafen nicht fristgerecht gezahlt',            betrag: 10 },
+  { name: 'Unentschuldigtes Fehlen Pflichtveranstaltung',  betrag: 20 },
+  { name: 'Bier zu warm',                                  betrag: 10 },
+  { name: 'Offene Bierkiste',                              betrag: 15 },
+  { name: 'Fußballtrikot im Training',                     betrag: 5 },
+  { name: 'Dumme Frage',                                   betrag: 1 },
+  { name: 'Alkoholisiert zum Spiel',                       betrag: 20 },
+  { name: 'Pussyhaftes Verhalten',                         betrag: 5 },
+  { name: 'Handy im Training',                             betrag: 5 },
+  { name: 'Spam in der HSG 2 Offiziell',                   betrag: 2 },
+  { name: 'Wechselfehler',                                 betrag: 10 },
+  { name: 'Disqualifikation Meckern',                      betrag: 30 },
+  { name: 'Zeitstrafe Meckern',                            betrag: 20 },
+  { name: 'Gelbe Karte Meckern',                           betrag: 15 },
+  { name: 'Verschwitztes Trikot nicht in Tasche geräumt',  betrag: 5 },
+  { name: 'Frühzeitiges Verlassen einer Pflichtveranstaltg', betrag: 5 },
+  { name: 'Regeln von Team Alt hinterfragen',              betrag: 5 },
+  { name: 'Trainer bei (wichtiger) Ansprache unterbrechen', betrag: 5 },
+  { name: 'Diskussion mit Kassenwart',                     betrag: 5 },
+  { name: 'Mannschaftsdienst nicht erfüllt',               betrag: 10 },
+  { name: 'keine offizielle Kleidung Spiel/Pflichtveranstaltg', betrag: 5 },
+  { name: 'Equipment vergessen (Spielkleidung, Ball u.ä.)', betrag: 5 },
+  { name: 'Unentschuldigtes Fehlen Spiel',                 betrag: 50 },
+  { name: 'Unentschuldigtes Fehlen Training',              betrag: 15 },
+  { name: 'Monatsbeitrag',                                 betrag: 15 },
+  { name: 'Verspätung Training',                           betrag: 5 },
+  { name: 'Verspätung Spiel',                              betrag: 10 },
+  { name: 'Ball in Wald schießen',                         betrag: 1 },
+  { name: 'Ball gegen Decke schießen',                     betrag: 1 },
+  { name: 'Trikotregel freikaufen',                        betrag: 20 },
+  { name: 'Getränk nicht leer trinken',                    betrag: 5 },
+];
+
+// ---------- Startdaten Historie (Stand 31.07.2026, aus PDF-Abrechnung übernommen) ----------
+// [datum, spielerName, art, text, betrag, notiz]
+const SEED_BUCHUNGEN = [
+  ['2026-07-09', 'Christian Bernhardt', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-19', 'Christian Bernhardt', 'strafe', 'Equipment vergessen (Spielkleidung, Ball u.ä.)', 5, 'Nicht-Anmeldung Handball360'],
+  ['2026-07-09', 'Christoph Spieler', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-25', 'Christoph Spieler', 'strafe', 'Getränk nicht leer trinken', 5, 'Apfelwein beim Dieter'],
+  ['2026-07-09', 'Daniel Schmitz', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Duck', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-16', 'Duck', 'strafe', 'Bierdienst nicht erfüllt', 30, ''],
+  ['2026-07-09', 'Erik Szabo', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Jonas Schneider', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Julian Haak', 'strafe', 'Trikotregel freikaufen', 20, ''],
+  ['2026-07-09', 'Julian Haak', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-23', 'Julian Haak', 'strafe', 'Ball in Wald schießen', 1, ''],
+  ['2026-07-09', 'Julian Ruppert', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Konstantin Wolf', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Konstantin Wolf', 'strafe', 'Equipment vergessen (Spielkleidung, Ball u.ä.)', 5, ''],
+  ['2026-07-09', 'Linus Müller', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-16', 'Linus Müller', 'strafe', 'Mannschaftsdienst nicht erfüllt', 10, 'Hemdchen vergessen'],
+  ['2026-07-09', 'Linus Zorn', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-30', 'Linus Zorn', 'strafe', 'Ball in Wald schießen', 1, ''],
+  ['2026-07-09', 'Luis Valentin', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, 'Bei Sprintübung Erklärung unterbrochen'],
+  ['2026-07-09', 'Luis Valentin', 'strafe', 'Dumme Frage', 1, ''],
+  ['2026-07-09', 'Luis Valentin', 'strafe', 'Trikotregel freikaufen', 20, ''],
+  ['2026-07-09', 'Luis Valentin', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-30', 'Luis Valentin', 'zahlung', 'Einzahlung', 3.99, 'Karte Jonny Hochzeit'],
+  ['2026-07-09', 'Lukas Friedl', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Mirko Schulcz', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Moritz Kemper', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, 'Bei Sprintübung Erklärung unterbrochen'],
+  ['2026-07-09', 'Moritz Kemper', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-20', 'Moritz Kemper', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-20', 'Moritz Wegener', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-09', 'Nick Stroh', 'strafe', 'Trikotregel freikaufen', 20, ''],
+  ['2026-07-09', 'Nick Stroh', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Nick Stroh', 'strafe', 'Verspätung Training', 5, ''],
+  ['2026-07-16', 'Nick Stroh', 'zahlung', 'Einzahlung', 28, 'Derbystar Fußball'],
+  ['2026-07-09', 'Nils Becker', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-23', 'Nils Becker', 'strafe', 'Ball in Wald schießen', 1, ''],
+  ['2026-07-09', 'Noah Kemper', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Noah Kemper', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-09', 'Olaf Kleinschmidt', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-19', 'Olaf Kleinschmidt', 'strafe', 'Equipment vergessen (Spielkleidung, Ball u.ä.)', 5, 'Nicht-Anmeldung Handball360'],
+  ['2026-07-09', 'Sascha Kreutz', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-20', 'Sascha Kreutz', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, 'Training Mirko'],
+  ['2026-07-23', 'Sascha Kreutz', 'strafe', 'Dumme Frage', 1, 'Einwurf oder Einrollen'],
+  ['2026-07-30', 'Sascha Kreutz', 'strafe', 'Verspätung Training', 5, 'Kunstrasen nicht umgezogen'],
+  ['2026-07-09', 'Sascha Möbus', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Sascha Puhl', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-19', 'Sascha Puhl', 'strafe', 'Equipment vergessen (Spielkleidung, Ball u.ä.)', 5, 'Nicht-Anmeldung Handball360'],
+  ['2026-07-20', 'Sascha Puhl', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, 'Training Mirko'],
+  ['2026-07-09', 'Simon Bogner', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-16', 'Simon Bogner', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, ''],
+  ['2026-07-20', 'Simon Bogner', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-09', 'Simon Brück', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Simon Brück', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-09', 'Simon Wingefeld', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-09', 'Steffen Gerisch', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-30', 'Steffen Gerisch', 'strafe', 'Verspätung Training', 5, 'Kunstrasen nicht umgezogen'],
+  ['2026-07-09', 'Tobias Henkel', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Tobias Henkel', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+  ['2026-07-09', 'Valentin Quurck', 'strafe', 'Monatsbeitrag', 15, 'Monatsbeitrag Juli'],
+  ['2026-07-13', 'Valentin Quurck', 'strafe', 'Equipment vergessen (Spielkleidung, Ball u.ä.)', 5, ''],
+  ['2026-07-13', 'Valentin Quurck', 'strafe', 'Diskussion mit Kassenwart', 5, ''],
+  ['2026-07-16', 'Valentin Quurck', 'strafe', 'Dumme Frage', 1, ''],
+  ['2026-07-20', 'Valentin Quurck', 'strafe', 'Trainer bei Ansprache unterbrochen', 2.5, 'Training Mirko'],
+  ['2026-07-20', 'Valentin Quurck', 'strafe', 'Ball gegen Decke schießen', 1, ''],
+];
+
+// Baut die vollständigen Startdaten (Spieler + Katalog + Historie) für eine frische Installation.
+function standardDaten() {
+  const ts = Date.now();
+  const spieler = STANDARD_SPIELER.map(name => ({ id: neueId(), name, aktiv: true }));
+  const idVon = {}; spieler.forEach(s => { idVon[s.name] = s.id; });
+  const seedQuelle = PROFIL.seedHistorie ? SEED_BUCHUNGEN : [];
+  const buchungen = seedQuelle.map(b => ({
+    id: neueId(), art: b[2], spielerId: idVon[b[1]], text: b[3], betrag: b[4], datum: b[0], notiz: b[5] || '', ts,
+  }));
+  return {
+    titel: STD_TITEL, verein: STD_VEREIN, paypal: STD_PAYPAL,
+    spieler, spielerVersion: SPIELER_VERSION, spielerTs: ts,
+    katalog: STANDARD_KATALOG.map(k => ({ id: neueId(), ...k })), katalogVersion: KATALOG_VERSION, katalogTs: ts,
+    buchungen, geloescht: {},
+  };
+}
+
+// Stellt sicher, dass Merge-Felder vorhanden sind (nach Import / Server-Übernahme)
+function normalisieren(d) {
+  if (!d.geloescht) d.geloescht = {};
+  if (d.spielerTs == null) d.spielerTs = 0;
+  if (d.katalogTs == null) d.katalogTs = 0;
+  if (d.titel == null) d.titel = STD_TITEL;
+  if (d.verein == null) d.verein = STD_VEREIN;
+  if (d.paypal == null) d.paypal = STD_PAYPAL;
+  return d;
+}
+
+// ---------- UI-Einstellungen (nur lokal auf diesem Gerät) ----------
+let prefs = ladenUi();
+function ladenUi() {
+  const std = { theme: 'auto', sortUeb: 'offen-ab', sortHist: 'datum-neu', filterHistTyp: 'alle', sortKat: 'name-az', nurOffen: false, mbBannerWeg: '', letzterZahlweg: 'bar', mbErinnerungAus: false };
+  try { return Object.assign(std, JSON.parse(localStorage.getItem(UI_KEY) || '{}')); }
+  catch (e) { return std; }
+}
+function speichernUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(prefs)); } catch (e) {} }
+
+let nurLesen = false; // Team-Ansicht (nur Lesen, kein Schreiben)
+let daten = laden();
+
+function laden() {
+  try {
+    const roh = localStorage.getItem(SPEICHER_KEY);
+    if (roh) {
+      const d = JSON.parse(roh);
+      if ((d.katalogVersion || 1) < KATALOG_VERSION && d.buchungen.length === 0) {
+        d.katalog = STANDARD_KATALOG.map(k => ({ id: neueId(), ...k }));
+        d.katalogVersion = KATALOG_VERSION;
+      }
+      if ((d.katalogVersion || 1) < 3) {
+        const entfernen = ['Abschlussfahrt', 'Pizza Essen EM26', 'T-Shirt Weihnachtsfeier', 'Verlierer Mett', 'Hallendienst Arsch', 'Partnerkarte'];
+        d.katalog = d.katalog.filter(k => !entfernen.includes(k.name));
+        const umbenennen = {
+          'Disqualifikation wg. MMN': 'Disqualifikation Meckern',
+          'Zeitstrafe wg. MMN': 'Zeitstrafe Meckern',
+          'Gelbe Karte wg. MMN': 'Gelbe Karte Meckern',
+        };
+        d.katalog.forEach(k => { if (umbenennen[k.name]) k.name = umbenennen[k.name]; });
+        d.katalogVersion = 3;
+      }
+      if ((d.spielerVersion || 1) < SPIELER_VERSION && d.spieler.length === 0) {
+        d.spieler = standardSpieler();
+        d.spielerVersion = SPIELER_VERSION;
+      }
+      if ((d.spielerVersion || 1) < 3) {
+        const sk = d.spieler.find(s => s.name === 'Sascha KreuTz');
+        if (sk) sk.name = 'Sascha Kreutz';
+        const kw = d.spieler.find(s => s.name === 'Konstantin Wolf');
+        if (kw) kw.aktiv = true;
+        d.spielerVersion = 3;
+      }
+      // Merge-Felder für Cloud-Sync sicherstellen
+      if (!d.geloescht) d.geloescht = {};
+      if (d.spielerTs == null) d.spielerTs = 0;
+      if (d.katalogTs == null) d.katalogTs = 0;
+      // Branding-Felder
+      if (d.titel == null) d.titel = STD_TITEL;
+      if (d.verein == null) d.verein = STD_VEREIN;
+      if (d.paypal == null) d.paypal = STD_PAYPAL;
+      return d;
+    }
+  } catch (e) { /* defekte Daten -> Neustart */ }
+  // Frische Installation: mit aktuellem Stand (Spieler, Katalog, Historie 07/2026) starten
+  return standardDaten();
+}
+function speichernNurLokal() { try { localStorage.setItem(SPEICHER_KEY, JSON.stringify(daten)); } catch (e) { /* Speicher gesperrt (z. B. privater Modus) */ } }
+function speichern() { speichernNurLokal(); if (typeof Sync !== 'undefined') Sync.plane(); }
+function neueId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ---------- Hilfen ----------
+const eur = b => b.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const heute = () => new Date().toISOString().slice(0, 10);
+const datumDE = iso => { const [j, m, t] = iso.split('-'); return `${t}.${m}.${j}`; };
+const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const monatName = iso7 => { const [j, m] = iso7.split('-'); return `${MONATE[parseInt(m, 10) - 1] || m} ${j}`; };
+const spielerName = id => (daten.spieler.find(s => s.id === id) || { name: 'Unbekannt' }).name;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const nachName = (a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+const titelZeile = () => (daten.verein ? `${daten.titel} – ${daten.verein}` : daten.titel);
+
+function betragParsen(text) {
+  const n = parseFloat(String(text).replace(',', '.'));
+  return isNaN(n) ? null : Math.round(n * 100) / 100;
+}
+
+function saldo(spielerId) {
+  let s = 0;
+  for (const b of daten.buchungen) {
+    if (b.spielerId !== spielerId) continue;
+    if (b.art === 'strafe') s += b.betrag;
+    if (b.art === 'zahlung') s -= b.betrag;
+  }
+  return Math.round(s * 100) / 100;
+}
+function kassenstand() {
+  let s = 0;
+  for (const b of daten.buchungen) {
+    if (b.art === 'zahlung' || b.art === 'kasse_ein') s += b.betrag;
+    if (b.art === 'kasse_aus') s -= b.betrag;
+  }
+  return Math.round(s * 100) / 100;
+}
+function offenGesamt() {
+  return Math.round(daten.spieler.reduce((s, sp) => s + Math.max(0, saldo(sp.id)), 0) * 100) / 100;
+}
+function kassenausgaben() {
+  let s = 0;
+  for (const b of daten.buchungen) if (b.art === 'kasse_aus') s += b.betrag;
+  return Math.round(s * 100) / 100;
+}
+// Kassenanteil nach Zahlweg ('bar' | 'digital'); 'ausgelegt'/ohne Zahlweg zählt nicht mit
+function kassenTeil(weg) {
+  let s = 0;
+  for (const b of daten.buchungen) {
+    if (b.zahlweg !== weg) continue;
+    if (b.art === 'zahlung' || b.art === 'kasse_ein') s += b.betrag;
+    if (b.art === 'kasse_aus') s -= b.betrag;
+  }
+  return Math.round(s * 100) / 100;
+}
+function zahlwegOptionen(sel) {
+  return ['bar', 'digital'].map(w => `<option value="${w}"${w === sel ? ' selected' : ''}>${w === 'bar' ? 'Bar' : 'Digital (Paypal/Überweisung)'}</option>`).join('');
+}
+
+// Stabile Serialisierung (Schlüssel sortiert) – für zuverlässigen Gleichheits-Vergleich
+function stabil(o) {
+  if (Array.isArray(o)) return '[' + o.map(stabil).join(',') + ']';
+  if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + stabil(o[k])).join(',') + '}';
+  return JSON.stringify(o);
+}
+
+// ---------- Merge zweier Datenstände (konfliktfreie Zusammenführung) ----------
+// Buchungen: Vereinigung nach id (Löschungen via Tombstones in .geloescht).
+// Spieler/Katalog: ganze Sammlung, neuerer Zeitstempel (spielerTs/katalogTs) gewinnt.
+function mergeDaten(remote, local) {
+  const m = {};
+  m.spielerTs = Math.max(local.spielerTs || 0, remote.spielerTs || 0);
+  m.spieler = (local.spielerTs || 0) >= (remote.spielerTs || 0) ? local.spieler : remote.spieler;
+  m.spielerVersion = Math.max(local.spielerVersion || 1, remote.spielerVersion || 1);
+  m.katalogTs = Math.max(local.katalogTs || 0, remote.katalogTs || 0);
+  m.katalog = (local.katalogTs || 0) >= (remote.katalogTs || 0) ? local.katalog : remote.katalog;
+  m.katalogVersion = Math.max(local.katalogVersion || 1, remote.katalogVersion || 1);
+  // Tombstones zusammenführen (jüngster Löschzeitpunkt pro id)
+  const tomb = Object.assign({}, remote.geloescht || {});
+  const lt = local.geloescht || {};
+  for (const id in lt) tomb[id] = Math.max(tomb[id] || 0, lt[id]);
+  m.geloescht = tomb;
+  // Buchungen vereinen; bei gleicher id gewinnt der neuere ts; gelöschte fliegen raus
+  const map = {};
+  (remote.buchungen || []).forEach(b => { map[b.id] = b; });
+  (local.buchungen || []).forEach(b => { const e = map[b.id]; if (!e || (b.ts || 0) >= (e.ts || 0)) map[b.id] = b; });
+  m.buchungen = Object.values(map)
+    .filter(b => !(tomb[b.id] && tomb[b.id] >= (b.ts || 0)))
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  return m;
+}
+
+// ================= Cloud-Sync (Supabase REST) =================
+const Sync = {
+  cfg: null,
+  timer: null,
+  laufend: false,
+
+  init() {
+    try { this.cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { this.cfg = null; }
+  },
+  speichernCfg() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.cfg)); } catch (e) {} },
+  aktiv() { return !!(this.cfg && this.cfg.url && this.cfg.key && this.cfg.code); },
+
+  headers() {
+    return { apikey: this.cfg.key, Authorization: 'Bearer ' + this.cfg.key, 'Content-Type': 'application/json' };
+  },
+  basis() { return this.cfg.url.replace(/\/+$/, '') + '/rest/v1/strafenkasse'; },
+
+  // ---- optionale Verschlüsselung mit Team-PIN (AES-GCM, Schlüssel via PBKDF2) ----
+  cryptoDa() { return !!(window.crypto && crypto.subtle); },
+  _key: null,
+  async keyAbleiten() {
+    if (this._key) return this._key;
+    const enc = new TextEncoder();
+    const material = await crypto.subtle.importKey('raw', enc.encode(this.cfg.pin), 'PBKDF2', false, ['deriveKey']);
+    this._key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode('hsg-strafenkasse-' + this.cfg.code), iterations: 100000, hash: 'SHA-256' },
+      material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return this._key;
+  },
+  _b64(buf) { const b = new Uint8Array(buf); let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); },
+  _vonB64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
+  async verschluesseln(obj) {
+    const key = await this.keyAbleiten();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+    return { enc: 1, iv: this._b64(iv), ct: this._b64(ct) };
+  },
+  async entschluesseln(payload) {
+    if (!payload || !payload.enc) return payload; // Klartext (unverschlüsselt)
+    const key = await this.keyAbleiten();
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: this._vonB64(payload.iv) }, key, this._vonB64(payload.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  },
+
+  relZeit(iso) {
+    const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return 'gerade eben';
+    if (min < 60) return `vor ${min} Min.`;
+    const std = Math.floor(min / 60); if (std < 24) return `vor ${std} Std.`;
+    return `vor ${Math.floor(std / 24)} Tg.`;
+  },
+
+  status(zustand, text) {
+    const btn = document.getElementById('sync-btn');
+    if (!btn) return;
+    btn.className = 'kopf-btn ' + zustand;
+    const ico = { aus: ICON.cloudAus, ok: ICON.cloudOk, laedt: ICON.cloud, ausstehend: ICON.cloud, fehler: ICON.cloudAus }[zustand] || ICON.cloud;
+    btn.innerHTML = ico;
+    this._zustand = zustand;
+    this.statusText(text);
+  },
+  statusText(text) {
+    const el = document.getElementById('sync-status-text');
+    if (!el) return;
+    if (!this.aktiv()) { el.innerHTML = '<span class="punkt grau"></span>Nicht eingerichtet'; return; }
+    const farbe = { ok: 'gruen', laedt: 'grau', ausstehend: 'grau', fehler: 'rot' }[this._zustand] || 'grau';
+    const standard = { ok: 'Synchron', laedt: 'Synchronisiere …', ausstehend: 'Änderungen ausstehend', fehler: 'Sync-Fehler' }[this._zustand] || 'Verbunden';
+    let anzeige = text || standard;
+    if (!text && this._zustand === 'ok' && this.cfg.lastAt) anzeige = 'Synchron · ' + this.relZeit(this.cfg.lastAt);
+    el.innerHTML = `<span class="punkt ${farbe}"></span>${esc(anzeige)}`;
+  },
+
+  plane() {
+    if (!this.aktiv() || this.cfg.autoSync === false) return;
+    this.status('ausstehend');
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.synchronisieren(false), 1200);
+  },
+
+  async pullRow() {
+    try {
+      const r = await fetch(this.basis() + '?id=eq.' + encodeURIComponent(this.cfg.code) + '&select=data,rev,updated_at', { headers: this.headers() });
+      if (!r.ok) return null;
+      const rows = await r.json();
+      if (!rows.length) return undefined; // Zeile existiert noch nicht
+      try {
+        const data = normalisieren(await this.entschluesseln(rows[0].data));
+        return { data, rev: rows[0].rev, updated_at: rows[0].updated_at };
+      } catch (e) { return { pinFehler: true }; }
+    } catch (e) { return null; }
+  },
+
+  // Schreibt einen Stand konditional (nur wenn der Server noch bei erwarteteRev steht).
+  // Rückgabe: {rev, updated_at} bei Erfolg, {konflikt:true} wenn jemand dazwischenkam.
+  async schreiben(stand, erwarteteRev) {
+    const jetzt = new Date().toISOString();
+    const nutz = this.cfg.pin ? await this.verschluesseln(stand) : stand;
+    if (erwarteteRev == null) {
+      const res = await fetch(this.basis(), {
+        method: 'POST',
+        headers: Object.assign(this.headers(), { Prefer: 'return=representation' }),
+        body: JSON.stringify([{ id: this.cfg.code, data: nutz, rev: 1, updated_at: jetzt }]),
+      });
+      if (res.status === 409) return { konflikt: true };
+      if (!res.ok) throw new Error(await res.text());
+      return { rev: (await res.json())[0].rev, updated_at: jetzt };
+    }
+    const res = await fetch(this.basis() + '?id=eq.' + encodeURIComponent(this.cfg.code) + '&rev=eq.' + erwarteteRev, {
+      method: 'PATCH',
+      headers: Object.assign(this.headers(), { Prefer: 'return=representation' }),
+      body: JSON.stringify({ data: nutz, rev: erwarteteRev + 1, updated_at: jetzt }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    if (!rows.length) return { konflikt: true };
+    return { rev: rows[0].rev, updated_at: jetzt };
+  },
+
+  // Konfliktfreier Abgleich: Server holen, mit lokal mergen, zurückschreiben.
+  // Kein Bestätigungsdialog, keine Datenverluste. Bei gleichzeitigem Schreiben
+  // wird automatisch neu gemergt (mehrere Versuche).
+  async synchronisieren(zeigeToast) {
+    if (!this.aktiv() || this.laufend) return;
+    if (nurLesen) { // Team-Ansicht: nur herunterladen, niemals schreiben
+      this.laufend = true; this.status('laedt');
+      try {
+        const remote = await this.pullRow();
+        if (!remote) this.status('fehler');
+        else if (remote.pinFehler) { this.status('fehler'); App.toast('Ansicht nicht lesbar (PIN).'); }
+        else { daten = remote.data; this.cfg.rev = remote.rev; this.cfg.lastAt = remote.updated_at; speichernNurLokal(); App.rendern(); this.status('ok'); }
+      } catch (e) { this.status('fehler'); } finally { this.laufend = false; }
+      return;
+    }
+    if (this.cfg.pin && !this.cryptoDa()) { this.status('fehler'); if (zeigeToast) App.toast('Verschlüsselung hier nicht verfügbar (Team-PIN)'); return; }
+    this.laufend = true; this.status('laedt');
+    try {
+      for (let versuch = 0; versuch < 6; versuch++) {
+        const remote = await this.pullRow();
+        if (remote === null) { this.status('fehler'); if (zeigeToast) App.toast('Sync fehlgeschlagen (offline?)'); return; }
+        if (remote && remote.pinFehler) { this.status('fehler'); App.toast('Falscher Team-PIN – Daten nicht entschlüsselbar.'); return; }
+
+        // Server noch leer -> lokalen Stand anlegen
+        if (remote === undefined) {
+          const erg = await this.schreiben(daten, null);
+          if (erg.konflikt) continue;
+          this.cfg.rev = erg.rev; this.cfg.lastJson = stabil(daten); this.cfg.lastAt = erg.updated_at;
+          this.speichernCfg(); this.status('ok'); if (zeigeToast) App.toast('Daten in die Cloud geladen');
+          return;
+        }
+
+        // Erste Verbindung dieses Geräts: Server-Stand komplett übernehmen
+        // (kein Merge – verhindert Dubletten aus getrennt erzeugten Startdaten).
+        if (this.cfg.rev == null && this.cfg.lastJson == null) {
+          daten = remote.data; this.cfg.rev = remote.rev; this.cfg.lastJson = stabil(daten); this.cfg.lastAt = remote.updated_at;
+          this.speichernCfg(); speichernNurLokal(); App.rendern(); this.status('ok'); if (zeigeToast) App.toast('Server-Stand geladen');
+          return;
+        }
+
+        // Normalfall: zusammenführen
+        const merged = mergeDaten(remote.data, daten);
+        const mergedS = stabil(merged);
+        if (mergedS !== stabil(daten)) { daten = merged; speichernNurLokal(); App.rendern(); }
+
+        if (mergedS === stabil(remote.data)) {
+          // Nichts Neues beizutragen -> Server ist bereits aktuell
+          this.cfg.rev = remote.rev; this.cfg.lastJson = mergedS; this.cfg.lastAt = remote.updated_at;
+          this.speichernCfg(); this.status('ok'); if (zeigeToast) App.toast('Aktuell');
+          return;
+        }
+
+        const erg = await this.schreiben(merged, remote.rev);
+        if (erg.konflikt) continue; // jemand hat zwischenzeitlich geschrieben -> neu mergen
+        this.cfg.rev = erg.rev; this.cfg.lastJson = mergedS; this.cfg.lastAt = erg.updated_at;
+        this.speichernCfg(); this.status('ok'); if (zeigeToast) App.toast('Synchronisiert');
+        return;
+      }
+      this.status('fehler'); if (zeigeToast) App.toast('Sync gerade ausgelastet – bitte gleich erneut versuchen');
+    } catch (e) {
+      this.status('fehler');
+    } finally {
+      this.laufend = false;
+    }
+  },
+
+  // Alias für bestehende Aufrufer
+  abgleichen(zeigeToast) { return this.synchronisieren(zeigeToast); },
+
+  trennen() {
+    this.cfg = null; localStorage.removeItem(SYNC_KEY);
+    this.status('aus'); this.statusText(); App.rendernVerwaltenSyncKnopf();
+  },
+};
+
+// ================= App =================
+const App = {
+
+  tab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('aktiv'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('aktiv'));
+    document.getElementById('tab-' + name).classList.add('aktiv');
+    document.getElementById('nav-' + name).classList.add('aktiv');
+    this.rendern();
+  },
+
+  rendernKopf() {
+    const h1 = document.querySelector('header h1'); if (h1) h1.textContent = daten.titel || 'Strafenkasse';
+    const sub = document.querySelector('header .sub');
+    if (sub && !nurLesen) sub.textContent = daten.verein || '';
+    document.title = (daten.titel || 'Strafenkasse') + (daten.verein ? ' · ' + daten.verein : '');
+  },
+
+  rendern() {
+    this.rendernKopf();
+    this.renderMbBanner();
+    this.rendernErfassen();
+    this.rendernUebersicht();
+    this.rendernHistorie();
+    this.rendernStatistik();
+    this.rendernVerwalten();
+    speichern();
+  },
+
+  // Monatsbeitrags-Erinnerung als dauerhafter Banner (Erfassen + Übersicht)
+  monatsbeitragFaellig() {
+    if (prefs.mbErinnerungAus) return null;
+    const monat = heute().slice(0, 7);
+    const aktive = daten.spieler.some(s => s.aktiv !== false);
+    const schon = daten.buchungen.some(b => b.text === 'Monatsbeitrag' && b.datum.slice(0, 7) === monat);
+    return aktive && !schon && prefs.mbBannerWeg !== monat ? monat : null;
+  },
+  renderMbBanner() {
+    const monat = this.monatsbeitragFaellig();
+    const html = monat ? `<div class="banner">
+        <div class="b-links"><span>${ICON.glocke}</span>
+          <div class="banner-txt"><b>Monatsbeitrag ${monatName(monat)}</b> noch nicht abgerechnet.</div></div>
+        <div class="banner-akt">
+          <button class="btn klein" onclick="App.monatsbeitragModal()">Abrechnen</button>
+          <button class="icon-btn" title="Ausblenden" onclick="App.mbBannerAus('${monat}')">${ICON.x}</button>
+        </div>
+      </div>` : '';
+    document.querySelectorAll('.mb-banner').forEach(el => { el.innerHTML = html; });
+  },
+  mbBannerAus(monat) { prefs.mbBannerWeg = monat; speichernUi(); this.renderMbBanner(); },
+
+  uiSet(key, value) {
+    prefs[key] = value; speichernUi();
+    if (key === 'sortUeb' || key === 'nurOffen') this.rendernUebersicht();
+    else if (key === 'sortHist' || key === 'filterHistTyp') this.rendernHistorie();
+    else if (key === 'sortKat') this.rendernVerwalten();
+    else if (key === 'mbErinnerungAus') { this.renderMbBanner(); this.toast(value ? 'Monats-Erinnerung aus' : 'Monats-Erinnerung an'); }
+  },
+
+  // ===== Design / Theme =====
+  themeAnwenden() {
+    const t = prefs.theme || 'auto';
+    const root = document.documentElement;
+    if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+    const btn = document.getElementById('theme-btn');
+    if (btn) btn.innerHTML = t === 'dunkel' ? ICON.moon : t === 'hell' ? ICON.sun : ICON.auto;
+  },
+  themeWechseln() {
+    const reihe = ['auto', 'hell', 'dunkel'];
+    prefs.theme = reihe[(reihe.indexOf(prefs.theme || 'auto') + 1) % 3];
+    speichernUi(); this.themeAnwenden();
+    this.toast('Design: ' + { auto: 'Automatisch (System)', hell: 'Hell', dunkel: 'Dunkel' }[prefs.theme]);
+  },
+
+  spielerSortiertAktiv() { return daten.spieler.filter(s => s.aktiv !== false).sort(nachName); },
+
+  // ===== Tab: Erfassen =====
+  rendernErfassen() {
+    const grid = document.getElementById('strafen-grid');
+    const suche = document.getElementById('strafen-suche').value.trim().toLowerCase();
+    const treffer = daten.katalog.filter(k => !suche || k.name.toLowerCase().includes(suche));
+    grid.innerHTML = treffer.length ? treffer.map(k =>
+      `<button class="strafe-btn" onclick="App.strafeModal('${k.id}')">
+         <span class="name">${esc(k.name)}</span><span class="preis">${eur(k.betrag)}</span>
+       </button>`).join('') : '<div class="leer" style="grid-column:1/-1">Keine Strafe gefunden.</div>';
+    document.getElementById('katalog-leer-hinweis').style.display = daten.katalog.length ? 'none' : 'block';
+    document.getElementById('erfassen-werkzeug').style.display = daten.katalog.length > 8 ? '' : 'none';
+  },
+
+  chipPickerHtml() {
+    return `<div class="chip-werkzeug">
+        <div class="suchwrap"><span class="such-ico">${ICON.such}</span>
+          <input type="search" class="suchfeld" placeholder="Spieler filtern …" oninput="App.chipsFiltern(this.value)"></div>
+        <button type="button" class="mini-link" onclick="App.chipsAlle(true)">Alle auswählen</button>
+        <button type="button" class="mini-link" onclick="App.chipsAlle(false)">Keine</button>
+      </div>
+      <div class="chips" id="m-chips">${this.spielerSortiertAktiv().map(s =>
+        `<button type="button" class="chip" data-id="${s.id}" data-name="${esc(s.name.toLowerCase())}" onclick="this.classList.toggle('gewaehlt')">${esc(s.name)}</button>`).join('')}
+      </div>`;
+  },
+  chipsFiltern(text) {
+    const t = text.trim().toLowerCase();
+    document.querySelectorAll('#m-chips .chip').forEach(c => { c.style.display = !t || c.dataset.name.includes(t) ? '' : 'none'; });
+  },
+  chipsAlle(an) {
+    document.querySelectorAll('#m-chips .chip').forEach(c => { if (c.style.display !== 'none') c.classList.toggle('gewaehlt', an); });
+  },
+
+  strafeModal(katalogId) {
+    const k = daten.katalog.find(x => x.id === katalogId);
+    if (!k) return;
+    if (!this.spielerSortiertAktiv().length) { this.toast('Lege zuerst Spieler unter „Verwalten“ an.'); return; }
+    this.modal(`
+      <h3>${esc(k.name)} · ${eur(k.betrag)}</h3>
+      <div class="feld"><label>Wer? (mehrere möglich)</label>${this.chipPickerHtml()}</div>
+      <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="feld"><label>Notiz (optional)</label><input type="text" id="m-notiz" placeholder="z. B. Auswärtsspiel Pohlheim"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.strafeSpeichern('${k.id}')">Speichern</button>
+      </div>`);
+  },
+
+  strafeSpeichern(katalogId) {
+    const k = daten.katalog.find(x => x.id === katalogId);
+    const ids = [...document.querySelectorAll('#m-chips .chip.gewaehlt')].map(c => c.dataset.id);
+    if (!ids.length) { this.toast('Bitte mindestens einen Spieler wählen.'); return; }
+    const datum = document.getElementById('m-datum').value || heute();
+    const notiz = document.getElementById('m-notiz').value.trim();
+    const ts = Date.now();
+    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text: k.name, betrag: k.betrag, datum, notiz, ts }));
+    daten.buchungen.push(...neue);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`${k.name} für ${ids.length} Spieler gebucht`, neue.map(b => b.id));
+  },
+
+  sonstigeStrafeModal() {
+    if (!this.spielerSortiertAktiv().length) { this.toast('Lege zuerst Spieler unter „Verwalten“ an.'); return; }
+    this.modal(`
+      <h3>Sonstige Strafe</h3>
+      <div class="feld"><label>Bezeichnung</label><input type="text" id="m-text" placeholder="z. B. Wette verloren"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" placeholder="z. B. 5,00"></div>
+      <div class="feld"><label>Wer? (mehrere möglich)</label>${this.chipPickerHtml()}</div>
+      <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.sonstigeStrafeSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  sonstigeStrafeSpeichern() {
+    const text = document.getElementById('m-text').value.trim();
+    const betrag = betragParsen(document.getElementById('m-betrag').value);
+    const ids = [...document.querySelectorAll('#m-chips .chip.gewaehlt')].map(c => c.dataset.id);
+    if (!text || betrag === null || betrag <= 0 || !ids.length) { this.toast('Bitte Bezeichnung, Betrag und Spieler angeben.'); return; }
+    const datum = document.getElementById('m-datum').value || heute();
+    const ts = Date.now();
+    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text, betrag, datum, notiz: '', ts }));
+    daten.buchungen.push(...neue);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig('Strafe gebucht', neue.map(b => b.id));
+  },
+
+  zahlungModal() {
+    if (!daten.spieler.length) { this.toast('Lege zuerst Spieler unter „Verwalten“ an.'); return; }
+    const spielerSort = [...daten.spieler].sort(nachName);
+    this.modal(`
+      <h3>Einzahlung</h3>
+      <div class="feld"><label>Spieler</label>
+        <select id="m-spieler">${spielerSort.map(s =>
+          `<option value="${s.id}">${esc(s.name)} (offen: ${eur(saldo(s.id))})</option>`).join('')}</select>
+      </div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" placeholder="z. B. 10,00"></div>
+      <div class="feld"><label>Zahlweg</label><select id="m-weg">${zahlwegOptionen(prefs.letzterZahlweg)}</select></div>
+      <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="feld"><label>Notiz (optional)</label><input type="text" id="m-notiz" placeholder="z. B. nach dem Training"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn gruen" onclick="App.zahlungSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  zahlungSpeichern() {
+    const spielerId = document.getElementById('m-spieler').value;
+    const betrag = betragParsen(document.getElementById('m-betrag').value);
+    if (betrag === null || betrag <= 0) { this.toast('Bitte gültigen Betrag angeben.'); return; }
+    const weg = document.getElementById('m-weg').value;
+    prefs.letzterZahlweg = weg; speichernUi();
+    const b = {
+      id: neueId(), art: 'zahlung', spielerId, text: 'Einzahlung', betrag, zahlweg: weg,
+      datum: document.getElementById('m-datum').value || heute(),
+      notiz: document.getElementById('m-notiz').value.trim(), ts: Date.now(),
+    };
+    daten.buchungen.push(b);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`${eur(betrag)} von ${spielerName(spielerId)} gebucht`, [b.id]);
+  },
+
+  sammelZahlungModal() {
+    const zahlbar = daten.spieler.filter(s => s.aktiv !== false && saldo(s.id) > 0).sort(nachName);
+    if (!zahlbar.length) { this.toast('Niemand hat gerade offene Beträge.'); return; }
+    this.modal(`
+      <h3>Sammel-Einzahlung</h3>
+      <div class="hinweis" style="margin-top:0">Wähle, wer bezahlt hat – für jeden wird der komplette offene Betrag als Einzahlung gebucht.</div>
+      <div class="feld"><label>Zahlweg</label><select id="sz-weg">${zahlwegOptionen(prefs.letzterZahlweg)}</select></div>
+      <div class="feld"><label>Wer hat bezahlt? (mehrere)</label>
+        <div class="chip-werkzeug">
+          <button type="button" class="mini-link" onclick="App.chipsAlle(true)">Alle auswählen</button>
+          <button type="button" class="mini-link" onclick="App.chipsAlle(false)">Keine</button>
+        </div>
+        <div class="chips" id="m-chips">${zahlbar.map(s => `<button type="button" class="chip" data-id="${s.id}" onclick="this.classList.toggle('gewaehlt')">${esc(s.name)} · ${eur(saldo(s.id))}</button>`).join('')}</div>
+      </div>
+      <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn gruen" onclick="App.sammelZahlungSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  sammelZahlungSpeichern() {
+    const ids = [...document.querySelectorAll('#m-chips .chip.gewaehlt')].map(c => c.dataset.id);
+    if (!ids.length) { this.toast('Bitte mindestens einen Spieler wählen.'); return; }
+    const weg = document.getElementById('sz-weg').value;
+    prefs.letzterZahlweg = weg; speichernUi();
+    const datum = document.getElementById('m-datum').value || heute();
+    const ts = Date.now();
+    const neue = [];
+    ids.forEach(id => { const off = saldo(id); if (off > 0) neue.push({ id: neueId(), art: 'zahlung', spielerId: id, text: 'Einzahlung', betrag: off, zahlweg: weg, datum, notiz: '', ts }); });
+    if (!neue.length) { this.toast('Keine offenen Beträge.'); return; }
+    daten.buchungen.push(...neue);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`${neue.length} Einzahlungen gebucht`, neue.map(b => b.id));
+  },
+
+  kasseModal() {
+    this.modal(`
+      <h3>Kasse: Einnahme / Ausgabe</h3>
+      <div class="feld"><label>Art</label>
+        <select id="m-art"><option value="kasse_aus">Ausgabe (z. B. Kiste Bier)</option><option value="kasse_ein">Einnahme (z. B. Spende)</option></select>
+      </div>
+      <div class="feld"><label>Bezeichnung</label><input type="text" id="m-text" placeholder="z. B. Getränke Mannschaftsabend"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" placeholder="z. B. 24,50"></div>
+      <div class="feld"><label>Zahlweg</label><select id="m-weg">${zahlwegOptionen(prefs.letzterZahlweg)}</select></div>
+      <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.kasseSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  kasseSpeichern() {
+    const text = document.getElementById('m-text').value.trim();
+    const betrag = betragParsen(document.getElementById('m-betrag').value);
+    if (!text || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und Betrag angeben.'); return; }
+    const weg = document.getElementById('m-weg').value;
+    prefs.letzterZahlweg = weg; speichernUi();
+    const b = {
+      id: neueId(), art: document.getElementById('m-art').value, text, betrag, zahlweg: weg,
+      datum: document.getElementById('m-datum').value || heute(), notiz: '', ts: Date.now(),
+    };
+    daten.buchungen.push(b);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig('Kassenbuchung gespeichert', [b.id]);
+  },
+
+  // ===== Auslage: Spieler hat für die Mannschaft bezahlt =====
+  auslageModal() {
+    if (!daten.spieler.length) { this.toast('Lege zuerst Spieler unter „Verwalten“ an.'); return; }
+    this.modal(`
+      <h3>Spieler hat vorgelegt</h3>
+      <div class="hinweis" style="margin-top:0">Der Spieler bekommt den Betrag gutgeschrieben (wie eine Einzahlung) und es wird zugleich als Kasse-Ausgabe gebucht. Beides zusammen verändert den Kassenstand nicht.</div>
+      <div class="feld"><label>Wer hat ausgelegt?</label>
+        <select id="a-spieler">${[...daten.spieler].sort(nachName).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+      </div>
+      <div class="feld"><label>Wofür?</label><input type="text" id="a-text" placeholder="z. B. Pizza vor Kirmes"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="a-betrag" inputmode="decimal" placeholder="z. B. 25,00"></div>
+      <div class="feld"><label>Datum</label><input type="date" id="a-datum" value="${heute()}"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.auslageSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  auslageSpeichern() {
+    const spielerId = document.getElementById('a-spieler').value;
+    const text = document.getElementById('a-text').value.trim();
+    const betrag = betragParsen(document.getElementById('a-betrag').value);
+    if (!text || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und gültigen Betrag angeben.'); return; }
+    const datum = document.getElementById('a-datum').value || heute();
+    const ts = Date.now();
+    const b1 = { id: neueId(), art: 'zahlung', spielerId, text: 'Einzahlung', betrag, datum, notiz: text, zahlweg: 'ausgelegt', ts };
+    const b2 = { id: neueId(), art: 'kasse_aus', text, betrag, datum, notiz: '', zahlweg: 'ausgelegt', ts };
+    daten.buchungen.push(b1, b2);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`${spielerName(spielerId)} hat ${eur(betrag)} vorgelegt (${text})`, [b1.id, b2.id]);
+  },
+
+  // ===== Monatsbeitrag =====
+  monatsbeitragModal() {
+    const kat = daten.katalog.find(k => k.name === 'Monatsbeitrag');
+    const betrag = kat ? kat.betrag : 15;
+    this.modal(`
+      <h3>Monatsbeitrag abrechnen</h3>
+      <div class="feld"><label>Monat</label><input type="month" id="mb-monat" value="${heute().slice(0, 7)}"></div>
+      <div class="feld"><label>Betrag pro Spieler (€)</label><input type="text" id="mb-betrag" inputmode="decimal" value="${String(betrag).replace('.', ',')}"></div>
+      <div class="hinweis">Bucht den Monatsbeitrag für alle aktiven Spieler, die für den gewählten Monat noch keinen haben. Bereits abgerechnete werden übersprungen.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.monatsbeitragAbrechnen()">Abrechnen</button>
+      </div>`);
+  },
+
+  monatsbeitragAbrechnen() {
+    const monat = document.getElementById('mb-monat').value;
+    const betrag = betragParsen(document.getElementById('mb-betrag').value);
+    if (!monat || betrag === null || betrag <= 0) { this.toast('Bitte Monat und gültigen Betrag angeben.'); return; }
+    const aktive = daten.spieler.filter(s => s.aktiv !== false);
+    const schonGebucht = id => daten.buchungen.some(b => b.spielerId === id && b.text === 'Monatsbeitrag' && b.datum.slice(0, 7) === monat);
+    const faellig = aktive.filter(s => !schonGebucht(s.id));
+    if (!faellig.length) { this.modalZu(); this.toast(`Monatsbeitrag ${monatName(monat)} war bereits für alle gebucht.`); return; }
+    const mbTs = Date.now();
+    const neue = faellig.map(s => ({ id: neueId(), art: 'strafe', spielerId: s.id, text: 'Monatsbeitrag', betrag, datum: monat + '-01', notiz: 'Monatsbeitrag ' + monatName(monat), ts: mbTs }));
+    daten.buchungen.push(...neue);
+    const uebersprungen = aktive.length - faellig.length;
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`Monatsbeitrag ${monatName(monat)}: ${faellig.length} gebucht${uebersprungen ? `, ${uebersprungen} bereits vorhanden` : ''}`, neue.map(b => b.id));
+  },
+
+  monatsbeitragErinnerung() {
+    const monat = this.monatsbeitragFaellig();
+    if (monat) setTimeout(() => this.toast(`Monatsbeitrag ${monatName(monat)} noch nicht abgerechnet`, 'Abrechnen', () => this.monatsbeitragModal()), 900);
+  },
+
+  // ===== Tab: Übersicht =====
+  rendernUebersicht() {
+    document.getElementById('kz-offen').textContent = eur(offenGesamt());
+    document.getElementById('kz-kasse').textContent = eur(kassenstand());
+    document.getElementById('kz-ausgaben').textContent = eur(kassenausgaben());
+    const kBar = kassenTeil('bar'), kDig = kassenTeil('digital');
+    const kNz = Math.round((kassenstand() - kBar - kDig) * 100) / 100;
+    document.getElementById('kasse-split').innerHTML = `Bar <b>${eur(kBar)}</b> · Digital <b>${eur(kDig)}</b>` + (kNz !== 0 ? ` · Nicht zugeordnet <b>${eur(kNz)}</b>` : '');
+    const sortEl = document.getElementById('ueb-sort'); if (sortEl) sortEl.value = prefs.sortUeb;
+    const offenEl = document.getElementById('ueb-nuroffen'); if (offenEl) offenEl.checked = !!prefs.nurOffen;
+    const liste = document.getElementById('uebersicht-liste');
+    if (!daten.spieler.length) { liste.innerHTML = '<div class="leer">Noch keine Spieler angelegt.</div>'; return; }
+    const suche = (document.getElementById('ueb-suche').value || '').trim().toLowerCase();
+    let arr = daten.spieler.filter(s => (!suche || s.name.toLowerCase().includes(suche)) && (!prefs.nurOffen || saldo(s.id) > 0));
+    const sort = prefs.sortUeb;
+    arr = arr.sort((a, b) =>
+      sort === 'name-az' ? nachName(a, b) :
+      sort === 'name-za' ? nachName(b, a) :
+      sort === 'offen-auf' ? saldo(a.id) - saldo(b.id) :
+      saldo(b.id) - saldo(a.id));
+    liste.innerHTML = arr.length ? arr.map(s => {
+      const off = saldo(s.id);
+      return `<div class="zeile" onclick="App.spielerDetail('${s.id}')" style="cursor:pointer">
+        <div><div class="haupt">${esc(s.name)}${s.aktiv === false ? ' <small>(inaktiv)</small>' : ''}</div></div>
+        <div class="betrag ${off > 0 ? 'offen' : off < 0 ? 'plus' : ''}">${eur(off)}</div>
+      </div>`;
+    }).join('') : '<div class="leer">Kein Spieler gefunden.</div>';
+  },
+
+  spielerDetail(id) {
+    const s = daten.spieler.find(x => x.id === id);
+    const buchungen = daten.buchungen.filter(b => b.spielerId === id).sort((a, b) => b.datum.localeCompare(a.datum));
+    this.modal(`
+      <h3>${esc(s.name)} · offen: ${eur(saldo(id))}</h3>
+      <div class="detail-liste">
+      ${buchungen.length ? buchungen.map(b => `
+        <div class="zeile">
+          <div><div class="haupt">${esc(b.text)}</div>
+          <div class="detail">${datumDE(b.datum)}${b.notiz ? ' · ' + esc(b.notiz) : ''}</div></div>
+          <div class="betrag ${b.art === 'strafe' ? 'offen' : 'plus'}">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</div>
+        </div>`).join('') : '<div class="leer">Noch keine Buchungen.</div>'}
+      </div>
+      ${!nurLesen && saldo(id) > 0 ? `<button class="btn gruen" onclick="App.schnellzahlung('${id}')">Kompletten offenen Betrag einzahlen (${eur(saldo(id))})</button><div style="height:9px"></div>` : ''}
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.spielerPdf('${id}')">Als PDF</button>
+        <button class="btn sekundaer" onclick="App.modalZu()">Schließen</button>
+      </div>`);
+  },
+
+  spielerPdf(id) {
+    const s = daten.spieler.find(x => x.id === id);
+    if (!s) return;
+    const bs = daten.buchungen.filter(b => b.spielerId === id).sort((a, b) => a.datum.localeCompare(b.datum));
+    const strafen = bs.filter(b => b.art === 'strafe').reduce((x, b) => x + b.betrag, 0);
+    const gezahlt = bs.filter(b => b.art === 'zahlung').reduce((x, b) => x + b.betrag, 0);
+    document.getElementById('druckbereich').innerHTML = `
+      <h1>${esc(s.name)} – ${esc(daten.titel || 'Strafenkasse')}</h1>
+      <div class="datum">${esc(daten.verein ? daten.verein + ' · ' : '')}Stand ${datumDE(heute())}</div>
+      ${daten.paypal ? `<div class="datum">Zahlung: bar oder PayPal an ${esc(daten.paypal)}</div>` : ''}
+      <table>
+        <tr><th>Datum</th><th>Buchung</th><th class="r">Betrag</th></tr>
+        ${bs.length ? bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('') : '<tr><td colspan="3">Noch keine Buchungen</td></tr>'}
+        <tr class="summe"><td>Strafen gesamt</td><td></td><td class="r">${eur(strafen)}</td></tr>
+        <tr class="summe"><td>Gezahlt</td><td></td><td class="r">−${eur(gezahlt)}</td></tr>
+        <tr class="summe"><td>Offen</td><td></td><td class="r">${eur(strafen - gezahlt)}</td></tr>
+      </table>`;
+    window.print();
+  },
+
+  schnellzahlung(id) {
+    const betrag = saldo(id);
+    if (betrag <= 0) return;
+    this.modal(`
+      <h3>Offenen Betrag einzahlen</h3>
+      <p style="font-size:.98rem;line-height:1.5;color:var(--text);margin-bottom:4px"><b>${esc(spielerName(id))}</b> zahlt <b>${eur(betrag)}</b> ein – damit ist der offene Betrag beglichen.</p>
+      <div class="feld"><label>Zahlweg</label><select id="sz-weg">${zahlwegOptionen(prefs.letzterZahlweg)}</select></div>
+      <div class="hinweis" style="margin-top:0">Falsch getippt? Mit „Zurück“ passiert nichts.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.spielerDetail('${id}')">Zurück</button>
+        <button class="btn gruen" onclick="App.schnellzahlungAusfuehren('${id}')">Einzahlen</button>
+      </div>`);
+  },
+
+  schnellzahlungAusfuehren(id) {
+    const betrag = saldo(id);
+    if (betrag <= 0) { this.modalZu(); return; }
+    const wegEl = document.getElementById('sz-weg');
+    const weg = wegEl ? wegEl.value : (prefs.letzterZahlweg || 'bar');
+    prefs.letzterZahlweg = weg; speichernUi();
+    const b = { id: neueId(), art: 'zahlung', spielerId: id, text: 'Einzahlung', betrag, zahlweg: weg, datum: heute(), notiz: 'Offener Betrag beglichen', ts: Date.now() };
+    daten.buchungen.push(b);
+    this.modalZu(); this.rendern();
+    this.toastRueckgaengig(`${eur(betrag)} von ${spielerName(id)} gebucht – beglichen`, [b.id]);
+  },
+
+  // ===== Tab: Historie =====
+  rendernHistorie() {
+    const sortEl = document.getElementById('hist-sort'); if (sortEl) sortEl.value = prefs.sortHist;
+    const typEl = document.getElementById('hist-typ'); if (typEl) typEl.value = prefs.filterHistTyp;
+    const liste = document.getElementById('historie-liste');
+    if (!daten.buchungen.length) { liste.innerHTML = '<div class="leer">Noch keine Buchungen.</div>'; return; }
+    const suche = (document.getElementById('hist-suche').value || '').trim().toLowerCase();
+    const typ = prefs.filterHistTyp;
+    let arr = daten.buchungen.filter(b =>
+      typ === 'alle' ? true :
+      typ === 'kasse' ? (b.art === 'kasse_ein' || b.art === 'kasse_aus') :
+      b.art === typ);
+    if (suche) arr = arr.filter(b => (b.text + ' ' + (b.spielerId ? spielerName(b.spielerId) : '') + ' ' + (b.notiz || '')).toLowerCase().includes(suche));
+    const sort = prefs.sortHist;
+    arr = arr.slice().sort((a, b) =>
+      sort === 'datum-alt' ? (a.datum.localeCompare(b.datum) || a.id.localeCompare(b.id)) :
+      sort === 'betrag-ab' ? (b.betrag - a.betrag) :
+      sort === 'betrag-auf' ? (a.betrag - b.betrag) :
+      (b.datum.localeCompare(a.datum) || b.id.localeCompare(a.id)));
+    const punkt = { strafe: 'rot', zahlung: 'gruen', kasse_ein: 'gruen', kasse_aus: 'grau' };
+    liste.innerHTML = arr.length ? arr.map(b => `
+      <div class="zeile">
+        <div><div class="haupt"><span class="punkt ${punkt[b.art] || 'grau'}"></span>${esc(b.text)}${b.spielerId ? ' · ' + esc(spielerName(b.spielerId)) : ''}</div>
+        <div class="detail">${datumDE(b.datum)}${b.notiz ? ' · ' + esc(b.notiz) : ''}</div></div>
+        <div class="aktionen">
+          <div class="betrag ${b.art === 'strafe' || b.art === 'kasse_aus' ? 'offen' : 'plus'}">${eur(b.betrag)}</div>
+          <button class="icon-btn" title="Bearbeiten" onclick="App.buchungBearbeitenModal('${b.id}')">${ICON.edit}</button>
+          <button class="icon-btn rot" title="Löschen" onclick="App.buchungLoeschen('${b.id}')">${ICON.del}</button>
+        </div>
+      </div>`).join('') : '<div class="leer">Keine Buchung gefunden.</div>';
+  },
+
+  // ===== Tab: Statistik =====
+  rendernStatistik() {
+    const strafen = daten.buchungen.filter(b => b.art === 'strafe');
+    const summe = Math.round(strafen.reduce((s, b) => s + b.betrag, 0) * 100) / 100;
+    document.getElementById('st-summe').textContent = eur(summe);
+    document.getElementById('st-anzahl').textContent = String(strafen.length);
+
+    // Rangliste: Strafsumme pro Spieler
+    const proSpieler = daten.spieler.map(s => {
+      const bs = strafen.filter(b => b.spielerId === s.id);
+      return { name: s.name, sum: bs.reduce((x, b) => x + b.betrag, 0), anz: bs.length };
+    }).filter(r => r.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 10);
+    const rl = document.getElementById('st-rangliste');
+    rl.innerHTML = proSpieler.length ? proSpieler.map((r, i) => `
+      <div class="rang">
+        <div class="pos ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</div>
+        <div class="nam">${esc(r.name)}</div>
+        <div style="text-align:right"><div class="val">${eur(r.sum)}</div><div class="sub">${r.anz} Strafen</div></div>
+      </div>`).join('') : '<div class="leer">Noch keine Strafen gebucht.</div>';
+
+    // Häufigste Strafen nach Anzahl
+    const proText = {};
+    strafen.forEach(b => { (proText[b.text] = proText[b.text] || { anz: 0, sum: 0 }); proText[b.text].anz++; proText[b.text].sum += b.betrag; });
+    const topText = Object.entries(proText).map(([text, v]) => ({ text, ...v })).sort((a, b) => b.anz - a.anz).slice(0, 8);
+    const maxAnz = topText.length ? topText[0].anz : 1;
+    const st = document.getElementById('st-strafen');
+    st.innerHTML = topText.length ? topText.map(t => `
+      <div class="balken-zeile">
+        <div class="balken-kopf"><span class="b-nam">${esc(t.text)}</span><span class="b-val">${t.anz}× · ${eur(t.sum)}</span></div>
+        <div class="balken-spur"><div class="balken-fill" style="width:${Math.max(6, Math.round(t.anz / maxAnz * 100))}%"></div></div>
+      </div>`).join('') : '<div class="leer">Noch keine Strafen gebucht.</div>';
+
+    // Strafen pro Monat (Summe)
+    const proMonat = {};
+    strafen.forEach(b => { const m = b.datum.slice(0, 7); proMonat[m] = (proMonat[m] || 0) + b.betrag; });
+    const monate = Object.entries(proMonat).sort((a, b) => b[0].localeCompare(a[0]));
+    const maxSum = monate.length ? Math.max(...monate.map(m => m[1])) : 1;
+    const sm = document.getElementById('st-monate');
+    sm.innerHTML = monate.length ? monate.map(([m, sum]) => `
+      <div class="balken-zeile">
+        <div class="balken-kopf"><span class="b-nam">${monatName(m)}</span><span class="b-val">${eur(sum)}</span></div>
+        <div class="balken-spur"><div class="balken-fill" style="width:${Math.max(6, Math.round(sum / maxSum * 100))}%"></div></div>
+      </div>`).join('') : '<div class="leer">Noch keine Strafen gebucht.</div>';
+  },
+
+  buchungLoeschen(id) {
+    const b = daten.buchungen.find(x => x.id === id);
+    if (!b) return;
+    if (!confirm(`„${b.text}“ (${eur(b.betrag)}) wirklich löschen?`)) return;
+    daten.buchungen = daten.buchungen.filter(x => x.id !== id);
+    daten.geloescht[id] = Date.now();
+    this.rendern();
+  },
+
+  buchungBearbeitenModal(id) {
+    const b = daten.buchungen.find(x => x.id === id);
+    if (!b) return;
+    const spielerOpts = [...daten.spieler].sort(nachName).map(s => `<option value="${s.id}"${s.id === b.spielerId ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
+    const artOpt = (v, t) => `<option value="${v}"${b.art === v ? ' selected' : ''}>${t}</option>`;
+    this.modal(`
+      <h3>Buchung bearbeiten</h3>
+      <div class="feld"><label>Art</label>
+        <select id="e-art" onchange="App.editArtGewechselt()">
+          ${artOpt('strafe', 'Strafe (Spieler schuldet)')}
+          ${artOpt('zahlung', 'Einzahlung (Spieler zahlt in die Kasse)')}
+          ${artOpt('kasse_ein', 'Kasse-Einnahme (ohne Spieler)')}
+          ${artOpt('kasse_aus', 'Kasse-Ausgabe (ohne Spieler)')}
+        </select>
+      </div>
+      <div class="feld" id="e-spieler-feld"><label>Spieler</label><select id="e-spieler">${spielerOpts}</select></div>
+      <div class="feld"><label>Bezeichnung</label><input type="text" id="e-text" value="${esc(b.text)}"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="e-betrag" inputmode="decimal" value="${String(b.betrag).replace('.', ',')}"></div>
+      <div class="feld"><label>Datum</label><input type="date" id="e-datum" value="${b.datum}"></div>
+      <div class="feld"><label>Notiz (optional)</label><input type="text" id="e-notiz" value="${esc(b.notiz || '')}"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.buchungSpeichern('${id}')">Speichern</button>
+      </div>`);
+    this.editArtGewechselt();
+  },
+
+  editArtGewechselt() {
+    const el = document.getElementById('e-art'); if (!el) return;
+    const feld = document.getElementById('e-spieler-feld');
+    if (feld) feld.style.display = (el.value === 'strafe' || el.value === 'zahlung') ? '' : 'none';
+  },
+
+  buchungSpeichern(id) {
+    const b = daten.buchungen.find(x => x.id === id);
+    if (!b) return;
+    const art = document.getElementById('e-art').value;
+    const text = document.getElementById('e-text').value.trim();
+    const betrag = betragParsen(document.getElementById('e-betrag').value);
+    if (!text || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und gültigen Betrag angeben.'); return; }
+    const brauchtSpieler = (art === 'strafe' || art === 'zahlung');
+    const sel = document.getElementById('e-spieler');
+    if (brauchtSpieler && (!sel || !sel.value)) { this.toast('Bitte einen Spieler wählen.'); return; }
+    b.art = art;
+    b.text = text;
+    b.betrag = betrag;
+    b.datum = document.getElementById('e-datum').value || b.datum;
+    b.notiz = document.getElementById('e-notiz').value.trim();
+    if (brauchtSpieler) b.spielerId = sel.value; else delete b.spielerId;
+    b.ts = Date.now();
+    this.modalZu(); this.rendern();
+    this.toast('Buchung geändert');
+  },
+
+  // ===== Tab: Verwalten =====
+  rendernVerwalten() {
+    this.rendernVerwaltenSyncKnopf();
+    const pinfo = document.getElementById('profil-info');
+    if (pinfo) pinfo.textContent = `Aktives Team: ${PROFIL.titel}. Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync – ein Wechsel lädt die App neu.`;
+    const info = document.getElementById('einstellungen-info'); if (info) info.textContent = titelZeile() + (daten.paypal ? ' · PayPal: ' + daten.paypal : '');
+    const mbEl = document.getElementById('mb-erinnerung'); if (mbEl) mbEl.checked = !prefs.mbErinnerungAus;
+    const sortEl = document.getElementById('kat-sort'); if (sortEl) sortEl.value = prefs.sortKat;
+
+    const spSuche = (document.getElementById('sp-suche').value || '').trim().toLowerCase();
+    const sl = document.getElementById('spieler-liste');
+    const spieler = [...daten.spieler].sort(nachName).filter(s => !spSuche || s.name.toLowerCase().includes(spSuche));
+    sl.innerHTML = daten.spieler.length ? (spieler.length ? spieler.map(s => `
+      <div class="zeile">
+        <div class="haupt">${esc(s.name)}${s.aktiv === false ? ' <small>(inaktiv)</small>' : ''}</div>
+        <div class="aktionen">
+          <button class="icon-btn" title="Umbenennen" onclick="App.spielerModal('${s.id}')">${ICON.edit}</button>
+          <button class="icon-btn" title="${s.aktiv === false ? 'Aktivieren' : 'Deaktivieren'}" onclick="App.spielerUmschalten('${s.id}')">${s.aktiv === false ? ICON.play : ICON.pause}</button>
+          <button class="icon-btn rot" title="Löschen" onclick="App.spielerLoeschen('${s.id}')">${ICON.del}</button>
+        </div>
+      </div>`).join('') : '<div class="leer">Kein Spieler gefunden.</div>') : '<div class="leer">Noch keine Spieler.</div>';
+
+    const katSuche = (document.getElementById('kat-suche').value || '').trim().toLowerCase();
+    const sortK = prefs.sortKat;
+    const kl = document.getElementById('katalog-liste');
+    let kat = daten.katalog.filter(k => !katSuche || k.name.toLowerCase().includes(katSuche));
+    kat = kat.sort((a, b) =>
+      sortK === 'name-za' ? nachName(b, a) :
+      sortK === 'betrag-ab' ? (b.betrag - a.betrag) :
+      sortK === 'betrag-auf' ? (a.betrag - b.betrag) :
+      nachName(a, b));
+    kl.innerHTML = daten.katalog.length ? (kat.length ? kat.map(k => `
+      <div class="zeile">
+        <div class="haupt">${esc(k.name)}</div>
+        <div class="aktionen">
+          <div class="betrag">${eur(k.betrag)}</div>
+          <button class="icon-btn" title="Bearbeiten" onclick="App.katalogModal('${k.id}')">${ICON.edit}</button>
+          <button class="icon-btn rot" title="Löschen" onclick="App.katalogLoeschen('${k.id}')">${ICON.del}</button>
+        </div>
+      </div>`).join('') : '<div class="leer">Keine Strafe gefunden.</div>') : '<div class="leer">Katalog ist leer.</div>';
+  },
+
+  rendernVerwaltenSyncKnopf() {
+    const jetztBtn = document.getElementById('sync-jetzt-btn');
+    if (jetztBtn) jetztBtn.style.display = Sync.aktiv() ? '' : 'none';
+    const teamBtn = document.getElementById('team-link-btn');
+    if (teamBtn) teamBtn.style.display = Sync.aktiv() ? '' : 'none';
+    Sync.statusText();
+    const hinweis = document.getElementById('sync-hinweis');
+    if (hinweis) hinweis.textContent = Sync.aktiv()
+      ? 'Verbunden mit Team-Code „' + Sync.cfg.code + '“. Änderungen werden automatisch synchronisiert.'
+      : 'Richte den Sync ein, damit mehrere Kassenwarte denselben Stand sehen.';
+  },
+
+  spielerModal(id) {
+    const s = id ? daten.spieler.find(x => x.id === id) : null;
+    this.modal(`
+      <h3>${s ? 'Spieler umbenennen' : 'Spieler hinzufügen'}</h3>
+      <div class="feld"><label>Name</label><input type="text" id="m-name" value="${s ? esc(s.name) : ''}" placeholder="z. B. Max M."></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.spielerSpeichern('${id || ''}')">Speichern</button>
+      </div>`);
+    setTimeout(() => { const el = document.getElementById('m-name'); if (el) el.focus(); }, 100);
+  },
+
+  spielerSpeichern(id) {
+    const name = document.getElementById('m-name').value.trim();
+    if (!name) { this.toast('Bitte einen Namen eingeben.'); return; }
+    if (id) daten.spieler.find(x => x.id === id).name = name;
+    else daten.spieler.push({ id: neueId(), name, aktiv: true });
+    daten.spielerTs = Date.now();
+    this.modalZu(); this.rendern();
+  },
+
+  spielerUmschalten(id) {
+    const s = daten.spieler.find(x => x.id === id);
+    s.aktiv = s.aktiv === false;
+    daten.spielerTs = Date.now();
+    this.rendern();
+  },
+
+  spielerLoeschen(id) {
+    const s = daten.spieler.find(x => x.id === id);
+    const anzahl = daten.buchungen.filter(b => b.spielerId === id).length;
+    if (!confirm(`${s.name} wirklich löschen?${anzahl ? ` Dabei werden auch ${anzahl} Buchungen gelöscht!` : ''}\nTipp: „Deaktivieren“ behält die Historie.`)) return;
+    const t = Date.now();
+    daten.buchungen.filter(b => b.spielerId === id).forEach(b => { daten.geloescht[b.id] = t; });
+    daten.spieler = daten.spieler.filter(x => x.id !== id);
+    daten.buchungen = daten.buchungen.filter(b => b.spielerId !== id);
+    daten.spielerTs = t;
+    this.rendern();
+  },
+
+  katalogModal(id) {
+    const k = id ? daten.katalog.find(x => x.id === id) : null;
+    this.modal(`
+      <h3>${k ? 'Strafe bearbeiten' : 'Strafe hinzufügen'}</h3>
+      <div class="feld"><label>Bezeichnung</label><input type="text" id="m-name" value="${k ? esc(k.name) : ''}" placeholder="z. B. Zu spät zum Training"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" value="${k ? String(k.betrag).replace('.', ',') : ''}" placeholder="z. B. 2,50"></div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.katalogSpeichern('${id || ''}')">Speichern</button>
+      </div>`);
+  },
+
+  katalogSpeichern(id) {
+    const name = document.getElementById('m-name').value.trim();
+    const betrag = betragParsen(document.getElementById('m-betrag').value);
+    if (!name || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und Betrag angeben.'); return; }
+    if (id) { const k = daten.katalog.find(x => x.id === id); k.name = name; k.betrag = betrag; }
+    else daten.katalog.push({ id: neueId(), name, betrag });
+    daten.katalogTs = Date.now();
+    this.modalZu(); this.rendern();
+  },
+
+  katalogLoeschen(id) {
+    const k = daten.katalog.find(x => x.id === id);
+    if (!confirm(`„${k.name}“ aus dem Katalog löschen? Bereits gebuchte Strafen bleiben erhalten.`)) return;
+    daten.katalog = daten.katalog.filter(x => x.id !== id);
+    daten.katalogTs = Date.now();
+    this.rendern();
+  },
+
+  // ===== Katalog Export / Import =====
+  katalogAlsZeilen() {
+    return daten.katalog.map(k => `${k.name}; ${k.betrag.toFixed(2).replace('.', ',')}`).join('\n');
+  },
+
+  katalogExportModal() {
+    this.modal(`
+      <h3>Strafenkatalog exportieren</h3>
+      <div class="feld"><label>Katalog (eine Strafe pro Zeile)</label>
+        <textarea id="m-export" readonly rows="10">${esc(this.katalogAlsZeilen())}</textarea>
+      </div>
+      <div class="knoepfe">
+        <button class="btn klein sekundaer" onclick="App.katalogCsvSpeichern()">CSV-Datei</button>
+        <button class="btn klein" onclick="App.katalogTeilen()">Teilen</button>
+      </div>
+      <div class="knoepfe"><button class="btn sekundaer" onclick="App.modalZu()">Schließen</button></div>`);
+  },
+
+  async katalogTeilen() {
+    const text = [
+      `Strafenkatalog · ${titelZeile()}`,
+      `Stand: ${datumDE(heute())}`,
+      `------------------------------`,
+      ...daten.katalog.map(k => `${k.name}: ${eur(k.betrag)}`),
+      `------------------------------`,
+      `Individuelle Strafen nach Absprache.`,
+    ].join('\n');
+    if (navigator.share) {
+      try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  },
+
+  katalogCsvSpeichern() {
+    const blob = new Blob(['﻿' + this.katalogAlsZeilen()], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `strafenkatalog-${heute()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  katalogImportModal() {
+    this.modal(`
+      <h3>Strafenkatalog importieren</h3>
+      <div class="feld"><label>Eine Strafe pro Zeile: Name; Betrag</label>
+        <textarea id="m-import" rows="10" placeholder="Zu spät zum Training; 2,50&#10;Bier zu warm; 10,00"></textarea>
+      </div>
+      <div class="hinweis">Vorhandene Strafen mit gleichem Namen bekommen den neuen Betrag, neue werden ergänzt. Es wird nichts gelöscht. Du kannst auch eine exportierte CSV-Datei laden:</div>
+      <div style="margin-top:9px"><button class="btn klein sekundaer" onclick="document.getElementById('m-import-datei').click()">CSV/TXT-Datei laden</button></div>
+      <input type="file" id="m-import-datei" accept=".csv,.txt" style="display:none" onchange="App.katalogDateiLaden(event)">
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.katalogImportieren()">Importieren</button>
+      </div>`);
+  },
+
+  katalogDateiLaden(event) {
+    const datei = event.target.files[0];
+    if (!datei) return;
+    const leser = new FileReader();
+    leser.onload = () => { document.getElementById('m-import').value = leser.result; };
+    leser.readAsText(datei);
+    event.target.value = '';
+  },
+
+  katalogImportieren() {
+    const zeilen = document.getElementById('m-import').value.split('\n');
+    let neu = 0, geaendert = 0, fehler = [];
+    for (const zeile of zeilen) {
+      const t = zeile.trim();
+      if (!t) continue;
+      const eintrag = this.katalogZeileParsen(t);
+      if (!eintrag) { fehler.push(t); continue; }
+      const vorhanden = daten.katalog.find(k => k.name.toLowerCase() === eintrag.name.toLowerCase());
+      if (vorhanden) {
+        if (vorhanden.betrag !== eintrag.betrag) { vorhanden.betrag = eintrag.betrag; geaendert++; }
+      } else {
+        daten.katalog.push({ id: neueId(), name: eintrag.name, betrag: eintrag.betrag });
+        neu++;
+      }
+    }
+    if (!neu && !geaendert && fehler.length) { this.toast('Keine Zeile erkannt. Format: Name; Betrag'); return; }
+    if (neu || geaendert) daten.katalogTs = Date.now();
+    this.modalZu(); this.rendern();
+    this.toast(`Import: ${neu} neu, ${geaendert} geändert${fehler.length ? `, ${fehler.length} Zeilen unlesbar` : ''}`);
+  },
+
+  katalogZeileParsen(zeile) {
+    let t = zeile.replace(/€/g, '').trim();
+    const m = t.match(/(\d+(?:[.,]\d{1,2})?)\s*$/);
+    if (!m) return null;
+    const betrag = betragParsen(m[1]);
+    const name = t.slice(0, m.index).replace(/[\s;:,\-\t]+$/, '').trim();
+    if (!name || betrag === null || betrag <= 0) return null;
+    return { name, betrag };
+  },
+
+  // ===== Cloud-Sync UI =====
+  syncKnopf() {
+    if (Sync.aktiv()) this.syncJetzt(); else this.syncModal();
+  },
+  syncJetzt() { Sync.abgleichen(true); },
+
+  async teamAnsichtLink() {
+    if (!Sync.aktiv()) { this.toast('Erst Cloud-Sync einrichten.'); return; }
+    const c = Sync.cfg;
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.url, k: c.key, c: c.code, p: c.pin || '' }))));
+    const link = location.origin + location.pathname + '#v=' + code;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Strafenkasse – Team-Ansicht', text: 'Strafenkasse Männer 2 – live ansehen (nur Lesen):', url: link }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    this.modal(`
+      <h3>Team-Ansicht teilen</h3>
+      <div class="hinweis" style="margin-top:0">Diesen Link an die Mannschaft schicken. Wer ihn öffnet, sieht den Stand live – kann aber nichts bearbeiten.</div>
+      <div class="code-box" style="user-select:all;-webkit-user-select:all">${esc(link)}</div>
+      <div class="hinweis">Der Link enthält den Zugang samt Team-PIN – bitte nur an Teammitglieder weitergeben.</div>
+      <div class="knoepfe"><button class="btn" onclick="App.modalZu()">Schließen</button></div>`);
+  },
+
+  syncModal() {
+    const c = Sync.cfg || {};
+    const sql = 'create table if not exists strafenkasse (\n  id text primary key,\n  data jsonb,\n  rev bigint default 0,\n  updated_at timestamptz default now()\n);\nalter table strafenkasse enable row level security;\ncreate policy "team" on strafenkasse for all using (true) with check (true);\ngrant select, insert, update, delete on table strafenkasse to anon;';
+    this.modal(`
+      <h3>Cloud-Sync einrichten</h3>
+      <div class="hinweis" style="margin-top:0">Einmalig ein kostenloses Supabase-Projekt anlegen. Danach tragen alle Kassenwarte dieselben Werte + denselben Team-Code ein und sehen automatisch denselben Stand.</div>
+      <ol class="hinweis" style="padding-left:18px;margin-top:8px">
+        <li>Auf <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> kostenlos registrieren, „New project“ (Region: EU, z.&nbsp;B. Frankfurt).</li>
+        <li>Links „SQL Editor“ öffnen, folgendes einfügen und „Run“:</li>
+      </ol>
+      <div class="code-box">${esc(sql)}</div>
+      <div class="hinweis">Dann unter „Project Settings → API“: die <b>Project URL</b> und den <b>anon public</b>-Key kopieren und hier einfügen.</div>
+      <div class="feld" style="margin-top:12px"><label>Project URL</label><input type="text" id="s-url" placeholder="https://xxxx.supabase.co" value="${c.url ? esc(c.url) : ''}"></div>
+      <div class="feld"><label>anon public Key</label><input type="text" id="s-key" placeholder="eyJhbGci…" value="${c.key ? esc(c.key) : ''}"></div>
+      <div class="feld"><label>Team-Code (bei allen gleich)</label><input type="text" id="s-code" placeholder="z. B. hsg-${PROFIL_ID}" value="${esc(c.code || ('hsg-' + PROFIL_ID))}"></div>
+      <div class="feld"><label>Team-PIN (optional)</label><input type="text" id="s-pin" placeholder="leer lassen = ohne Verschlüsselung" value="${c.pin ? esc(c.pin) : ''}"></div>
+      <div class="hinweis" style="margin-top:0">Mit PIN werden die Daten verschlüsselt in der Cloud abgelegt – ohne den PIN sind sie dort nicht lesbar. Alle Geräte müssen denselben PIN verwenden.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.syncSpeichern()">Verbinden</button>
+      </div>
+      ${Sync.aktiv() ? '<div class="knoepfe"><button class="btn gefahr" onclick="App.syncTrennen()">Verbindung trennen</button></div>' : ''}`);
+  },
+
+  syncSpeichern() {
+    const url = document.getElementById('s-url').value.trim();
+    const key = document.getElementById('s-key').value.trim();
+    const code = document.getElementById('s-code').value.trim().toLowerCase().replace(/\s+/g, '-');
+    const pin = document.getElementById('s-pin').value.trim();
+    if (!url || !key || !code) { this.toast('Bitte URL, Key und Team-Code angeben.'); return; }
+    if (!/^https:\/\/.+/.test(url)) { this.toast('Die Project URL muss mit https:// beginnen.'); return; }
+    const alt = Sync.cfg || {};
+    // Bei Wechsel von URL/Code/PIN die Revisionsverfolgung zurücksetzen
+    const gleich = alt.url === url && alt.code === code && (alt.pin || '') === pin;
+    Sync._key = null;
+    Sync.cfg = { url, key, code, pin, autoSync: true, rev: gleich ? alt.rev : null, lastJson: gleich ? alt.lastJson : null, lastAt: gleich ? alt.lastAt : null };
+    Sync.speichernCfg();
+    this.modalZu();
+    this.toast('Verbunden – synchronisiere …');
+    Sync.abgleichen(true).then(() => this.rendernVerwaltenSyncKnopf());
+  },
+
+  syncTrennen() {
+    if (!confirm('Cloud-Sync auf diesem Gerät trennen? Die Daten bleiben lokal erhalten.')) return;
+    Sync.trennen(); this.modalZu(); this.toast('Sync getrennt');
+  },
+
+  // ===== Team wechseln =====
+  profilModal() {
+    if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
+    const zeilen = Object.values(PROFILE).map(p => `
+      <button class="btn ${p.id === PROFIL_ID ? '' : 'sekundaer'}" style="width:100%;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="App.profilWechseln('${p.id}')">
+        <span>${esc(p.titel)}</span>${p.id === PROFIL_ID ? '<span style="font-size:.78rem;opacity:.85">Aktiv</span>' : ''}
+      </button>`).join('');
+    this.modal(`
+      <h3>Team wechseln</h3>
+      <div class="hinweis" style="margin-top:0;margin-bottom:12px">Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync. Die App lädt nach dem Wechsel neu.</div>
+      ${zeilen}
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+      </div>`);
+  },
+  profilWechseln(id) {
+    if (id === PROFIL_ID || !PROFILE[id]) { this.modalZu(); return; }
+    try { localStorage.setItem(PROFIL_KEY, id); } catch (e) {}
+    location.reload();
+  },
+
+  einstellungenModal() {
+    this.modal(`
+      <h3>Verein / Mannschaft</h3>
+      <div class="feld"><label>Titel</label><input type="text" id="e-titel" value="${esc(daten.titel || '')}" placeholder="z. B. ${esc(STD_TITEL)}"></div>
+      <div class="feld"><label>Verein</label><input type="text" id="e-verein" value="${esc(daten.verein || '')}" placeholder="z. B. HSG Wettenberg"></div>
+      <div class="feld"><label>PayPal-Adresse (optional)</label><input type="text" id="e-paypal" value="${esc(daten.paypal || '')}" placeholder="name@mail.de"></div>
+      <div class="hinweis" style="margin-top:0">Erscheint im Kopf der App und in den geteilten Übersichten, Bildern und PDFs. PayPal leer lassen, wenn nicht gewünscht.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.einstellungenSpeichern()">Speichern</button>
+      </div>`);
+  },
+
+  einstellungenSpeichern() {
+    const titel = document.getElementById('e-titel').value.trim();
+    if (!titel) { this.toast('Bitte einen Titel angeben.'); return; }
+    daten.titel = titel;
+    daten.verein = document.getElementById('e-verein').value.trim();
+    daten.paypal = document.getElementById('e-paypal').value.trim();
+    this.modalZu(); this.rendern();
+    this.toast('Gespeichert');
+  },
+
+  // ===== Teilen =====
+  standText() {
+    const zeilen = [...daten.spieler]
+      .filter(s => s.aktiv !== false || saldo(s.id) !== 0)
+      .sort((a, b) => saldo(b.id) - saldo(a.id))
+      .map(s => `${s.name}: ${eur(saldo(s.id))}`);
+    return [
+      titelZeile(),
+      `Stand: ${datumDE(heute())}`,
+      `------------------------------`,
+      ...zeilen,
+      `------------------------------`,
+      `Offen gesamt: ${eur(offenGesamt())}`,
+      `Kassenstand: ${eur(kassenstand())}`,
+      ``,
+      ...(daten.paypal ? [`Bitte zeitnah einzahlen – bar oder per PayPal:`, daten.paypal] : [`Bitte zeitnah beim Kassenwart einzahlen.`]),
+    ].join('\n');
+  },
+
+  async teilenWhatsApp() {
+    const text = this.standText();
+    if (navigator.share) {
+      try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  },
+
+  teilenBild() {
+    const zeilen = [...daten.spieler]
+      .filter(s => s.aktiv !== false || saldo(s.id) !== 0)
+      .sort((a, b) => saldo(b.id) - saldo(a.id));
+    const w = 800, kopf = 170, zeilenH = 52, fuss = 175;
+    const h = kopf + zeilen.length * zeilenH + fuss;
+    const c = document.createElement('canvas');
+    c.width = w * 2; c.height = h * 2;
+    const ctx = c.getContext('2d');
+    ctx.scale(2, 2);
+
+    let logoImg = null;
+    const zeichnen = () => {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, '#C30606'); grad.addColorStop(1, '#8a0404');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, kopf - 30);
+      // Logo-Badge oben links (falls geladen)
+      if (logoImg) {
+        const badge = 90, bx = 40, by = (kopf - 30 - badge) / 2, pad = 10;
+        ctx.fillStyle = '#fff';
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, badge, badge, 16); ctx.fill(); }
+        else ctx.fillRect(bx, by, badge, badge);
+        ctx.drawImage(logoImg, bx + pad, by + pad, badge - 2 * pad, badge - 2 * pad);
+      }
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 34px -apple-system, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(daten.titel || 'Strafenkasse', 150, 62);
+      ctx.font = '600 22px -apple-system, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText((daten.verein ? daten.verein + ' · ' : '') + 'Stand ' + datumDE(heute()), 150, 98);
+
+      let y = kopf + 8;
+      zeilen.forEach((s, i) => {
+        if (i % 2 === 0) { ctx.fillStyle = '#f7f7f8'; ctx.fillRect(20, y - 32, w - 40, zeilenH - 6); }
+        const off = saldo(s.id);
+        ctx.fillStyle = '#1a1a1a';
+        ctx.font = '600 24px -apple-system, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'left'; ctx.fillText(s.name, 40, y);
+        ctx.fillStyle = off > 0 ? '#C30606' : '#16a34a';
+        ctx.font = '800 24px -apple-system, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'right'; ctx.fillText(eur(off), w - 40, y);
+        ctx.textAlign = 'left';
+        y += zeilenH;
+      });
+
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(20, y - 20); ctx.lineTo(w - 20, y - 20); ctx.stroke();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = '800 26px -apple-system, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Offen gesamt', 40, y + 22);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#C30606'; ctx.fillText(eur(offenGesamt()), w - 40, y + 22);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#6b7280';
+      ctx.font = '600 22px -apple-system, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Kassenstand', 40, y + 60);
+      ctx.textAlign = 'right'; ctx.fillText(eur(kassenstand()), w - 40, y + 60);
+      ctx.textAlign = 'left';
+      if (daten.paypal) {
+        ctx.fillStyle = '#C30606';
+        ctx.font = '700 22px -apple-system, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText('Bitte einzahlen – PayPal: ' + daten.paypal, 40, y + 104);
+      }
+
+      c.toBlob(async blob => {
+        const datei = new File([blob], `strafenkasse-${heute()}.png`, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [datei] })) {
+          try { await navigator.share({ files: [datei] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = datei.name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+    };
+
+    const logo = new Image();
+    logo.onload = () => { logoImg = logo; zeichnen(); };
+    logo.onerror = () => { zeichnen(); };
+    logo.src = LOGO;
+  },
+
+  teilenPdf() {
+    const d = document.getElementById('druckbereich');
+    const spielerSortiert = [...daten.spieler].sort(nachName);
+    d.innerHTML = `
+      <h1>${esc(titelZeile())}</h1>
+      <div class="datum">Abrechnung · Stand ${datumDE(heute())}</div>
+      ${daten.paypal ? `<div class="datum">Zahlung: bar oder PayPal an ${esc(daten.paypal)}</div>` : ''}
+      <h2>Übersicht</h2>
+      <table>
+        <tr><th>Spieler</th><th class="r">Strafen</th><th class="r">Gezahlt</th><th class="r">Offen</th></tr>
+        ${spielerSortiert.map(s => {
+          const strafen = daten.buchungen.filter(b => b.spielerId === s.id && b.art === 'strafe').reduce((x, b) => x + b.betrag, 0);
+          const gezahlt = daten.buchungen.filter(b => b.spielerId === s.id && b.art === 'zahlung').reduce((x, b) => x + b.betrag, 0);
+          return `<tr><td>${esc(s.name)}</td><td class="r">${eur(strafen)}</td><td class="r">${eur(gezahlt)}</td><td class="r"><b>${eur(strafen - gezahlt)}</b></td></tr>`;
+        }).join('')}
+        <tr class="summe"><td>Gesamt</td><td></td><td></td><td class="r">${eur(offenGesamt())}</td></tr>
+      </table>
+      <h2>Kassenstand: ${eur(kassenstand())}</h2>
+      ${spielerSortiert.map(s => {
+        const bs = daten.buchungen.filter(b => b.spielerId === s.id).sort((a, b) => a.datum.localeCompare(b.datum));
+        if (!bs.length) return '';
+        return `<h2>${esc(s.name)}</h2><table>
+          <tr><th>Datum</th><th>Buchung</th><th class="r">Betrag</th></tr>
+          ${bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('')}
+        </table>`;
+      }).join('')}`;
+    window.print();
+  },
+
+  // ===== Statistik teilen / exportieren =====
+  statistikDaten() {
+    const strafen = daten.buchungen.filter(b => b.art === 'strafe');
+    const summe = Math.round(strafen.reduce((s, b) => s + b.betrag, 0) * 100) / 100;
+    const proSpieler = daten.spieler.map(s => {
+      const bs = strafen.filter(b => b.spielerId === s.id);
+      return { name: s.name, sum: Math.round(bs.reduce((x, b) => x + b.betrag, 0) * 100) / 100, anz: bs.length };
+    }).filter(r => r.sum > 0).sort((a, b) => b.sum - a.sum);
+    const proText = {};
+    strafen.forEach(b => { (proText[b.text] = proText[b.text] || { anz: 0, sum: 0 }); proText[b.text].anz++; proText[b.text].sum += b.betrag; });
+    const topText = Object.entries(proText).map(([text, v]) => ({ text, anz: v.anz, sum: Math.round(v.sum * 100) / 100 })).sort((a, b) => b.anz - a.anz);
+    const proMonat = {};
+    strafen.forEach(b => { const m = b.datum.slice(0, 7); proMonat[m] = (proMonat[m] || 0) + b.betrag; });
+    const monate = Object.entries(proMonat).map(([m, s]) => ({ m, sum: Math.round(s * 100) / 100 })).sort((a, b) => b.m.localeCompare(a.m));
+    return { strafen, summe, proSpieler, topText, monate };
+  },
+
+  statistikText() {
+    const d = this.statistikDaten();
+    return [
+      'Statistik · ' + titelZeile(),
+      'Stand: ' + datumDE(heute()),
+      '------------------------------',
+      'Strafen gesamt: ' + eur(d.summe) + ' (' + d.strafen.length + ' Strafen)',
+      '',
+      'Rangliste (Strafsumme):',
+      ...d.proSpieler.slice(0, 10).map((r, i) => `${i + 1}. ${r.name}: ${eur(r.sum)}`),
+      '',
+      'Häufigste Strafen:',
+      ...d.topText.slice(0, 6).map(t => `${t.anz}× ${t.text}`),
+    ].join('\n');
+  },
+
+  async teilenStatistik() {
+    const text = this.statistikText();
+    if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  },
+
+  statistikPdf() {
+    const d = this.statistikDaten();
+    document.getElementById('druckbereich').innerHTML = `
+      <h1>Statistik · ${esc(titelZeile())}</h1>
+      <div class="datum">Stand ${datumDE(heute())} · Strafen gesamt ${eur(d.summe)} (${d.strafen.length})</div>
+      <h2>Rangliste – Strafsumme pro Spieler</h2>
+      <table>
+        <tr><th>#</th><th>Spieler</th><th class="r">Anzahl</th><th class="r">Summe</th></tr>
+        ${d.proSpieler.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td class="r">${r.anz}</td><td class="r">${eur(r.sum)}</td></tr>`).join('')}
+      </table>
+      <h2>Häufigste Strafen</h2>
+      <table>
+        <tr><th>Strafe</th><th class="r">Anzahl</th><th class="r">Summe</th></tr>
+        ${d.topText.map(t => `<tr><td>${esc(t.text)}</td><td class="r">${t.anz}</td><td class="r">${eur(t.sum)}</td></tr>`).join('')}
+      </table>
+      <h2>Strafen pro Monat</h2>
+      <table>
+        <tr><th>Monat</th><th class="r">Summe</th></tr>
+        ${d.monate.map(m => `<tr><td>${monatName(m.m)}</td><td class="r">${eur(m.sum)}</td></tr>`).join('')}
+      </table>`;
+    window.print();
+  },
+
+  // ===== Backup =====
+  exportieren() {
+    const blob = new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `strafenkasse-backup-${heute()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  importieren(event) {
+    const datei = event.target.files[0];
+    if (!datei) return;
+    const leser = new FileReader();
+    leser.onload = () => {
+      try {
+        const neu = JSON.parse(leser.result);
+        if (!neu.spieler || !neu.katalog || !neu.buchungen) throw new Error('Format');
+        if (!confirm('Backup laden? Die aktuellen Daten auf diesem Gerät werden ersetzt.')) return;
+        daten = normalisieren(neu);
+        this.rendern();
+        this.toast('Backup geladen');
+      } catch (e) { this.toast('Datei konnte nicht gelesen werden.'); }
+    };
+    leser.readAsText(datei);
+    event.target.value = '';
+  },
+
+  // ===== Modal & Toast =====
+  modal(html) {
+    document.getElementById('modal-inhalt').innerHTML =
+      '<div class="modal-kopf"><div class="modal-griff"></div><button class="modal-x" type="button" aria-label="Schließen" onclick="App.modalZu()">' + ICON.x + '</button></div>' + html;
+    const m = document.querySelector('.modal'); m.scrollTop = 0; m.style.transform = '';
+    document.getElementById('modal-hg').classList.add('offen');
+    this.sucheXAnlegen(document.getElementById('modal-inhalt'));
+  },
+  modalZu() { document.getElementById('modal-hg').classList.remove('offen'); },
+
+  // Fügt jedem Suchfeld einen X-Knopf zum Zurücksetzen hinzu
+  sucheXAnlegen(wurzel) {
+    (wurzel || document).querySelectorAll('.suchwrap').forEach(w => {
+      const inp = w.querySelector('.suchfeld');
+      if (!inp) return;
+      if (!w.querySelector('.such-clear')) {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'such-clear'; btn.setAttribute('aria-label', 'Suche zurücksetzen');
+        btn.innerHTML = ICON.x;
+        btn.addEventListener('click', () => App.sucheLeeren(btn));
+        w.appendChild(btn);
+      }
+      w.classList.toggle('hat-text', !!inp.value);
+    });
+  },
+  sucheLeeren(btn) {
+    const w = btn.closest('.suchwrap'); if (!w) return;
+    const inp = w.querySelector('.suchfeld'); if (!inp) return;
+    inp.value = ''; w.classList.remove('hat-text');
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.focus();
+  },
+
+  _toastTimer: null,
+  toast(text, aktionText, aktion, dauer) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    const btn = document.getElementById('toast-aktion');
+    if (aktionText) {
+      btn.style.display = '';
+      btn.textContent = aktionText;
+      btn.onclick = () => { aktion(); t.classList.remove('offen'); };
+    } else btn.style.display = 'none';
+    t.classList.add('offen');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => t.classList.remove('offen'), dauer || 5000);
+  },
+  toastRueckgaengig(text, buchungsIds) {
+    this.toast(text, 'Rückgängig', () => {
+      const t = Date.now();
+      daten.buchungen = daten.buchungen.filter(b => !buchungsIds.includes(b.id));
+      buchungsIds.forEach(id => { daten.geloescht[id] = t; });
+      this.rendern();
+    }, 9000);
+  },
+};
+
+// ---------- Statische Icons setzen ----------
+document.getElementById('kopf-logo').src = LOGO;
+document.getElementById('team-btn').innerHTML = ICON.team;
+document.getElementById('nav-erfassen').innerHTML = ICON.erfassen + 'Erfassen';
+document.getElementById('nav-uebersicht').innerHTML = ICON.uebersicht + 'Übersicht';
+document.getElementById('nav-statistik').innerHTML = ICON.statistik + 'Statistik';
+document.getElementById('nav-historie').innerHTML = ICON.historie + 'Historie';
+document.getElementById('nav-verwalten').innerHTML = ICON.verwalten + 'Verwalten';
+['erfassen', 'ueb', 'hist', 'sp', 'kat'].forEach(k => {
+  const el = document.getElementById('ico-such-' + k);
+  if (el) el.innerHTML = ICON.such;
+});
+App.sucheXAnlegen();
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('suchfeld')) {
+    const w = t.closest('.suchwrap'); if (w) w.classList.toggle('hat-text', !!t.value);
+  }
+});
+
+// Bottom-Sheet: nach unten wischen zum Schließen
+(() => {
+  const m = document.querySelector('.modal');
+  if (!m) return;
+  let startY = null, dy = 0, ziehen = false;
+  m.addEventListener('touchstart', e => {
+    if (m.scrollTop > 0) { ziehen = false; return; }
+    startY = e.touches[0].clientY; dy = 0; ziehen = true; m.style.transition = 'none';
+  }, { passive: true });
+  m.addEventListener('touchmove', e => {
+    if (!ziehen || startY === null) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy > 0) m.style.transform = 'translateY(' + dy + 'px)';
+  }, { passive: true });
+  m.addEventListener('touchend', () => {
+    if (!ziehen) return;
+    ziehen = false; m.style.transition = 'transform .2s';
+    if (dy > 90) App.modalZu();
+    m.style.transform = '';
+    startY = null;
+  });
+})();
+
+// ---------- Start ----------
+Sync.init();
+
+// Team-Ansicht (nur Lesen): per Link (#v=...) aktivieren UND dauerhaft merken,
+// damit auch die Homescreen-App (die den #-Teil verliert) im Ansicht-Modus bleibt.
+const ANSICHT_KEY = `hsg-${PROFIL_ID}-ansicht`;
+(() => {
+  const h = location.hash || '';
+  // Notausstieg zurück zum Vollzugriff: .../#bearbeiten
+  if (h === '#normal' || h === '#edit' || h === '#bearbeiten') {
+    try { localStorage.removeItem(ANSICHT_KEY); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    return;
+  }
+  let conf = null;
+  if (h.indexOf('#v=') === 0) conf = h.slice(3);
+  else { try { conf = localStorage.getItem(ANSICHT_KEY); } catch (e) {} }
+  if (!conf) return;
+  let p;
+  try { p = JSON.parse(decodeURIComponent(escape(atob(conf)))); } catch (e) { return; }
+  if (!p || !p.u || !p.k || p.c == null) return;
+
+  nurLesen = true;
+  try { localStorage.setItem(ANSICHT_KEY, conf); } catch (e) {}
+  // URL mit #v= versehen (falls aus dem Speicher aktiviert) und Manifest so setzen,
+  // dass "Zum Home-Bildschirm" den Ansicht-Modus mitnimmt.
+  try {
+    if (h.indexOf('#v=') !== 0) history.replaceState(null, '', location.pathname + location.search + '#v=' + conf);
+    const basis = location.href.replace(/#.*$/, '').replace(/[^/]*$/, '');
+    const man = {
+      name: 'Strafenkasse (Ansicht)', short_name: 'Strafenkasse',
+      start_url: location.href, scope: basis, display: 'standalone',
+      background_color: '#111114', theme_color: '#C30606',
+      icons: [{ src: basis + 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: basis + 'icon-512.png', sizes: '512x512', type: 'image/png' }],
+    };
+    const ml = document.querySelector('link[rel="manifest"]');
+    if (ml) ml.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man)));
+  } catch (e) {}
+
+  Sync.cfg = { url: p.u, key: p.k, code: p.c, pin: p.p || '', autoSync: false, rev: null, lastJson: null, lastAt: null };
+  Sync._key = null;
+  document.body.classList.add('nur-lesen');
+  const sub = document.querySelector('header .sub'); if (sub) sub.textContent = (daten.verein || '') + ' · Team-Ansicht';
+  const lh = document.getElementById('lese-hinweis'); if (lh) lh.innerHTML = ICON.cloud + 'Team-Ansicht – Live-Stand, schreibgeschützt';
+})();
+
+App.themeAnwenden();
+Sync.status(Sync.aktiv() ? 'ok' : 'aus');
+App.rendern();
+if (nurLesen) App.tab('uebersicht');
+if (Sync.aktiv()) Sync.abgleichen(false);
+if (!nurLesen) App.monatsbeitragErinnerung();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Sync.aktiv()) Sync.abgleichen(false);
+});
+window.addEventListener('online', () => { if (Sync.aktiv()) Sync.abgleichen(false); });
+
+// Regelmäßiger Hintergrund-Abgleich, solange die App sichtbar ist (Live-Aktualisierung)
+setInterval(() => {
+  if (Sync.aktiv() && !Sync.laufend && document.visibilityState === 'visible') Sync.synchronisieren(false);
+}, 20000);
+
+// PWA: Service Worker registrieren (nur über http/https, nicht bei lokalem Datei-Öffnen)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

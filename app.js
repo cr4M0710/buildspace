@@ -36,7 +36,8 @@ const folderStructure = {
       { id: "jugend", label: "Jugend" },
       { id: "maenner1", label: "Männer 1" },
       { id: "maenner2", label: "Männer 2" },
-      { id: "hallendienst", label: "Hallendienst" }
+      { id: "hallendienst", label: "Hallendienst" },
+      { id: "training", label: "Training" }
     ]
   },
   freizeit: {

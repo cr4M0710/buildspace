@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Wizard – Das Kartenspiel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Grenze:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<style>
+:root{
+  --nacht:#151021;
+  --nacht2:#1f1830;
+  --pergament:#ece0c2;
+  --pergament2:#e0d0a8;
+  --tinte:#2b2118;
+  --gold:#d4a542;
+  --gold-hell:#f0c96a;
+  --blau:#2f6fb8;
+  --rot:#c14238;
+  --gruen:#3f9158;
+  --gelb:#dca62c;
+  --lila:#7b5cc4;
+  --grau:#8a8494;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Grenze',Georgia,serif;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, #2c2145 0%, transparent 60%),
+    radial-gradient(ellipse 100% 50% at 50% 110%, #241a3a 0%, transparent 55%),
+    var(--nacht);
+  color:var(--pergament);
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+h1,h2,.display{font-family:'Pirata One','Grenze',serif;font-weight:400;letter-spacing:.03em;}
+
+/* ============ App-Gerüst ============ */
+#app{height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.screen{flex:1;display:none;flex-direction:column;min-height:0;}
+.screen.active{display:flex;}
+
+/* ============ Startbildschirm ============ */
+#setup{align-items:center;justify-content:flex-start;padding:20px;gap:0;overflow-y:auto;}
+.logo{font-size:clamp(3rem,15vw,4.6rem);color:var(--gold);text-shadow:0 0 24px rgba(212,165,66,.35),0 2px 0 #5a3f10;line-height:1;margin-top:8px;}
+.tagline{color:var(--grau);font-size:.95rem;margin:4px 0 20px;font-style:italic;}
+.setup-card{background:linear-gradient(160deg,var(--nacht2),#181226);border:1px solid #3a2f56;border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.5);}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:.82rem;color:var(--gold-hell);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;}
+.field input[type=text]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4a3d6e;background:#120d1e;color:var(--pergament);font-family:inherit;font-size:1.1rem;}
+.field input[type=text]:focus{outline:2px solid var(--gold);border-color:transparent;}
+.count-row{display:flex;gap:8px;}
+.count-btn{flex:1;padding:11px 0;border-radius:10px;border:1px solid #4a3d6e;background:#120d1e;color:var(--pergament);font-family:inherit;font-size:1.1rem;cursor:pointer;}
+.count-btn.sel{background:var(--gold);color:var(--tinte);border-color:var(--gold);font-weight:700;box-shadow:0 0 14px rgba(212,165,66,.4);}
+.hint{font-size:.83rem;color:var(--grau);margin-top:6px;}
+.btn-primary{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(160deg,var(--gold-hell),var(--gold));color:var(--tinte);font-family:'Pirata One',serif;font-size:1.45rem;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 0 #7a5a18,0 8px 20px rgba(0,0,0,.4);}
+.btn-primary:active{transform:translateY(3px);box-shadow:0 1px 0 #7a5a18;}
+.btn-primary:disabled{opacity:.45;box-shadow:none;cursor:default;}
+.btn-ghost{width:100%;padding:11px;border:1px solid #4a3d6e;border-radius:10px;background:transparent;color:var(--pergament);font-family:inherit;font-size:1rem;cursor:pointer;}
+.divider{display:flex;align-items:center;gap:10px;color:var(--grau);font-size:.8rem;margin:14px 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#3a2f56;}
+.net-msg{font-size:.88rem;color:#e8766c;margin-top:8px;min-height:1.2em;text-align:center;}
+.join-row{display:flex;gap:8px;}
+.join-row input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid #4a3d6e;background:#120d1e;color:var(--pergament);font-family:inherit;font-size:1.2rem;letter-spacing:.3em;text-transform:uppercase;text-align:center;min-width:0;}
+.join-row .btn-primary{width:auto;padding:0 18px;font-size:1.15rem;}
+
+/* ============ Spielbildschirm ============ */
+#game{position:relative;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid #2c2344;background:rgba(18,13,30,.6);}
+.round-info{font-size:.95rem;line-height:1.2;}
+.round-info b{color:var(--gold-hell);font-size:1.05rem;}
+.round-info small{display:block;color:var(--grau);font-size:.75rem;}
+.trump-chip{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid #4a3d6e;background:#120d1e;font-size:.95rem;}
+.trump-gem{width:16px;height:16px;border-radius:50%;box-shadow:0 0 8px currentColor;border:1px solid rgba(255,255,255,.5);}
+.icon-btn{width:40px;height:40px;border-radius:10px;border:1px solid #4a3d6e;background:#120d1e;color:var(--gold-hell);font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Pirata One',serif;}
+
+/* Gegner */
+.opponents{display:flex;justify-content:center;gap:6px;padding:10px 8px 4px;flex-wrap:wrap;}
+.seat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:62px;padding:6px 4px;border-radius:12px;transition:background .3s;}
+.seat .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(160deg,#3a2f56,#241a3a);border:2px solid #4a3d6e;display:flex;align-items:center;justify-content:center;font-family:'Pirata One',serif;font-size:1.3rem;color:var(--gold-hell);position:relative;transition:border-color .3s,box-shadow .3s;}
+.seat.active .avatar{border-color:var(--gold);box-shadow:0 0 16px rgba(212,165,66,.55);animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 10px rgba(212,165,66,.4)}50%{box-shadow:0 0 22px rgba(212,165,66,.75)}}
+.seat .cardcount{position:absolute;bottom:-4px;right:-6px;background:var(--nacht2);border:1px solid #4a3d6e;border-radius:999px;font-size:.65rem;padding:1px 6px;color:var(--pergament);}
+.seat .dealer-badge{position:absolute;top:-6px;left:-8px;background:var(--gold);color:var(--tinte);border-radius:999px;font-size:.6rem;font-weight:700;padding:1px 5px;display:none;}
+.seat.dealer .dealer-badge{display:block;}
+.seat .pname{font-size:.8rem;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.seat .stats{font-size:.75rem;color:var(--grau);}
+.seat .stats b{color:var(--pergament);}
+.seat .stats.done b{color:#7ed491;}
+.seat .stats.over b{color:#e8766c;}
+
+/* Stichfläche */
+.table-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;position:relative;padding:4px 8px;}
+.rune-circle{position:absolute;inset:8px 16px;border:1px dashed rgba(212,165,66,.18);border-radius:24px;pointer-events:none;}
+.trick{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:6px;z-index:1;max-width:100%;}
+.played{display:flex;flex-direction:column;align-items:center;gap:3px;animation:dropIn .3s ease-out;}
+@keyframes dropIn{from{transform:translateY(-24px) scale(.85);opacity:0}to{transform:none;opacity:1}}
+.played .who{font-size:.72rem;color:var(--grau);max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.played.winner .who{color:var(--gold-hell);font-weight:700;}
+.played.winner .card{box-shadow:0 0 0 2px var(--gold),0 0 22px rgba(212,165,66,.7);}
+
+/* ============ Karten: vollflächig gefärbte Völker ============ */
+.card{width:52px;height:76px;border-radius:8px;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.45);font-family:'Pirata One',serif;flex-shrink:0;overflow:hidden;isolation:isolate;-webkit-mask-image:-webkit-radial-gradient(white,black);}
+.card .tl{position:absolute;top:3px;left:5px;font-size:.95rem;line-height:1;z-index:2;}
+.card .br{position:absolute;bottom:3px;right:5px;font-size:.95rem;line-height:1;transform:rotate(180deg);z-index:2;}
+.card .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.5rem;line-height:1;gap:1px;z-index:2;}
+.card .mid .sym{font-size:.9rem;opacity:.9;}
+.card .mid .volk{font-family:'Grenze',serif;font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;opacity:.85;}
+/* Großes Wasserzeichen-Symbol im Hintergrund */
+.card::before{content:attr(data-sym);position:absolute;right:-8px;bottom:-12px;font-size:3.2rem;opacity:.16;z-index:1;font-family:'Grenze',serif;}
+.card.c-blau{background:linear-gradient(165deg,#4d88ca,var(--blau) 55%,#235a9e);color:#fff;border:1px solid #1c4a84;}
+.card.c-rot{background:linear-gradient(165deg,#d15b50,var(--rot) 55%,#9c3129);color:#fff;border:1px solid #7e2620;}
+.card.c-gruen{background:linear-gradient(165deg,#54a86c,var(--gruen) 55%,#2f7444);color:#fff;border:1px solid #245c36;}
+.card.c-gelb{background:linear-gradient(165deg,#f0c159,var(--gelb) 55%,#b8860f);color:#3d2c04;border:1px solid #96700c;}
+/* Zauberer: Nachtviolett mit Sternenstaub */
+.card.c-wizard{background:radial-gradient(circle at 30% 20%,rgba(240,201,106,.28) 0%,transparent 34%),radial-gradient(circle at 75% 65%,rgba(240,201,106,.18) 0%,transparent 26%),linear-gradient(165deg,#5c3f9c,#3c2478 55%,#241448);color:var(--gold-hell);border:2px solid var(--gold);}
+.card.c-wizard .mid .emoji{font-size:1.45rem;text-shadow:0 0 8px rgba(240,201,106,.6);}
+/* Narr: helle Schellenkappe mit Schrägstreifen */
+.card.c-jester{background:repeating-linear-gradient(135deg,#f4f0e6 0 7px,#ddd4e8 7px 14px);color:#4c3a66;border:2px dashed #8a7aa8;}
+.card.c-jester .mid .emoji{font-size:1.45rem;}
+.card.trumpcard{box-shadow:0 0 0 2px var(--gold),0 0 10px rgba(212,165,66,.45),0 3px 8px rgba(0,0,0,.45);}
+.card.back{background:linear-gradient(150deg,#332756,#241a3a);border:1px solid #4a3d6e;}
+.card.back::after{content:'✦';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--gold);opacity:.6;font-size:1.3rem;}
+
+/* Statuszeile */
+.status{min-height:34px;display:flex;align-items:center;justify-content:center;padding:2px 12px;font-size:1.02rem;color:var(--gold-hell);text-align:center;}
+.status.subtle{color:var(--grau);}
+
+/* Hand */
+.hand-wrap{padding:6px 0 12px;background:linear-gradient(to top,rgba(18,13,30,.85),transparent);}
+.hand{display:flex;overflow-x:auto;overflow-y:visible;padding:16px 18px 6px;scrollbar-width:none;}
+.hand::-webkit-scrollbar{display:none;}
+.hand .card{width:60px;height:88px;margin-left:-22px;transition:transform .18s,box-shadow .18s,opacity .18s;cursor:pointer;}
+.hand .card:first-child{margin-left:0;}
+.hand .card .tl{font-size:1.1rem;} .hand .card .mid{font-size:1.8rem;}
+.hand .card.c-wizard .mid .emoji,.hand .card.c-jester .mid .emoji{font-size:1.7rem;}
+.hand .card.illegal{opacity:.42;filter:saturate(.4);}
+.hand .card.sel{transform:translateY(-16px);box-shadow:0 0 0 2px var(--gold),0 8px 18px rgba(0,0,0,.6);z-index:5;}
+.hand.inactive .card{cursor:default;}
+
+/* Ansage-Panel */
+.bid-panel{padding:10px 14px 16px;background:rgba(18,13,30,.9);border-top:1px solid #2c2344;}
+.bid-title{text-align:center;font-size:1rem;color:var(--gold-hell);margin-bottom:4px;}
+.bid-sub{text-align:center;font-size:.82rem;color:var(--grau);margin-bottom:10px;}
+.bid-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.bid-btn{min-width:52px;padding:12px 0;border-radius:10px;border:1px solid #4a3d6e;background:#1c1530;color:var(--pergament);font-family:'Pirata One',serif;font-size:1.35rem;cursor:pointer;}
+.bid-btn:active{background:var(--gold);color:var(--tinte);}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(10,7,18,.82);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px;}
+.overlay.show{display:flex;}
+.panel{background:linear-gradient(160deg,var(--nacht2),#181226);border:1px solid #4a3d6e;border-radius:18px;padding:22px;width:100%;max-width:420px;max-height:86dvh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7);}
+.panel h2{color:var(--gold);font-size:1.8rem;text-align:center;margin-bottom:12px;}
+.panel .sub{text-align:center;color:var(--grau);font-size:.92rem;margin-bottom:14px;}
+
+/* Trumpfwahl */
+.trump-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.trump-choice button{padding:16px 8px;border-radius:12px;border:2px solid transparent;font-family:'Pirata One',serif;font-size:1.3rem;cursor:pointer;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);}
+.tc-blau{background:var(--blau);} .tc-rot{background:var(--rot);}
+.tc-gruen{background:var(--gruen);} .tc-gelb{background:var(--gelb);color:var(--tinte)!important;text-shadow:none!important;}
+
+/* Lobby */
+.code-display{font-family:ui-monospace,'SF Mono','Menlo','Consolas','Courier New',monospace;font-weight:700;font-size:2.1rem;letter-spacing:.3em;text-align:center;color:var(--gold-hell);background:#120d1e;border:1px dashed var(--gold);border-radius:12px;padding:10px 4px 10px 14px;margin-bottom:6px;}
+.lobby-list{list-style:none;margin:12px 0;}
+.lobby-list li{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #2c2344;font-size:1.05rem;}
+.lobby-list .tag{margin-left:auto;font-size:.75rem;color:var(--grau);border:1px solid #3a2f56;border-radius:999px;padding:2px 8px;}
+.lobby-section-label{font-size:.82rem;color:var(--gold-hell);letter-spacing:.08em;text-transform:uppercase;margin:12px 0 7px;}
+
+/* Block der Wahrheit */
+.truth{width:100%;border-collapse:collapse;background:var(--pergament);color:var(--tinte);border-radius:8px;overflow:hidden;font-family:'Grenze',serif;}
+.truth th,.truth td{border:1px solid #b8a678;padding:5px 4px;text-align:center;font-size:.85rem;}
+.truth th{background:var(--pergament2);font-family:'Pirata One',serif;font-size:.95rem;font-weight:400;}
+.truth td.total{font-weight:700;}
+.truth td small{color:#7a6a4a;font-size:.7rem;display:block;}
+.truth-scroll{max-height:52dvh;overflow:auto;border-radius:8px;}
+
+/* Rundenende */
+.round-result{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.round-result td{padding:7px 4px;border-bottom:1px solid #2c2344;font-size:.98rem;}
+.round-result .pts{text-align:right;font-family:'Pirata One',serif;font-size:1.15rem;}
+.round-result .pos{color:#7ed491;} .round-result .neg{color:#e8766c;}
+.round-result .tot{text-align:right;color:var(--grau);font-size:.85rem;width:60px;}
+
+/* Spielende */
+.ranking{list-style:none;margin-bottom:18px;}
+.ranking li{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid #2c2344;font-size:1.1rem;}
+.ranking .place{font-family:'Pirata One',serif;font-size:1.4rem;color:var(--gold);width:34px;text-align:center;}
+.ranking .pts{margin-left:auto;font-family:'Pirata One',serif;font-size:1.25rem;}
+.ranking li.first{background:linear-gradient(90deg,rgba(212,165,66,.16),transparent);border-radius:10px;}
+
+/* Toast */
+.toast{position:fixed;top:14dvh;left:50%;transform:translateX(-50%) translateY(-10px);background:linear-gradient(160deg,var(--nacht2),#181226);border:1px solid var(--gold);border-radius:14px;padding:12px 22px;font-family:'Pirata One',serif;font-size:1.25rem;color:var(--gold-hell);box-shadow:0 10px 30px rgba(0,0,0,.6);opacity:0;transition:opacity .3s,transform .3s;z-index:60;pointer-events:none;text-align:center;max-width:88vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast small{display:block;font-family:'Grenze',serif;font-size:.85rem;color:var(--grau);}
+
+/* Neue Elemente: letzter Stich, Regeln, Chart, Fortsetzen */
+.icon-btn{width:34px;height:34px;font-size:1rem;}
+.trump-chip{cursor:pointer;}
+.trick-log{display:flex;flex-direction:column;gap:16px;max-height:56dvh;overflow-y:auto;padding:4px 2px;}
+.trick-log .entry .hdr{font-size:.88rem;color:var(--gold-hell);margin-bottom:6px;}
+.trick-log .trick{justify-content:flex-start;flex-wrap:wrap;}
+.mini-btn{position:absolute;top:6px;right:12px;z-index:2;padding:5px 11px;border-radius:999px;border:1px solid #4a3d6e;background:rgba(18,13,30,.78);color:var(--grau);font-family:'Grenze',serif;font-size:.8rem;cursor:pointer;}
+.rules-scroll{max-height:58dvh;overflow-y:auto;padding-right:4px;}
+.rules-body{font-size:.95rem;line-height:1.45;}
+.rules-body h3{font-family:'Pirata One',serif;color:var(--gold-hell);font-size:1.15rem;margin:12px 0 3px;}
+.rules-body p{margin-bottom:4px;color:var(--pergament);}
+#scoreChart{width:100%;height:170px;background:#120d1e;border:1px solid #2c2344;border-radius:10px;margin-bottom:8px;}
+.chart-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px;font-size:.8rem;color:var(--grau);}
+.chart-legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:baseline;}
+.bid-btn:disabled{opacity:.32;cursor:default;text-decoration:line-through;}
+.resume-box{background:#1c1530;border:1px solid var(--gold);border-radius:12px;padding:12px;margin-bottom:16px;font-size:.98rem;}
+.resume-box .btn-row{display:flex;gap:8px;margin-top:10px;}
+.resume-box .btn-row .btn-primary{font-size:1.05rem;padding:9px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important;}
+}
+@media (max-height:640px){
+  .seat .avatar{width:38px;height:38px;font-size:1.1rem;}
+  .hand .card{width:54px;height:80px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ======== Start ======== -->
+  <div class="screen active" id="setup">
+    <div class="logo">Wizard</div>
+    <div class="tagline">Das Spiel, das Sie in Rage bringt</div>
+    <div class="setup-card">
+      <div class="resume-box" id="resumeBox" style="display:none">
+        <b>⏳ Unterbrochene Partie gefunden</b>
+        <div class="hint" id="resumeInfo"></div>
+        <div class="btn-row">
+          <button class="btn-primary" id="resumeBtn">Fortsetzen</button>
+          <button class="btn-ghost" id="resumeDelBtn">Verwerfen</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="playerName">Dein Name, Lehrling</label>
+        <input type="text" id="playerName" maxlength="12" value="Du" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Stärke der Computerspieler</label>
+        <div class="count-row" id="diffRow">
+          <button class="count-btn" data-d="leicht">Leicht</button>
+          <button class="count-btn sel" data-d="mittel">Mittel</button>
+          <button class="count-btn" data-d="schwer">Schwer</button>
+        </div>
+        <div class="hint" id="diffHint">Solide Gegner, die ihre Ansagen meist treffen</div>
+      </div>
+      <div class="field">
+        <label>Wertung</label>
+        <div class="count-row" id="scoreRow">
+          <button class="count-btn sel" data-s="streng">Offiziell</button>
+          <button class="count-btn" data-s="mild">Mild</button>
+        </div>
+        <div class="hint" id="scoreHint">Daneben = nur Minuspunkte (offizielle Regel)</div>
+      </div>
+      <div class="field">
+        <label>Ansageregel</label>
+        <div class="count-row" id="ruleRow">
+          <button class="count-btn sel" data-r="frei">Frei</button>
+          <button class="count-btn" data-r="pm1">Plus/minus 1</button>
+        </div>
+        <div class="hint" id="ruleHint">Jede Ansage ist erlaubt</div>
+      </div>
+      <div class="field">
+        <label>Tempo</label>
+        <div class="count-row" id="speedRow">
+          <button class="count-btn sel" data-t="normal">Gemütlich</button>
+          <button class="count-btn" data-t="fast">Zügig</button>
+        </div>
+        <div class="hint" id="speedHint">Ruhige Denkpausen der Gegner</div>
+      </div>
+      <div class="field">
+        <label>Spielmodus</label>
+        <div class="count-row">
+          <button class="count-btn sel" id="modeSolo">🤖 Solo</button>
+          <button class="count-btn" id="modeOnline">🌐 Online</button>
+        </div>
+      </div>
+
+      <div id="soloSection">
+        <div class="field">
+          <label>Spieler insgesamt</label>
+          <div class="count-row" id="countRow">
+            <button class="count-btn" data-n="3">3</button>
+            <button class="count-btn sel" data-n="4">4</button>
+            <button class="count-btn" data-n="5">5</button>
+            <button class="count-btn" data-n="6">6</button>
+          </div>
+          <div class="hint" id="countHint">Du + 3 Computerspieler · 15 Runden</div>
+        </div>
+        <button class="btn-primary" id="startBtn">Spiel beginnen</button>
+      </div>
+
+      <div id="onlineSection" style="display:none">
+        <button class="btn-primary" id="createBtn">Neues Spiel erstellen</button>
+        <div class="divider">oder beitreten</div>
+        <div class="join-row">
+          <input type="text" id="joinCode" maxlength="5" placeholder="CODE" autocomplete="off">
+          <button class="btn-primary" id="joinBtn">Los</button>
+        </div>
+        <div class="hint" style="margin-top:10px">Alle öffnen dieselbe Seite. Einer erstellt das Spiel und teilt den Code – freie Plätze übernehmen Computerspieler.</div>
+        <div class="net-msg" id="netMsg"></div>
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn-ghost" id="helpBtn2">📜 Regeln ansehen</button>
+    </div>
+  </div>
+
+  <!-- ======== Spiel ======== -->
+  <div class="screen" id="game">
+    <div class="topbar">
+      <div class="round-info"><b id="roundLabel">Runde 1</b><small id="roundSub">von 15 · Geber: –</small></div>
+      <div class="trump-chip" id="trumpChip"><span class="trump-gem" id="trumpGem"></span><span id="trumpLabel">–</span></div>
+      <button class="icon-btn" id="homeBtn" title="Hauptmenü">⌂</button>
+      <button class="icon-btn" id="soundBtn" title="Ton an/aus">🔊</button>
+      <button class="icon-btn" id="helpBtn" title="Regeln">?</button>
+      <button class="icon-btn" id="scoreBtn" title="Block der Wahrheit">≡</button>
+    </div>
+    <div class="opponents" id="opponents"></div>
+    <div class="table-area">
+      <div class="rune-circle"></div>
+      <button class="mini-btn" id="lastTrickBtn" style="display:none">↩ Letzter Stich</button>
+      <div class="trick" id="trick"></div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="hand-wrap" id="handWrap">
+      <div class="hand" id="hand"></div>
+    </div>
+    <div class="bid-panel" id="bidPanel" style="display:none">
+      <div class="bid-title" id="bidTitle">Wie viele Stiche machst du?</div>
+      <div class="bid-sub" id="bidSub"></div>
+      <div class="bid-grid" id="bidGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== Overlays ======== -->
+<div class="overlay" id="lobbyOverlay">
+  <div class="panel">
+    <h2>Lobby</h2>
+    <div class="code-display" id="lobbyCode">·····</div>
+    <div class="sub">Teile den Code – Freunde öffnen dieselbe Seite<br>und treten unter „Online" bei.</div>
+    <button class="btn-ghost" id="shareBtn" style="margin-bottom:4px">📤 Code teilen</button>
+    <div class="lobby-section-label">Am Tisch</div>
+    <ul class="lobby-list" id="lobbyList"></ul>
+    <div id="lobbyHostControls">
+      <div class="lobby-section-label">Plätze insgesamt (Rest = Computer)</div>
+      <div class="count-row" id="lobbySeats">
+        <button class="count-btn" data-n="3">3</button>
+        <button class="count-btn sel" data-n="4">4</button>
+        <button class="count-btn" data-n="5">5</button>
+        <button class="count-btn" data-n="6">6</button>
+      </div>
+      <div style="height:14px"></div>
+      <button class="btn-primary" id="lobbyStartBtn" disabled>Warte auf Mitspieler …</button>
+    </div>
+    <div id="lobbyClientInfo" class="sub" style="display:none;margin-top:10px">Warte, bis der Gastgeber startet …</div>
+    <div style="height:10px"></div>
+    <button class="btn-ghost" id="lobbyLeaveBtn">Verlassen</button>
+  </div>
+</div>
+
+<div class="overlay" id="trumpOverlay">
+  <div class="panel">
+    <h2>Zauberer aufgedeckt!</h2>
+    <div class="sub">Du bist Geber und bestimmst die Trumpffarbe.</div>
+    <div class="trump-choice">
+      <button class="tc-blau" data-c="blau">◆ Blau<br><small>Menschen</small></button>
+      <button class="tc-rot" data-c="rot">▲ Rot<br><small>Zwerge</small></button>
+      <button class="tc-gruen" data-c="gruen">● Grün<br><small>Elfen</small></button>
+      <button class="tc-gelb" data-c="gelb">★ Gelb<br><small>Riesen</small></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="scoreOverlay">
+  <div class="panel">
+    <h2>Block der Wahrheit</h2>
+    <div class="truth-scroll"><table class="truth" id="truthTable"></table></div>
+    <div style="height:14px"></div>
+    <button class="btn-primary" id="scoreClose">Weiter</button>
+  </div>
+</div>
+
+<div class="overlay" id="roundOverlay">
+  <div class="panel">
+    <h2 id="roundResultTitle">Runde beendet</h2>
+    <table class="round-result" id="roundResult"></table>
+    <button class="btn-primary" id="nextRoundBtn">Nächste Runde</button>
+    <div class="sub" id="roundWaitInfo" style="display:none;margin-top:10px">Der Gastgeber startet die nächste Runde …</div>
+  </div>
+</div>
+
+<div class="overlay" id="endOverlay">
+  <div class="panel">
+    <h2 id="endTitle">Spiel beendet</h2>
+    <canvas id="scoreChart" width="380" height="170"></canvas>
+    <div class="chart-legend" id="chartLegend"></div>
+    <ol class="ranking" id="ranking"></ol>
+    <button class="btn-primary" id="newGameBtn">Neues Spiel</button>
+  </div>
+</div>
+
+<div class="overlay" id="netLostOverlay">
+  <div class="panel">
+    <h2>Verbindung verloren</h2>
+    <div class="sub" id="netLostMsg">Die Verbindung ist abgerissen. Lade neu und tritt innerhalb von <b>60 Sekunden</b> mit demselben Namen und Spielcode wieder bei – dein Platz bleibt so lange reserviert.</div>
+    <button class="btn-primary" onclick="location.reload()">Neu laden</button>
+  </div>
+</div>
+
+<div class="overlay" id="helpOverlay">
+  <div class="panel">
+    <h2>So wird gespielt</h2>
+    <div class="rules-scroll rules-body">
+      <h3>Ziel</h3><p>Sag vor jeder Runde exakt voraus, wie viele Stiche du machst. Nur die exakte Vorhersage bringt viele Punkte.</p>
+      <h3>Ablauf</h3><p>Runde 1 = 1 Karte, Runde 2 = 2 Karten … Nach dem Geben wird die oberste Restkarte als Trumpf aufgedeckt. Reihum sagt jeder an, dann wird gespielt. Der Stichgewinner spielt als Nächster aus.</p>
+      <h3>Bedienpflicht</h3><p>Die zuerst gespielte Farbe muss bedient werden, wenn du sie hast. Zauberer 🧙 und Narren 🃏 darfst du immer spielen.</p>
+      <h3>Zauberer &amp; Narren</h3><p>Der zuerst gespielte Zauberer gewinnt den Stich – immer. Narren verlieren immer. Eröffnet ein Zauberer den Stich, dürfen alle abwerfen; eröffnet ein Narr, bestimmt die nächste Farbkarte die zu bedienende Farbe.</p>
+      <h3>Trumpf</h3><p>Trumpf sticht alle anderen Farben. Wird ein Zauberer als Trumpf aufgedeckt, wählt der Geber die Trumpffarbe. Beim Narren – und in der letzten Runde – gibt es keinen Trumpf.</p>
+      <h3>Wertung</h3><p><b>Offiziell:</b> Ansage getroffen = 20 + 10 je Stich, daneben = −10 je Stich Abweichung.<br><b>Mild:</b> Daneben zählen die Stiche trotzdem: +10 je Stich, −10 je Abweichung.</p>
+      <h3>Plus/minus 1 (Variante)</h3><p>Wenn aktiv, darf die letzte Ansage die Summe nicht genau auf die Stichzahl bringen – so kämpft in jeder Runde garantiert jemand um zu viel oder zu wenig.</p>
+      <h3>Bedienung</h3><p>Karte antippen = anheben, nochmal tippen = ausspielen. Ausgegraute Karten sind gerade nicht erlaubt. ↩ zeigt den letzten Stich.</p>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn-primary" id="helpClose">Alles klar</button>
+  </div>
+</div>
+
+<div class="overlay" id="lastTrickOverlay">
+  <div class="panel">
+    <h2 id="trickLogTitle">Letzter Stich</h2>
+    <div class="trick-log" id="trickLogList"></div>
+    <div style="height:12px"></div>
+    <button class="btn-primary" id="lastTrickClose">Schließen</button>
+  </div>
+</div>
+
+<div class="overlay" id="trumpInfoOverlay">
+  <div class="panel">
+    <h2>Trumpf dieser Runde</h2>
+    <div id="trumpInfoCard" style="display:flex;justify-content:center;margin:6px 0 14px"></div>
+    <div class="sub" id="trumpInfoText"></div>
+    <button class="btn-primary" id="trumpInfoClose">Schließen</button>
+  </div>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="panel">
+    <h2>Hauptmenü</h2>
+    <div class="sub">Zurück zur Startseite? Bei Solo-Partien bleibt der Stand bis zur letzten abgeschlossenen Runde gespeichert. Online verlässt du damit den Tisch.</div>
+    <button class="btn-primary" id="menuQuitBtn">Zum Hauptmenü</button>
+    <div style="height:10px"></div>
+    <button class="btn-ghost" id="menuStayBtn">Weiterspielen</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ LOGIC-START ============
+// ============ WIZARD SPIELLOGIK (pur, testbar) ============
+const COLORS = ['blau', 'rot', 'gruen', 'gelb'];
+
+function createDeck() {
+  const deck = [];
+  let id = 0;
+  for (const c of COLORS) {
+    for (let v = 1; v <= 13; v++) deck.push({ id: id++, type: 'number', color: c, value: v });
+  }
+  for (let i = 0; i < 4; i++) deck.push({ id: id++, type: 'wizard', color: null, value: 14 });
+  for (let i = 0; i < 4; i++) deck.push({ id: id++, type: 'jester', color: null, value: 0 });
+  return deck;
+}
+
+function shuffle(arr, rng) {
+  const a = arr.slice();
+  const rand = rng || Math.random;
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Angesagte Farbe eines Stichs:
+// - 'free'  -> Zauberer eröffnet (oder Zauberer vor erster Farbkarte): alles erlaubt
+// - Farbe   -> erste Farbkarte bestimmt die zu bedienende Farbe
+// - null    -> bisher nur Narren (noch keine Farbe festgelegt)
+function ledColor(trick) {
+  for (const t of trick) {
+    if (t.card.type === 'wizard') return 'free';
+    if (t.card.type === 'number') return t.card.color;
+  }
+  return null;
+}
+
+function legalCards(hand, trick) {
+  if (trick.length === 0) return hand.slice();
+  const lc = ledColor(trick);
+  if (lc === 'free' || lc === null) return hand.slice();
+  const hasLed = hand.some(c => c.type === 'number' && c.color === lc);
+  if (!hasLed) return hand.slice();
+  return hand.filter(c => c.type !== 'number' || c.color === lc);
+}
+
+function trickWinner(trick, trumpColor) {
+  // 1) Erster Zauberer gewinnt
+  for (let i = 0; i < trick.length; i++) {
+    if (trick[i].card.type === 'wizard') return trick[i].playerIndex;
+  }
+  // 2) Nur Narren -> erster Narr gewinnt
+  const numbers = trick.filter(t => t.card.type === 'number');
+  if (numbers.length === 0) return trick[0].playerIndex;
+  // 3) Höchster Trumpf
+  if (trumpColor) {
+    const trumps = numbers.filter(t => t.card.color === trumpColor);
+    if (trumps.length > 0) {
+      return trumps.reduce((a, b) => (b.card.value > a.card.value ? b : a)).playerIndex;
+    }
+  }
+  // 4) Höchste Karte der zuerst ausgespielten Farbe
+  const led = numbers[0].card.color;
+  const ledCards = numbers.filter(t => t.card.color === led);
+  return ledCards.reduce((a, b) => (b.card.value > a.card.value ? b : a)).playerIndex;
+}
+
+function scoreFor(bid, tricks, variant) {
+  if (bid === tricks) return 20 + 10 * tricks;
+  if (variant === 'mild') {
+    // Hausregel "Milde Wertung": Stiche zaehlen immer, Abweichung kostet
+    return tricks * 10 - Math.abs(bid - tricks) * 10;
+  }
+  return -10 * Math.abs(bid - tricks);
+}
+
+function maxRounds(numPlayers) {
+  return Math.floor(60 / numPlayers); // 3->20, 4->15, 5->12, 6->10
+}
+
+// ============ KI ============
+function aiChooseTrump(hand, rng) {
+  const counts = {};
+  for (const c of COLORS) counts[c] = 0;
+  for (const c of hand) {
+    if (c.type === 'number') counts[c.color] += 1 + c.value / 20;
+  }
+  let best = COLORS[0], bestV = -1;
+  for (const c of COLORS) {
+    if (counts[c] > bestV) { bestV = counts[c]; best = c; }
+  }
+  if (bestV <= 0) {
+    const rand = rng || Math.random;
+    return COLORS[Math.floor(rand() * COLORS.length)];
+  }
+  return best;
+}
+
+function aiBid(hand, trumpColor, roundCards, difficulty, numPlayers, rng, forbidden) {
+  difficulty = difficulty || 'mittel';
+  numPlayers = numPlayers || 4;
+  const rand = rng || Math.random;
+  const hard = difficulty === 'schwer';
+  let s = 0;
+  let wizards = 0;
+  for (const c of hand) {
+    if (c.type === 'wizard') { s += 1.0; wizards++; }
+    else if (c.type === 'jester') s += 0;
+    else if (trumpColor && c.color === trumpColor) {
+      if (hard) {
+        if (c.value === 13) s += 0.95;
+        else if (c.value >= 11) s += 0.85;
+        else if (c.value >= 8) s += 0.6;
+        else if (c.value >= 5) s += 0.35;
+        else s += 0.2;
+      } else {
+        if (c.value >= 11) s += 0.9;
+        else if (c.value >= 8) s += 0.55;
+        else if (c.value >= 5) s += 0.3;
+        else s += 0.15;
+      }
+    } else {
+      if (hard) {
+        if (c.value === 13) s += 0.55;
+        else if (c.value === 12) s += 0.3;
+        else if (c.value === 11) s += 0.12;
+      } else {
+        if (c.value === 13) s += 0.6;
+        else if (c.value === 12) s += 0.3;
+        else if (c.value === 11) s += 0.15;
+      }
+    }
+  }
+  if (hard) {
+    // Bei mehr Spielern gewinnen mittlere Karten seltener; Zauberer bleiben sichere Stiche
+    const mult = numPlayers <= 3 ? 1.1 : numPlayers === 4 ? 1.0 : numPlayers === 5 ? 0.92 : 0.85;
+    s = wizards + (s - wizards) * mult;
+    // Stechpotenzial: freie Farbe + mehrere Truempfe = zusaetzliche Stiche
+    if (trumpColor && roundCards >= 5) {
+      const trumpsHeld = hand.filter(c => c.type === 'number' && c.color === trumpColor).length;
+      if (trumpsHeld >= 2) {
+        let voids = 0;
+        for (const col of COLORS) {
+          if (col !== trumpColor && !hand.some(c => c.type === 'number' && c.color === col)) voids++;
+        }
+        s += Math.min(voids, 2) * 0.3;
+      }
+    }
+  }
+  let bid = Math.round(s);
+  if (difficulty === 'leicht' && rand() < 0.6) {
+    // Leichte Gegner verschaetzen sich oft um 1
+    bid += rand() < 0.5 ? -1 : 1;
+  }
+  bid = Math.max(0, Math.min(roundCards, bid));
+  if (forbidden !== null && forbidden !== undefined && bid === forbidden) {
+    // Plus/minus-Eins-Regel: dem letzten Ansager ist genau dieser Wert verboten
+    bid = bid > 0 ? bid - 1 : bid + 1;
+    bid = Math.max(0, Math.min(roundCards, bid));
+  }
+  return bid;
+}
+
+// Stärke einer Karte im Kontext (nur zum Sortieren von KI-Entscheidungen)
+function cardPower(card, lc, trumpColor) {
+  if (card.type === 'wizard') return 1000;
+  if (card.type === 'jester') return -1;
+  if (trumpColor && card.color === trumpColor) return 500 + card.value;
+  if (lc && lc !== 'free' && card.color === lc) return 100 + card.value;
+  return card.value / 100;
+}
+
+// Wert der Karte für spätere Stiche (was man ungern hergibt)
+function keepValue(card, trumpColor) {
+  if (card.type === 'wizard') return 1000;
+  if (card.type === 'jester') return 5; // Narren sind wertvoll zum gezielten Verlieren
+  if (trumpColor && card.color === trumpColor) return 200 + card.value * 5;
+  return card.value * 3;
+}
+
+function aiPlay(player, trick, trumpColor, playersInTrick, totalPlayers, opts) {
+  opts = opts || {};
+  const difficulty = opts.difficulty || 'mittel';
+  const rand = opts.rng || Math.random;
+  const legal = legalCards(player.hand, trick);
+  if (legal.length === 1) return legal[0];
+  // Leichte Gegner spielen oft einfach irgendeine erlaubte Karte
+  if (difficulty === 'leicht' && rand() < 0.45) {
+    return legal[Math.floor(rand() * legal.length)];
+  }
+  const hard = difficulty === 'schwer';
+  const wantTrick = player.tricks < player.bid;
+  const isLast = trick.length === totalPlayers - 1;
+  const lc = ledColor(trick);
+  const tricksNeeded = player.bid - player.tricks;
+  // Schwer: wer noch alle restlichen Stiche braucht, spielt kompromisslos auf Sieg
+  const desperate = hard && tricksNeeded > 0 && tricksNeeded >= player.hand.length;
+  // Zauberer-Einsatzplan: horten bringt nichts, aber frueh verheizen auch nicht.
+  // Massgeblich ist die Reserve (spare): wie viele Stiche darf ich noch abgeben?
+  const wizCount = player.hand.filter(c => c.type === 'wizard').length;
+  const strongCount = player.hand.filter(c => c.type === 'number' &&
+    ((trumpColor && c.color === trumpColor && c.value >= 5) || c.value >= 12)).length;
+  const spare = player.hand.length - tricksNeeded;
+  const useWizardNow = wizCount > 0 && tricksNeeded > 0 && (
+    spare <= 1 ||
+    (spare <= 3 && wizCount + strongCount <= tricksNeeded) ||
+    (spare <= 5 && strongCount === 0 && wizCount >= tricksNeeded)
+  );
+  // Decken die Zauberer den Restbedarf exakt, sind sie der Plan:
+  // alle anderen Karten muessen dann verlieren, sonst wird ueberboten.
+  const wizardsArePlan = wizCount > 0 && tricksNeeded > 0 && wizCount >= tricksNeeded;
+
+  // Schwer zaehlt Karten: welche hoeheren Karten sind noch im Umlauf?
+  const seen = new Set();
+  if (hard) {
+    for (const c of (opts.played || [])) if (c.type === 'number') seen.add(c.color + ':' + c.value);
+    for (const c of player.hand) if (c.type === 'number') seen.add(c.color + ':' + c.value);
+    for (const t of trick) if (t.card.type === 'number') seen.add(t.card.color + ':' + t.card.value);
+  }
+  const bossInSuit = (c) => {
+    for (let v = c.value + 1; v <= 13; v++) if (!seen.has(c.color + ':' + v)) return false;
+    return true;
+  };
+  let trumpGone = !trumpColor;
+  if (hard && trumpColor) {
+    trumpGone = true;
+    for (let v = 1; v <= 13; v++) if (!seen.has(trumpColor + ':' + v)) { trumpGone = false; break; }
+  }
+  // Haelt diese Karte den Stich sehr wahrscheinlich bis zum Ende?
+  const holdsWell = (c) => {
+    if (c.type !== 'number') return false;
+    if (trumpColor && c.color === trumpColor) return c.value >= 10 || bossInSuit(c);
+    if (!bossInSuit(c)) return false;
+    if (trick.length > 0) return true;   // Farbe liegt bereits, Bedienzwang schuetzt
+    return trumpGone;                    // beim Anspiel droht sonst ein Trumpf
+  };
+
+  const winsWith = (card) => {
+    const t = trick.concat([{ playerIndex: -99, card }]);
+    return trickWinner(t, trumpColor) === -99;
+  };
+
+  if (isLast) {
+    const winning = legal.filter(winsWith);
+    const losing = legal.filter(c => !winsWith(c));
+    if (wantTrick && wizardsArePlan && !desperate) {
+      const wizW = winning.find(c => c.type === 'wizard');
+      // Als Letzter ist ein Zauberer-Stich sicher: Plan-Stich mitnehmen
+      if (wizW) return wizW;
+      // Fremder Zauberer liegt: eigenen Zauberer schonen und gezielt verlieren
+      const losersNW = losing.filter(c => c.type !== 'wizard');
+      if (losersNW.length > 0) {
+        const nonJ = losersNW.filter(c => c.type !== 'jester');
+        const pool = nonJ.length > 0 ? nonJ : losersNW;
+        return pool.reduce((a, b) => {
+          const va = a.type === 'number' ? a.value + (trumpColor && a.color === trumpColor ? 20 : 0) : -1;
+          const vb = b.type === 'number' ? b.value + (trumpColor && b.color === trumpColor ? 20 : 0) : -1;
+          return vb > va ? b : a;
+        });
+      }
+      // alles wuerde gewinnen: schwaechste Nicht-Zauberer-Karte
+      const nw = legal.filter(c => c.type !== 'wizard');
+      if (nw.length > 0) return nw.reduce((a, b) => (cardPower(b, lc, trumpColor) < cardPower(a, lc, trumpColor) ? b : a));
+      return legal[0];
+    }
+    if (wantTrick && winning.length > 0) {
+      const nonWizW = winning.filter(c => c.type !== 'wizard');
+      if (nonWizW.length > 0) {
+        // schwaechste gewinnende Karte spielen
+        return nonWizW.reduce((a, b) => (keepValue(b, trumpColor) < keepValue(a, trumpColor) ? b : a));
+      }
+      // Nur der Zauberer gewinnt: einsetzen, wenn der Einsatzplan es vorsieht,
+      // sonst aufsparen -- er gewinnt jeden spaeteren Stich genauso sicher.
+      if (useWizardNow) {
+        return winning[0];
+      }
+      if (losing.length > 0) {
+        return losing.reduce((a, b) => (keepValue(b, trumpColor) < keepValue(a, trumpColor) ? b : a));
+      }
+      return winning[0];
+    }
+    if (!wantTrick && losing.length > 0) {
+      // teuerste verlierende Karte abwerfen (aber Narren behalten, wenn andere Verlierer da sind)
+      const nonJester = losing.filter(c => c.type !== 'jester');
+      const pool = nonJester.length > 0 ? nonJester : losing;
+      return pool.reduce((a, b) => {
+        const va = a.type === 'number' ? a.value : -1;
+        const vb = b.type === 'number' ? b.value : -1;
+        return vb > va ? b : a;
+      });
+    }
+    if (wantTrick) {
+      // kann nicht gewinnen -> billigste Karte opfern
+      return legal.reduce((a, b) => (keepValue(b, trumpColor) < keepValue(a, trumpColor) ? b : a));
+    }
+    // muss gewinnen, will aber nicht -> schwaechste gewinnende Karte
+    return legal.reduce((a, b) => (cardPower(b, lc, trumpColor) < cardPower(a, lc, trumpColor) ? b : a));
+  }
+
+  // Nicht letzter Spieler
+  if (wantTrick && wizardsArePlan && !desperate) {
+    const wiz = legal.find(c => c.type === 'wizard');
+    if (wiz && useWizardNow && winsWith(wiz)) return wiz;
+    // Alle anderen Karten sollen verlieren (Zauberer bleiben der Plan)
+    const nonWizLegal = legal.filter(c => c.type !== 'wizard');
+    if (nonWizLegal.length === 0) return legal[0];
+    const safeLose = nonWizLegal.filter(c => !winsWith(c));
+    if (safeLose.length > 0) {
+      const nonJ = safeLose.filter(c => c.type !== 'jester');
+      if (nonJ.length > 0) {
+        // hoechste sichere Karte abwerfen, niedrige zum Ducken behalten
+        return nonJ.reduce((a, b) => {
+          const va = a.value + (trumpColor && a.color === trumpColor ? 20 : 0);
+          const vb = b.value + (trumpColor && b.color === trumpColor ? 20 : 0);
+          return vb > va ? b : a;
+        });
+      }
+      return safeLose[0];
+    }
+    return nonWizLegal.reduce((a, b) => (cardPower(b, lc, trumpColor) < cardPower(a, lc, trumpColor) ? b : a));
+  }
+  if (wantTrick) {
+    const currentlyWinning = legal.filter(winsWith);
+    if (desperate) {
+      // Staerkste Karte spielen (notfalls Zauberer), um nichts dem Zufall zu ueberlassen
+      const pool = currentlyWinning.length > 0 ? currentlyWinning : legal;
+      return pool.reduce((a, b) => (cardPower(b, lc, trumpColor) > cardPower(a, lc, trumpColor) ? b : a));
+    }
+    const nonWiz = currentlyWinning.filter(c => c.type !== 'wizard');
+    if (hard) {
+      // Erst die guenstigste Karte versuchen, die den Stich sicher haelt
+      const investable = nonWiz.filter(holdsWell);
+      if (investable.length > 0) {
+        return investable.reduce((a, b) => (keepValue(b, trumpColor) < keepValue(a, trumpColor) ? b : a));
+      }
+    }
+    if (nonWiz.length > 0) {
+      // Beim Eroeffnen nicht stur den Trumpf verheizen: hohe Farbkarte hat Vorrang
+      if (trick.length === 0 && trumpColor) {
+        const highOff = nonWiz.filter(c => c.type === 'number' && c.color !== trumpColor && c.value >= 12);
+        if (highOff.length > 0) {
+          return highOff.reduce((a, b) => (b.value > a.value ? b : a));
+        }
+      }
+      return nonWiz.reduce((a, b) => (cardPower(b, lc, trumpColor) > cardPower(a, lc, trumpColor) ? b : a));
+    }
+    // Zauberer nach Einsatzplan: horten bringt nichts, wenn er den Bedarf decken soll
+    const wizOnly = currentlyWinning.find(c => c.type === 'wizard');
+    if (wizOnly && useWizardNow) return wizOnly;
+    return legal.reduce((a, b) => (keepValue(b, trumpColor) < keepValue(a, trumpColor) ? b : a));
+  } else {
+    // will keinen Stich: sicher verlieren
+    const jesters = legal.filter(c => c.type === 'jester');
+    const safeLow = legal.filter(c => !winsWith(c) && c.type !== 'wizard');
+    if (safeLow.length > 0) {
+      const nonJ = safeLow.filter(c => c.type !== 'jester');
+      if (hard && nonJ.length > 0) {
+        // Hoechste sichere Karte abwerfen: gefaehrliche Karten loswerden, niedrige zum Ducken behalten
+        return nonJ.reduce((a, b) => {
+          const va = a.value + (trumpColor && a.color === trumpColor ? 20 : 0);
+          const vb = b.value + (trumpColor && b.color === trumpColor ? 20 : 0);
+          return vb > va ? b : a;
+        });
+      }
+      return safeLow.reduce((a, b) => {
+        const va = a.type === 'jester' ? -1 : a.value + (trumpColor && a.color === trumpColor ? 20 : 0);
+        const vb = b.type === 'jester' ? -1 : b.value + (trumpColor && b.color === trumpColor ? 20 : 0);
+        if (nonJ.length > 0 && a.type === 'jester') return b;
+        if (nonJ.length > 0 && b.type === 'jester') return a;
+        return vb < va ? b : a;
+      });
+    }
+    if (jesters.length > 0) return jesters[0];
+    return legal.reduce((a, b) => (cardPower(b, lc, trumpColor) < cardPower(a, lc, trumpColor) ? b : a));
+  }
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { COLORS, createDeck, shuffle, ledColor, legalCards, trickWinner, scoreFor, maxRounds, aiChooseTrump, aiBid, aiPlay, cardPower };
+}
+
+// ============ LOGIC-END ============
+
+// ============ UI / SPIELSTEUERUNG ============
+const FAST = (typeof window !== 'undefined' && window.__TEST_FAST__) ? true : false;
+let speedFactor = 1; // 1 = gemuetlich, 0.45 = zuegig
+const DELAY = (ms) => FAST ? 1 : Math.max(120, Math.round(ms * speedFactor));
+
+const COLOR_META = {
+  blau:  { name: 'Blau',  volk: 'Menschen', sym: '◆', css: 'var(--blau)' },
+  rot:   { name: 'Rot',   volk: 'Zwerge',   sym: '▲', css: 'var(--rot)' },
+  gruen: { name: 'Grün',  volk: 'Elfen',    sym: '●', css: 'var(--gruen)' },
+  gelb:  { name: 'Gelb',  volk: 'Riesen',   sym: '★', css: 'var(--gelb)' },
+};
+const AI_NAMES = ['Merlin', 'Morgana', 'Alrik', 'Zephyra', 'Baldur', 'Elowen', 'Thorin', 'Nyx', 'Fenrik', 'Lyra', 'Grimwald', 'Selene', 'Isolde', 'Auren', 'Vesper', 'Runa', 'Casimir', 'Elric', 'Thalia', 'Bromir', 'Ondra', 'Faelan', 'Ygrid', 'Nereus'];
+
+const $ = (id) => document.getElementById(id);
+
+const game = {
+  players: [],        // {name,isAI,conn,hand,bid,tricks,score}
+  numPlayers: 4,
+  round: 1,
+  totalRounds: 15,
+  dealer: 0,
+  trumpColor: null,
+  trumpCard: null,
+  phase: 'setup',     // setup|chooseTrump|bidding|playing|trickPause|roundEnd|gameEnd
+  trick: [],
+  leader: 0,
+  current: 0,
+  bidTurn: 0,
+  history: [],
+  played: [],         // in dieser Runde bereits gespielte Karten (für schwere KI)
+  lastWinner: null,
+  selectedCardId: null,
+  difficulty: 'mittel',
+  scoring: 'streng',    // 'streng' (offiziell) oder 'mild' (Hausregel)
+  bidRule: 'frei',      // 'frei' oder 'pm1' (Plus/minus Eins)
+  lastTrick: null,      // {cards, winner} des zuletzt abgeschlossenen Stichs
+  endSoundDone: false,
+  myIdx: 0,           // eigener Sitzplatz (Client bekommt ihn vom Host)
+  timers: [],
+};
+window.game = game;
+
+// ============ NETZWERK ============
+const net = {
+  mode: 'solo',       // solo | host | client
+  peer: null,
+  conns: [],          // Host: verbundene Clients {send, playerIndex, lobbyName, alive}
+  hostConn: null,     // Client: Verbindung zum Host
+  code: '',
+  started: false,
+  pendingPlay: false, // Client: warten auf Bestätigung
+  lobby: [],          // Host: [{name, conn|null}] – Index 0 = Host selbst
+};
+window.net = net;
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+function makeCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+}
+
+// ---- Host: Lobby ----
+function hostStartLobby(name, usePeer) {
+  net.mode = 'host';
+  net.code = makeCode();
+  net.lobby = [{ name, conn: null }];
+  $('lobbyCode').textContent = net.code;
+  $('lobbyHostControls').style.display = 'block';
+  $('lobbyClientInfo').style.display = 'none';
+  renderLobby();
+  $('lobbyOverlay').classList.add('show');
+  if (usePeer) {
+    if (typeof Peer === 'undefined') { netFail('Online-Modul konnte nicht geladen werden (Internet nötig).'); return; }
+    net.peer = new Peer('wzrd-de-' + net.code);
+    net.peer.on('open', () => {});
+    net.peer.on('error', (e) => netFail('Netzwerkfehler: ' + (e.type || e)));
+    net.peer.on('connection', (conn) => {
+      conn.on('open', () => {});
+      const c = { send: (m) => conn.send(clone(m)), playerIndex: -1, lobbyName: null, alive: true, raw: conn };
+      conn.on('data', (msg) => hostOnMessage(c, msg));
+      conn.on('close', () => hostOnDisconnect(c));
+      conn.on('error', () => hostOnDisconnect(c));
+    });
+  }
+}
+
+function hostOnMessage(c, msg) {
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.t === 'hello') {
+    if (net.started) {
+      // Reconnect: reservierter Platz mit gleichem Namen?
+      const name = String(msg.name || '').slice(0, 12);
+      const idx = game.players.findIndex(p => p.reserved && p.reservedName === name);
+      if (idx >= 0) {
+        const p = game.players[idx];
+        p.isAI = false;
+        p.reserved = false;
+        p.name = p.reservedName;
+        c.playerIndex = idx;
+        c.lobbyName = name;
+        net.conns.push(c);
+        c.send({ t: 'start', yourIndex: idx });
+        renderSeats();
+        showToast('Wieder da!', p.name + ' ist zurück im Spiel');
+        sync();
+        return;
+      }
+      c.send({ t: 'err', m: 'Das Spiel läuft bereits (kein reservierter Platz für „' + name + '").' });
+      return;
+    }
+    if (net.lobby.length >= 6) { c.send({ t: 'err', m: 'Die Lobby ist voll (max. 6).' }); return; }
+    c.lobbyName = String(msg.name || 'Lehrling').slice(0, 12);
+    net.lobby.push({ name: c.lobbyName, conn: c });
+    net.conns.push(c);
+    renderLobby();
+    broadcastLobby();
+    return;
+  }
+  if (msg.t === 'act' && net.started) hostOnAction(c, msg);
+}
+
+function hostOnDisconnect(c) {
+  c.alive = false;
+  if (!net.started) {
+    net.lobby = net.lobby.filter(l => l.conn !== c);
+    net.conns = net.conns.filter(x => x !== c);
+    renderLobby();
+    broadcastLobby();
+    return;
+  }
+  // Im Spiel: KI übernimmt, Platz bleibt für Reconnect reserviert
+  net.conns = net.conns.filter(x => x !== c);
+  const idx = c.playerIndex;
+  if (idx >= 0 && game.players[idx] && !game.players[idx].isAI) {
+    const p = game.players[idx];
+    p.reservedName = p.name;
+    p.reserved = true;
+    p.isAI = true;
+    p.name = p.name + ' 🤖';
+    showToast('Verbindung verloren', p.reservedName + ' kann 60 s lang zurückkehren – solange spielt der Computer');
+    renderSeats();
+    resumeAfterTakeover(idx);
+    sync();
+    const graceMs = (typeof window !== 'undefined' && window.__TEST_GRACE_MS__) || 60000;
+    setTimeout(() => {
+      if (p.reserved) {
+        p.reserved = false;
+        showToast('Platz vergeben', p.reservedName + ' bleibt dauerhaft ein Computerspieler');
+      }
+    }, graceMs);
+  }
+}
+
+function resumeAfterTakeover(idx) {
+  const g = game;
+  if (g.phase === 'bidding') {
+    const bidder = (g.dealer + 1 + g.bidTurn) % g.numPlayers;
+    if (bidder === idx) nextBid();
+  } else if (g.phase === 'playing' && g.current === idx) {
+    nextPlay();
+  } else if (g.phase === 'chooseTrump' && g.dealer === idx) {
+    g.trumpColor = aiChooseTrump(g.players[idx].hand);
+    g.phase = 'dealing';
+    renderTrump();
+    later(startBidding, 800);
+  }
+}
+
+function broadcastLobby() {
+  for (const c of net.conns) {
+    if (c.alive) c.send({ t: 'lobby', code: net.code, players: net.lobby.map(l => l.name) });
+  }
+  updateLobbyStart();
+}
+
+function renderLobby() {
+  const ul = $('lobbyList');
+  ul.innerHTML = '';
+  const names = net.mode === 'host' ? net.lobby.map(l => l.name) : net.clientLobbyNames || [];
+  names.forEach((n, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '👤 ' + esc(n) + (i === 0 ? '<span class="tag">Gastgeber</span>' : '');
+    ul.appendChild(li);
+  });
+  updateLobbyStart();
+}
+
+let lobbySeatCount = 4;
+document.querySelectorAll('#lobbySeats .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#lobbySeats .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    lobbySeatCount = parseInt(btn.dataset.n, 10);
+    updateLobbyStart();
+  });
+});
+
+function updateLobbyStart() {
+  if (net.mode !== 'host') return;
+  const humans = net.lobby.length;
+  const btn = $('lobbyStartBtn');
+  if (humans < 2) {
+    btn.disabled = true;
+    btn.textContent = 'Warte auf Mitspieler …';
+  } else {
+    btn.disabled = false;
+    const seats = Math.max(lobbySeatCount, humans);
+    const ais = seats - humans;
+    btn.textContent = 'Starten (' + humans + ' Spieler' + (ais > 0 ? ' + ' + ais + ' Computer' : '') + ')';
+  }
+}
+
+$('lobbyStartBtn').addEventListener('click', () => {
+  if (net.mode !== 'host') return;
+  const humans = net.lobby.length;
+  if (humans < 2) return;
+  const seats = Math.min(6, Math.max(3, Math.max(lobbySeatCount, humans)));
+  hostBeginGame(seats);
+});
+
+function hostBeginGame(seats) {
+  net.started = true;
+  $('lobbyOverlay').classList.remove('show');
+  game.numPlayers = seats;
+  game.totalRounds = maxRounds(seats);
+  game.players = [];
+  net.lobby.forEach((l, i) => {
+    game.players.push({ name: l.name, isAI: false, conn: l.conn, hand: [], bid: null, tricks: 0, score: 0 });
+    if (l.conn) l.conn.playerIndex = i;
+  });
+  const names = shuffle(AI_NAMES);
+  let ni = 0;
+  while (game.players.length < seats) {
+    game.players.push({ name: names[ni++], isAI: true, conn: null, hand: [], bid: null, tricks: 0, score: 0 });
+  }
+  game.round = 1;
+  game.dealer = Math.floor(Math.random() * seats);
+  game.history = [];
+  game.myIdx = 0;
+  for (const c of net.conns) {
+    if (c.alive && c.playerIndex >= 0) c.send({ t: 'start', yourIndex: c.playerIndex });
+  }
+  $('setup').classList.remove('active');
+  $('game').classList.add('active');
+  startRound();
+}
+
+function hostOnAction(c, msg) {
+  const g = game;
+  const idx = c.playerIndex;
+  if (idx < 0 || !g.players[idx]) return;
+  if (msg.a === 'bid' && g.phase === 'bidding') {
+    const bidder = (g.dealer + 1 + g.bidTurn) % g.numPlayers;
+    const n = parseInt(msg.n, 10);
+    const forbidden = currentForbidden();
+    if (bidder === idx && Number.isInteger(n) && n >= 0 && n <= g.round && (forbidden === null || n !== forbidden)) {
+      g.players[idx].bid = n;
+      g.bidTurn++;
+      renderSeats();
+      sync();
+      nextBid();
+    }
+  } else if (msg.a === 'play' && g.phase === 'playing' && g.current === idx) {
+    const card = g.players[idx].hand.find(cd => cd.id === msg.cardId);
+    if (!card) return;
+    const legal = legalCards(g.players[idx].hand, g.trick);
+    if (!legal.some(cd => cd.id === card.id)) return;
+    playCard(idx, card);
+  } else if (msg.a === 'trump' && g.phase === 'chooseTrump' && g.dealer === idx) {
+    if (!COLORS.includes(msg.color)) return;
+    g.trumpColor = msg.color;
+    g.phase = 'dealing';
+    renderTrump();
+    showToast('Trumpf: ' + COLOR_META[msg.color].name, 'gewählt von ' + g.players[idx].name);
+    sync();
+    later(startBidding, 1200);
+  }
+}
+
+// Snapshot an alle Clients (jeder bekommt nur die eigene Hand)
+function sync() {
+  if (net.mode !== 'host' || !net.started) return;
+  const g = game;
+  const pub = {
+    phase: g.phase, round: g.round, totalRounds: g.totalRounds, dealer: g.dealer,
+    current: g.current, bidTurn: g.bidTurn, trumpColor: g.trumpColor,
+    trumpCard: g.trumpCard,
+    trick: g.trick, leader: g.leader, lastWinner: g.lastWinner,
+    lastTrick: g.lastTrick, bidRule: g.bidRule,
+    history: g.history, difficulty: g.difficulty,
+    players: g.players.map(p => ({ name: p.name, isAI: p.isAI, bid: p.bid, tricks: p.tricks, score: p.score, handCount: p.hand.length })),
+  };
+  for (const c of net.conns) {
+    if (c.alive && c.playerIndex >= 0) {
+      c.send({ t: 'state', s: pub, hand: g.players[c.playerIndex].hand, yourIndex: c.playerIndex });
+    }
+  }
+}
+
+// ---- Client ----
+function clientJoin(name, code, usePeer) {
+  net.mode = 'client';
+  if (usePeer) {
+    if (typeof Peer === 'undefined') { netFail('Online-Modul konnte nicht geladen werden (Internet nötig).'); return; }
+    const peer = new Peer();
+    net.peer = peer;
+    peer.on('error', (e) => {
+      if (e.type === 'peer-unavailable') netFail('Kein Spiel mit Code „' + code + '" gefunden.');
+      else netFail('Netzwerkfehler: ' + (e.type || e));
+    });
+    peer.on('open', () => {
+      const conn = peer.connect('wzrd-de-' + code, { reliable: true });
+      net.hostConn = { send: (m) => conn.send(clone(m)) };
+      conn.on('open', () => conn.send(clone({ t: 'hello', name })));
+      conn.on('data', (msg) => clientOnMessage(msg));
+      conn.on('close', () => clientLost());
+      conn.on('error', () => clientLost());
+    });
+  }
+}
+
+function sendToHost(msg) {
+  if (net.hostConn) net.hostConn.send(msg);
+}
+
+function clientLost() {
+  if (game.phase === 'gameEnd') return;
+  $('netLostOverlay').classList.add('show');
+}
+
+function netFail(m) {
+  $('netMsg').textContent = m;
+  $('lobbyOverlay').classList.remove('show');
+  net.mode = 'solo';
+}
+
+function clientOnMessage(msg) {
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.t === 'err') { netFail(msg.m); return; }
+  if (msg.t === 'lobby') {
+    net.clientLobbyNames = msg.players;
+    $('lobbyCode').textContent = msg.code;
+    $('lobbyHostControls').style.display = 'none';
+    $('lobbyClientInfo').style.display = 'block';
+    renderLobby();
+    $('lobbyOverlay').classList.add('show');
+    return;
+  }
+  if (msg.t === 'start') {
+    net.started = true;
+    game.myIdx = msg.yourIndex;
+    $('lobbyOverlay').classList.remove('show');
+    $('setup').classList.remove('active');
+    $('game').classList.add('active');
+    return;
+  }
+  if (msg.t === 'state') applySnapshot(msg);
+}
+
+let clientPrevRound = 0;
+let clientPrevPhase = '';
+function applySnapshot(msg) {
+  const g = game;
+  const s = msg.s;
+  g.myIdx = msg.yourIndex;
+  g.round = s.round; g.totalRounds = s.totalRounds; g.dealer = s.dealer;
+  g.current = s.current; g.bidTurn = s.bidTurn; g.trumpColor = s.trumpColor;
+  g.trumpCard = s.trumpCard || null;
+  g.trick = s.trick; g.leader = s.leader; g.lastWinner = s.lastWinner;
+  g.lastTrick = s.lastTrick; g.bidRule = s.bidRule;
+  g.history = s.history; g.numPlayers = s.players.length;
+  g.phase = s.phase;
+  g.players = s.players.map((p, i) => ({
+    name: p.name, isAI: p.isAI, bid: p.bid, tricks: p.tricks, score: p.score,
+    hand: i === g.myIdx ? msg.hand : new Array(p.handCount).fill(null),
+  }));
+  net.pendingPlay = false;
+  if (g.selectedCardId !== null && !g.players[g.myIdx].hand.some(c => c && c.id === g.selectedCardId)) {
+    g.selectedCardId = null;
+  }
+
+  if (g.round !== clientPrevRound) {
+    clientPrevRound = g.round;
+    showToast('Runde ' + g.round + ' von ' + g.totalRounds, 'Geber: ' + g.players[g.dealer].name);
+  }
+
+  renderAllClient();
+  clientPrevPhase = g.phase;
+}
+
+function renderAllClient() {
+  const g = game;
+  renderTopbar(); renderTrump(); renderSeats(); renderTrick(); renderHand();
+
+  // Statuszeile
+  if (g.phase === 'bidding') {
+    const bidder = (g.dealer + 1 + g.bidTurn) % g.numPlayers;
+    if (bidder === g.myIdx && g.bidTurn < g.numPlayers) {
+      setStatus('Deine Ansage: Wie viele Stiche machst du?');
+      showBidPanel();
+    } else {
+      $('bidPanel').style.display = 'none';
+      setStatus(g.players[bidder] ? g.players[bidder].name + ' überlegt …' : '', true);
+    }
+  } else {
+    $('bidPanel').style.display = 'none';
+  }
+  if (g.phase === 'playing') {
+    if (g.current === g.myIdx) setStatus(myPlayStatus());
+    else setStatus(g.players[g.current].name + ' spielt …', true);
+  }
+  if (g.phase === 'trickPause' && g.lastWinner !== null) {
+    highlightWinner(g.lastWinner);
+    if (clientPrevPhase !== 'trickPause' && g.lastWinner === g.myIdx) sndTrickWin();
+    setStatus(g.lastWinner === g.myIdx ? 'Du gewinnst den Stich!' : g.players[g.lastWinner].name + ' gewinnt den Stich');
+  }
+  if (g.phase === 'chooseTrump') {
+    if (g.dealer === g.myIdx) {
+      $('trumpOverlay').classList.add('show');
+    } else {
+      setStatus(g.players[g.dealer].name + ' wählt die Trumpffarbe …', true);
+    }
+  } else {
+    $('trumpOverlay').classList.remove('show');
+  }
+  if (g.phase === 'roundEnd') {
+    showRoundResult(true);
+  } else {
+    $('roundOverlay').classList.remove('show');
+  }
+  if (g.phase === 'gameEnd') {
+    showEndScreen();
+  }
+}
+
+function myPlayStatus() {
+  const g = game;
+  const me = g.players[g.myIdx];
+  const legal = legalCards(me.hand, g.trick);
+  if (g.trick.length === 0) return 'Du bist dran – spiele die erste Karte';
+  const lc = ledColor(g.trick);
+  if (lc && lc !== 'free' && legal.length < me.hand.length) {
+    return 'Du musst ' + COLOR_META[lc].name + ' bedienen (Zauberer/Narr immer erlaubt)';
+  }
+  return 'Du bist dran – spiele eine Karte';
+}
+
+// Test-Hooks: erlauben Multiplayer ohne PeerJS (für automatisierte Tests)
+window.__wizardHooks = {
+  hostStartLobby: (name) => hostStartLobby(name, false),
+  hostAddClient: (connLike) => {
+    const c = { send: (m) => connLike.send(clone(m)), playerIndex: -1, lobbyName: null, alive: true };
+    return {
+      receive: (msg) => hostOnMessage(c, clone(msg)),
+      disconnect: () => hostOnDisconnect(c),
+    };
+  },
+  clientStart: (sendToHostFn) => {
+    net.mode = 'client';
+    net.hostConn = { send: (m) => sendToHostFn(clone(m)) };
+    return { receive: (msg) => clientOnMessage(clone(msg)) };
+  },
+};
+
+// ============ SETUP-UI ============
+function later(fn, ms) {
+  const t = setTimeout(fn, DELAY(ms));
+  game.timers.push(t);
+}
+function clearTimers() {
+  game.timers.forEach(clearTimeout);
+  game.timers = [];
+}
+
+let chosenCount = 4;
+document.querySelectorAll('#countRow .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#countRow .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    chosenCount = parseInt(btn.dataset.n, 10);
+    $('countHint').textContent = 'Du + ' + (chosenCount - 1) + ' Computerspieler · ' + maxRounds(chosenCount) + ' Runden';
+  });
+});
+
+const DIFF_HINTS = {
+  leicht: 'Entspannte Gegner, die sich oft verschätzen',
+  mittel: 'Solide Gegner, die ihre Ansagen meist treffen',
+  schwer: 'Gegner, die Karten zählen und eiskalt ducken',
+};
+document.querySelectorAll('#diffRow .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#diffRow .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    game.difficulty = btn.dataset.d;
+    $('diffHint').textContent = DIFF_HINTS[game.difficulty];
+  });
+});
+
+const SCORE_HINTS = {
+  streng: 'Daneben = nur Minuspunkte (offizielle Regel)',
+  mild: 'Stiche zählen immer: +10 je Stich, −10 je Abweichung',
+};
+document.querySelectorAll('#scoreRow .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#scoreRow .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    game.scoring = btn.dataset.s;
+    $('scoreHint').textContent = SCORE_HINTS[game.scoring];
+  });
+});
+
+$('modeSolo').addEventListener('click', () => {
+  $('modeSolo').classList.add('sel'); $('modeOnline').classList.remove('sel');
+  $('soloSection').style.display = 'block'; $('onlineSection').style.display = 'none';
+});
+$('modeOnline').addEventListener('click', () => {
+  $('modeOnline').classList.add('sel'); $('modeSolo').classList.remove('sel');
+  $('onlineSection').style.display = 'block'; $('soloSection').style.display = 'none';
+});
+
+$('startBtn').addEventListener('click', () => {
+  const name = ($('playerName').value.trim() || 'Du').slice(0, 12);
+  startSoloGame(name, chosenCount);
+});
+
+$('createBtn').addEventListener('click', () => {
+  $('netMsg').textContent = '';
+  const name = ($('playerName').value.trim() || 'Gastgeber').slice(0, 12);
+  hostStartLobby(name, true);
+});
+
+$('joinBtn').addEventListener('click', () => {
+  $('netMsg').textContent = '';
+  const name = ($('playerName').value.trim() || 'Lehrling').slice(0, 12);
+  const code = $('joinCode').value.trim().toUpperCase();
+  if (code.length !== 5) { $('netMsg').textContent = 'Bitte 5-stelligen Code eingeben.'; return; }
+  clientJoin(name, code, true);
+  $('netMsg').textContent = 'Verbinde …';
+});
+
+$('lobbyLeaveBtn').addEventListener('click', () => location.reload());
+
+function startSoloGame(humanName, numPlayers) {
+  clearTimers();
+  store.del(SAVE_KEY);
+  $('resumeBox').style.display = 'none';
+  net.mode = 'solo';
+  game.numPlayers = numPlayers;
+  game.totalRounds = maxRounds(numPlayers);
+  game.players = [{ name: humanName, isAI: false, conn: null, hand: [], bid: null, tricks: 0, score: 0 }];
+  const names = shuffle(AI_NAMES);
+  for (let i = 1; i < numPlayers; i++) {
+    game.players.push({ name: names[i - 1], isAI: true, conn: null, hand: [], bid: null, tricks: 0, score: 0 });
+  }
+  game.round = 1;
+  game.dealer = Math.floor(Math.random() * numPlayers);
+  game.history = [];
+  game.myIdx = 0;
+  $('setup').classList.remove('active');
+  $('game').classList.add('active');
+  startRound();
+}
+
+// ============ RUNDENABLAUF (Host/Solo) ============
+function startRound() {
+  clearTimers();
+  const g = game;
+  g.trick = [];
+  g.played = [];
+  g.lastWinner = null;
+  g.lastTrick = null;
+  g.trickLog = [];
+  g.endSoundDone = false;
+  g.selectedCardId = null;
+  const deck = shuffle(createDeck());
+  let pos = 0;
+  for (const p of g.players) {
+    p.hand = sortHand(deck.slice(pos, pos + g.round));
+    pos += g.round;
+    p.bid = null;
+    p.tricks = 0;
+  }
+  g.trumpCard = pos < 60 ? deck[pos] : null;
+  g.trumpColor = null;
+  g.leader = (g.dealer + 1) % g.numPlayers;
+  g.phase = 'dealing';
+
+  renderAll();
+  sync();
+  const dealerName = g.players[g.dealer].name;
+  showToast('Runde ' + g.round + ' von ' + g.totalRounds, 'Geber: ' + dealerName);
+
+  later(() => {
+    if (!g.trumpCard) {
+      g.trumpColor = null;
+      showToast('Letzte Runde', 'Kein Trumpf – alle Karten sind im Spiel');
+      later(startBidding, 1400);
+    } else if (g.trumpCard.type === 'number') {
+      g.trumpColor = g.trumpCard.color;
+      renderTrump();
+      sync();
+      later(startBidding, 600);
+    } else if (g.trumpCard.type === 'jester') {
+      g.trumpColor = null;
+      renderTrump();
+      showToast('Narr aufgedeckt', 'Diese Runde gibt es keinen Trumpf');
+      later(startBidding, 1400);
+    } else {
+      // Zauberer: Geber wählt Trumpf
+      renderTrump();
+      const dealerP = g.players[g.dealer];
+      if (dealerP.isAI) {
+        showToast('Zauberer aufgedeckt', dealerP.name + ' wählt die Trumpffarbe …');
+        later(() => {
+          g.trumpColor = aiChooseTrump(dealerP.hand);
+          renderTrump();
+          sync();
+          showToast('Trumpf: ' + COLOR_META[g.trumpColor].name, 'gewählt von ' + dealerP.name);
+          later(startBidding, 1300);
+        }, 1400);
+      } else {
+        g.phase = 'chooseTrump';
+        sync();
+        if (g.dealer === 0 && net.mode !== 'client') {
+          setStatus('Zauberer aufgedeckt – wähle die Trumpffarbe');
+          $('trumpOverlay').classList.add('show');
+        } else {
+          setStatus(dealerP.name + ' wählt die Trumpffarbe …', true);
+        }
+      }
+    }
+  }, 1500);
+}
+
+document.querySelectorAll('#trumpOverlay .trump-choice button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (game.phase !== 'chooseTrump') return;
+    if (net.mode === 'client') {
+      if (game.dealer !== game.myIdx) return;
+      $('trumpOverlay').classList.remove('show');
+      sendToHost({ t: 'act', a: 'trump', color: btn.dataset.c });
+      return;
+    }
+    if (game.dealer !== 0) return;
+    game.trumpColor = btn.dataset.c;
+    game.phase = 'dealing';
+    $('trumpOverlay').classList.remove('show');
+    renderTrump();
+    renderHand();
+    sync();
+    showToast('Trumpf: ' + COLOR_META[game.trumpColor].name, 'von dir gewählt');
+    later(startBidding, 1200);
+  });
+});
+
+// ---------- Ansagen ----------
+function startBidding() {
+  game.phase = 'bidding';
+  game.bidTurn = 0;
+  renderAll();
+  sync();
+  nextBid();
+}
+
+function nextBid() {
+  const g = game;
+  if (g.phase !== 'bidding') return;
+  if (g.bidTurn >= g.numPlayers) {
+    finishBidding();
+    return;
+  }
+  const pi = (g.dealer + 1 + g.bidTurn) % g.numPlayers;
+  g.current = pi;
+  renderSeats();
+  const p = g.players[pi];
+  if (p.isAI) {
+    setStatus(p.name + ' überlegt …', true);
+    sync();
+    later(() => {
+      if (g.phase !== 'bidding') return;
+      if (!p.isAI) { nextBid(); return; } // Spieler ist zurueckgekehrt
+      p.bid = aiBid(p.hand, g.trumpColor, g.round, g.difficulty, g.numPlayers, undefined, currentForbidden());
+      g.bidTurn++;
+      renderSeats();
+      sync();
+      nextBid();
+    }, 700 + Math.random() * 500);
+  } else if (pi === 0 && net.mode !== 'client') {
+    setStatus('Deine Ansage: Wie viele Stiche machst du?');
+    showBidPanel();
+    sync();
+  } else {
+    setStatus(p.name + ' überlegt …', true);
+    sync();
+  }
+}
+
+function showBidPanel() {
+  const g = game;
+  $('handWrap').style.display = 'block';
+  const grid = $('bidGrid');
+  grid.innerHTML = '';
+  const others = g.players.filter(p => p.bid !== null && p.bid !== undefined);
+  const sumSoFar = others.reduce((a, p) => a + p.bid, 0);
+  const forbidden = currentForbidden();
+  let sub = 'Runde ' + g.round + ' · Bisher angesagt: ' + sumSoFar + ' von ' + g.round + ' Stichen';
+  if (forbidden !== null) sub += ' · ' + forbidden + ' ist gesperrt (±1-Regel)';
+  $('bidSub').textContent = sub;
+  for (let n = 0; n <= g.round; n++) {
+    const b = document.createElement('button');
+    b.className = 'bid-btn';
+    b.textContent = n;
+    if (forbidden !== null && n === forbidden) b.disabled = true;
+    b.addEventListener('click', () => {
+      if (game.phase !== 'bidding') return;
+      const bidder = (game.dealer + 1 + game.bidTurn) % game.numPlayers;
+      if (bidder !== game.myIdx) return;
+      $('bidPanel').style.display = 'none';
+      if (net.mode === 'client') {
+        sendToHost({ t: 'act', a: 'bid', n });
+        return;
+      }
+      game.players[0].bid = n;
+      game.bidTurn++;
+      renderSeats();
+      sync();
+      nextBid();
+    });
+    grid.appendChild(b);
+  }
+  $('bidPanel').style.display = 'block';
+}
+
+function finishBidding() {
+  const g = game;
+  $('bidPanel').style.display = 'none';
+  const sum = g.players.reduce((a, p) => a + p.bid, 0);
+  const diff = sum - g.round;
+  let sub;
+  if (diff > 0) sub = sum + ' angesagt bei ' + g.round + ' Stichen – Kampfrunde!';
+  else if (diff < 0) sub = 'Nur ' + sum + ' angesagt bei ' + g.round + ' Stichen – wer weicht aus?';
+  else sub = sum + ' angesagt bei genau ' + g.round + ' Stichen';
+  showToast('Alle Ansagen stehen', sub);
+  later(() => {
+    g.phase = 'playing';
+    g.current = g.leader;
+    renderAll();
+    sync();
+    nextPlay();
+  }, 1600);
+}
+
+// ---------- Stiche spielen ----------
+function nextPlay() {
+  const g = game;
+  if (g.phase !== 'playing') return;
+  renderSeats();
+  const p = g.players[g.current];
+  if (p.isAI) {
+    setStatus(p.name + ' spielt …', true);
+    renderHand();
+    sync();
+    later(() => {
+      if (g.phase !== 'playing') return;
+      if (!p.isAI) { nextPlay(); return; } // Spieler ist zurueckgekehrt
+      const card = aiPlay(p, g.trick, g.trumpColor, g.trick.length, g.numPlayers, { difficulty: g.difficulty, played: g.played });
+      playCard(g.current, card);
+    }, 800 + Math.random() * 600);
+  } else if (g.current === 0 && net.mode !== 'client') {
+    setStatus(myPlayStatus());
+    renderHand();
+    sync();
+  } else {
+    setStatus(p.name + ' spielt …', true);
+    renderHand();
+    sync();
+  }
+}
+
+function playCard(playerIndex, card) {
+  const g = game;
+  const p = g.players[playerIndex];
+  p.hand = p.hand.filter(c => c.id !== card.id);
+  g.trick.push({ playerIndex, card });
+  g.played.push(card);
+  g.selectedCardId = null;
+  renderTrick();
+  renderHand();
+  renderSeats();
+
+  if (g.trick.length === g.numPlayers) {
+    g.phase = 'trickPause';
+    const winner = trickWinner(g.trick, g.trumpColor);
+    g.lastTrick = { cards: g.trick.slice(), winner };
+    if (!g.trickLog) g.trickLog = [];
+    g.trickLog.push(g.lastTrick);
+    sync();
+    later(() => {
+      g.players[winner].tricks++;
+      g.lastWinner = winner;
+      highlightWinner(winner);
+      if (winner === g.myIdx) sndTrickWin();
+      setStatus(winner === g.myIdx ? 'Du gewinnst den Stich!' : g.players[winner].name + ' gewinnt den Stich');
+      renderSeats();
+      sync();
+      later(() => {
+        g.trick = [];
+        g.lastWinner = null;
+        renderTrick();
+        const tricksPlayed = g.players.reduce((a, pl) => a + pl.tricks, 0);
+        if (tricksPlayed === g.round) {
+          endRound();
+        } else {
+          g.phase = 'playing';
+          g.leader = winner;
+          g.current = winner;
+          sync();
+          nextPlay();
+        }
+      }, 2600);
+    }, 600);
+  } else {
+    g.current = (g.current + 1) % g.numPlayers;
+    sync();
+    nextPlay();
+  }
+}
+
+// ---------- Rundenende / Spielende ----------
+function endRound() {
+  const g = game;
+  g.phase = 'roundEnd';
+  const roundData = [];
+  for (const p of g.players) {
+    const delta = scoreFor(p.bid, p.tricks, g.scoring);
+    p.score += delta;
+    roundData.push({ bid: p.bid, tricks: p.tricks, delta, total: p.score });
+  }
+  g.history.push(roundData);
+  saveGame();
+  sync();
+  later(() => showRoundResult(false), 900);
+}
+
+function showRoundResult(isClient) {
+  const g = game;
+  if (g.history.length === 0) return;
+  const roundData = g.history[g.history.length - 1];
+  const tbl = $('roundResult');
+  tbl.innerHTML = '';
+  $('roundResultTitle').textContent = 'Runde ' + g.history.length + ' beendet';
+  g.players.forEach((p, i) => {
+    const d = roundData[i];
+    const tr = document.createElement('tr');
+    const ok = d.bid === d.tricks;
+    tr.innerHTML =
+      '<td>' + esc(p.name) + (i === g.myIdx ? ' (Du)' : '') + '</td>' +
+      '<td style="color:var(--grau)">Ansage ' + d.bid + ' · Stiche ' + d.tricks + (ok ? ' ✓' : '') + '</td>' +
+      '<td class="pts ' + (d.delta >= 0 ? 'pos' : 'neg') + '">' + (d.delta > 0 ? '+' : '') + d.delta + '</td>' +
+      '<td class="tot">' + d.total + '</td>';
+    tbl.appendChild(tr);
+  });
+  const lastRound = g.history.length >= g.totalRounds;
+  $('nextRoundBtn').textContent = lastRound ? 'Zur Siegerehrung' : 'Nächste Runde';
+  $('nextRoundBtn').style.display = isClient ? 'none' : 'block';
+  $('roundWaitInfo').style.display = isClient ? 'block' : 'none';
+  $('roundOverlay').classList.add('show');
+}
+
+$('nextRoundBtn').addEventListener('click', () => {
+  if (net.mode === 'client') return;
+  $('roundOverlay').classList.remove('show');
+  const g = game;
+  if (g.round >= g.totalRounds) {
+    g.phase = 'gameEnd';
+    sync();
+    showEndScreen();
+  } else {
+    g.round++;
+    g.dealer = (g.dealer + 1) % g.numPlayers;
+    startRound();
+  }
+});
+
+function showEndScreen() {
+  const g = game;
+  g.phase = 'gameEnd';
+  $('roundOverlay').classList.remove('show');
+  const order = g.players.map((p, i) => ({ p, i })).sort((a, b) => b.p.score - a.p.score);
+  const list = $('ranking');
+  list.innerHTML = '';
+  const medals = ['👑', '2.', '3.', '4.', '5.', '6.'];
+  order.forEach((o, rank) => {
+    const li = document.createElement('li');
+    if (rank === 0) li.className = 'first';
+    li.innerHTML = '<span class="place">' + medals[rank] + '</span><span>' + esc(o.p.name) + (o.i === g.myIdx ? ' (Du)' : '') + '</span><span class="pts">' + o.p.score + '</span>';
+    list.appendChild(li);
+  });
+  $('endTitle').textContent = order[0].i === g.myIdx ? 'Du bist der Zauberer!' : order[0].p.name + ' gewinnt';
+  drawScoreChart();
+  if (!g.endSoundDone) { g.endSoundDone = true; sndGameEnd(order[0].i === g.myIdx); }
+  $('newGameBtn').textContent = net.mode === 'solo' ? 'Neues Spiel' : 'Zurück zur Startseite';
+  $('endOverlay').classList.add('show');
+}
+
+$('newGameBtn').addEventListener('click', () => {
+  if (net.mode !== 'solo') { location.reload(); return; }
+  $('endOverlay').classList.remove('show');
+  $('game').classList.remove('active');
+  $('setup').classList.add('active');
+  game.phase = 'setup';
+  clearTimers();
+});
+
+// ---------- Block der Wahrheit ----------
+$('scoreBtn').addEventListener('click', renderTruthAndShow);
+$('scoreClose').addEventListener('click', () => $('scoreOverlay').classList.remove('show'));
+
+function renderTruthAndShow() {
+  const g = game;
+  const t = $('truthTable');
+  let html = '<tr><th>R.</th>';
+  for (const p of g.players) html += '<th>' + esc(p.name) + '</th>';
+  html += '</tr>';
+  g.history.forEach((rd, r) => {
+    html += '<tr><td>' + (r + 1) + '</td>';
+    rd.forEach(d => {
+      html += '<td class="total">' + d.total + '<small>' + d.bid + ' / ' + d.tricks + '</small></td>';
+    });
+    html += '</tr>';
+  });
+  if (g.history.length === 0) {
+    html += '<tr><td colspan="' + (g.numPlayers + 1) + '" style="padding:14px">Noch keine Runde abgerechnet.</td></tr>';
+  }
+  t.innerHTML = html;
+  $('scoreOverlay').classList.add('show');
+}
+
+// ---------- Rendering ----------
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function sortHand(hand) {
+  const order = { jester: 0, number: 1, wizard: 2 };
+  const colOrder = { blau: 0, rot: 1, gruen: 2, gelb: 3 };
+  return hand.slice().sort((a, b) => {
+    if (order[a.type] !== order[b.type]) return order[a.type] - order[b.type];
+    if (a.type === 'number') {
+      if (colOrder[a.color] !== colOrder[b.color]) return colOrder[a.color] - colOrder[b.color];
+      return a.value - b.value;
+    }
+    return 0;
+  });
+}
+
+function cardEl(card) {
+  const div = document.createElement('div');
+  if (card.type === 'wizard') {
+    div.className = 'card c-wizard';
+    div.dataset.sym = '✶';
+    div.innerHTML = '<span class="tl">Z</span><span class="mid"><span class="emoji">🧙</span><span class="volk">Zauberer</span></span><span class="br">Z</span>';
+    return div;
+  }
+  if (card.type === 'jester') {
+    div.className = 'card c-jester';
+    div.dataset.sym = '◎';
+    div.innerHTML = '<span class="tl">N</span><span class="mid"><span class="emoji">🃏</span><span class="volk">Narr</span></span><span class="br">N</span>';
+    return div;
+  }
+  const m = COLOR_META[card.color];
+  let cls = 'card c-' + card.color;
+  if (game.trumpColor && card.color === game.trumpColor) cls += ' trumpcard';
+  div.className = cls;
+  div.dataset.sym = m.sym;
+  div.innerHTML = '<span class="tl">' + card.value + '</span><span class="mid">' + card.value +
+    '<span class="sym">' + m.sym + '</span></span><span class="br">' + card.value + '</span>';
+  return div;
+}
+
+function renderAll() { renderTopbar(); renderTrump(); renderSeats(); renderTrick(); renderHand(); }
+
+function renderTopbar() {
+  $('roundLabel').textContent = 'Runde ' + game.round;
+  $('roundSub').textContent = 'von ' + game.totalRounds + ' · Geber: ' + (game.players[game.dealer] ? game.players[game.dealer].name : '–');
+}
+
+function renderTrump() {
+  const gem = $('trumpGem');
+  const lbl = $('trumpLabel');
+  if (game.trumpColor) {
+    const m = COLOR_META[game.trumpColor];
+    gem.style.background = m.css;
+    gem.style.color = m.css;
+    gem.style.display = 'block';
+    lbl.textContent = 'Trumpf: ' + m.name;
+  } else if (game.trumpCard && game.trumpCard.type === 'wizard') {
+    gem.style.display = 'none';
+    lbl.textContent = 'Trumpfwahl …';
+  } else {
+    gem.style.display = 'none';
+    lbl.textContent = 'Kein Trumpf';
+  }
+}
+
+function renderSeats() {
+  const wrap = $('opponents');
+  wrap.innerHTML = '';
+  const g = game;
+  for (let i = 0; i < g.numPlayers; i++) {
+    const p = g.players[i];
+    if (!p) continue;
+    const seat = document.createElement('div');
+    let cls = 'seat';
+    if (i === g.dealer) cls += ' dealer';
+    const isActive =
+      (g.phase === 'playing' && i === g.current) ||
+      (g.phase === 'bidding' && g.bidTurn < g.numPlayers && i === (g.dealer + 1 + g.bidTurn) % g.numPlayers);
+    if (isActive) cls += ' active';
+    seat.className = cls;
+    let statsCls = 'stats';
+    let statsHtml = '– / –';
+    if (p.bid !== null && p.bid !== undefined) {
+      if (p.tricks === p.bid) statsCls += ' done';
+      else if (p.tricks > p.bid) statsCls += ' over';
+      statsHtml = 'Ansage <b>' + p.bid + '</b> · <b>' + p.tricks + '</b>';
+    }
+    seat.innerHTML =
+      '<div class="avatar">' + esc(p.name[0]) +
+      '<span class="dealer-badge">Geber</span>' +
+      '<span class="cardcount">' + p.hand.length + '</span></div>' +
+      '<div class="pname">' + esc(i === g.myIdx ? p.name + ' (Du)' : p.name) + '</div>' +
+      '<div class="' + statsCls + '">' + statsHtml + '</div>';
+    wrap.appendChild(seat);
+  }
+  maybeTurnSound();
+}
+
+function renderTrick() {
+  const wrap = $('trick');
+  wrap.innerHTML = '';
+  const hasLog = net.mode === 'solo' ? (game.trickLog && game.trickLog.length > 0) : !!game.lastTrick;
+  const showLast = hasLog && game.trick.length === 0 && (game.phase === 'playing' || game.phase === 'trickPause');
+  $('lastTrickBtn').textContent = net.mode === 'solo' ? '↩ Stiche' : '↩ Letzter Stich';
+  $('lastTrickBtn').style.display = showLast ? 'block' : 'none';
+  for (const t of game.trick) {
+    const d = document.createElement('div');
+    d.className = 'played';
+    d.dataset.pi = t.playerIndex;
+    d.appendChild(cardEl(t.card));
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = t.playerIndex === game.myIdx ? 'Du' : (game.players[t.playerIndex] ? game.players[t.playerIndex].name : '');
+    d.appendChild(who);
+    wrap.appendChild(d);
+  }
+}
+
+function highlightWinner(winner) {
+  document.querySelectorAll('.played').forEach(el => {
+    if (parseInt(el.dataset.pi, 10) === winner) el.classList.add('winner');
+  });
+}
+
+function renderHand() {
+  const wrap = $('hand');
+  wrap.innerHTML = '';
+  const g = game;
+  const me = g.players[g.myIdx];
+  if (!me || !me.hand) return;
+  const myTurn = g.phase === 'playing' && g.current === g.myIdx && !net.pendingPlay;
+  const legal = myTurn ? legalCards(me.hand, g.trick) : [];
+  const legalIds = new Set(legal.map(c => c.id));
+  wrap.className = 'hand' + (myTurn ? '' : ' inactive');
+
+  for (const card of me.hand) {
+    if (!card) continue;
+    const el = cardEl(card);
+    if (myTurn && !legalIds.has(card.id)) el.classList.add('illegal');
+    if (card.id === g.selectedCardId) el.classList.add('sel');
+    el.addEventListener('click', () => {
+      if (game.phase !== 'playing' || game.current !== game.myIdx || net.pendingPlay) return;
+      if (!legalIds.has(card.id)) {
+        const lc = ledColor(game.trick);
+        if (lc && lc !== 'free') setStatus('Du musst ' + COLOR_META[lc].name + ' bedienen!');
+        return;
+      }
+      if (game.selectedCardId === card.id) {
+        if (net.mode === 'client') {
+          net.pendingPlay = true;
+          game.selectedCardId = null;
+          sendToHost({ t: 'act', a: 'play', cardId: card.id });
+          renderHand();
+        } else {
+          playCard(game.myIdx, card);
+        }
+      } else {
+        game.selectedCardId = card.id;
+        renderHand();
+        setStatus('Nochmal tippen zum Ausspielen');
+      }
+    });
+    wrap.appendChild(el);
+  }
+}
+
+function setStatus(text, subtle) {
+  const s = $('status');
+  s.textContent = text;
+  s.className = 'status' + (subtle ? ' subtle' : '');
+}
+
+// ============ NEUE FEATURES ============
+
+// ---- Speicher-Helfer (funktioniert nur, wo localStorage erlaubt ist, z. B. GitHub Pages) ----
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+const SAVE_KEY = 'wizard-save-v1';
+const PREFS_KEY = 'wizard-prefs-v1';
+
+// ---- ±1-Regel: verbotene Ansage des letzten Ansagers ----
+function currentForbidden() {
+  const g = game;
+  if (g.bidRule !== 'pm1' || g.phase !== 'bidding') return null;
+  if (g.bidTurn !== g.numPlayers - 1) return null;
+  const sum = g.players.reduce((a, p) => a + (p.bid ?? 0), 0);
+  const f = g.round - sum;
+  return (f >= 0 && f <= g.round) ? f : null;
+}
+
+// ---- Spielstand sichern & fortsetzen (nur Solo) ----
+function saveGame() {
+  const g = game;
+  if (net.mode !== 'solo') return;
+  if (g.history.length >= g.totalRounds) { store.del(SAVE_KEY); return; }
+  store.set(SAVE_KEY, JSON.stringify({
+    v: 1, ts: Date.now(),
+    numPlayers: g.numPlayers, totalRounds: g.totalRounds,
+    nextRound: g.round + 1, nextDealer: (g.dealer + 1) % g.numPlayers,
+    difficulty: g.difficulty, scoring: g.scoring, bidRule: g.bidRule,
+    history: g.history,
+    players: g.players.map(p => ({ name: p.name, isAI: p.isAI, score: p.score })),
+  }));
+}
+
+function loadSave() {
+  const raw = store.get(SAVE_KEY);
+  if (!raw) return null;
+  try {
+    const s = JSON.parse(raw);
+    if (s && s.v === 1 && s.nextRound <= s.totalRounds && Array.isArray(s.players)) return s;
+  } catch (e) {}
+  return null;
+}
+
+function showResumeIfAny() {
+  const s = loadSave();
+  if (!s) return;
+  const best = s.players.reduce((a, b) => (b.score > a.score ? b : a));
+  $('resumeInfo').textContent = 'Runde ' + s.nextRound + ' von ' + s.totalRounds + ' · ' +
+    s.numPlayers + ' Spieler · Führend: ' + best.name + ' (' + best.score + ')';
+  $('resumeBox').style.display = 'block';
+}
+
+$('resumeBtn').addEventListener('click', () => {
+  const s = loadSave();
+  if (!s) { $('resumeBox').style.display = 'none'; return; }
+  clearTimers();
+  net.mode = 'solo';
+  const g = game;
+  g.numPlayers = s.numPlayers; g.totalRounds = s.totalRounds;
+  g.difficulty = s.difficulty; g.scoring = s.scoring; g.bidRule = s.bidRule || 'frei';
+  g.history = s.history; g.round = s.nextRound; g.dealer = s.nextDealer;
+  g.myIdx = 0;
+  g.players = s.players.map(p => ({ name: p.name, isAI: p.isAI, conn: null, hand: [], bid: null, tricks: 0, score: p.score }));
+  $('resumeBox').style.display = 'none';
+  $('setup').classList.remove('active');
+  $('game').classList.add('active');
+  showToast('Willkommen zurück!', 'Weiter mit Runde ' + g.round);
+  startRound();
+});
+$('resumeDelBtn').addEventListener('click', () => {
+  store.del(SAVE_KEY);
+  $('resumeBox').style.display = 'none';
+});
+
+// ---- Einstellungen: Ansageregel + Tempo ----
+const RULE_HINTS = { frei: 'Jede Ansage ist erlaubt', pm1: 'Die letzte Ansage darf die Summe nicht aufgehen lassen' };
+document.querySelectorAll('#ruleRow .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#ruleRow .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    game.bidRule = btn.dataset.r;
+    $('ruleHint').textContent = RULE_HINTS[game.bidRule];
+  });
+});
+const SPEED_HINTS = { normal: 'Ruhige Denkpausen der Gegner', fast: 'Kaum Wartezeit – für geübte Spieler' };
+document.querySelectorAll('#speedRow .count-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#speedRow .count-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    speedFactor = btn.dataset.t === 'fast' ? 0.45 : 1;
+    $('speedHint').textContent = SPEED_HINTS[btn.dataset.t];
+    savePrefs();
+  });
+});
+
+// ---- Sound & Vibration ----
+let audioCtx = null;
+let soundOn = true;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+  // iOS startet den Kontext stumm ("suspended") und pausiert ihn wieder --
+  // deshalb in jeder Nutzergeste erneut aktivieren
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { audioCtx.resume(); } catch (e) {}
+  }
+}
+document.addEventListener('touchstart', ensureAudio, { passive: true });
+document.addEventListener('pointerdown', ensureAudio);
+document.addEventListener('click', ensureAudio);
+
+function tone(freq, delay, dur, vol) {
+  if (!soundOn) return;
+  ensureAudio();
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime + delay;
+    const o = audioCtx.createOscillator();
+    const gn = audioCtx.createGain();
+    o.type = 'triangle';
+    o.frequency.value = freq;
+    gn.gain.setValueAtTime(0, t0);
+    gn.gain.linearRampToValueAtTime(vol || 0.12, t0 + 0.015);
+    gn.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    o.connect(gn); gn.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch (e) {}
+}
+function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+function sndTurn() { tone(660, 0, 0.1); tone(880, 0.11, 0.14); buzz(30); }
+function sndTrickWin() { tone(523, 0, 0.09); tone(659, 0.09, 0.09); tone(784, 0.18, 0.16); buzz([40, 40, 40]); }
+function sndGameEnd(won) {
+  if (won) { tone(523, 0, 0.12); tone(659, 0.12, 0.12); tone(784, 0.24, 0.12); tone(1047, 0.36, 0.3, 0.16); buzz([60, 60, 120]); }
+  else { tone(392, 0, 0.18); tone(330, 0.2, 0.28); }
+}
+
+let lastTurnKey = '';
+function maybeTurnSound() {
+  const g = game;
+  let myTurn = false;
+  if (g.phase === 'playing' && g.current === g.myIdx && g.players[g.myIdx] && !g.players[g.myIdx].isAI) myTurn = true;
+  if (g.phase === 'bidding' && g.bidTurn < g.numPlayers && (g.dealer + 1 + g.bidTurn) % g.numPlayers === g.myIdx) myTurn = true;
+  if (!myTurn) return;
+  const tricksDone = g.players.reduce((a, p) => a + p.tricks, 0);
+  const key = g.round + ':' + g.phase + ':' + g.bidTurn + ':' + tricksDone + ':' + g.trick.length;
+  if (key !== lastTurnKey) {
+    lastTurnKey = key;
+    sndTurn();
+  }
+}
+
+$('soundBtn').addEventListener('click', () => {
+  ensureAudio();
+  soundOn = !soundOn;
+  $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+  if (soundOn) { tone(660, 0.02, 0.09); tone(880, 0.13, 0.14); buzz(30); }
+  savePrefs();
+});
+
+function savePrefs() {
+  store.set(PREFS_KEY, JSON.stringify({ sound: soundOn ? 1 : 0, speed: speedFactor }));
+}
+(function loadPrefs() {
+  const raw = store.get(PREFS_KEY);
+  if (!raw) return;
+  try {
+    const p = JSON.parse(raw);
+    if (p.sound === 0) { soundOn = false; $('soundBtn').textContent = '🔇'; }
+    if (p.speed && p.speed < 1) {
+      speedFactor = p.speed;
+      document.querySelectorAll('#speedRow .count-btn').forEach(b => b.classList.toggle('sel', b.dataset.t === 'fast'));
+      $('speedHint').textContent = SPEED_HINTS.fast;
+    }
+  } catch (e) {}
+})();
+
+// ---- Regeln-Overlay ----
+$('helpBtn').addEventListener('click', () => $('helpOverlay').classList.add('show'));
+$('helpBtn2').addEventListener('click', () => $('helpOverlay').classList.add('show'));
+$('helpClose').addEventListener('click', () => $('helpOverlay').classList.remove('show'));
+
+// ---- Letzter Stich ----
+$('lastTrickBtn').addEventListener('click', () => {
+  const entries = (net.mode === 'solo' && game.trickLog && game.trickLog.length)
+    ? game.trickLog.slice().reverse()
+    : (game.lastTrick ? [game.lastTrick] : []);
+  if (!entries.length) return;
+  $('trickLogTitle').textContent = net.mode === 'solo' ? 'Stiche dieser Runde' : 'Letzter Stich';
+  const list = $('trickLogList');
+  list.innerHTML = '';
+  entries.forEach((e, ridx) => {
+    const div = document.createElement('div');
+    div.className = 'entry';
+    const hdr = document.createElement('div');
+    hdr.className = 'hdr';
+    const num = net.mode === 'solo' ? (game.trickLog.length - ridx) : null;
+    const wname = e.winner === game.myIdx ? 'Du' : (game.players[e.winner] ? game.players[e.winner].name : '?');
+    hdr.textContent = (num !== null ? 'Stich ' + num + ' · ' : '') + 'Gewinner: ' + wname;
+    div.appendChild(hdr);
+    const row = document.createElement('div');
+    row.className = 'trick';
+    for (const t of e.cards) {
+      const d = document.createElement('div');
+      d.className = 'played' + (t.playerIndex === e.winner ? ' winner' : '');
+      d.appendChild(cardEl(t.card));
+      const who = document.createElement('div');
+      who.className = 'who';
+      who.textContent = t.playerIndex === game.myIdx ? 'Du' : (game.players[t.playerIndex] ? game.players[t.playerIndex].name : '');
+      d.appendChild(who);
+      row.appendChild(d);
+    }
+    div.appendChild(row);
+    list.appendChild(div);
+  });
+  $('lastTrickOverlay').classList.add('show');
+});
+
+// ---- Trumpfkarte ansehen ----
+$('trumpChip').addEventListener('click', () => {
+  const g = game;
+  if (g.phase === 'setup' || !g.players.length) return;
+  const cardWrap = $('trumpInfoCard');
+  cardWrap.innerHTML = '';
+  let text;
+  if (!g.trumpCard) {
+    text = 'Letzte Runde: Alle Karten sind verteilt – es gibt keinen Trumpf.';
+  } else {
+    cardWrap.appendChild(cardEl(g.trumpCard));
+    const dealerName = g.players[g.dealer] ? g.players[g.dealer].name : '?';
+    if (g.trumpCard.type === 'wizard') {
+      text = 'Ein Zauberer wurde aufgedeckt – ' + (g.dealer === g.myIdx ? 'du durftest' : dealerName + ' durfte') +
+        ' die Trumpffarbe bestimmen' + (g.trumpColor ? ': ' + COLOR_META[g.trumpColor].name + '.' : ' …');
+    } else if (g.trumpCard.type === 'jester') {
+      text = 'Ein Narr wurde aufgedeckt – diese Runde gibt es keinen Trumpf.';
+    } else {
+      const m = COLOR_META[g.trumpCard.color];
+      text = 'Aufgedeckt: ' + m.name + ' ' + g.trumpCard.value + ' – ' + m.name + ' (' + m.volk + ') ist Trumpf.';
+    }
+  }
+  $('trumpInfoText').textContent = text;
+  $('trumpInfoOverlay').classList.add('show');
+});
+$('trumpInfoClose').addEventListener('click', () => $('trumpInfoOverlay').classList.remove('show'));
+
+// ---- Hauptmenü ----
+$('homeBtn').addEventListener('click', () => $('menuOverlay').classList.add('show'));
+$('menuStayBtn').addEventListener('click', () => $('menuOverlay').classList.remove('show'));
+$('menuQuitBtn').addEventListener('click', () => {
+  try { location.reload(); } catch (e) {}
+});
+$('lastTrickClose').addEventListener('click', () => $('lastTrickOverlay').classList.remove('show'));
+
+// ---- Code teilen ----
+$('shareBtn').addEventListener('click', async () => {
+  const code = net.code || $('lobbyCode').textContent;
+  const text = 'Spiel eine Runde Wizard mit! Öffne ' + location.href + ' , wähle „Online" und tritt mit Code ' + code + ' bei.';
+  try {
+    if (navigator.share) { await navigator.share({ title: 'Wizard – Mitspielen', text }); return; }
+  } catch (e) { return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Kopiert!', 'Einladung ist in der Zwischenablage');
+  } catch (e) {
+    showToast('Code: ' + code, 'Bitte manuell weitergeben');
+  }
+});
+
+// ---- Punkteverlauf als Grafik ----
+const CHART_COLORS = ['#4d88ca', '#d15b50', '#54a86c', '#e8c052', '#9a7ce0', '#8a8494'];
+function drawScoreChart() {
+  const g = game;
+  const cv = $('scoreChart');
+  const legend = $('chartLegend');
+  if (!cv || g.history.length < 2) { if (cv) cv.style.display = 'none'; if (legend) legend.style.display = 'none'; return; }
+  let ctx = null;
+  try { ctx = cv.getContext('2d'); } catch (e) {}
+  if (!ctx) { cv.style.display = 'none'; legend.style.display = 'none'; return; }
+  cv.style.display = 'block';
+  legend.style.display = 'flex';
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth || 380, H = 170;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+  const series = g.players.map((p, i) => [0].concat(g.history.map(rd => rd[i].total)));
+  let mn = 0, mx = 20;
+  for (const s of series) for (const v of s) { if (v < mn) mn = v; if (v > mx) mx = v; }
+  const pad = { l: 34, r: 8, t: 8, b: 16 };
+  const X = (r) => pad.l + (W - pad.l - pad.r) * (r / (series[0].length - 1));
+  const Y = (v) => pad.t + (H - pad.t - pad.b) * (1 - (v - mn) / (mx - mn || 1));
+  // Nulllinie + Gitter
+  ctx.strokeStyle = '#2c2344'; ctx.lineWidth = 1; ctx.fillStyle = '#8a8494';
+  ctx.font = '10px Grenze, serif';
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = Math.round(mn + (mx - mn) * i / steps);
+    ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(W - pad.r, Y(v)); ctx.stroke();
+    ctx.fillText(String(v), 4, Y(v) + 3);
+  }
+  if (mn < 0) {
+    ctx.strokeStyle = '#4a3d6e';
+    ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(W - pad.r, Y(0)); ctx.stroke();
+  }
+  series.forEach((s, i) => {
+    ctx.strokeStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    s.forEach((v, r) => { r === 0 ? ctx.moveTo(X(r), Y(v)) : ctx.lineTo(X(r), Y(v)); });
+    ctx.stroke();
+  });
+  legend.innerHTML = g.players.map((p, i) =>
+    '<span><span class="dot" style="background:' + CHART_COLORS[i % CHART_COLORS.length] + '"></span>' + esc(p.name) + '</span>').join('');
+}
+
+showResumeIfAny();
+
+let toastTimer = null;
+function showToast(title, sub) {
+  const t = $('toast');
+  t.innerHTML = esc(title) + (sub ? '<small>' + esc(sub) + '</small>' : '');
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), DELAY(2200));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🧙 Wizard Scoreboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night: #0f0d1a; --deep: #1a1535; --card: #1e1a3a;
+  --gold: #c9a227; --gold-light: #f0c840;
+  --purple: #6b21a8; --purple-bright: #9333ea; --purple-glow: rgba(147,51,234,0.3);
+  --cream: #f5f0e8; --muted: #8b82a8;
+  --green: #22c55e; --red: #ef4444;
+  --border: rgba(201,162,39,0.2); --border-strong: rgba(201,162,39,0.5);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+body { font-family: 'Inter', sans-serif; background: var(--night); color: var(--cream); min-height: 100vh; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42%  8%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 68% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(2px 2px at 78% 88%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 38% 52%, rgba(201,162,39,0.3) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+#app { position: relative; z-index: 1; width: 100%; max-width: 600px; margin: 0 auto; padding: 0 12px 32px; }
+
+/* ── HEADER ── */
+header { text-align: center; padding: 18px 0 14px; border-bottom: 1px solid var(--border-strong); margin-bottom: 18px; position: relative; }
+header::after { content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 100px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.header-icon { font-size: 2rem; display: block; margin-bottom: 2px; }
+h1 { font-family: 'Cinzel', serif; font-size: clamp(1.5rem, 6vw, 2.2rem); font-weight: 900; background: linear-gradient(135deg, var(--gold-light), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 0.08em; }
+.subtitle { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px; }
+
+/* ── SETUP ── */
+#setup-screen { padding: 8px 0 0; }
+.setup-card { background: var(--card); border: 1px solid var(--border-strong); border-radius: 16px; padding: 22px 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.setup-title { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); margin-bottom: 16px; text-align: center; }
+.count-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 8px; text-align: center; }
+.player-count-row { display: flex; gap: 8px; margin-bottom: 20px; }
+.count-btn { flex: 1; padding: 10px 4px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--deep); color: var(--muted); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+.count-btn.active { background: linear-gradient(135deg, var(--purple), #4c1d95); border-color: var(--purple-bright); color: var(--cream); box-shadow: 0 0 12px var(--purple-glow); }
+.player-inputs { display: flex; flex-direction: column; gap: 9px; margin-bottom: 20px; }
+.player-input-row { display: flex; align-items: center; gap: 10px; }
+.player-emoji { font-size: 1.2rem; width: 28px; text-align: center; flex-shrink: 0; }
+.player-input-row input { flex: 1; background: var(--deep); border: 1px solid var(--border-strong); border-radius: 8px; color: var(--cream); font-size: 1rem; font-family: 'Inter', sans-serif; padding: 10px 12px; outline: none; transition: border-color 0.2s; }
+.player-input-row input:focus { border-color: var(--gold); }
+.start-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--gold), #a07a10); border: none; border-radius: 12px; color: var(--night); font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 20px rgba(201,162,39,0.3); }
+
+/* ── GAME ── */
+#game-screen { display: none; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+.round-indicator { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--gold); }
+.round-indicator strong { font-size: 1.2rem; }
+.top-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.icon-btn { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--card); color: var(--muted); font-size: 0.73rem; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.icon-btn:hover { color: var(--cream); border-color: var(--gold); }
+.icon-btn.danger { border-color: rgba(239,68,68,0.4); }
+.icon-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* ── ROUND CARD ── */
+.round-card { background: var(--card); border: 1px solid var(--border-strong); border-radius: 14px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.round-card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: linear-gradient(135deg, rgba(107,33,168,0.25), rgba(30,26,58,0.8)); border-bottom: 1px solid var(--border); }
+.round-card-title { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold); font-weight: 600; }
+.round-card-sub { font-size: 0.7rem; color: var(--muted); }
+.player-row { display: flex; align-items: center; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 8px; }
+.player-row:last-child { border-bottom: none; }
+.player-row-icon { font-size: 1.1rem; flex-shrink: 0; width: 24px; text-align: center; }
+.player-row-name { flex: 1; font-size: 0.85rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.player-row-inputs { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.inp-label { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; display: block; margin-bottom: 2px; }
+.inp-group { display: flex; flex-direction: column; align-items: center; }
+.num-input { width: 48px; height: 40px; background: var(--deep); border: 1.5px solid var(--border); border-radius: 8px; color: var(--cream); font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif; text-align: center; outline: none; transition: border-color 0.2s, box-shadow 0.2s; -moz-appearance: textfield; }
+.num-input::-webkit-inner-spin-button, .num-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.num-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,162,39,0.2); }
+.num-input.ansage-inp { border-color: rgba(147,51,234,0.5); }
+.num-input.ansage-inp:focus { border-color: var(--purple-bright); box-shadow: 0 0 0 2px var(--purple-glow); }
+.pkt-badge { min-width: 52px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; font-family: 'Inter', sans-serif; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.06); color: var(--muted); transition: all 0.25s; flex-shrink: 0; }
+.pkt-badge.pos { color: var(--green); background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); }
+.pkt-badge.neg { color: var(--red); background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+
+/* ── HISTORY ── */
+.history-section { margin-bottom: 12px; }
+.history-toggle { width: 100%; padding: 9px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 0.78rem; font-family: 'Inter', sans-serif; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.history-body { display: none; }
+.history-body.open { display: block; }
+.hist-table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 0.78rem; }
+.hist-table th { padding: 6px 8px; font-family: 'Cinzel', serif; font-size: 0.65rem; color: var(--gold); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.hist-table th:first-child { text-align: left; padding-left: 12px; }
+.hist-table td { padding: 5px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--cream); }
+.hist-table td:first-child { text-align: left; padding-left: 12px; color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.72rem; }
+.hist-table tr:last-child td { border-bottom: none; }
+.hist-table .h-pos { color: var(--green); font-weight: 600; }
+.hist-table .h-neg { color: var(--red); font-weight: 600; }
+.hist-table .h-zero { color: var(--muted); }
+.hist-table .h-total { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold-light); }
+
+/* ── SCORE FOOTER ── */
+.score-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.score-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; position: relative; }
+.score-card.leader { border-color: var(--gold); background: linear-gradient(135deg, rgba(201,162,39,0.1), var(--card)); box-shadow: 0 0 16px rgba(201,162,39,0.12); }
+.score-card .sc-rank { position: absolute; top: 5px; right: 7px; font-size: 0.65rem; color: var(--muted); }
+.score-card.leader .sc-rank { color: var(--gold); }
+.score-card .sc-icon { font-size: 1.2rem; display: block; }
+.score-card .sc-name { font-size: 0.7rem; color: var(--gold); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0; }
+.score-card .sc-score { font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 700; color: var(--gold-light); }
+
+/* ── NAV ── */
+.nav-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.nav-btn { flex: 1; padding: 13px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--card); color: var(--cream); font-family: 'Cinzel', serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; letter-spacing: 0.04em; }
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.nav-btn.primary { background: linear-gradient(135deg, var(--purple), #4c1d95); border-color: var(--purple-bright); box-shadow: 0 3px 14px var(--purple-glow); }
+
+/* ── LEGEND ── */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 0.68rem; color: var(--muted); padding-bottom: 20px; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ══ BOTTOM SHEETS ══ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 200; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.bottom-sheet { background: var(--card); border: 1px solid var(--border-strong); border-radius: 20px 20px 0 0; width: 100%; max-width: 600px; padding: 0 0 32px; max-height: 92vh; overflow-y: auto; animation: slide-up 0.3s cubic-bezier(0.25,0.46,0.45,0.94); }
+@keyframes slide-up { from { transform: translateY(100%); opacity:0; } to { transform: translateY(0); opacity:1; } }
+.sheet-handle { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 10px auto 0; }
+.sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
+.sheet-title { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); letter-spacing: 0.05em; }
+.sheet-header-actions { display: flex; gap: 8px; align-items: center; }
+.sheet-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--deep); color: var(--muted); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pdf-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--gold); background: linear-gradient(135deg, var(--gold), #a07a10); color: var(--night); font-size: 0.75rem; font-weight: 700; font-family: 'Cinzel', serif; cursor: pointer; letter-spacing: 0.04em; white-space: nowrap; }
+
+/* ── STATISTIK INHALT ── */
+.stats-body { padding: 16px; }
+.stats-section-title { font-family: 'Cinzel', serif; font-size: 0.72rem; color: var(--purple-bright); letter-spacing: 0.1em; text-transform: uppercase; margin: 18px 0 8px; }
+.stats-section-title:first-child { margin-top: 0; }
+.stats-podium { display: flex; gap: 8px; margin-bottom: 4px; }
+.podium-card { flex: 1; background: var(--deep); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; text-align: center; }
+.podium-card.first { border-color: var(--gold); background: linear-gradient(135deg,rgba(201,162,39,0.12),var(--deep)); }
+.podium-card .p-medal { font-size: 1.4rem; display: block; }
+.podium-card .p-icon { font-size: 1rem; display: block; margin: 2px 0; }
+.podium-card .p-name { font-size: 0.68rem; color: var(--gold); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.podium-card .p-score { font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; color: var(--gold-light); display: block; }
+.podium-card .p-correct { font-size: 0.62rem; color: var(--muted); display: block; margin-top: 2px; }
+.rounds-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 4px; }
+.rounds-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.rounds-table th { background: rgba(255,255,255,0.04); padding: 7px 6px; font-family: 'Cinzel', serif; font-size: 0.62rem; color: var(--gold); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.rounds-table th:first-child { text-align: left; padding-left: 12px; }
+.rounds-table td { padding: 6px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--cream); }
+.rounds-table td:first-child { text-align: left; padding-left: 12px; color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.7rem; }
+.rounds-table tr:last-child td { border-bottom: none; }
+.rounds-table .rt-pos { color: var(--green); font-weight: 600; }
+.rounds-table .rt-neg { color: var(--red); font-weight: 600; }
+.rounds-table .rt-zero { color: var(--muted); }
+.rounds-table .rt-total { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold-light); background: rgba(201,162,39,0.05); }
+.player-stat-cards { display: flex; flex-direction: column; gap: 10px; }
+.player-stat-card { background: var(--deep); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.psc-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+.psc-icon { font-size: 1.1rem; } .psc-name { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--gold); flex: 1; }
+.psc-total { font-family: 'Cinzel', serif; font-size: 1.1rem; font-weight: 700; color: var(--gold-light); }
+.psc-stats { display: grid; grid-template-columns: repeat(4,1fr); }
+.psc-stat { text-align: center; padding: 8px 4px; border-right: 1px solid var(--border); }
+.psc-stat:last-child { border-right: none; }
+.psc-stat-val { font-size: 0.95rem; font-weight: 700; display: block; color: var(--cream); }
+.psc-stat-val.green { color: var(--green); } .psc-stat-val.red { color: var(--red); }
+.psc-stat-lbl { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-top: 2px; }
+.accuracy-bar { margin: 8px 14px 10px; }
+.accuracy-label { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+.accuracy-label span:last-child { color: var(--gold); font-weight: 600; }
+.bar-track { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--purple-bright), var(--gold)); }
+
+/* ── REGELN ── */
+.rules-body { padding: 18px 20px; }
+.rules-section { margin-bottom: 20px; }
+.rules-section:last-child { margin-bottom: 0; }
+.rules-section-title { font-family: 'Cinzel', serif; font-size: 0.78rem; color: var(--purple-bright); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+.rule-block { background: var(--deep); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.rule-block:last-child { margin-bottom: 0; }
+.rule-block p { font-size: 0.85rem; color: var(--cream); line-height: 1.5; margin-bottom: 4px; }
+.rule-block p:last-child { margin-bottom: 0; }
+.rule-block .formula { font-family: 'Cinzel', serif; font-size: 0.88rem; color: var(--gold-light); font-weight: 600; margin-bottom: 4px; }
+.rule-block .ex { font-size: 0.78rem; color: var(--muted); }
+.rule-pos { border-left: 3px solid var(--green); }
+.rule-neg { border-left: 3px solid var(--red); }
+.example-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; }
+.example-row:last-child { border-bottom: none; }
+.example-row .ex-calc { color: var(--muted); font-size: 0.75rem; }
+.ex-result { font-weight: 700; }
+.ex-result.pos { color: var(--green); } .ex-result.neg { color: var(--red); }
+
+/* ══ DRUCKVORSCHAU (Fullscreen In-App) ══ */
+#print-preview {
+  display: none;
+  position: fixed; inset: 0; z-index: 300;
+  background: #f0f0f0;
+  overflow-y: auto;
+  flex-direction: column;
+}
+#print-preview.show { display: flex; }
+.preview-toolbar {
+  background: #1a1535;
+  color: #f5f0e8;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.preview-toolbar-title { font-family: 'Cinzel', serif; font-size: 0.9rem; color: var(--gold); }
+.preview-toolbar-actions { display: flex; gap: 8px; }
+.preview-close-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(201,162,39,0.4); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; }
+.preview-print-btn { padding: 8px 18px; border-radius: 8px; border: none; background: linear-gradient(135deg, var(--gold), #a07a10); color: #0f0d1a; font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; letter-spacing: 0.05em; }
+.preview-hint { text-align: center; font-size: 0.72rem; color: #666; padding: 6px 16px; background: #e8e0d0; flex-shrink: 0; }
+.preview-page-wrap { flex: 1; display: flex; justify-content: center; padding: 20px 12px 32px; }
+/* The actual A4-like page */
+#pdf-page {
+  background: #fff;
+  width: 100%;
+  max-width: 720px;
+  min-height: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  border-radius: 4px;
+  padding: 24px 24px 32px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111;
+  font-size: 11px;
+}
+/* PDF page internal styles */
+.pdf-header { text-align: center; border-bottom: 3px solid #1a1535; padding-bottom: 12px; margin-bottom: 16px; }
+.pdf-header h2 { font-size: 22px; font-weight: 900; letter-spacing: 4px; color: #1a1535; font-family: Georgia, serif; margin: 0 0 4px; }
+.pdf-header .pdf-sub { font-size: 11px; color: #666; margin: 2px 0; }
+.pdf-sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #6b21a8; border-left: 3px solid #6b21a8; padding-left: 8px; margin: 14px 0 8px; }
+.pdf-podium { display: flex; gap: 8px; margin-bottom: 14px; }
+.pdf-pod { flex: 1; border: 2px solid #ddd; border-radius: 8px; padding: 10px 6px; text-align: center; }
+.pdf-pod.first { border-color: #c9a227; background: #fefce8; }
+.pdf-pod .medal { font-size: 18px; display: block; }
+.pdf-pod .pname { font-size: 10px; font-weight: 700; color: #1a1535; display: block; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdf-pod .pscore { font-size: 18px; font-weight: 900; color: #c9a227; display: block; font-family: Georgia, serif; }
+.pdf-pod .pacc { font-size: 9px; color: #666; display: block; margin-top: 2px; }
+.pdf-tbl { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-bottom: 14px; }
+.pdf-tbl th { background: #1a1535; color: #fff; padding: 5px 5px; text-align: center; font-size: 9px; letter-spacing: 0.5px; border: 1px solid #ccc; }
+.pdf-tbl th:first-child { text-align: left; padding-left: 8px; }
+.pdf-tbl td { padding: 4px 5px; text-align: center; border: 1px solid #e8e8e8; background: #fff; }
+.pdf-tbl td:first-child { text-align: left; padding-left: 8px; font-weight: 600; color: #1a1535; background: #fafafa; }
+.pdf-tbl tr:nth-child(even) td { background: #f7f7f7; }
+.pdf-tbl tr:nth-child(even) td:first-child { background: #f0f0f0; }
+.pdf-tbl .tpos { color: #16a34a; font-weight: 700; }
+.pdf-tbl .tneg { color: #dc2626; font-weight: 700; }
+.pdf-tbl .tzero { color: #888; }
+.pdf-tbl .ttot td { background: #1a1535 !important; color: #f0c840 !important; font-weight: 900; font-size: 10px; }
+.pdf-player-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.pdf-plyr { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; flex: 1; min-width: 120px; }
+.pdf-plyr-name { font-size: 10px; font-weight: 700; color: #1a1535; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+.pdf-plyr table { width: 100%; font-size: 9px; }
+.pdf-plyr td { padding: 2px 0; color: #444; border: none; background: none !important; }
+.pdf-plyr td:last-child { text-align: right; font-weight: 600; color: #1a1535; }
+.pdf-plyr .tpos-sm { color: #16a34a; }
+.pdf-plyr .tneg-sm { color: #dc2626; }
+.pdf-footer { text-align: center; font-size: 9px; color: #aaa; margin-top: 16px; border-top: 1px solid #eee; padding-top: 8px; }
+
+/* ── RESET CONFIRM ── */
+#confirm-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 400;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#confirm-overlay.show { display: flex; }
+.confirm-card { background: var(--card); border: 1px solid var(--border-strong); border-radius: 16px; padding: 28px 24px; max-width: 320px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+.confirm-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+.confirm-title { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--cream); margin-bottom: 8px; }
+.confirm-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 10px; }
+.confirm-actions button { flex: 1; padding: 12px; border-radius: 10px; font-family: 'Cinzel', serif; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--border-strong); }
+.btn-cancel { background: var(--deep); color: var(--muted); }
+.btn-confirm { background: linear-gradient(135deg, var(--red), #991b1b); border-color: var(--red); color: #fff; font-weight: 700; }
+
+/* ── WINNER ── */
+#winner-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+#winner-overlay.show { display: flex; }
+.winner-card { background: var(--card); border: 2px solid var(--gold); border-radius: 20px; padding: 32px 24px; text-align: center; max-width: 360px; width: 100%; box-shadow: 0 0 60px rgba(201,162,39,0.3); animation: pop-in 0.35s cubic-bezier(0.175,0.885,0.32,1.275); }
+@keyframes pop-in { from{transform:scale(0.7);opacity:0;} to{transform:scale(1);opacity:1;} }
+.winner-icon { font-size: 3.5rem; display: block; margin-bottom: 10px; }
+.winner-title { font-family: 'Cinzel', serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 6px; }
+.winner-name { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 700; color: var(--gold-light); margin-bottom: 3px; }
+.winner-score-txt { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); margin-bottom: 22px; }
+.winner-podium { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; text-align: left; }
+.podium-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); }
+.podium-rank { font-size: 1rem; width: 22px; }
+.podium-name { flex: 1; font-size: 0.88rem; }
+.podium-pts { font-family: 'Cinzel', serif; font-size: 0.88rem; color: var(--gold); font-weight: 600; }
+.winner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.winner-actions button { flex: 1; min-width: 80px; padding: 11px 8px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--deep); color: var(--cream); font-family: 'Cinzel', serif; font-size: 0.75rem; cursor: pointer; }
+.winner-actions button.gold-btn { background: linear-gradient(135deg,var(--gold),#a07a10); border-color:var(--gold); color:var(--night); font-weight:700; }
+.winner-actions button.purple-btn { background: linear-gradient(135deg,var(--purple),#4c1d95); border-color:var(--purple-bright); }
+</style>
+</head>
+<body>
+
+<!-- ══ DRUCKVORSCHAU FULLSCREEN ══ -->
+<div id="print-preview">
+  <div class="preview-toolbar">
+    <span class="preview-toolbar-title">🖨 Druckvorschau</span>
+    <div class="preview-toolbar-actions">
+      <button class="preview-close-btn" onclick="closePrintPreview()">✕ Schließen</button>
+      <button class="preview-print-btn" onclick="doPrint()">🖨 Als PDF speichern</button>
+    </div>
+  </div>
+  <div class="preview-hint">Tippe „Als PDF speichern" → im Druckdialog Ziel „Als PDF speichern" wählen</div>
+  <div class="preview-page-wrap">
+    <div id="pdf-page"></div>
+  </div>
+</div>
+
+<!-- ══ RESET CONFIRM ══ -->
+<div id="confirm-overlay">
+  <div class="confirm-card">
+    <span class="confirm-icon">⚠️</span>
+    <p class="confirm-title">Neues Spiel?</p>
+    <p class="confirm-sub">Alle eingetragenen Punkte gehen verloren. Wirklich zurücksetzen?</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeConfirm()">Abbrechen</button>
+      <button class="btn-confirm" onclick="doReset()">Ja, zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <span class="header-icon">🧙‍♂️</span>
+    <h1>WIZARD</h1>
+    <p class="subtitle">Das Kartenspiel · Scoreboard</p>
+  </header>
+
+  <!-- SETUP -->
+  <div id="setup-screen">
+    <div class="setup-card">
+      <p class="setup-title">✨ Neue Runde</p>
+      <p class="count-label">Anzahl Spieler</p>
+      <div class="player-count-row">
+        <button class="count-btn" onclick="setCount(3)">3</button>
+        <button class="count-btn active" onclick="setCount(4)">4</button>
+        <button class="count-btn" onclick="setCount(5)">5</button>
+        <button class="count-btn" onclick="setCount(6)">6</button>
+      </div>
+      <div class="player-inputs" id="player-inputs"></div>
+      <button class="start-btn" onclick="startGame()">🂡 Spiel beginnen</button>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen">
+    <div class="top-bar">
+      <div class="round-indicator">
+        Runde <strong id="current-round-label">1</strong> / <span id="total-rounds-label">-</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" onclick="showStats()">📊</button>
+        <button class="icon-btn" onclick="showRules()">📖 Regeln</button>
+        <button class="icon-btn danger" onclick="showConfirm()">↩ Neu</button>
+      </div>
+    </div>
+
+    <div class="round-card">
+      <div class="round-card-header">
+        <span class="round-card-title" id="round-card-title">Runde 1</span>
+        <span class="round-card-sub" id="round-card-sub">1 Karte pro Spieler</span>
+      </div>
+      <div id="round-rows"></div>
+    </div>
+
+    <div class="history-section">
+      <button class="history-toggle" onclick="toggleHistory()">
+        <span>📋 Bisherige Runden</span>
+        <span id="hist-arrow">▼</span>
+      </button>
+      <div class="history-body" id="history-body"></div>
+    </div>
+
+    <div class="score-footer" id="score-footer"></div>
+
+    <div class="nav-row">
+      <button class="nav-btn" id="prev-btn" onclick="navigateRound(-1)" disabled>◀ Zurück</button>
+      <button class="nav-btn primary" id="next-btn" onclick="navigateRound(1)">Weiter ▶</button>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot" style="background:var(--purple-bright)"></span>Ansage</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--muted)"></span>Stiche</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>Richtig</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--red)"></span>Falsch</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STATISTIK MODAL ══ -->
+<div id="stats-modal" class="modal-overlay" onclick="if(event.target===this)hideStats()">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">📊 Statistik</span>
+      <div class="sheet-header-actions">
+        <button class="pdf-btn" onclick="showPrintPreview()">🖨 Druckvorschau</button>
+        <button class="sheet-close" onclick="hideStats()">✕</button>
+      </div>
+    </div>
+    <div class="stats-body" id="stats-body"></div>
+  </div>
+</div>
+
+<!-- ══ REGELN MODAL ══ -->
+<div id="rules-modal" class="modal-overlay" onclick="if(event.target===this)hideRules()">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">🧙 Wizard – Regeln</span>
+      <div class="sheet-header-actions">
+        <button class="sheet-close" onclick="hideRules()">✕</button>
+      </div>
+    </div>
+    <div class="rules-body">
+      <div class="rules-section">
+        <p class="rules-section-title">📣 Ablauf</p>
+        <div class="rule-block">
+          <p>Jede Runde wird reihum eine Karte mehr ausgeteilt. Runde 1 = 1 Karte, Runde 2 = 2 Karten usw.</p>
+          <p>Jeder Spieler gibt <strong>vorher</strong> an, wie viele Stiche er zu gewinnen glaubt (Ansage).</p>
+          <p>Danach wird gespielt und die tatsächlichen Stiche eingetragen.</p>
+        </div>
+      </div>
+      <div class="rules-section">
+        <p class="rules-section-title">🃏 Karten</p>
+        <div class="rule-block">
+          <p><strong>Wizard (W):</strong> Schlägt immer – höchste Karte.</p>
+          <p><strong>Narr (N / 0):</strong> Verliert immer – niedrigste Karte.</p>
+          <p>Farbkarten 1–13 in vier Farben. Trumpf schlägt alle anderen Farbkarten.</p>
+        </div>
+      </div>
+      <div class="rules-section">
+        <p class="rules-section-title">🧮 Punkterechnung</p>
+        <div class="rule-block rule-pos">
+          <p class="formula">+10 je gemachtem Stich (immer)</p>
+          <p class="ex">Jeder Stich zählt – egal ob Ansage stimmt oder nicht.</p>
+        </div>
+        <div class="rule-block rule-pos">
+          <p class="formula">+20 Bonus bei richtiger Vorhersage</p>
+          <p class="ex">Nur wenn Ansage und Stiche exakt gleich sind.</p>
+        </div>
+        <div class="rule-block rule-neg">
+          <p class="formula">−10 je Stich Differenz</p>
+          <p class="ex">Für jeden Stich, um den die Ansage daneben liegt.</p>
+        </div>
+        <div class="rule-block" style="border-left:3px solid var(--gold)">
+          <p class="formula" style="font-size:0.8rem">Stiche×10 + (richtig ? +20 : 0) − |Differenz|×10</p>
+        </div>
+      </div>
+      <div class="rules-section">
+        <p class="rules-section-title">📊 Beispiele</p>
+        <div class="rule-block">
+          <div class="example-row"><span>Ansage 0, Stiche 0</span><span class="ex-calc">0+20−0</span><span class="ex-result pos">+20</span></div>
+          <div class="example-row"><span>Ansage 3, Stiche 3</span><span class="ex-calc">30+20−0</span><span class="ex-result pos">+50</span></div>
+          <div class="example-row"><span>Ansage 5, Stiche 4</span><span class="ex-calc">40+0−10</span><span class="ex-result pos">+30</span></div>
+          <div class="example-row"><span>Ansage 2, Stiche 0</span><span class="ex-calc">0+0−20</span><span class="ex-result neg">−20</span></div>
+          <div class="example-row"><span>Ansage 1, Stiche 3</span><span class="ex-calc">30+0−20</span><span class="ex-result pos">+10</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WINNER ══ -->
+<div id="winner-overlay">
+  <div class="winner-card">
+    <span class="winner-icon" id="winner-icon">🏆</span>
+    <p class="winner-title">Großer Wizard</p>
+    <p class="winner-name" id="winner-name">-</p>
+    <p class="winner-score-txt" id="winner-score">0 Punkte</p>
+    <div class="winner-podium" id="winner-podium"></div>
+    <div class="winner-actions">
+      <button onclick="closeWinner()">Ergebnis</button>
+      <button class="purple-btn" onclick="showStatsFromWinner()">📊 Statistik</button>
+      <button class="gold-btn" onclick="showConfirmFromWinner()">🎴 Neu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ICONS = ['🧙','🧝','🧛','🧜','🧚','🦸'];
+const MEDALS = ['🥇','🥈','🥉','4.','5.','6.'];
+let histOpen = false;
+let state = { players:[], numRounds:0, currentRound:1, scores:[] };
+let selectedCount = 4;
+let fromWinner = false;
+
+// ══ SETUP ══
+function setCount(n) {
+  selectedCount = n;
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('active', parseInt(b.textContent)===n));
+  renderPlayerInputs();
+}
+function renderPlayerInputs() {
+  const c = document.getElementById('player-inputs');
+  c.innerHTML = '';
+  for(let i=0;i<selectedCount;i++) {
+    c.innerHTML += `<div class="player-input-row">
+      <span class="player-emoji">${ICONS[i]}</span>
+      <input type="text" id="pname-${i}" placeholder="Spieler ${i+1}" maxlength="14" autocomplete="off" spellcheck="false"
+        onkeydown="if(event.key==='Enter'){document.getElementById('pname-${i+1}')?.focus()}">
+    </div>`;
+  }
+}
+function startGame() {
+  const names = [];
+  for(let i=0;i<selectedCount;i++) {
+    const v = document.getElementById(`pname-${i}`).value.trim();
+    names.push(v||`Spieler ${i+1}`);
+  }
+  const nr = Math.floor(60/selectedCount);
+  state = { players:names, numRounds:nr, currentRound:1,
+    scores: Array.from({length:nr}, ()=>names.map(()=>({ansage:null,stiche:null,punkte:null}))) };
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('game-screen').style.display='block';
+  document.getElementById('total-rounds-label').textContent=nr;
+  renderRound(); renderFooter();
+}
+
+// ══ ROUND ══
+function renderRound() {
+  const {currentRound,players,numRounds}=state, r=currentRound-1;
+  document.getElementById('current-round-label').textContent=currentRound;
+  document.getElementById('round-card-title').textContent=`Runde ${currentRound}`;
+  document.getElementById('round-card-sub').textContent=`${currentRound} ${currentRound===1?'Karte':'Karten'} pro Spieler`;
+  document.getElementById('prev-btn').disabled=currentRound<=1;
+  const nb=document.getElementById('next-btn');
+  if(currentRound>=numRounds){nb.textContent='🏆 Auswertung';nb.style.background='linear-gradient(135deg,var(--gold),#a07a10)';nb.style.borderColor='var(--gold)';}
+  else{nb.textContent='Weiter ▶';nb.style.background='';nb.style.borderColor='';}
+  const container=document.getElementById('round-rows'); container.innerHTML='';
+  players.forEach((name,pi)=>{
+    const s=state.scores[r][pi];
+    const pc=s.punkte===null?'':s.punkte>0?'pos':s.punkte<0?'neg':'zero';
+    const pt=s.punkte===null?'?':(s.punkte>0?'+':'')+s.punkte;
+    const div=document.createElement('div'); div.className='player-row';
+    div.innerHTML=`<span class="player-row-icon">${ICONS[pi]}</span>
+      <span class="player-row-name">${name}</span>
+      <div class="player-row-inputs">
+        <div class="inp-group"><span class="inp-label">Ansage</span>
+          <input type="number" min="0" max="${currentRound}" class="num-input ansage-inp" id="inp-a-${pi}"
+            value="${s.ansage!==null?s.ansage:''}" placeholder="?" inputmode="numeric"
+            oninput="onAnsage(${r},${pi},this.value)"></div>
+        <div class="inp-group"><span class="inp-label">Stiche</span>
+          <input type="number" min="0" max="${currentRound}" class="num-input" id="inp-s-${pi}"
+            value="${s.stiche!==null?s.stiche:''}" placeholder="–" inputmode="numeric"
+            oninput="onStiche(${r},${pi},this.value)"></div>
+        <div class="inp-group"><span class="inp-label">Punkte</span>
+          <span class="pkt-badge ${pc}" id="pkt-${pi}">${pt}</span></div>
+      </div>`;
+    container.appendChild(div);
+  });
+  if(histOpen)renderHistory();
+}
+
+// ══ INPUTS ══
+function onAnsage(r,pi,v){state.scores[r][pi].ansage=v===''?null:parseInt(v);recalc(r,pi);refresh(pi);renderFooter();if(histOpen)renderHistory();}
+function onStiche(r,pi,v){state.scores[r][pi].stiche=v===''?null:parseInt(v);recalc(r,pi);refresh(pi);renderFooter();if(histOpen)renderHistory();}
+function recalc(r,pi){
+  const s=state.scores[r][pi];
+  if(s.ansage===null||s.stiche===null){s.punkte=null;return;}
+  const d=Math.abs(s.ansage-s.stiche);
+  s.punkte=s.stiche*10+(d===0?20:0)-d*10;
+}
+function refresh(pi){
+  const el=document.getElementById(`pkt-${pi}`); if(!el)return;
+  const s=state.scores[state.currentRound-1][pi];
+  el.className=`pkt-badge ${s.punkte===null?'':s.punkte>0?'pos':s.punkte<0?'neg':'zero'}`;
+  el.textContent=s.punkte===null?'?':(s.punkte>0?'+':'')+s.punkte;
+}
+function getTotal(pi){let t=0;for(let r=0;r<state.numRounds;r++)t+=(state.scores[r][pi].punkte||0);return t;}
+
+// ══ HISTORY ══
+function toggleHistory(){
+  histOpen=!histOpen;
+  document.getElementById('history-body').classList.toggle('open',histOpen);
+  document.getElementById('hist-arrow').textContent=histOpen?'▲':'▼';
+  if(histOpen)renderHistory();
+}
+function renderHistory(){
+  const {players,currentRound,scores}=state, past=currentRound-1;
+  const body=document.getElementById('history-body');
+  if(past===0){body.innerHTML='<p style="font-size:0.78rem;color:var(--muted);padding:10px 14px">Noch keine abgeschlossenen Runden.</p>';return;}
+  const run=players.map(()=>0);
+  let h=`<table class="hist-table"><thead><tr><th>Runde</th>`;
+  players.forEach((p,i)=>{h+=`<th>${ICONS[i]}<br>${p.substring(0,6)}</th>`;});
+  h+=`</tr></thead><tbody>`;
+  for(let r=0;r<past;r++){
+    h+=`<tr><td>${r+1}</td>`;
+    players.forEach((_,pi)=>{
+      const pkt=scores[r][pi].punkte; run[pi]+=(pkt||0);
+      const cls=pkt===null?'':pkt>0?'h-pos':pkt<0?'h-neg':'h-zero';
+      h+=`<td class="${cls}">${pkt===null?'–':(pkt>0?'+':'')+pkt}</td>`;
+    });
+    h+=`</tr>`;
+  }
+  h+=`<tr style="background:rgba(255,255,255,0.04);border-top:1px solid var(--border)"><td style="color:var(--gold);font-size:0.7rem">∑</td>`;
+  run.forEach(t=>{h+=`<td class="h-total">${t}</td>`;});
+  h+=`</tr></tbody></table>`;
+  body.innerHTML=h;
+}
+
+// ══ FOOTER ══
+function renderFooter(){
+  const {players}=state;
+  const totals=players.map((_,pi)=>getTotal(pi)), max=Math.max(...totals);
+  const ranked=players.map((p,i)=>({name:p,icon:ICONS[i],score:totals[i]})).sort((a,b)=>b.score-a.score);
+  document.getElementById('score-footer').innerHTML=ranked.map((p,rank)=>`
+    <div class="score-card ${p.score===max?'leader':''}">
+      <span class="sc-rank">${MEDALS[rank]}</span>
+      <span class="sc-icon">${p.icon}</span>
+      <span class="sc-name">${p.name}</span>
+      <span class="sc-score">${p.score}</span>
+    </div>`).join('');
+}
+
+// ══ NAVIGATION ══
+function navigateRound(dir){
+  const {numRounds,currentRound}=state, next=currentRound+dir;
+  if(next<1)return;
+  if(next>numRounds){showWinner();return;}
+  state.currentRound=next; renderRound(); renderFooter();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══ STATISTIK ══
+function calcStats(pi){
+  const {scores,numRounds}=state;
+  let correct=0,total=0,bigWin=null,bigLoss=null;
+  for(let r=0;r<numRounds;r++){
+    const s=scores[r][pi];
+    if(s.ansage!==null&&s.stiche!==null){
+      total++;
+      if(s.ansage===s.stiche)correct++;
+      if(s.punkte!==null){
+        if(bigWin===null||s.punkte>bigWin.pkt)bigWin={r:r+1,pkt:s.punkte};
+        if(bigLoss===null||s.punkte<bigLoss.pkt)bigLoss={r:r+1,pkt:s.punkte};
+      }
+    }
+  }
+  return{correct,total,accuracy:total>0?Math.round(correct/total*100):0,bigWin,bigLoss};
+}
+function buildStatsHTML(){
+  const {players,numRounds,currentRound}=state;
+  const totals=players.map((_,pi)=>getTotal(pi));
+  const ranked=players.map((p,i)=>({name:p,icon:ICONS[i],score:totals[i],pi:i})).sort((a,b)=>b.score-a.score);
+  let h='';
+  h+=`<p class="stats-section-title">🏆 Aktueller Stand</p><div class="stats-podium">`;
+  ranked.forEach((p,rank)=>{
+    const st=calcStats(p.pi);
+    h+=`<div class="podium-card ${rank===0?'first':''}">
+      <span class="p-medal">${MEDALS[rank]}</span>
+      <span class="p-icon">${p.icon}</span>
+      <span class="p-name">${p.name}</span>
+      <span class="p-score">${p.score}</span>
+      <span class="p-correct">${st.accuracy}% Treffer</span>
+    </div>`;
+  });
+  h+=`</div>`;
+  h+=`<p class="stats-section-title">📋 Rundenübersicht</p>`;
+  h+=`<div class="rounds-table-wrap"><table class="rounds-table"><thead><tr><th>Runde</th>`;
+  players.forEach((p,i)=>{h+=`<th>${ICONS[i]} ${p.substring(0,5)}</th>`;});
+  h+=`</tr></thead><tbody>`;
+  const run=players.map(()=>0);
+  for(let r=0;r<numRounds;r++){
+    const isCur=r===currentRound-1;
+    h+=`<tr${isCur?' style="background:rgba(107,33,168,0.1)"':''}>`;
+    h+=`<td>${r+1}${isCur?' ◀':''}</td>`;
+    players.forEach((_,pi)=>{
+      const s=state.scores[r][pi];
+      if(s.ansage===null&&s.stiche===null){h+=`<td style="color:var(--muted)">–</td>`;return;}
+      const pkt=s.punkte; run[pi]+=(pkt||0);
+      const cls=pkt===null?'':pkt>0?'rt-pos':pkt<0?'rt-neg':'rt-zero';
+      h+=`<td class="${cls}" title="Ansage:${s.ansage??'?'} Stiche:${s.stiche??'?'}">${pkt===null?'?':(pkt>0?'+':'')+pkt}</td>`;
+    });
+    h+=`</tr>`;
+  }
+  h+=`<tr><td class="rt-total">∑</td>`;
+  run.forEach(t=>{h+=`<td class="rt-total">${t}</td>`;});
+  h+=`</tr></tbody></table></div>`;
+  h+=`<p class="stats-section-title">🎯 Spieler-Statistik</p><div class="player-stat-cards">`;
+  players.forEach((name,pi)=>{
+    const st=calcStats(pi);
+    h+=`<div class="player-stat-card">
+      <div class="psc-header"><span class="psc-icon">${ICONS[pi]}</span><span class="psc-name">${name}</span><span class="psc-total">${getTotal(pi)} Pkt.</span></div>
+      <div class="psc-stats">
+        <div class="psc-stat"><span class="psc-stat-val green">${st.correct}</span><span class="psc-stat-lbl">Richtig</span></div>
+        <div class="psc-stat"><span class="psc-stat-val red">${st.total-st.correct}</span><span class="psc-stat-lbl">Falsch</span></div>
+        <div class="psc-stat"><span class="psc-stat-val">${st.total}</span><span class="psc-stat-lbl">Gespielt</span></div>
+        <div class="psc-stat"><span class="psc-stat-val">${st.accuracy}%</span><span class="psc-stat-lbl">Quote</span></div>
+      </div>
+      <div class="accuracy-bar">
+        <div class="accuracy-label"><span>Trefferquote</span><span>${st.accuracy}%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${st.accuracy}%"></div></div>
+      </div>
+    </div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+function showStats(){document.getElementById('stats-body').innerHTML=buildStatsHTML();document.getElementById('stats-modal').classList.add('show');}
+function hideStats(){document.getElementById('stats-modal').classList.remove('show');}
+function showStatsFromWinner(){closeWinner();showStats();}
+
+// ══ DRUCKVORSCHAU ══
+function buildPDFHTML(){
+  const {players,numRounds,currentRound}=state;
+  const doneRounds=currentRound-1;
+  const now=new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const totals=players.map((_,pi)=>getTotal(pi));
+  const ranked=players.map((p,i)=>({name:p,icon:ICONS[i],score:totals[i],pi:i})).sort((a,b)=>b.score-a.score);
+  let h=`<div class="pdf-header">
+    <h2>🧙 WIZARD</h2>
+    <p class="pdf-sub">Spielauswertung vom ${now}</p>
+    <p class="pdf-sub">${players.length} Spieler · ${doneRounds} von ${numRounds} Runden gespielt</p>
+  </div>
+  <div class="pdf-sec">ABSCHLUSS-RANGLISTE</div>
+  <div class="pdf-podium">`;
+  ranked.forEach((p,rank)=>{
+    const st=calcStats(p.pi);
+    h+=`<div class="pdf-pod ${rank===0?'first':''}">
+      <span class="medal">${['🥇','🥈','🥉','4.','5.','6.'][rank]}</span>
+      <span class="pname">${p.icon} ${p.name}</span>
+      <span class="pscore">${p.score} Pkt.</span>
+      <span class="pacc">${st.accuracy}% Trefferquote</span>
+    </div>`;
+  });
+  h+=`</div>
+  <div class="pdf-sec">RUNDENÜBERSICHT</div>
+  <table class="pdf-tbl"><thead><tr><th>Runde</th>`;
+  players.forEach(p=>{h+=`<th>${p}</th>`;});
+  h+=`<th>Laufend (${players.map((_,i)=>players[i].substring(0,3)).join('/')})</th></tr></thead><tbody>`;
+  const run=players.map(()=>0);
+  for(let r=0;r<numRounds;r++){
+    h+=`<tr><td>Runde ${r+1}</td>`;
+    players.forEach((_,pi)=>{
+      const s=state.scores[r][pi];
+      if(s.ansage===null&&s.stiche===null){h+=`<td>–</td>`;return;}
+      run[pi]+=(s.punkte||0);
+      const cls=s.punkte===null?'':s.punkte>0?'tpos':s.punkte<0?'tneg':'tzero';
+      h+=`<td class="${cls}">${s.punkte===null?'?':(s.punkte>0?'+':'')+s.punkte}</td>`;
+    });
+    h+=`<td style="color:#666;font-size:8.5px">${run.join(' / ')}</td></tr>`;
+  }
+  h+=`<tr class="ttot"><td>GESAMT</td>`;
+  players.forEach((_,pi)=>{h+=`<td>${getTotal(pi)}</td>`;});
+  h+=`<td>–</td></tr></tbody></table>
+  <div class="pdf-sec">SPIELER-STATISTIK</div>
+  <div class="pdf-player-grid">`;
+  players.forEach((name,pi)=>{
+    const st=calcStats(pi);
+    h+=`<div class="pdf-plyr">
+      <div class="pdf-plyr-name">${ICONS[pi]} ${name}</div>
+      <table>
+        <tr><td>Gesamtpunkte</td><td>${getTotal(pi)}</td></tr>
+        <tr><td>Richtige Ansagen</td><td class="tpos-sm">${st.correct} / ${st.total}</td></tr>
+        <tr><td>Trefferquote</td><td>${st.accuracy}%</td></tr>
+        ${st.bigWin&&st.bigWin.pkt>0?`<tr><td>Beste Runde</td><td class="tpos-sm">Rd.${st.bigWin.r}: +${st.bigWin.pkt}</td></tr>`:''}
+        ${st.bigLoss&&st.bigLoss.pkt<0?`<tr><td>Schlechteste</td><td class="tneg-sm">Rd.${st.bigLoss.r}: ${st.bigLoss.pkt}</td></tr>`:''}
+      </table>
+    </div>`;
+  });
+  h+=`</div>
+  <div class="pdf-footer">Erstellt mit Wizard Scoreboard · ${now}</div>`;
+  return h;
+}
+function showPrintPreview(){
+  hideStats();
+  document.getElementById('pdf-page').innerHTML=buildPDFHTML();
+  document.getElementById('print-preview').classList.add('show');
+}
+function closePrintPreview(){
+  document.getElementById('print-preview').classList.remove('show');
+}
+function doPrint(){
+  // Open a new window with just the PDF page content for clean printing
+  const content=document.getElementById('pdf-page').innerHTML;
+  const styles=`
+    body{font-family:Arial,Helvetica,sans-serif;margin:15mm 12mm;color:#111;font-size:11px;}
+    .pdf-header{text-align:center;border-bottom:3px solid #1a1535;padding-bottom:12px;margin-bottom:16px;}
+    .pdf-header h2{font-size:22px;font-weight:900;letter-spacing:4px;color:#1a1535;font-family:Georgia,serif;margin:0 0 4px;}
+    .pdf-sub{font-size:11px;color:#666;margin:2px 0;}
+    .pdf-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6b21a8;border-left:3px solid #6b21a8;padding-left:8px;margin:14px 0 8px;}
+    .pdf-podium{display:flex;gap:8px;margin-bottom:14px;}
+    .pdf-pod{flex:1;border:2px solid #ddd;border-radius:8px;padding:10px 6px;text-align:center;}
+    .pdf-pod.first{border-color:#c9a227;background:#fefce8;}
+    .medal{font-size:18px;display:block;}.pname{font-size:10px;font-weight:700;color:#1a1535;display:block;margin:4px 0 2px;}
+    .pscore{font-size:18px;font-weight:900;color:#c9a227;display:block;font-family:Georgia,serif;}
+    .pacc{font-size:9px;color:#666;display:block;margin-top:2px;}
+    .pdf-tbl{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:14px;}
+    .pdf-tbl th{background:#1a1535;color:#fff;padding:5px;text-align:center;font-size:9px;border:1px solid #ccc;}
+    .pdf-tbl th:first-child{text-align:left;padding-left:8px;}
+    .pdf-tbl td{padding:4px 5px;text-align:center;border:1px solid #e8e8e8;}
+    .pdf-tbl td:first-child{text-align:left;padding-left:8px;font-weight:600;color:#1a1535;background:#fafafa;}
+    .pdf-tbl tr:nth-child(even) td{background:#f7f7f7;}
+    .pdf-tbl tr:nth-child(even) td:first-child{background:#f0f0f0;}
+    .tpos{color:#16a34a;font-weight:700;}.tneg{color:#dc2626;font-weight:700;}.tzero{color:#888;}
+    .ttot td{background:#1a1535 !important;color:#f0c840 !important;font-weight:900;font-size:10px;}
+    .pdf-player-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+    .pdf-plyr{border:1px solid #ddd;border-radius:8px;padding:8px 10px;flex:1;min-width:120px;}
+    .pdf-plyr-name{font-size:10px;font-weight:700;color:#1a1535;margin-bottom:5px;border-bottom:1px solid #eee;padding-bottom:4px;}
+    .pdf-plyr table{width:100%;font-size:9px;}.pdf-plyr td{padding:2px 0;color:#444;border:none;}
+    .pdf-plyr td:last-child{text-align:right;font-weight:600;color:#1a1535;}
+    .tpos-sm{color:#16a34a;}.tneg-sm{color:#dc2626;}
+    .pdf-footer{text-align:center;font-size:9px;color:#aaa;margin-top:16px;border-top:1px solid #eee;padding-top:8px;}
+    @page{margin:15mm 12mm;size:A4 portrait;}
+  `;
+  const win=window.open('','_blank','width=800,height=900');
+  if(!win){alert('Bitte Popup-Blocker deaktivieren und erneut versuchen.');return;}
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Wizard Auswertung</title>
+    <style>${styles}</style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),400);
+}
+
+// ══ MODALS ══
+function showRules(){document.getElementById('rules-modal').classList.add('show');}
+function hideRules(){document.getElementById('rules-modal').classList.remove('show');}
+
+// ══ RESET CONFIRM ══
+function showConfirm(){document.getElementById('confirm-overlay').classList.add('show'); fromWinner=false;}
+function showConfirmFromWinner(){closeWinner();document.getElementById('confirm-overlay').classList.add('show'); fromWinner=true;}
+function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('show');}
+function doReset(){
+  closeConfirm();
+  document.getElementById('game-screen').style.display='none';
+  document.getElementById('winner-overlay').classList.remove('show');
+  document.getElementById('setup-screen').style.display='block';
+  histOpen=false;
+  renderPlayerInputs();
+}
+
+// ══ WINNER ══
+function showWinner(){
+  const {players}=state;
+  const totals=players.map((_,pi)=>getTotal(pi));
+  const ranked=players.map((p,i)=>({name:p,icon:ICONS[i],score:totals[i]})).sort((a,b)=>b.score-a.score);
+  const w=ranked[0];
+  document.getElementById('winner-icon').textContent=w.icon;
+  document.getElementById('winner-name').textContent=w.name;
+  document.getElementById('winner-score').textContent=`${w.score} Punkte`;
+  document.getElementById('winner-podium').innerHTML=ranked.map((p,i)=>`
+    <div class="podium-row">
+      <span class="podium-rank">${MEDALS[i]}</span>
+      <span class="podium-name">${p.icon} ${p.name}</span>
+      <span class="podium-pts">${p.score} Pkt.</span>
+    </div>`).join('');
+  document.getElementById('winner-overlay').classList.add('show');
+}
+function closeWinner(){document.getElementById('winner-overlay').classList.remove('show');}
+
+renderPlayerInputs();
+</script>
+</body>
+</html>

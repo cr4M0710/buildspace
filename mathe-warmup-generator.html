@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathe Warm-up Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tafel:#1e4d3f; --tafel-2:#163b30; --tafel-3:#2a5c4c;
+    --chalk:#f6f2e7; --chalk-dim:rgba(246,242,231,0.68);
+    --kreide:#e3a94c; --kreide-dark:#c98f37;
+    --ink:#1e4d3f; --paper-bg:#f3efe4; --muted:#7a7364; --line:#e2ddd0;
+    --leicht:#5fa876; --mittel:#d9a24b; --schwer:#c1604f;
+    --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { overflow-x: hidden; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    margin: 0; background: var(--paper-bg); color: #222;
+  }
+  .app { display: flex; min-height: 100vh; }
+  .controls {
+    width: 360px; flex-shrink: 0; background: var(--tafel); color: var(--chalk); padding: 20px;
+    overflow-y: auto; height: 100vh;
+    position: sticky; top: 0; accent-color: var(--kreide);
+  }
+  .controls h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; margin: 0 0 4px; color: var(--chalk); letter-spacing: 0.2px; }
+  .controls .sub { font-size: 0.8rem; color: var(--chalk-dim); margin-bottom: 18px; line-height: 1.4; }
+  fieldset {
+    border: 1px solid rgba(246,242,231,0.16); background: rgba(246,242,231,0.045);
+    border-radius: 10px; margin-bottom: 14px; padding: 10px 12px;
+  }
+  legend { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; color: var(--kreide); padding: 0 6px; }
+  .topic-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 0.85rem; }
+  .topic-row label { flex: 1; cursor: pointer; }
+  .quick-btns { display: flex; gap: 6px; margin-bottom: 8px; }
+  .quick-btns button {
+    font-size: 0.72rem; padding: 3px 8px; border: 1px solid var(--kreide); background: transparent;
+    color: var(--kreide); border-radius: 5px; cursor: pointer;
+  }
+  .quick-btns button:hover { background: rgba(227,169,76,0.16); }
+  .radio-row, .check-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 0.85rem; }
+  .count-wrap { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { flex: 1; }
+  .count-display {
+    font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--kreide); min-width: 32px; text-align: center;
+  }
+  .gen-btn, .print-btn {
+    width: 100%; padding: 12px; font-size: 0.95rem; font-weight: 600; border: none;
+    border-radius: 8px; cursor: pointer; margin-top: 6px; font-family: var(--font-display);
+  }
+  .gen-btn { background: var(--kreide); color: var(--tafel-2); }
+  .gen-btn:hover { background: var(--kreide-dark); }
+  .print-btn { background: transparent; color: var(--chalk); border: 2px solid rgba(246,242,231,0.5); }
+  .print-btn:hover { background: rgba(246,242,231,0.08); border-color: var(--chalk); }
+  .print-btn:disabled { opacity: 0.5; cursor: default; }
+  .action-bar { display: flex; flex-direction: column; gap: 8px; }
+
+  @media (max-width: 860px) {
+    .app { flex-direction: column; }
+    .controls {
+      width: 100%; height: auto; position: static;
+      padding: 14px 16px 90px;
+    }
+    .preview-area { padding: 16px; padding-bottom: 90px; gap: 18px; }
+    .topic-row, .radio-row, .check-row { padding: 7px 0; font-size: 0.92rem; }
+    .topic-row input, .radio-row input, .check-row input { width: 18px; height: 18px; }
+    .quick-btns button { padding: 7px 12px; font-size: 0.78rem; }
+    .count-display { font-size: 1.3rem; }
+    input[type=range] { height: 26px; }
+
+    .action-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+      flex-direction: row; gap: 8px; background: var(--tafel); padding: 10px 12px;
+      box-shadow: 0 -3px 12px rgba(0,0,0,0.25); margin-top: 0;
+    }
+    .action-bar .gen-btn, .action-bar .print-btn {
+      margin-top: 0; flex: 1; font-size: 0.8rem; padding: 12px 6px;
+    }
+    .info-box { margin-bottom: 10px; }
+  }
+
+  @media (max-width: 480px) {
+    .controls h1 { font-size: 1.05rem; }
+    .action-bar .gen-btn, .action-bar .print-btn { font-size: 0.72rem; padding: 12px 4px; }
+  }
+
+  .info-box {
+    font-size: 0.75rem; color: var(--chalk-dim); background: rgba(246,242,231,0.05); border-radius: 8px;
+    padding: 10px 12px; margin-top: 14px; line-height: 1.45; border: 1px solid rgba(246,242,231,0.12);
+  }
+  .preview-area {
+    flex: 1; padding: 30px; display: flex; flex-direction: column; align-items: center;
+    gap: 24px; overflow-y: auto;
+  }
+  .page-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-bottom: -14px; }
+
+  /* --- Blatt (A4 Querformat, wird zu A5 Hochformat gefaltet) --- */
+  .blatt {
+    background: #fff; position: relative;
+    box-shadow: 0 6px 24px rgba(30,77,63,0.18); flex-shrink: 0;
+    display: flex;
+  }
+  .blatt.quer { width: 297mm; height: 210mm; flex-direction: row; }
+  .blatt.hoch { width: 210mm; height: 297mm; flex-direction: column; }
+  .haelfte {
+    flex: 1 1 0; min-width: 0; min-height: 0; padding: 16mm 14mm; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .fold-line { position: absolute; }
+  .fold-line.vertical {
+    top: 8mm; bottom: 8mm; left: 50%; border-left: 1px dashed #c7c2b3; width: 0;
+  }
+  .fold-line.horizontal {
+    left: 8mm; right: 8mm; top: 50%; border-top: 1px dashed #c7c2b3; height: 0;
+  }
+  .page-num {
+    position: absolute; bottom: 7mm; right: 8mm; font-size: 6.5pt; color: #bbb;
+  }
+
+  .cover-title { font-family: var(--font-display); font-size: 21pt; font-weight: 700; color: var(--ink); margin: 6mm 0 2mm; letter-spacing: 0.2px; }
+  .cover-thema { font-size: 12pt; color: #444; margin-bottom: 6mm; }
+  .cover-fields { display: flex; gap: 14mm; font-size: 9.5pt; color: #333; margin-bottom: 6mm; }
+  .cover-fields span { border-bottom: 1px solid #999; min-width: 30mm; display: inline-block; }
+  .cover-hint { font-size: 8.5pt; color: #888; font-style: italic; margin-top: auto; }
+
+  .task-list { flex: 1; display: flex; flex-direction: column; gap: 3mm; margin-top: 2mm; justify-content: space-between; }
+  .task {
+    font-size: 10.5pt; line-height: 1.6; display: flex; gap: 2mm;
+  }
+  .task .num { font-family: var(--font-display); font-weight: 700; color: var(--ink); min-width: 6mm; }
+  .task .content { flex: 1; }
+  .level-tag {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px;
+  }
+  .lvl1 { background: var(--leicht); }
+  .lvl2 { background: var(--mittel); }
+  .lvl3 { background: var(--schwer); }
+
+  .frac { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle;
+    font-size: max(9pt, 0.92em); line-height: 1.25; margin: 0 2px; padding: 1px 0; }
+  .frac .n, .frac .d { padding: 0 3px; }
+  .frac .n { border-bottom: 1.3px solid #333; }
+
+  .blank { display: inline-block; width: 16mm; border-bottom: 1.2px solid #333; height: 1px; margin: 0 1px -1px; }
+
+  .workspace {
+    height: 9mm; margin: 1.5mm 0 0 0; border-bottom: 1px solid #b9c7bf;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(30,77,63,0.1) 0, rgba(30,77,63,0.1) 0.75px, transparent 0.75px, transparent 4mm),
+      repeating-linear-gradient(90deg, rgba(30,77,63,0.1) 0, rgba(30,77,63,0.1) 0.75px, transparent 0.75px, transparent 4mm);
+  }
+  .task-list.compact { gap: 2mm; }
+  .task-list.compact .task { font-size: 9.5pt; }
+  .task-list.compact .workspace { height: 7mm; }
+  .task-list.tight { gap: 1.3mm; }
+  .task-list.tight .task { font-size: 8.8pt; }
+  .task-list.tight .workspace { height: 5mm; }
+  .task-list.ultratight { gap: 0.8mm; }
+  .task-list.ultratight .task { font-size: 8pt; }
+  .task-list.ultratight .workspace { height: 3.5mm; background-size: 3mm 3mm; }
+  .task-list.extreme { gap: 0.5mm; }
+  .task-list.extreme .task { font-size: 7.2pt; line-height: 1.3; }
+  .task-list.extreme .workspace { height: 2.2mm; background-image: none; }
+
+  table.aufgabe-tab { border-collapse: collapse; font-size: 9.5pt; margin-top: 2px; }
+  table.aufgabe-tab td, table.aufgabe-tab th {
+    border: 1px solid #a9a493; padding: 2px 7px; text-align: center;
+  }
+  table.aufgabe-tab th { background: #f1ede2; }
+
+  .loesungen-block {
+    margin-top: auto; border-top: 1.5px solid var(--ink); padding-top: 2.5mm;
+  }
+  .loesungen-block h3 {
+    font-family: var(--font-display); font-size: 9pt; font-weight: 600; color: var(--ink);
+    margin: 0 0 2mm;
+  }
+  .loesungen-grid {
+    column-count: 3; column-gap: 6mm; font-size: 7.8pt; line-height: 1.5; color: #333;
+  }
+  .loesungen-grid div { break-inside: avoid; }
+  .loesungen-grid b { color: var(--ink); }
+
+  svg.diagram { display: block; margin-top: 1mm; overflow: visible; }
+
+  /* --- Screen preview scaling (Basiswerte, werden per JS an Bildschirmbreite angepasst) --- */
+  .preview-scale-wrap { overflow: hidden; }
+  .preview-scale-wrap .blatt { transform-origin: top left; }
+
+  /* Fallback, falls jemand Strg+P direkt auf dieser Seite nutzt statt des Drucken-Buttons */
+  @media print {
+    body { background: #fff; }
+    .controls, .page-label { display: none !important; }
+    .preview-area { padding: 0; display: block; }
+    .preview-scale-wrap { width: auto; height: auto; overflow: visible; }
+    .preview-scale-wrap .blatt { transform: none; }
+    .blatt { box-shadow: none; page-break-after: always; margin: 0; }
+  }
+</style>
+<style id="pageSizeStyle">@page { size: A4 landscape; margin: 0; }</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="controls">
+    <h1>Mathe Warm-up Generator</h1>
+    <div class="sub">Themen & Anzahl wählen, "Aufgaben erzeugen" klicken, dann als PDF exportieren.</div>
+
+    <fieldset>
+      <legend>Anzahl Aufgaben</legend>
+      <div class="count-wrap">
+        <input type="range" id="anzahl" min="10" max="30" value="20">
+        <div class="count-display" id="anzahlDisplay">20</div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Themen</legend>
+      <div class="quick-btns">
+        <button type="button" onclick="toggleAllTopics()">Alle</button>
+      </div>
+      <div id="topicList"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Schwierigkeit</legend>
+      <div class="radio-row"><input type="radio" name="schwierigkeit" value="gemischt" id="s-gemischt" checked><label for="s-gemischt">Gemischt, ansteigend (empfohlen)</label></div>
+      <div class="radio-row"><input type="radio" name="schwierigkeit" value="leicht" id="s-leicht"><label for="s-leicht">Leicht (C‑Niveau)</label></div>
+      <div class="radio-row"><input type="radio" name="schwierigkeit" value="mittel" id="s-mittel"><label for="s-mittel">Mittel (B‑Niveau)</label></div>
+      <div class="radio-row"><input type="radio" name="schwierigkeit" value="schwer" id="s-schwer"><label for="s-schwer">Schwer (A‑Niveau)</label></div>
+      <div class="radio-row"><input type="radio" name="schwierigkeit" value="abc" id="s-abc"><label for="s-abc">A/B/C‑Kurs (3 differenzierte Blätter)</label></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Darstellungsformen</legend>
+      <div class="check-row"><input type="checkbox" id="d-numerisch" checked><label for="d-numerisch">Zahlenaufgaben</label></div>
+      <div class="check-row"><input type="checkbox" id="d-text" checked><label for="d-text">Textaufgaben (Sachkontext)</label></div>
+      <div class="check-row"><input type="checkbox" id="d-tabelle" checked><label for="d-tabelle">Tabellen</label></div>
+      <div class="check-row"><input type="checkbox" id="d-bild" checked><label for="d-bild">Grafisch / bildlich</label></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Seitenzahl</legend>
+      <div class="radio-row"><input type="radio" name="seitenzahl" value="2" id="p-2" checked><label for="p-2">2 Seiten (4 Zonen, mehr Platz)</label></div>
+      <div class="radio-row"><input type="radio" name="seitenzahl" value="1" id="p-1"><label for="p-1">1 Seite (2 Zonen, kompakt)</label></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Format</legend>
+      <div class="radio-row"><input type="radio" name="format" value="quer" id="f-quer" checked><label for="f-quer">Querformat (A4 quer → A5 hoch)</label></div>
+      <div class="radio-row"><input type="radio" name="format" value="hoch" id="f-hoch"><label for="f-hoch">Hochformat (A4 hoch → A5 quer)</label></div>
+    </fieldset>
+
+    <div class="action-bar">
+      <button class="gen-btn" onclick="generiereBlatt()">▶ Aufgaben erzeugen</button>
+      <button class="print-btn" id="printBtn" onclick="erzeugePDF()" disabled>⏳ PDF-Funktion lädt...</button>
+    </div>
+
+    <div class="info-box">
+      <b>Hinweis:</b> Die gestrichelte Linie trennt die Aufgabenbereiche und kann bei Bedarf als Faltlinie genutzt werden (bei 2 Seiten doppelseitig drucken). Lösungen stehen immer unten auf der letzten Zone. Der Button erstellt eine PDF-Datei zum Download – diese kannst du wie gewohnt über die PDF-Ansicht deines Geräts drucken (funktioniert zuverlässig auch am Handy). Bitte einmal testdrucken.
+    </div>
+  </div>
+
+  <div class="preview-area" id="previewArea">
+    <div id="previewContainer"></div>
+  </div>
+
+</div>
+
+<script>
+/* ============================= HELPERS ============================= */
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function choice(arr){ return arr[randInt(0,arr.length-1)]; }
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=randInt(0,i); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){[a,b]=[b,a%b];} return a||1; }
+function reduceFrac(n,d){
+  if(d<0){ n=-n; d=-d; }
+  const g=gcd(n,d)||1; return [n/g, d/g];
+}
+function fracHTML(n,d){
+  const [rn,rd]=reduceFrac(n,d);
+  const sign = rn<0 ? '−' : '';
+  return `${sign}<span class="frac"><span class="n">${Math.abs(rn)}</span><span class="d">${rd}</span></span>`;
+}
+function fracPlain(n,d){ const [rn,rd]=reduceFrac(n,d); return `${rn}/${rd}`; }
+function fracBlankHTML(d){ return `<span class="frac"><span class="n">&nbsp;&nbsp;</span><span class="d">${d}</span></span>`; }
+const BLANK = '<span class="blank"></span>';
+
+function formatNum(x){
+  const r = Math.round(x*1000)/1000;
+  return r.toString().replace('.', ',');
+}
+function formatLinear(m,b){
+  let s = `${m}x`;
+  if(b>0) s += ` + ${b}`; else if(b<0) s += ` − ${Math.abs(b)}`;
+  return s;
+}
+const EINHEITEN = {
+  laenge: [{n:'mm',f:1},{n:'cm',f:10},{n:'m',f:1000},{n:'km',f:1000000}],
+  gewicht: [{n:'g',f:1},{n:'kg',f:1000},{n:'t',f:1000000}],
+  volumen: [{n:'ml',f:1},{n:'l',f:1000}],
+  zeit: [{n:'s',f:1},{n:'min',f:60},{n:'h',f:3600}],
+};
+
+const LEVEL_NAME = {1:'Leicht',2:'Mittel',3:'Schwer'};
+
+/* ============================= THEMEN-KONFIG ============================= */
+const TOPICS = [
+  {id:'kopf', label:'Kopfrechnen', gen: familyKopfrechnen, forms:['numerisch','text']},
+  {id:'neg', label:'Negative Zahlen', gen: familyNegativeZahlen, forms:['numerisch']},
+  {id:'bruch_kuerzen', label:'Brüche kürzen/erweitern', gen: familyBruchKuerzen, forms:['numerisch','bildlich']},
+  {id:'bruch_rechnen', label:'Bruchrechnung', gen: singleBruchRechnen, forms:['numerisch']},
+  {id:'prozent', label:'Prozentrechnung', gen: singleProzent, forms:['numerisch','text','bildlich']},
+  {id:'dreisatz', label:'Dreisatz / Proportionalität', gen: singleDreisatz, forms:['tabelle']},
+  {id:'terme', label:'Terme & Gleichungen', gen: familyGleichungen, forms:['numerisch']},
+  {id:'geometrie', label:'Flächen & Umfang', gen: singleGeometrie, forms:['bildlich','numerisch']},
+  {id:'potenzen', label:'Potenzen', gen: familyPotenzen, forms:['numerisch']},
+  {id:'pythagoras', label:'Satz des Pythagoras', gen: singlePythagoras, forms:['bildlich','numerisch']},
+  {id:'rechengesetze', label:'Rechengesetze/Klammern', gen: familyRechengesetze, forms:['numerisch']},
+  {id:'groessen', label:'Größen umrechnen', gen: familyGroessen, forms:['numerisch']},
+  {id:'linear', label:'Lineare Funktionen', gen: singleLineareFunktion, forms:['numerisch','tabelle']},
+  {id:'winkel', label:'Winkel', gen: familyWinkel, forms:['bildlich','text']},
+  {id:'folgen', label:'Zahlenfolgen/Muster', gen: familyZahlenfolgen, forms:['numerisch']},
+  {id:'volumen', label:'Volumen & Oberfläche', gen: singleVolumenOberflaeche, forms:['bildlich','numerisch']},
+  {id:'statistik', label:'Statistik/Diagramme lesen', gen: familyStatistik, forms:['bildlich','tabelle','numerisch']},
+  {id:'massstab', label:'Maßstab', gen: familyMassstab, forms:['text']},
+];
+
+const DEFAULT_TOPICS = ['kopf'];
+
+function buildTopicList(){
+  const wrap = document.getElementById('topicList');
+  wrap.innerHTML = TOPICS.map(t=>`
+    <div class="topic-row">
+      <input type="checkbox" id="topic-${t.id}" ${DEFAULT_TOPICS.includes(t.id)?'checked':''}>
+      <label for="topic-${t.id}">${t.label}</label>
+    </div>`).join('');
+}
+function toggleAllTopics(){
+  const allChecked = TOPICS.every(t=> document.getElementById('topic-'+t.id).checked);
+  if(allChecked){
+    TOPICS.forEach(t=> document.getElementById('topic-'+t.id).checked = DEFAULT_TOPICS.includes(t.id));
+  } else {
+    TOPICS.forEach(t=> document.getElementById('topic-'+t.id).checked = true);
+  }
+}
+
+/* ============================= GENERATOREN ============================= */
+/* Jeder Generator bekommt ein level (1/2/3) und erlaubte forms und liefert
+   ein ARRAY von Task-Objekten {text, solution, level, rep} zurück (Aufgabenfamilie
+   = operative Variation / Kontrastaufgaben statt isolierter Einzelaufgaben). */
+
+function kopfrechnenTextvariante(op, x, y){
+  if(op==='+'){
+    const t = [
+      `Lena sammelt Sticker. Sie hat ${x} Sticker und bekommt ${y} weitere geschenkt. Wie viele Sticker hat sie jetzt?`,
+      `An einer Bushaltestelle steigen ${x} Kinder ein, an der nächsten ${y} weitere. Wie viele Kinder sind jetzt im Bus?`,
+      `Ein Eisladen verkauft am Vormittag ${x} und am Nachmittag ${y} Eis. Wie viele Eis wurden insgesamt verkauft?`,
+      `Im Klassenzimmer stehen ${x} Stühle, es werden ${y} weitere dazugestellt. Wie viele Stühle stehen jetzt insgesamt dort?`,
+    ];
+    return choice(t);
+  }
+  if(op==='−'){
+    const t = [
+      `Ein Fußballstadion hat ${x} Plätze. ${y} Plätze sind schon besetzt. Wie viele Plätze sind noch frei?`,
+      `Paul hat ${x} € gespart. Er kauft sich ein Spiel für ${y} €. Wie viel Geld bleibt ihm übrig?`,
+      `In einer Klasse mit ${x} Schülerinnen und Schülern sind heute ${y} krank. Wie viele sind anwesend?`,
+      `Ein Wasserkanister fasst ${x} Liter. Es wurden bereits ${y} Liter entnommen. Wie viel Wasser ist noch im Kanister?`,
+    ];
+    return choice(t);
+  }
+  const t = [
+    `Ein Karton enthält ${x} Reihen mit je ${y} Eiern. Wie viele Eier sind das insgesamt?`,
+    `In der Turnhalle stehen ${x} Bankreihen mit je ${y} Plätzen. Wie viele Plätze gibt es insgesamt?`,
+    `Für ein Rezept werden ${y} Äpfel pro Kuchen gebraucht. Wie viele Äpfel werden für ${x} Kuchen benötigt?`,
+    `Eine Buchreihe hat ${x} Bände mit je ${y} Seiten. Wie viele Seiten hat die gesamte Reihe?`,
+  ];
+  return choice(t);
+}
+
+function familyKopfrechnen(level, allowed){
+  function makeTask(){
+    const op = choice(['+','−','·']);
+    let a, b;
+    if(op==='·'){
+      const range = level===1?[2,9]: level===2?[3,15]:[4,25];
+      a = randInt(range[0],range[1]); b = randInt(range[0],range[1]);
+    } else {
+      const range = level===1?[5,20]: level===2?[15,90]:[30,300];
+      a = randInt(range[0],range[1]); b = randInt(range[0],range[1]);
+    }
+    // Verhindert triviale Aufgaben wie "40 − 40 = 0" durch identische Zahlen
+    if(op==='−' && a===b){ b = Math.max(1, a - randInt(1,5)); }
+    let sol;
+    if(op==='+') sol=a+b; else if(op==='−') sol=Math.max(a,b)-Math.min(a,b); else sol=a*b;
+    const [x,y] = op==='−' ? [Math.max(a,b),Math.min(a,b)] : [a,b];
+    const canText = allowed.includes('text');
+    const canNum = allowed.includes('numerisch');
+    const useText = canText && (!canNum || Math.random()<0.35);
+    const text = useText ? kopfrechnenTextvariante(op,x,y) : `${x} ${op} ${y} = ${BLANK}`;
+    return { text, solution:`${sol}`, level, rep: useText?'text':'numerisch' };
+  }
+  return [makeTask()];
+}
+
+function familyNegativeZahlen(level, allowed){
+  function makeTask(){
+    const range = level===1?[3,9]: level===2?[5,19]:[8,39];
+    const a = randInt(range[0],range[1]);
+    let b = randInt(range[0],range[1]);
+    if(a===b){ b = Math.max(range[0], b - randInt(1,3)); }
+    const type = choice(['a-b','-a+b','-a-b','a+(-b)']);
+    let expr, val;
+    if(type==='a-b'){ expr=`${a} − ${b}`; val=a-b; }
+    else if(type==='-a+b'){ expr=`−${a} + ${b}`; val=-a+b; }
+    else if(type==='-a-b'){ expr=`−${a} − ${b}`; val=-a-b; }
+    else { expr=`${a} + (−${b})`; val=a-b; }
+    return { text:`${expr} = ${BLANK}`, solution:`${val}`, level, rep:'numerisch' };
+  }
+  const count = level===1?1: level===2?2:2;
+  const tasks = [];
+  for(let i=0;i<count;i++) tasks.push(makeTask());
+  return tasks;
+}
+
+function familyBruchKuerzen(level, allowed){
+  const canBild = allowed.includes('bildlich');
+  const canNum = allowed.includes('numerisch');
+  const useBild = canBild && (!canNum || Math.random()<0.4);
+  const d = choice([4,6,8,9,10,12]);
+  const n = randInt(1,d-1);
+  const factor = level===1?2: level===2?3:4;
+  const t1 = { text:`Erweitere: ${fracHTML(n,d)} = ${fracBlankHTML(d*factor)}`, solution:`${fracPlain(n*factor,d*factor)}`, level, rep: useBild?'bildlich':'numerisch' };
+  if(useBild){
+    t1.diagram = fractionBarSVG(n,d);
+  }
+  if(level===3 && canNum){
+    // Eigener, unabhängiger Bruch für die Kürzen-Aufgabe (nicht von t1 ableitbar)
+    let d2 = choice([4,6,8,9,10,12]);
+    while(d2===d) d2 = choice([4,6,8,9,10,12]);
+    const kFactor = choice([2,3]);
+    const n2 = randInt(1, Math.floor((d2-1)/kFactor)) * kFactor;
+    const t2 = { text:`Kürze so weit wie möglich: ${fracHTML(n2*kFactor, d2*kFactor)}`, solution:`${fracPlain(n2,d2)}`, level, rep:'numerisch' };
+    return [t1,t2];
+  }
+  return [t1];
+}
+
+function fractionBarSVG(n,d){
+  const w=140,h=22, cell=w/d;
+  let rects='';
+  for(let i=0;i<d;i++){
+    rects += `<rect x="${i*cell}" y="0" width="${cell}" height="${h}" fill="${i<n?'#1e4d3f':'#fff'}" stroke="#333" stroke-width="1"/>`;
+  }
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h+2}" viewBox="0 0 ${w} ${h+2}">${rects}</svg>`;
+}
+
+function singleBruchRechnen(level, allowed){
+  const d1 = choice([2,3,4,5,6]);
+  const d2 = level===1 ? d1 : choice([2,3,4,5,6,8,9]);
+  let n1 = randInt(1,d1-1), n2 = randInt(1,d2-1);
+  const op = choice(['+','−','·',':']);
+
+  // Verhindert triviale Ergebnisse wie 3/4 − 3/4 = 0 oder 3/4 : 3/4 = 1 bei identischen Brüchen
+  if((op==='−' || op===':') && n1===n2 && d1===d2 && d2>2){
+    n2 = ((n1) % (d2-1)) + 1; // wählt einen anderen Zähler im gültigen Bereich
+  }
+
+  if(op==='·'){
+    const text = `${fracHTML(n1,d1)} · ${fracHTML(n2,d2)} = ${BLANK}`;
+    return [{ text, solution: fracPlain(n1*n2, d1*d2), level, rep:'numerisch' }];
+  }
+  if(op===':'){
+    const text = `${fracHTML(n1,d1)} : ${fracHTML(n2,d2)} = ${BLANK}`;
+    return [{ text, solution: fracPlain(n1*d2, d1*n2), level, rep:'numerisch' }];
+  }
+
+  const commonD = (d1*d2)/gcd(d1,d2);
+  const N1 = n1*(commonD/d1), N2 = n2*(commonD/d2);
+  const solN = op==='+' ? N1+N2 : N1-N2;
+  const text = op==='−' && solN<0
+    ? `${fracHTML(n2,d2)} − ${fracHTML(n1,d1)} = ${BLANK}`
+    : `${fracHTML(n1,d1)} ${op} ${fracHTML(n2,d2)} = ${BLANK}`;
+  const finalSol = op==='−' && solN<0 ? fracPlain(N2-N1, commonD) : fracPlain(solN, commonD);
+  return [{ text, solution:finalSol, level, rep:'numerisch' }];
+}
+
+function singleProzent(level, allowed){
+  const forms = allowed.filter(f=>['numerisch','text','bildlich'].includes(f));
+  const kontexte = ['Klassenarbeit','Rabatt im Laden','Umfrage in der Klasse','Akku-Anzeige','Fußballspiel (Zuschauer)'];
+  const grundwert = choice([20,25,40,50,80,120,200,250]);
+  const satz = level===1 ? choice([10,25,50]) : level===2 ? choice([15,20,30,60,75]) : choice([12,35,68,15.5]);
+  const wert = Math.round(grundwert*satz/100 * 100)/100;
+  const wertStr = formatNum(wert);
+  const satzStr = formatNum(satz);
+  const variante = randInt(1,3);
+  let useText, useBar;
+  if(forms.length===1){
+    useText = forms[0]==='text';
+    useBar = forms[0]==='bildlich';
+  } else {
+    useText = forms.includes('text') && Math.random()<0.5;
+    useBar = !useText && forms.includes('bildlich') && Math.random()<0.35;
+  }
+
+  let text, solution;
+  if(variante===1){
+    text = useText
+      ? `${choice(kontexte)}: Von ${grundwert} sind ${satzStr}% wie viele? Berechne den Prozentwert.`
+      : `${satzStr}% von ${grundwert} = ${BLANK}`;
+    solution = `${wertStr}`;
+  } else if(variante===2){
+    text = useText
+      ? `${choice(kontexte)}: ${wertStr} von ${grundwert} — wie viel Prozent sind das?`
+      : `${wertStr} von ${grundwert} sind wie viel %?`;
+    solution = `${satzStr}%`;
+  } else {
+    text = useText
+      ? `${choice(kontexte)}: ${satzStr}% einer Menge sind ${wertStr}. Wie groß ist die Gesamtmenge?`
+      : `${satzStr}% einer Zahl sind ${wertStr}. Wie groß ist die Zahl?`;
+    solution = `${grundwert}`;
+  }
+  const task = { text, solution, level, rep: useText?'text':useBar?'bildlich':'numerisch' };
+  if(useBar) task.diagram = percentBarSVG(satz>100?100:satz);
+  return [task];
+}
+
+function percentBarSVG(pct){
+  const w=140,h=16;
+  const fillW = w*Math.min(pct,100)/100;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <rect x="0" y="0" width="${w}" height="${h}" fill="#fff" stroke="#333"/>
+    <rect x="0" y="0" width="${fillW}" height="${h}" fill="#1e4d3f"/>
+  </svg>`;
+}
+
+function singleDreisatz(level, allowed){
+  const kontexte = [
+    ['Kopien', 'Blätter'], ['Stunden', 'verdiente €'], ['Äpfel', 'Kosten in €'], ['Schüler', 'Pizzastücke']
+  ];
+  const [k1,k2] = choice(kontexte);
+  const rate = level===1 ? randInt(2,5) : level===2 ? randInt(3,9) : randInt(15,45)/10;
+  const x1 = level===1 ? randInt(2,6) : randInt(3,12);
+  const x2 = level===3 ? randInt(13,30) : randInt(x1+2, x1+10);
+  const y1 = Math.round(x1*rate*100)/100;
+  const y2Missing = Math.round(x2*rate*100)/100;
+  const table = `<table class="aufgabe-tab">
+    <tr><th>${k1}</th><td>${x1}</td><td>${x2}</td></tr>
+    <tr><th>${k2}</th><td>${formatNum(y1)}</td><td>${BLANK}</td></tr>
+  </table>`;
+  return [{ text:`Ergänze die Tabelle (proportionaler Zusammenhang):${table}`, solution:`${formatNum(y2Missing)}`, level, rep:'tabelle' }];
+}
+
+function familyGleichungen(level, allowed){
+  function makeEq(){
+    const a = level===1?randInt(2,6):level===2?randInt(2,9):randInt(3,12);
+    const x = randInt(2, level===1?6:level===2?10:15);
+    const b = randInt(1,20);
+    const rhs = a*x+b;
+    return { text:`${a}x + ${b} = ${rhs}   →  x = ${BLANK}`, solution:`x = ${x}`, level, rep:'numerisch' };
+  }
+  const count = level>=2 ? 2 : 1;
+  const tasks = [];
+  for(let i=0;i<count;i++) tasks.push(makeEq());
+  return tasks;
+}
+
+function singleGeometrie(level, allowed){
+  const useBild = allowed.includes('bildlich');
+  const shape = level===1 ? 'rechteck' : level===2 ? choice(['rechteck','dreieck']) : choice(['dreieck','kreis']);
+  if(shape==='rechteck'){
+    const a=randInt(3,12), b=randInt(3,12);
+    const flaeche = a*b, umfang = 2*(a+b);
+    const askFlaeche = Math.random()<0.5;
+    const svg = rectSVG(a,b);
+    return [{ text:`Rechteck: a = ${a} cm, b = ${b} cm. Berechne ${askFlaeche?'die Fläche':'den Umfang'}.`,
+      solution: askFlaeche?`${flaeche} cm²`:`${umfang} cm`, level, rep: useBild?'bildlich':'numerisch', diagram: useBild?svg:null }];
+  } else if(shape==='dreieck'){
+    const g=randInt(4,14), h=randInt(3,10);
+    const flaeche = (g*h)/2;
+    const svg = triSVG(g,h);
+    return [{ text:`Dreieck: Grundseite g = ${g} cm, Höhe h = ${h} cm. Berechne die Fläche.`,
+      solution:`${flaeche} cm²`, level, rep: useBild?'bildlich':'numerisch', diagram: useBild?svg:null }];
+  } else {
+    const r=randInt(2,9);
+    const flaeche = Math.round(Math.PI*r*r*100)/100;
+    const umfang = Math.round(2*Math.PI*r*100)/100;
+    const askFlaeche = Math.random()<0.5;
+    const svg = circleSVG(r);
+    return [{ text:`Kreis: Radius r = ${r} cm. Berechne ${askFlaeche?'die Fläche':'den Umfang'} (π ≈ 3,14).`,
+      solution: askFlaeche?`≈ ${formatNum(flaeche)} cm²`:`≈ ${formatNum(umfang)} cm`, level, rep: useBild?'bildlich':'numerisch', diagram: useBild?svg:null }];
+  }
+}
+// Diagramme werden immer auf eine feste Ziel-Größe normiert (unabhängig von den
+// tatsächlichen Zahlenwerten), damit sie nie über den verfügbaren Platz hinauswachsen.
+// Der Zielwert wird passend zur Aufgabenanzahl gesetzt (siehe generiereAufgaben()).
+let DIAGRAM_TARGET_PX = 120;
+function scaleTo(maxValue){ return DIAGRAM_TARGET_PX / Math.max(maxValue, 1); }
+
+function rectSVG(a,b){
+  const scale = Math.min(scaleTo(Math.max(a,b)), 14);
+  const w=a*scale, h=b*scale;
+  const padX=26, padTop=8, padBottom=20;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w+padX+22}" height="${h+padTop+padBottom}" viewBox="0 0 ${w+padX+22} ${h+padTop+padBottom}">
+    <rect x="${padX}" y="${padTop}" width="${w}" height="${h}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <text x="${padX+w/2}" y="${h+padTop+16}" font-size="7.5" text-anchor="middle">${a} cm</text>
+    <text x="${padX+w+16}" y="${padTop+h/2}" font-size="7.5" text-anchor="middle" transform="rotate(90 ${padX+w+16} ${padTop+h/2})">${b} cm</text>
+  </svg>`;
+}
+function triSVG(g,h){
+  const scale = Math.min(scaleTo(Math.max(g,h)), 14);
+  const gw=g*scale, hh=h*scale;
+  const padX=24, padTop=8, padBottom=20;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${gw+padX*2}" height="${hh+padTop+padBottom}" viewBox="0 0 ${gw+padX*2} ${hh+padTop+padBottom}">
+    <polygon points="${padX},${hh+padTop} ${padX+gw},${hh+padTop} ${padX+gw*0.4},${padTop}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <line x1="${padX+gw*0.4}" y1="${padTop}" x2="${padX+gw*0.4}" y2="${hh+padTop}" stroke="#999" stroke-dasharray="2,2"/>
+    <text x="${padX+gw/2}" y="${hh+padTop+16}" font-size="7.5" text-anchor="middle">g = ${g} cm</text>
+  </svg>`;
+}
+function circleSVG(r){
+  const scale = Math.min(DIAGRAM_TARGET_PX/(2*Math.max(r,1)), 14);
+  const R=r*scale;
+  const pad=26;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${R*2+pad*2}" height="${R*2+pad*2}" viewBox="0 0 ${R*2+pad*2} ${R*2+pad*2}">
+    <circle cx="${R+pad}" cy="${R+pad}" r="${R}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <line x1="${R+pad}" y1="${R+pad}" x2="${R*2+pad}" y2="${R+pad}" stroke="#999"/>
+    <text x="${R+pad+R/2}" y="${R+pad-6}" font-size="7.5" text-anchor="middle">r=${r}</text>
+  </svg>`;
+}
+
+function familyPotenzen(level, allowed){
+  const exps = level===1?[2]:level===2?[2,3]:[2,3,4];
+  return exps.map(e=>{
+    const base = level===1?randInt(2,5):level===2?randInt(2,9):randInt(2,12);
+    const powVal = Math.pow(base,e);
+    const combine = Math.random()<0.5;
+    if(combine){
+      const op = choice(['+','−','·']);
+      let extra, sol, text;
+      if(op==='·'){
+        extra = randInt(2, level===1?6:level===2?9:12);
+        sol = powVal*extra;
+        text = `${base}<sup>${e}</sup> · ${extra} = ${BLANK}`;
+      } else {
+        extra = randInt(2, level===1?9:level===2?25:50);
+        sol = op==='+' ? powVal+extra : powVal-extra;
+        text = `${base}<sup>${e}</sup> ${op} ${extra} = ${BLANK}`;
+      }
+      return { text, solution:`${sol}`, level, rep:'numerisch' };
+    }
+    return { text:`${base}<sup>${e}</sup> = ${BLANK}`, solution:`${powVal}`, level, rep:'numerisch' };
+  });
+}
+
+function singlePythagoras(level, allowed){
+  const useBild = allowed.includes('bildlich');
+  const triples = [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25]];
+  const t = choice(triples);
+  const scale = level===1?1: level===2?choice([1,2]): choice([1,2,3]);
+  const [a,b,c] = t.map(v=>v*scale);
+  const askHyp = Math.random()<0.6;
+  const hide = askHyp ? 'c' : 'b';
+  const svg = rightTriSVG(a,b,c,hide);
+  return [{
+    text: askHyp
+      ? `Rechtwinkliges Dreieck: Katheten a = ${a} cm, b = ${b} cm. Berechne die Hypotenuse c.`
+      : `Rechtwinkliges Dreieck: Hypotenuse c = ${c} cm, Kathete a = ${a} cm. Berechne die fehlende Kathete b.`,
+    solution: askHyp ? `c = ${c} cm` : `b = ${b} cm`,
+    level, rep: useBild?'bildlich':'numerisch', diagram: useBild?svg:null
+  }];
+}
+function rightTriSVG(a,b,c,hide){
+  const scale = Math.min(scaleTo(Math.max(a,b)), 14);
+  const aw=a*scale, bh=b*scale;
+  const padL=22, padR=26, padTop=10, padBottom=20;
+  const x0=padL, yBottom=bh+padTop, yTop=padTop, xRight=padL+aw;
+  const midCx=(x0+xRight)/2, midCy=(yTop+yBottom)/2;
+  const aText = hide==='a' ? 'a' : `a=${a}`;
+  const bText = hide==='b' ? 'b' : `b=${b}`;
+  const cText = hide==='c' ? 'c' : `c=${c}`;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${aw+padL+padR}" height="${bh+padTop+padBottom}" viewBox="0 0 ${aw+padL+padR} ${bh+padTop+padBottom}">
+    <polygon points="${x0},${yBottom} ${xRight},${yBottom} ${x0},${yTop}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <rect x="${x0}" y="${yBottom-8}" width="8" height="8" fill="none" stroke="#1e4d3f"/>
+    <text x="${x0+aw/2}" y="${yBottom+16}" font-size="7.5" text-anchor="middle">${aText}</text>
+    <text x="${x0-16}" y="${yTop+bh/2}" font-size="7.5" text-anchor="middle" transform="rotate(-90 ${x0-16} ${yTop+bh/2})">${bText}</text>
+    <text x="${midCx+12}" y="${midCy-6}" font-size="7.5" text-anchor="middle">${cText}</text>
+  </svg>`;
+}
+
+/* ============================= NEUE THEMEN ============================= */
+
+function familyRechengesetze(level, allowed){
+  const mulRange = level===1?[3,9]: level===2?[4,15]:[6,22];
+  const addRange = level===1?[8,20]: level===2?[15,50]:[25,90];
+  const type = choice(['ausmultiplizieren','ausklammern']);
+  const a = randInt(mulRange[0],mulRange[1]);
+  let b = randInt(addRange[0],addRange[1]);
+  let c = randInt(addRange[0],addRange[1]);
+  // Ab Niveau 2 gelegentlich auch mit Minus für Abwechslung (Ergebnis bleibt positiv)
+  const useMinus = level>=2 && Math.random()<0.3;
+  if(useMinus && b<c){ [b,c] = [c,b]; }
+  const op = useMinus ? '−' : '+';
+
+  if(type==='ausmultiplizieren'){
+    const result = useMinus ? a*(b-c) : a*(b+c);
+    return [{ text:`${a} · (${b} ${op} ${c}) = ${BLANK}`, solution:`${result}`, level, rep:'numerisch' }];
+  } else {
+    const result = useMinus ? a*b-a*c : a*b+a*c;
+    return [{ text:`${a}·${b} ${op} ${a}·${c} = ${BLANK}`, solution:`${result}`, level, rep:'numerisch' }];
+  }
+}
+
+function familyGroessen(level, allowed){
+  function makeTask(){
+    const catKeys = Object.keys(EINHEITEN);
+    const cat = choice(catKeys);
+    const units = EINHEITEN[cat];
+    const maxStep = level===1?1: level===2?2:Math.min(3, units.length-1);
+    let i = randInt(0, units.length-1);
+    let j = i + randInt(1,maxStep)*choice([1,-1]);
+    j = Math.max(0, Math.min(units.length-1, j));
+    if(j===i) j = i===0 ? Math.min(units.length-1,1) : i-1;
+    const from = units[i], to = units[j];
+    const value = randInt(2, level===1?9: level===2?40:250);
+    const converted = value*from.f/to.f;
+    return { text:`${value} ${from.n} = ${BLANK} ${to.n}`, solution:`${formatNum(converted)} ${to.n}`, level, rep:'numerisch' };
+  }
+  const count = level===1 ? 1 : 2;
+  const tasks = [];
+  for(let k=0;k<count;k++) tasks.push(makeTask());
+  return tasks;
+}
+
+function singleLineareFunktion(level, allowed){
+  const m = level===1?choice([1,2,3,-1,-2]): level===2?choice([1,2,3,4,-1,-2,-3]):choice([1,2,3,4,5,-1,-2,-3,-4]);
+  const b = level===1?randInt(-3,5): randInt(-8,10);
+  const canTable = allowed.includes('tabelle');
+  const canNum = allowed.includes('numerisch');
+  // Wenn beide Formen erlaubt sind: zufällig mischen. Ist nur eine erlaubt, diese auch nutzen.
+  const useTable = canTable && canNum ? Math.random()<0.6 : canTable;
+  if(useTable){
+    const xs = [-1,0,1,2];
+    const ys = xs.map(x=>m*x+b);
+    const hideIdx = randInt(0,xs.length-1);
+    const rowX = xs.map(x=>`<td>${x}</td>`).join('');
+    const rowY = ys.map((y,idx)=> idx===hideIdx ? `<td>${BLANK}</td>` : `<td>${y}</td>`).join('');
+    const table = `<table class="aufgabe-tab"><tr><th>x</th>${rowX}</tr><tr><th>y=${formatLinear(m,b)}</th>${rowY}</tr></table>`;
+    return [{ text:`Ergänze die Wertetabelle:${table}`, solution:`${ys[hideIdx]}`, level, rep:'tabelle' }];
+  }
+  const x = randInt(1,6);
+  const y = m*x+b;
+  return [{ text:`Lineare Funktion y = ${formatLinear(m,b)}. Berechne y für x = ${x}.`, solution:`y = ${y}`, level, rep:'numerisch' }];
+}
+
+function angleLinesSVG(givenDeg, label){
+  const w=130, h=110;
+  const cx=65, cy=60, r=42, ar=22;
+  const rad = givenDeg*Math.PI/180;
+  // Gerade 1: horizontal durch den Schnittpunkt
+  const x1a=cx-r, y1a=cy, x1b=cx+r, y1b=cy;
+  // Gerade 2: im Winkel "givenDeg" zur ersten Geraden geneigt
+  const x2a=cx-r*Math.cos(rad), y2a=cy+r*Math.sin(rad);
+  const x2b=cx+r*Math.cos(rad), y2b=cy-r*Math.sin(rad);
+  // Kleiner Bogen zur Veranschaulichung des Winkels
+  const arcStartX=cx+ar, arcStartY=cy;
+  const arcEndX=cx+ar*Math.cos(rad), arcEndY=cy-ar*Math.sin(rad);
+  const largeArc = givenDeg>180 ? 1 : 0;
+  const midRad = rad/2;
+  const labelX = cx+(ar+22)*Math.cos(midRad);
+  const labelY = cy-(ar+22)*Math.sin(midRad);
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <line x1="${x1a}" y1="${y1a}" x2="${x1b}" y2="${y1b}" stroke="#1e4d3f" stroke-width="2"/>
+    <line x1="${x2a}" y1="${y2a}" x2="${x2b}" y2="${y2b}" stroke="#1e4d3f" stroke-width="2"/>
+    <path d="M ${arcStartX} ${arcStartY} A ${ar} ${ar} 0 ${largeArc} 0 ${arcEndX} ${arcEndY}" fill="none" stroke="#999" stroke-width="1.2"/>
+    <text x="${labelX}" y="${labelY}" font-size="7.5" text-anchor="middle" fill="#333">${label}=${givenDeg}°</text>
+  </svg>`;
+}
+function triangleAngleSVG(w1,w2){
+  const w=110,h=68;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <polygon points="8,${h-8} ${w-8},${h-8} ${w*0.5},8" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <text x="24" y="${h-14}" font-size="7.5">${w1}°</text>
+    <text x="${w-34}" y="${h-14}" font-size="7.5">${w2}°</text>
+    <text x="${w*0.5}" y="20" font-size="7.5" text-anchor="middle">x</text>
+  </svg>`;
+}
+function familyWinkel(level, allowed){
+  const useBild = allowed.includes('bildlich');
+  const variant = Math.random()<0.5 ? 'kreuz' : 'dreieck';
+  if(variant==='kreuz'){
+    const alpha = level===1?choice([30,45,60,90]): level===2?randInt(20,160):randInt(10,170);
+    const askNeben = Math.random()<0.5;
+    const svg = useBild ? angleLinesSVG(alpha,'α') : null;
+    const text = askNeben
+      ? `Zwei sich kreuzende Geraden bilden den Winkel α = ${alpha}°. Berechne den Nebenwinkel β.`
+      : `Zwei sich kreuzende Geraden bilden den Winkel α = ${alpha}°. Wie groß ist der gegenüberliegende Scheitelwinkel γ?`;
+    const solution = askNeben ? `β = ${180-alpha}°` : `γ = ${alpha}°`;
+    return [{ text, solution, level, rep: useBild?'bildlich':'text', diagram: svg }];
+  } else {
+    const w1 = level===1?choice([40,50,60,70]): randInt(20,100);
+    let w2 = level===1?choice([50,60,70,80]): randInt(20,150);
+    if(w1+w2>=170) w2 = Math.max(10, 170-w1);
+    const w3 = 180-w1-w2;
+    const svg = useBild ? triangleAngleSVG(w1,w2) : null;
+    return [{ text:`Im Dreieck sind zwei Winkel bekannt: α = ${w1}°, β = ${w2}°. Berechne den dritten Winkel γ (Winkelsumme im Dreieck = 180°).`,
+      solution:`γ = ${w3}°`, level, rep: useBild?'bildlich':'text', diagram: svg }];
+  }
+}
+
+function familyZahlenfolgen(level, allowed){
+  const type = level===1?'arithmetisch': level===2?choice(['arithmetisch','geometrisch']):choice(['geometrisch','wachsend']);
+  let terms, next;
+  if(type==='arithmetisch'){
+    const start = randInt(1, level===1?10:30);
+    const step = randInt(2, level===1?5:9) * choice([1,-1]);
+    terms = [0,1,2,3].map(i=>start+i*step);
+    next = start+4*step;
+  } else if(type==='geometrisch'){
+    const start = randInt(1,5);
+    const factor = choice([2,3]);
+    terms = [0,1,2,3].map(i=>start*Math.pow(factor,i));
+    next = start*Math.pow(factor,4);
+  } else {
+    const start = randInt(1,10);
+    terms = [start]; let diff = randInt(1,3);
+    for(let i=0;i<3;i++){ terms.push(terms[terms.length-1]+diff); diff++; }
+    next = terms[terms.length-1]+diff;
+  }
+  return [{ text:`Setze die Zahlenfolge fort: ${terms.join(', ')}, ${BLANK} , ...`, solution:`${next}`, level, rep:'numerisch' }];
+}
+
+function cubeSVG(a){
+  const scale = Math.min(scaleTo(a), 12);
+  const s = a*scale;
+  const depth = s*0.5; // Tiefe ist proportional zur Kantenlänge selbst -> sieht immer wie ein echter Würfel aus
+  const padL=26, padTop=20, padBottom=24, padR=26;
+  const totalW = s+depth+padL+padR, totalH = s+depth+padTop+padBottom;
+  const x0=padL, y0=padTop+depth+s;
+
+  const FBL={x:x0,     y:y0};
+  const FBR={x:x0+s,   y:y0};
+  const FTL={x:x0,     y:y0-s};
+  const FTR={x:x0+s,   y:y0-s};
+  const BBR={x:x0+s+depth, y:y0-depth};
+  const BTR={x:x0+s+depth, y:y0-s-depth};
+  const BTL={x:x0+depth,   y:y0-s-depth};
+
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">
+    <polygon points="${FBL.x},${FBL.y} ${FBR.x},${FBR.y} ${FTR.x},${FTR.y} ${FTL.x},${FTL.y}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <polygon points="${FTL.x},${FTL.y} ${BTL.x},${BTL.y} ${BTR.x},${BTR.y} ${FTR.x},${FTR.y}" fill="none" stroke="#1e4d3f" stroke-width="1.3"/>
+    <polygon points="${FBR.x},${FBR.y} ${BBR.x},${BBR.y} ${BTR.x},${BTR.y} ${FTR.x},${FTR.y}" fill="none" stroke="#1e4d3f" stroke-width="1.3"/>
+    <text x="${(FBL.x+FBR.x)/2}" y="${FBL.y+16}" font-size="7.5" text-anchor="middle">a=${a}</text>
+  </svg>`;
+}
+function cuboidSVG(a,b,c){
+  const maxDim = Math.max(a,b,c);
+  const scale = Math.min(scaleTo(maxDim), 12);
+  const w=a*scale, h=c*scale, depth=b*scale*0.55;
+  const padL=28, padTop=20, padBottom=24, padR=30;
+  const totalW = w+depth+padL+padR, totalH = h+depth+padTop+padBottom;
+  const x0=padL, y0=padTop+depth+h;
+
+  // Eckpunkte des Quaders (Front = a×c-Fläche, Tiefe = b)
+  const FBL={x:x0,       y:y0};        // vorne-unten-links
+  const FBR={x:x0+w,     y:y0};        // vorne-unten-rechts
+  const FTL={x:x0,       y:y0-h};      // vorne-oben-links
+  const FTR={x:x0+w,     y:y0-h};      // vorne-oben-rechts
+  const BBR={x:x0+w+depth, y:y0-depth};       // hinten-unten-rechts
+  const BTR={x:x0+w+depth, y:y0-h-depth};     // hinten-oben-rechts
+  const BTL={x:x0+depth,   y:y0-h-depth};     // hinten-oben-links
+
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">
+    <polygon points="${FBL.x},${FBL.y} ${FBR.x},${FBR.y} ${FTR.x},${FTR.y} ${FTL.x},${FTL.y}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <polygon points="${FTL.x},${FTL.y} ${BTL.x},${BTL.y} ${BTR.x},${BTR.y} ${FTR.x},${FTR.y}" fill="none" stroke="#1e4d3f" stroke-width="1.3"/>
+    <polygon points="${FBR.x},${FBR.y} ${BBR.x},${BBR.y} ${BTR.x},${BTR.y} ${FTR.x},${FTR.y}" fill="none" stroke="#1e4d3f" stroke-width="1.3"/>
+    <text x="${(FBL.x+FBR.x)/2}" y="${FBL.y+16}" font-size="7.5" text-anchor="middle">a=${a}</text>
+    <text x="${FBL.x-16}" y="${(FBL.y+FTL.y)/2}" font-size="7.5" text-anchor="middle">c=${c}</text>
+    <text x="${(FBR.x+BBR.x)/2+2}" y="${(FBR.y+BBR.y)/2+14}" font-size="7.5" text-anchor="middle">b=${b}</text>
+  </svg>`;
+}
+function cylinderSVG(r,h){
+  const maxDim = Math.max(r*2,h);
+  const scale = Math.min(DIAGRAM_TARGET_PX/Math.max(maxDim,1), 10);
+  const R=r*scale, H=h*scale;
+  const padX=24, padTop=16, padBottom=24;
+  const w=R*2+padX*2, ht=H+R*0.6+padTop+padBottom;
+  const cx=w/2, topY=padTop+R*0.3, botY=topY+H;
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}">
+    <ellipse cx="${cx}" cy="${topY}" rx="${R}" ry="${R*0.3}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <line x1="${cx-R}" y1="${topY}" x2="${cx-R}" y2="${botY}" stroke="#1e4d3f" stroke-width="2"/>
+    <line x1="${cx+R}" y1="${topY}" x2="${cx+R}" y2="${botY}" stroke="#1e4d3f" stroke-width="2"/>
+    <ellipse cx="${cx}" cy="${botY}" rx="${R}" ry="${R*0.3}" fill="none" stroke="#1e4d3f" stroke-width="2"/>
+    <text x="${cx}" y="${botY+18}" font-size="7.5" text-anchor="middle">r=${r}, h=${h}</text>
+  </svg>`;
+}
+function singleVolumenOberflaeche(level, allowed){
+  const useBild = allowed.includes('bildlich');
+  const shape = level===1?choice(['wuerfel','quader']): level===2?choice(['wuerfel','quader']):choice(['quader','zylinder']);
+  if(shape==='wuerfel'){
+    const a=randInt(2,9);
+    const V=Math.pow(a,3), O=6*a*a;
+    const askV = Math.random()<0.5;
+    const svg = useBild? cubeSVG(a): null;
+    return [{ text:`Würfel mit Kantenlänge a = ${a} cm. Berechne ${askV?'das Volumen':'die Oberfläche'}.`,
+      solution: askV?`${V} cm³`:`${O} cm²`, level, rep:useBild?'bildlich':'numerisch', diagram:svg }];
+  } else if(shape==='quader'){
+    const a=randInt(2,10), b=randInt(2,10), c=randInt(2,10);
+    const V=a*b*c, O=2*(a*b+a*c+b*c);
+    const askV = Math.random()<0.5;
+    const svg = useBild? cuboidSVG(a,b,c): null;
+    return [{ text:`Quader: a=${a} cm, b=${b} cm, c=${c} cm. Berechne ${askV?'das Volumen':'die Oberfläche'}.`,
+      solution: askV?`${V} cm³`:`${O} cm²`, level, rep:useBild?'bildlich':'numerisch', diagram:svg }];
+  } else {
+    const r=randInt(2,6), h=randInt(3,12);
+    const V=Math.round(Math.PI*r*r*h*100)/100;
+    const O=Math.round((2*Math.PI*r*r+2*Math.PI*r*h)*100)/100;
+    const askV = Math.random()<0.5;
+    const svg = useBild? cylinderSVG(r,h): null;
+    return [{ text:`Zylinder: Radius r=${r} cm, Höhe h=${h} cm. Berechne ${askV?'das Volumen':'die Oberfläche'} (π≈3,14).`,
+      solution: askV?`≈ ${formatNum(V)} cm³`:`≈ ${formatNum(O)} cm²`, level, rep:useBild?'bildlich':'numerisch', diagram:svg }];
+  }
+}
+
+function barChartSVG(data){
+  const maxV = Math.max(...data,1);
+  const barW = 16, gap = 8, h = 55, topPad = 14;
+  const scale = h/maxV;
+  const w = data.length*(barW+gap)+gap;
+  const bars = data.map((v,i)=>{
+    const bh=v*scale, x=gap+i*(barW+gap), y=h-bh+topPad;
+    const labelY = y-4;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="#1e4d3f"/>
+    <text x="${x+barW/2}" y="${labelY}" font-size="7.5" text-anchor="middle" fill="#333">${v}</text>
+    <text x="${x+barW/2}" y="${h+topPad+13}" font-size="7" text-anchor="middle" fill="#777">${i+1}</text>`;
+  }).join('');
+  return `<svg class="diagram" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h+topPad+18}" viewBox="0 0 ${w} ${h+topPad+18}">
+    <line x1="4" y1="${h+topPad}" x2="${w-4}" y2="${h+topPad}" stroke="#333"/>
+    ${bars}
+  </svg>`;
+}
+function familyStatistik(level, allowed){
+  const n = level===1?5:level===2?6:7;
+  const maxVal = level===1?6:level===2?10:20;
+  const kontexte = [
+    {einheit:'Punkte', beschreibung:'Punkte in einem Kurztest'},
+    {einheit:'Tore', beschreibung:'geworfene Tore beim Handballturnier'},
+    {einheit:'Bücher', beschreibung:'gelesene Bücher im letzten Monat'},
+    {einheit:'Minuten', beschreibung:'Wartezeit an der Bushaltestelle (in Minuten)'},
+    {einheit:'Punkte', beschreibung:'Ergebnisse beim Würfeln'},
+  ];
+  const kontext = choice(kontexte);
+  const data = Array.from({length:n}, ()=>randInt(1,maxVal));
+  const sum = data.reduce((s,v)=>s+v,0);
+  const mean = Math.round(sum/n*100)/100;
+  const sorted = [...data].sort((x,y)=>x-y);
+  const median = n%2===1 ? sorted[(n-1)/2] : (sorted[n/2-1]+sorted[n/2])/2;
+  const askMean = Math.random()<0.5;
+  const canBild = allowed.includes('bildlich');
+  const canTab = allowed.includes('tabelle');
+  const canNum = allowed.includes('numerisch');
+  const useBild = canBild && (!canTab && !canNum ? true : Math.random()<0.5);
+
+  let intro, repr, diagram=null;
+  if(useBild){
+    diagram = barChartSVG(data); repr='bildlich';
+    intro = `Das Diagramm zeigt ${kontext.beschreibung} von ${n} Kindern (Balken 1 bis ${n}).`;
+  } else if(canTab){
+    const table = `<table class="aufgabe-tab"><tr>${data.map((v,i)=>`<th>Kind ${i+1}</th>`).join('')}</tr><tr>${data.map(v=>`<td>${v}</td>`).join('')}</tr></table>`;
+    intro = `Die Tabelle zeigt ${kontext.beschreibung} von ${n} Kindern:${table}`;
+    repr='tabelle';
+  } else {
+    intro = `Bei ${kontext.beschreibung} von ${n} Kindern wurden folgende Werte notiert: ${data.join(', ')}.`;
+    repr='numerisch';
+  }
+
+  const aufgabeMean = level===1
+    ? 'Berechne den Durchschnitt: Zähle alle Werte zusammen und teile durch die Anzahl der Kinder.'
+    : 'Berechne den Mittelwert (Durchschnitt).';
+  const aufgabeMedian = 'Bestimme den Median: Ordne alle Werte der Größe nach und suche den Wert in der Mitte.';
+
+  const text = `${intro} ${askMean ? aufgabeMean : aufgabeMedian}`;
+  const solution = askMean ? `${formatNum(mean)}` : `${formatNum(median)}`;
+  return [{ text, solution, level, rep:repr, diagram }];
+}
+
+function familyMassstab(level, allowed){
+  const scaleOptions = level===1? [10,100]: level===2?[50,100,200,1000]:[25,100,500,2500,10000];
+  const ms = choice(scaleOptions);
+  const kontext = choice(['Landkarte','Bauplan','Modellbau','Werkstattzeichnung']);
+  if(Math.random()<0.5){
+    const kartenLaenge = randInt(2, level===1?8:level===2?15:30);
+    const wirklich = kartenLaenge*ms;
+    return [{ text:`${kontext} im Maßstab 1:${ms}. Eine Strecke ist auf der Zeichnung ${kartenLaenge} cm lang. Wie lang ist sie in Wirklichkeit (in cm)?`,
+      solution:`${wirklich} cm${wirklich>=100? ` (= ${formatNum(wirklich/100)} m)`:''}`, level, rep:'text' }];
+  } else {
+    const wirklichWahl = randInt(2, level===1?8:level===2?20:50) * ms;
+    const kartenLaenge = wirklichWahl/ms;
+    return [{ text:`${kontext} im Maßstab 1:${ms}. Eine reale Strecke ist ${wirklichWahl} cm lang. Wie lang ist sie auf der Zeichnung (in cm)?`,
+      solution:`${formatNum(kartenLaenge)} cm`, level, rep:'text' }];
+  }
+}
+
+/* ============================= AUFGABEN ZUSAMMENSTELLEN ============================= */
+function generiereAufgaben(schwierigkeitOverride){
+  const anzahl = parseInt(document.getElementById('anzahl').value,10);
+
+  // Je mehr Aufgaben, desto weniger Platz pro Aufgabe -> Diagramme kompakter rendern,
+  // damit nichts über den Rand der Zone hinausläuft.
+  DIAGRAM_TARGET_PX = anzahl<=8 ? 125 : anzahl<=12 ? 105 : anzahl<=16 ? 85 : anzahl<=20 ? 68 : anzahl<=25 ? 56 : 46;
+
+  const selectedTopics = TOPICS.filter(t=>document.getElementById('topic-'+t.id).checked);
+  const schwierigkeit = schwierigkeitOverride || document.querySelector('input[name="schwierigkeit"]:checked').value;
+  const allowedForms = [];
+  if(document.getElementById('d-numerisch').checked) allowedForms.push('numerisch');
+  if(document.getElementById('d-text').checked) allowedForms.push('text');
+  if(document.getElementById('d-tabelle').checked) allowedForms.push('tabelle');
+  if(document.getElementById('d-bild').checked) allowedForms.push('bildlich');
+
+  if(selectedTopics.length===0){ alert('Bitte mindestens ein Thema auswählen.'); return null; }
+  if(allowedForms.length===0){ alert('Bitte mindestens eine Darstellungsform auswählen.'); return null; }
+
+  // Themen filtern nach kompatiblen Darstellungsformen (mind. eine Überschneidung)
+  const usable = selectedTopics.filter(t => t.forms.some(f=>allowedForms.includes(f)));
+  const pool = usable.length ? usable : selectedTopics;
+
+  let tasks = [];
+  let guard = 0;
+  let familyCounter = 0;
+  const famHatKollision = (f) => {
+    if(tasks.length>0 && f.length && numbersTooSimilar(tasks[tasks.length-1], f[0])) return true;
+    for(let k=1;k<f.length;k++){ if(numbersTooSimilar(f[k-1], f[k])) return true; }
+    return false;
+  };
+  while(tasks.length < anzahl && guard < 200){
+    guard++;
+    const topic = choice(pool);
+    let level;
+    if(schwierigkeit==='leicht') level=1;
+    else if(schwierigkeit==='mittel') level=2;
+    else if(schwierigkeit==='schwer') level=3;
+    else {
+      // gemischt ansteigend: Level abhängig vom Fortschritt (früh leicht, spät schwer)
+      const progress = tasks.length/anzahl;
+      level = progress<0.35?1: progress<0.75?2:3;
+    }
+    let fam = topic.gen(level, allowedForms) || [];
+    // Gegen die vorherige Aufgabe UND innerhalb der neuen Gruppe auf Kollisionen prüfen, bei Bedarf neu würfeln
+    let retries = 0;
+    while(retries<6 && famHatKollision(fam)){
+      fam = topic.gen(level, allowedForms) || [];
+      retries++;
+    }
+    familyCounter++;
+    fam.forEach(f => { f.topicLabel = topic.label; f.familyId = familyCounter; f.topicRef = topic; f.genLevel = level; });
+    tasks.push(...fam);
+  }
+  tasks = tasks.slice(0, anzahl);
+
+  if(schwierigkeit==='gemischt'){
+    // stabil nach Level sortieren, Familien bleiben durch Reihenfolge weitgehend zusammen
+    tasks = tasks.map((t,i)=>({...t, _i:i})).sort((a,b)=> a.level-b.level || a._i-b._i);
+  }
+
+  // Verhindert, dass zwei aufeinanderfolgende Aufgaben (aus unterschiedlichen Themen/Familien)
+  // die gleichen oder sehr ähnliche Zahlen verwenden. Innerhalb einer bewussten Aufgabenfamilie
+  // (z.B. 7+8 / 70+80 / 700+800) bleiben ähnliche Zahlen erlaubt, da das Absicht ist.
+  tasks = entzerreReihenfolge(tasks, allowedForms);
+
+  tasks.forEach((t,i)=> t.nummer = i+1);
+  return tasks;
+}
+
+function numbersFromTask(t){
+  const stripped = t.text.replace(/<[^>]+>/g, ' ');
+  const matches = stripped.match(/\d+(?:[.,]\d+)?/g) || [];
+  return matches.map(m => parseFloat(m.replace(',', '.')));
+}
+function numbersTooSimilar(a, b){
+  const numsA = numbersFromTask(a), numsB = numbersFromTask(b);
+  for(const x of numsA){
+    for(const y of numsB){
+      const tol = Math.max(1, Math.round(Math.max(Math.abs(x),Math.abs(y))*0.08));
+      if(Math.abs(x-y) <= tol) return true;
+    }
+  }
+  return false;
+}
+function entzerreReihenfolge(tasks, allowedForms){
+  for(let pass=0; pass<3; pass++){
+    for(let i=1; i<tasks.length; i++){
+      const clash = numbersTooSimilar(tasks[i-1], tasks[i]);
+      if(!clash) continue;
+      for(let j=i+1; j<tasks.length; j++){
+        const wouldClashLeft = numbersTooSimilar(tasks[i-1], tasks[j]);
+        const wouldClashRight = tasks[i+1] && numbersTooSimilar(tasks[j], tasks[i+1]);
+        if(!wouldClashLeft && !wouldClashRight){
+          [tasks[i], tasks[j]] = [tasks[j], tasks[i]];
+          break;
+        }
+      }
+    }
+  }
+  // Letzter Versuch: bei hartnäckigen Kollisionen die betroffene Aufgabe neu erzeugen
+  // (z.B. weil dieses Thema von Natur aus einen engen Zahlenbereich hat)
+  for(let i=1; i<tasks.length; i++){
+    const topic = tasks[i].topicRef;
+    if(!topic) continue;
+    let attempts = 0;
+    while(numbersTooSimilar(tasks[i-1], tasks[i]) && attempts<6){
+      const neu = topic.gen(tasks[i].genLevel, allowedForms)[0];
+      if(!neu) break;
+      neu.topicLabel = tasks[i].topicLabel; neu.familyId = tasks[i].familyId;
+      neu.topicRef = topic; neu.genLevel = tasks[i].genLevel; neu.level = tasks[i].level;
+      tasks[i] = neu;
+      attempts++;
+    }
+  }
+  return tasks;
+}
+
+/* ============================= RENDERING ============================= */
+function taskHTML(t){
+  const lvlClass = t.level===1?'lvl1':t.level===2?'lvl2':'lvl3';
+  return `<div class="task">
+    <div class="num">${t.nummer}.</div>
+    <div class="content"><span class="level-tag ${lvlClass}"></span>${t.text}
+      ${t.diagram?t.diagram:''}
+      <div class="workspace"></div>
+    </div>
+  </div>`;
+}
+
+function chunkByWeightRatios(tasks, ratios){
+  // Schätzt den Platzbedarf je Aufgabe (Diagramme/Tabellen brauchen mehr Höhe) und verteilt
+  // die Aufgaben so auf die Zonen, dass jede Zone im Verhältnis zu "ratios" ungefähr gleich
+  // "voll" wird. Arbeitet mit KUMULATIVEN Zielwerten, damit sich ein leichtes "Überschießen"
+  // einer Zone nicht zulasten der nachfolgenden Zonen aufsummiert (sonst bekommt die letzte
+  // Zone systematisch zu wenig ab).
+  const weight = t => 1 + (t.diagram ? 1.5 : 0) + (t.rep==='tabelle' ? 0.4 : 0);
+  const total = tasks.reduce((s,t)=>s+weight(t), 0);
+  const ratioSum = ratios.reduce((s,r)=>s+r, 0);
+  let cumRatio = 0;
+  const cumTargets = ratios.map(r => { cumRatio += r; return total * (cumRatio/ratioSum); });
+  const chunks = ratios.map(()=>[]);
+  let zoneIdx = 0, running = 0;
+  tasks.forEach(t=>{
+    while(zoneIdx < ratios.length-1 && running >= cumTargets[zoneIdx] && chunks[zoneIdx].length > 0){
+      zoneIdx++;
+    }
+    chunks[zoneIdx].push(t);
+    running += weight(t);
+  });
+  return chunks;
+}
+
+function renderBlaetter(tasks, thema, pageCount, orientation){
+  const foldClass = orientation==='hoch' ? 'horizontal' : 'vertical';
+  const density = tasks.length<=8 ? '' : tasks.length<=12 ? 'compact' : tasks.length<=16 ? 'tight' : tasks.length<=20 ? 'ultratight' : 'extreme';
+  const allSolved = tasks.map(t=>`<div><b>${t.nummer}.</b> ${t.solution}</div>`).join('');
+
+  // Im Querformat wird jede Seite per Faltlinie in 2 Zonen geteilt, im Hochformat
+  // bleibt jede Seite eine durchgehende Zone ohne Teilung in der Mitte.
+  const zonesPerPage = orientation==='quer' ? 2 : 1;
+  const zoneCount = pageCount * zonesPerPage;
+  const ratios = zoneCount===1 ? [1]
+    : zoneCount===2 ? [0.9, 1]
+    : [0.8, 1, 1, 0.85];
+  const chunks = chunkByWeightRatios(tasks, ratios);
+
+  const zoneHTML = chunks.map((chunkTasks, idx) => {
+    const isFirst = idx===0;
+    const isLast = idx===zoneCount-1;
+    let html = `<div class="haelfte">`;
+    if(isFirst){
+      html += `<div class="cover-title">Mathe Warm-up</div>
+        <div class="cover-thema">Thema: ${thema}</div>
+        <div class="cover-fields"><span>Name:</span><span>Klasse:</span><span>Datum:</span></div>`;
+    }
+    html += `<div class="task-list ${density}">${chunkTasks.map(taskHTML).join('')}</div>`;
+    if(isLast){
+      html += `<div class="loesungen-block"><h3>Lösungen</h3><div class="loesungen-grid">${allSolved}</div></div>`;
+    }
+    html += `<div class="page-num">Seite ${idx+1}</div></div>`;
+    return html;
+  });
+
+  const pages = [];
+  for(let p=0; p<pageCount; p++){
+    const start = p*zonesPerPage;
+    const zonesOnPage = zoneHTML.slice(start, start+zonesPerPage);
+    pages.push(zonesOnPage.join(`<div class="fold-line ${foldClass}"></div>`));
+  }
+
+  return { seite1: pages[0], seite2: pages[1] || null };
+}
+
+let lastSheets = []; // [{seite1, seite2, label}], label=null im Normalfall, sonst 'C-Kurs'/'B-Kurs'/'A-Kurs'
+let lastPageCount = 2;
+let lastOrientation = 'quer';
+
+function setPageSizeCSS(orientation){
+  const style = document.getElementById('pageSizeStyle');
+  if(style) style.textContent = `@page { size: A4 ${orientation==='hoch'?'portrait':'landscape'}; margin: 0; }`;
+}
+
+function generiereBlatt(){
+  const schwierigkeit = document.querySelector('input[name="schwierigkeit"]:checked').value;
+  const pageCount = parseInt(document.querySelector('input[name="seitenzahl"]:checked').value, 10);
+  const orientation = document.querySelector('input[name="format"]:checked').value;
+  lastPageCount = pageCount;
+  lastOrientation = orientation;
+  setPageSizeCSS(orientation);
+
+  const selectedTopics = TOPICS.filter(t=>document.getElementById('topic-'+t.id).checked);
+  const baseThema = selectedTopics.length===1 ? selectedTopics[0].label : 'Gemischt / Wiederholung';
+
+  lastSheets = [];
+
+  if(schwierigkeit==='abc'){
+    const kurse = [ {level:'leicht', label:'C-Kurs'}, {level:'mittel', label:'B-Kurs'}, {level:'schwer', label:'A-Kurs'} ];
+    for(const k of kurse){
+      const tasks = generiereAufgaben(k.level);
+      if(!tasks) return;
+      const thema = `${baseThema} — ${k.label}`;
+      const {seite1, seite2} = renderBlaetter(tasks, thema, pageCount, orientation);
+      lastSheets.push({ seite1, seite2, label: k.label });
+    }
+  } else {
+    const tasks = generiereAufgaben();
+    if(!tasks) return;
+    const {seite1, seite2} = renderBlaetter(tasks, baseThema, pageCount, orientation);
+    lastSheets.push({ seite1, seite2, label: null });
+  }
+
+  renderPreview();
+}
+
+function renderPreview(){
+  const container = document.getElementById('previewContainer');
+  container.innerHTML = '';
+  let pageCounter = 0;
+
+  lastSheets.forEach(sheet=>{
+    [sheet.seite1, sheet.seite2].forEach(seiteHTML=>{
+      if(!seiteHTML) return;
+      pageCounter++;
+
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'page-label';
+      labelDiv.textContent = `Vorschau (verkleinert) – Seite ${pageCounter}` + (sheet.label ? ` · ${sheet.label}` : '');
+      container.appendChild(labelDiv);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-scale-wrap';
+      const blattDiv = document.createElement('div');
+      blattDiv.className = 'blatt ' + lastOrientation;
+      blattDiv.innerHTML = seiteHTML;
+      wrap.appendChild(blattDiv);
+      container.appendChild(wrap);
+    });
+  });
+
+  updatePreviewScale();
+}
+
+function druckeBlatt(){
+  // Kompatibilitäts-Alias, falls irgendwo noch referenziert
+  erzeugePDF();
+}
+
+/* ---- PDF-Export (funktioniert zuverlässig auch am Handy / in Webviews,
+   da kein window.open()/window.print() nötig ist – stattdessen echter Datei-Download) ---- */
+let libsLoaded = { h2c:false, jspdf:false };
+function checkLibsLoaded(){
+  if(libsLoaded.h2c && libsLoaded.jspdf){
+    const btn = document.getElementById('printBtn');
+    if(btn){ btn.disabled = false; btn.textContent = '🖨 Als PDF exportieren'; }
+  }
+}
+
+async function erzeugePDF(){
+  if(!lastSheets.length){ generiereBlatt(); }
+  if(typeof html2canvas === 'undefined' || !window.jspdf){
+    alert('PDF-Funktion lädt noch – bitte einen Moment warten und erneut tippen.');
+    return;
+  }
+  const btn = document.getElementById('printBtn');
+  const originalText = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Erstelle PDF...'; }
+
+  const pdfW = lastOrientation==='hoch' ? 210 : 297;
+  const pdfH = lastOrientation==='hoch' ? 297 : 210;
+  const jspdfOrientation = lastOrientation==='hoch' ? 'portrait' : 'landscape';
+
+  const holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.top = '0';
+  holder.style.left = '-10000px';
+  holder.style.zIndex = '-1';
+  const allPagesHTML = [];
+  lastSheets.forEach(sheet=>{
+    [sheet.seite1, sheet.seite2].forEach(seiteHTML=>{
+      if(seiteHTML) allPagesHTML.push(seiteHTML);
+    });
+  });
+  holder.innerHTML = allPagesHTML.map(html => `<div class="blatt ${lastOrientation} pdf-page">${html}</div>`).join('');
+  document.body.appendChild(holder);
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:jspdfOrientation, unit:'mm', format:'a4' });
+    const pageEls = holder.querySelectorAll('.pdf-page');
+    for(let i=0; i<pageEls.length; i++){
+      const canvas = await html2canvas(pageEls[i], { scale:2, backgroundColor:'#ffffff' });
+      if(i>0) doc.addPage('a4', jspdfOrientation);
+      doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdfW, pdfH);
+    }
+    doc.save('mathe-warmup.pdf');
+  } catch(err){
+    console.error(err);
+    alert('Die PDF konnte leider nicht erstellt werden: ' + err.message);
+  } finally {
+    document.body.removeChild(holder);
+    if(btn){ btn.disabled = false; btn.textContent = originalText || '🖨 Als PDF exportieren'; }
+  }
+}
+
+/* ============================= INIT ============================= */
+const MM_TO_PX = 96/25.4;
+const BLATT_W_PX = 297 * MM_TO_PX;
+const BLATT_H_PX = 210 * MM_TO_PX;
+
+function updatePreviewScale(){
+  const area = document.getElementById('previewArea');
+  const wraps = document.querySelectorAll('.preview-scale-wrap');
+  if(!area || !wraps.length) return;
+  const wPx = (lastOrientation==='hoch' ? 210 : 297) * MM_TO_PX;
+  const hPx = (lastOrientation==='hoch' ? 297 : 210) * MM_TO_PX;
+  const available = area.clientWidth - 8; // kleine Randreserve
+  let scale = available / wPx;
+  scale = Math.min(scale, 0.55); // auf großen Bildschirmen nicht zu groß
+  scale = Math.max(scale, 0.16); // auf sehr schmalen Screens noch lesbar
+  wraps.forEach(w=>{
+    if(getComputedStyle(w).display==='none') return;
+    w.style.width = Math.round(wPx*scale)+'px';
+    w.style.height = Math.round(hPx*scale)+'px';
+    const blatt = w.querySelector('.blatt');
+    if(blatt) blatt.style.transform = `scale(${scale})`;
+  });
+}
+window.addEventListener('resize', updatePreviewScale);
+window.addEventListener('orientationchange', ()=> setTimeout(updatePreviewScale, 200));
+
+document.getElementById('anzahl').addEventListener('input', e=>{
+  document.getElementById('anzahlDisplay').textContent = e.target.value;
+});
+buildTopicList();
+generiereBlatt();
+updatePreviewScale();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onload="libsLoaded.h2c=true; checkLibsLoaded();" onerror="document.getElementById('printBtn').textContent='⚠️ PDF-Funktion nicht verfügbar (offline?)';"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onload="libsLoaded.jspdf=true; checkLibsLoaded();" onerror="document.getElementById('printBtn').textContent='⚠️ PDF-Funktion nicht verfügbar (offline?)';"></script>
+</body>
+</html>
