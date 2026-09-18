@@ -109,6 +109,9 @@
       "#protect-share-modal .protect-link-row { display: flex; gap: 8px; }",
       "#protect-share-modal .protect-link-row input { flex: 1; font-size: 12.5px; padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.85); }",
       "#protect-share-modal .protect-copy-btn { padding: 10px 14px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; background: rgba(0,0,0,0.07); }",
+      "#protect-share-modal .protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
+      "#protect-share-modal .protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
+      "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #6E6E73; text-align: center; margin: 8px 0 0; }",
       "html.share-mode .site-logo, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
       "html.share-mode #protect-share-btn { display: none; }",
       ".protect-banner {",
@@ -201,6 +204,22 @@
     return url.toString();
   }
 
+  function renderQrCode(container, text) {
+    if (!container) return;
+    if (typeof global.qrcode !== "function") {
+      container.innerHTML = "";
+      return;
+    }
+    try {
+      const qr = global.qrcode(0, "M");
+      qr.addData(text);
+      qr.make();
+      container.innerHTML = qr.createSvgTag(5, 8);
+    } catch (e) {
+      container.innerHTML = "";
+    }
+  }
+
   function openShareModal(cat) {
     ensureStyle();
     const wrap = document.createElement("div");
@@ -224,6 +243,8 @@
             '<button class="protect-copy-btn" id="protect-copy-btn">Kopieren</button>' +
           "</div>" +
           '<div class="protect-error" id="protect-copy-msg" style="color:#2F6F4F;"></div>' +
+          '<div class="protect-qr-wrap" id="protect-qr-wrap"></div>' +
+          '<p class="protect-qr-hint">QR-Code scannen, um den Link direkt zu öffnen.</p>' +
         "</div>" +
         '<button class="protect-close" id="protect-close-btn">Schließen</button>' +
       "</div>";
@@ -238,6 +259,7 @@
       wrap.querySelector("#protect-link-area").style.display = "block";
       out.focus(); out.select();
       wrap.querySelector("#protect-copy-msg").textContent = "";
+      renderQrCode(wrap.querySelector("#protect-qr-wrap"), link);
     });
     wrap.querySelector("#protect-copy-btn").addEventListener("click", async () => {
       const out = wrap.querySelector("#protect-link-out");

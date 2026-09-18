@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathe-Kick 2 Spieler</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;700;900&display=swap');
+
+:root {
+  --grass-dark: #1a6b1a;
+  --grass-mid:  #1f8020;
+  --grass-lite: #269026;
+  --grass-line: rgba(255,255,255,0.55);
+  --stand-dark: #111a11;
+  --stand-mid:  #1a2e1a;
+  --p1: #29b6f6;
+  --p1-dark: #0277bd;
+  --p2: #ff7043;
+  --p2-dark: #bf360c;
+  --gold: #f5c518;
+  --red:  #e53935;
+  --green:#4caf50;
+  --card: rgba(0,0,0,0.55);
+  --card-border: rgba(255,255,255,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; overflow:hidden; font-family:'Nunito',sans-serif; background:#0d1a0d; color:#fff; }
+body { display:flex; flex-direction:column; }
+
+/* ═══════════════════════════════════════════════
+   START SCREEN
+═══════════════════════════════════════════════ */
+#startScreen {
+  display:flex; position:fixed; inset:0; z-index:200;
+  flex-direction:column; align-items:center;
+  justify-content:flex-start; gap:10px;
+  text-align:center; padding:14px 18px 18px;
+  overflow-y:auto;
+  background: linear-gradient(160deg, #071a07 0%, #0d2e0d 40%, #0a1f0a 100%);
+  isolation:isolate;
+}
+/* Pitch lines */
+#startScreen::before {
+  content:''; position:fixed; inset:0; z-index:-2;
+  background:
+    /* center circle */
+    radial-gradient(ellipse 180px 120px at 50% 58%, transparent 68%, rgba(255,255,255,.07) 69%, rgba(255,255,255,.07) 71%, transparent 72%),
+    /* center spot */
+    radial-gradient(circle 3px at 50% 58%, rgba(255,255,255,.2) 100%, transparent 100%),
+    /* center line */
+    linear-gradient(90deg, transparent 49.85%, rgba(255,255,255,.08) 49.85%, rgba(255,255,255,.08) 50.15%, transparent 50.15%),
+    /* penalty arc left */
+    radial-gradient(ellipse 80px 80px at 10% 58%, transparent 54%, rgba(255,255,255,.05) 55%, rgba(255,255,255,.05) 57%, transparent 58%),
+    /* penalty arc right */
+    radial-gradient(ellipse 80px 80px at 90% 58%, transparent 54%, rgba(255,255,255,.05) 55%, rgba(255,255,255,.05) 57%, transparent 58%),
+    /* grass stripes */
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,.018) 0%, rgba(255,255,255,.018) 5%,
+      transparent 5%, transparent 10%
+    );
+}
+/* Atmospheric glow + vignette */
+#startScreen::after {
+  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(34,120,34,.25) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 40% at 50% 0%, rgba(0,0,0,.6) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 80% at 0% 50%, rgba(0,0,0,.4) 0%, transparent 50%),
+    radial-gradient(ellipse 30% 80% at 100% 50%, rgba(0,0,0,.4) 0%, transparent 50%);
+}
+/* SVG footballer silhouettes */
+#ss-players {
+  position:fixed; bottom:0; left:0; right:0; z-index:-1;
+  pointer-events:none; height:55%;
+}
+#startScreen h1 {
+  font-family:'Bebas Neue',cursive; font-size:2.6rem;
+  color:var(--gold); letter-spacing:6px;
+  text-shadow:0 0 30px rgba(245,197,24,.5), 0 2px 0 #000;
+  margin-top:4px;
+}
+#startScreen > p { color:#8fbc8f; font-size:.82rem; max-width:360px; line-height:1.5; }
+
+.ni { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.nf { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.nf label { font-family:'Bebas Neue',cursive; font-size:1.1rem; letter-spacing:2px; }
+.nf.n1 label { color:var(--p1); }
+.nf.n2 label { color:var(--p2); }
+.nf input {
+  background:rgba(255,255,255,.08); border-radius:8px; border:2px solid rgba(255,255,255,.2);
+  color:#fff; font-family:'Nunito',sans-serif; font-size:.88rem; font-weight:700;
+  padding:5px 10px; text-align:center; width:120px; outline:none; transition:border-color .15s;
+}
+.nf.n1 input:focus { border-color:var(--p1); }
+.nf.n2 input:focus { border-color:var(--p2); }
+
+.diff-label {
+  font-family:'Bebas Neue',cursive; font-size:1rem; letter-spacing:3px; color:#8fbc8f;
+}
+.mode-select { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:480px; }
+.mode-btn {
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.15);
+  border-radius:8px; padding:5px 10px; cursor:pointer; color:#aaa;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:.78rem;
+  transition:all .15s; white-space:nowrap;
+}
+.mode-btn:hover { border-color:rgba(255,255,255,.4); color:#fff; }
+.mode-btn.selected { background:rgba(245,197,24,.15); border-color:var(--gold); color:var(--gold); }
+
+.diff-select { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.diff-btn {
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.15);
+  border-radius:8px; padding:6px 14px; cursor:pointer; color:#ccc;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:.8rem;
+  transition:all .15s; text-align:center; min-width:88px;
+}
+.diff-btn:hover { border-color:#aaa; color:#fff; }
+.diff-btn.d-anf.selected { background:rgba(76,175,80,.2);  border-color:#4caf50; color:#4caf50; }
+.diff-btn.d-pro.selected { background:rgba(245,197,24,.2); border-color:var(--gold); color:var(--gold); }
+.diff-btn.d-exp.selected { background:rgba(229,57,53,.2);  border-color:#e53935; color:#e53935; }
+.diff-sub { font-size:.68rem; color:#888; margin-top:2px; }
+.pcount-select { display:flex; gap:8px; justify-content:center; }
+.pcount-btn {
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.15);
+  border-radius:8px; padding:6px 14px; cursor:pointer; color:#ccc;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:.8rem;
+  transition:all .15s; text-align:center; min-width:88px;
+}
+.pcount-btn:hover { border-color:#aaa; color:#fff; }
+.pcount-btn.selected { background:rgba(245,197,24,.2); border-color:var(--gold); color:var(--gold); }
+.pcount-sub { font-size:.68rem; color:#888; margin-top:2px; }
+
+.khints { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.kh {
+  background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:5px 10px; font-size:.72rem; color:#888; line-height:1.4;
+}
+.kh b { display:block; font-size:.8rem; margin-bottom:1px; }
+.kh.kp1 b { color:var(--p1); } .kh.kp2 b { color:var(--p2); }
+
+#startBtn {
+  background:linear-gradient(135deg,#f5c518,#e0a800);
+  color:#111; border:none; border-radius:24px;
+  padding:10px 40px;
+  font-family:'Bebas Neue',cursive; font-size:1.5rem; letter-spacing:4px;
+  cursor:pointer; box-shadow:0 4px 20px rgba(245,197,24,.4);
+  transition:transform .14s, box-shadow .14s;
+}
+#startBtn:hover { transform:scale(1.06); box-shadow:0 6px 28px rgba(245,197,24,.6); }
+
+/* ═══════════════════════════════════════════════
+   STADIUM SCENE
+═══════════════════════════════════════════════ */
+#scene {
+  position:relative; flex:0 0 140px; overflow:hidden;
+  background:linear-gradient(180deg, #050d05 0%, #0d200d 45%, #163016 100%);
+}
+
+/* Animated crowd flicker */
+.crowd-section {
+  position:absolute; top:0; left:0; right:0; height:72px;
+  overflow:hidden;
+}
+
+/* Players (formerly motos) */
+.moto {
+  position:absolute; bottom:0; z-index:10; width:80px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));
+  animation:playerRun .38s ease-in-out infinite alternate;
+}
+#moto1 { left:calc(50% - 130px); }
+#moto2 { right:100px; }
+@keyframes playerRun {
+  from { transform:translateY(0) rotate(-2deg) scaleX(1.02); }
+  to   { transform:translateY(-6px) rotate(2deg) scaleX(.98); }
+}
+
+/* Defenders (formerly boulders) */
+.boulder {
+  position:absolute; bottom:0; z-index:9; width:68px;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.7));
+  animation:defRun .32s ease-in-out infinite alternate;
+}
+#boulder1 { left:-70px; }
+#boulder2 { left:calc(50% + 0px); }
+@keyframes defRun {
+  from { transform:translateY(0) rotate(-2.5deg); }
+  to   { transform:translateY(-5px) rotate(2.5deg); }
+}
+.boulder.catching { filter:drop-shadow(0 0 12px #ff1744) brightness(1.15); }
+
+/* Tackle crash */
+.crash-sym {
+  display:none; position:absolute; z-index:20;
+  font-size:3rem; pointer-events:none;
+}
+.crash-sym.show { display:block; animation:crashPop .9s ease-out forwards; }
+@keyframes crashPop {
+  0%  { transform:scale(0) rotate(-20deg); opacity:1; }
+  35% { transform:scale(1.6) rotate(10deg); opacity:1; }
+  70% { transform:scale(1.2) rotate(-5deg); opacity:.8; }
+  100%{ transform:scale(.8) rotate(5deg); opacity:0; }
+}
+.crash { animation:tackleAnim .7s ease-in forwards; }
+@keyframes tackleAnim {
+  0%   { transform:rotate(0deg) translateY(0); opacity:1; }
+  40%  { transform:rotate(-30deg) translateY(5px); opacity:.8; }
+  100% { transform:rotate(-80deg) translateY(14px) scaleX(.6); opacity:0; }
+}
+
+/* Scene divider */
+#scene-div {
+  position:absolute; top:0; bottom:0; left:50%;
+  width:2px; background:rgba(255,255,255,.15);
+  transform:translateX(-50%); z-index:5;
+}
+/* Goal on each side */
+.goal {
+  position:absolute; bottom:0; z-index:8;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+}
+#goal1 { right:calc(50% + 6px); }
+#goal2 { right:6px; }
+
+.lane-label {
+  position:absolute; top:6px; z-index:6;
+  font-family:'Bebas Neue',cursive; font-size:1rem; letter-spacing:2px;
+  background:rgba(0,0,0,.5); padding:2px 7px; border-radius:4px;
+}
+#lbl1 { left:10px; color:var(--p1); border:1px solid rgba(41,182,246,.3); }
+#lbl2 { right:10px; color:var(--p2); border:1px solid rgba(255,112,67,.3); }
+
+/* ═══════════════════════════════════════════════
+   GRASS / PITCH
+═══════════════════════════════════════════════ */
+#roads { display:none; }
+#road1, #road2 {
+  flex:1; position:relative; overflow:hidden;
+}
+/* Alternating grass stripes */
+#road1 { background:linear-gradient(90deg,
+  #1a6b1a 0%, #1a6b1a 49%, #1f8020 51%, #1f8020 100%); }
+#road2 { background:linear-gradient(90deg,
+  #1f8020 0%, #1f8020 49%, #1a6b1a 51%, #1a6b1a 100%); }
+
+#road-div { width:2px; background:rgba(255,255,255,.2); flex-shrink:0; }
+
+/* Moving grass blade shimmer */
+.road-stripe {
+  position:absolute; top:0; bottom:0; width:46px;
+  background:rgba(0,0,0,.1);
+  animation:grassMove .8s linear infinite;
+}
+@keyframes grassMove {
+  from { transform:translateX(0); }
+  to   { transform:translateX(-92px); }
+}
+
+/* ═══════════════════════════════════════════════
+   HOME BAR
+═══════════════════════════════════════════════ */
+#home-bar {
+  position:relative; flex:0 0 26px;
+  display:flex; align-items:center; justify-content:center;
+  background:#0a150a; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.home-btn {
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.18);
+  border-radius:6px; color:#888; font-size:.78rem; height:20px;
+  padding:0 10px; cursor:pointer; display:flex; align-items:center; gap:4px;
+  font-family:'Nunito',sans-serif; font-weight:700;
+  transition:all .15s; white-space:nowrap;
+}
+.home-btn:hover { border-color:var(--gold); color:var(--gold); }
+
+/* ═══════════════════════════════════════════════
+   TIMER BARS
+═══════════════════════════════════════════════ */
+#timers { flex:0 0 8px; display:flex; background:#060e06; }
+.thalf { flex:1; overflow:hidden; }
+.tbar { height:100%; width:100%; transform-origin:left; transition:transform .1s linear; }
+#tb1 { background:linear-gradient(90deg,#4caf50,#f5c518,#e53935); }
+#tb2 { background:linear-gradient(90deg,#e53935,#f5c518,#4caf50); }
+.tdiv { width:2px; background:#0a150a; flex-shrink:0; }
+
+/* ═══════════════════════════════════════════════
+   ARENA — TWO PLAYER PANELS
+═══════════════════════════════════════════════ */
+#arena {
+  flex:1; display:grid; grid-template-columns:1fr 2px 1fr; min-height:0;
+  background:#0d1a0d;
+}
+#arena.solo { grid-template-columns:1fr 0 0; }
+#arena.solo .adiv,#arena.solo #panel2 { display:none; }
+/* Solo: player1 uses full screen width */
+#scene.solo #moto1   { left:auto; right:130px; }
+#scene.solo #goal1   { right:6px; left:auto; }
+#scene.solo #boulder1{ left:-70px; }
+#scene.solo #lbl1    { left:10px; }
+.adiv {
+  background:rgba(255,255,255,.07);
+  position:relative;
+}
+.adiv::after {
+  content:'VS'; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Bebas Neue',cursive; font-size:1.1rem;
+  color:rgba(255,255,255,.2); writing-mode:vertical-rl; letter-spacing:6px;
+}
+
+.ppanel {
+  position:relative;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:space-evenly; padding:5px 10px 7px; min-height:0;
+  background:rgba(10,20,10,.6);
+}
+
+/* Info row */
+.info-row {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; gap:6px;
+}
+.sdisplay { font-family:'Bebas Neue',cursive; font-size:1.1rem; letter-spacing:1px; white-space:nowrap; }
+.sdisplay b { font-size:1.3rem; }
+.pdots { display:flex; gap:3px; flex-wrap:wrap; max-width:110px; }
+.pdot {
+  width:8px; height:8px; border-radius:50%;
+  background:#1a2a1a; border:1.5px solid #2a3a2a; transition:background .2s;
+}
+.pdot.done { background:#4caf50; border-color:#4caf50; }
+.pdot.wrong { background:#e53935; border-color:#e53935; }
+.pdot.current { animation:dotPulse .55s ease-in-out infinite alternate; }
+.p1 .pdot.current { background:var(--p1); border-color:var(--p1); }
+.p2 .pdot.current { background:var(--p2); border-color:var(--p2); }
+@keyframes dotPulse { from{transform:scale(1)} to{transform:scale(1.5)} }
+.ptext { font-size:.72rem; color:#5a8a5a; white-space:nowrap; }
+
+.pbtn {
+  background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.2);
+  border-radius:7px; color:#aaa; font-size:.95rem; width:28px; height:28px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .15s; flex-shrink:0;
+}
+.pbtn:hover { border-color:var(--gold); color:var(--gold); }
+.pbtn.paused { border-color:#4caf50; color:#4caf50; }
+
+/* Fraction area */
+.frac-area {
+  display:flex; align-items:center; justify-content:center;
+  gap:12px; flex-shrink:0;
+}
+.task-big { font-family:'Bebas Neue',cursive; letter-spacing:2px; line-height:1.15; text-align:center; }
+.task-verb  { display:block; font-size:1.4rem; font-family:'Nunito',sans-serif; font-weight:900; }
+.task-factor{ display:block; font-size:1rem; color:#8fbc8f; font-family:'Nunito',sans-serif; font-weight:700; }
+.p1 .task-verb { color:var(--p1); text-shadow:0 0 14px rgba(41,182,246,.35); }
+.p2 .task-verb { color:var(--p2); text-shadow:0 0 14px rgba(255,112,67,.35); }
+
+.frac-box {
+  background:rgba(0,0,0,.45); border-radius:12px; padding:8px 18px;
+  display:flex; flex-direction:column; align-items:center; gap:2px; min-width:86px;
+  backdrop-filter:blur(4px);
+}
+.p1 .frac-box { border:2px solid rgba(41,182,246,.5); box-shadow:0 0 16px rgba(41,182,246,.12); }
+.p2 .frac-box { border:2px solid rgba(255,112,67,.5);  box-shadow:0 0 16px rgba(255,112,67,.12); }
+.frac-num { font-family:'Nunito',sans-serif; font-size:1.8rem; font-weight:900; line-height:1; }
+.frac-line { height:3px; width:54px; border-radius:2px; margin:3px 0; }
+.p1 .frac-line { background:var(--p1); }
+.p2 .frac-line { background:var(--p2); }
+
+/* Answer buttons */
+.answers { display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; flex-shrink:0; }
+.ans-btn {
+  background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.15);
+  border-radius:10px; padding:8px 6px; cursor:pointer; color:#fff; font-weight:900;
+  transition:all .14s; display:flex; flex-direction:column; align-items:center; gap:1px;
+}
+.ans-btn:hover:not(:disabled) { transform:translateY(-2px); background:rgba(255,255,255,.1); }
+.p1 .ans-btn:hover:not(:disabled) { border-color:var(--p1); box-shadow:0 3px 12px rgba(41,182,246,.2); }
+.p2 .ans-btn:hover:not(:disabled) { border-color:var(--p2); box-shadow:0 3px 12px rgba(255,112,67,.2); }
+.ans-btn.correct { border-color:#4caf50; background:rgba(76,175,80,.2); animation:popOk .35s ease; }
+.ans-btn.wrong   { border-color:#e53935; background:rgba(229,57,53,.2); animation:popWrong .3s ease; }
+@keyframes popOk    { 0%,100%{transform:scale(1)}   50%{transform:scale(1.07)} }
+@keyframes popWrong { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+.afrac { display:flex; flex-direction:column; align-items:center; }
+.afnum { font-size:1.05rem; font-weight:900; font-family:'Nunito',sans-serif; }
+.afline { width:36px; height:2px; background:rgba(255,255,255,.4); border-radius:2px; margin:2px 0; }
+
+/* Crossed-7 */
+.s7 { position:relative; display:inline-block; }
+.s7::after {
+  content:''; position:absolute; left:5%; top:48%; width:90%; height:3px;
+  background:currentColor; border-radius:2px; transform:rotate(-10deg);
+  pointer-events:none; opacity:1;
+}
+
+/* ═══════════════════════════════════════════════
+   PAUSE OVERLAY (half-screen)
+═══════════════════════════════════════════════ */
+.pov {
+  display:none; position:absolute; inset:0;
+  background:rgba(0,0,0,.85); z-index:50; backdrop-filter:blur(3px);
+  flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center;
+}
+.pov.show { display:flex; }
+.pov h2 { font-family:'Bebas Neue',cursive; font-size:2.2rem; color:var(--gold); letter-spacing:4px; }
+.pov p  { font-size:.85rem; color:#8fbc8f; }
+.rbtn {
+  background:linear-gradient(135deg,#4caf50,#2e7d32); color:#fff; border:none;
+  border-radius:22px; padding:9px 28px;
+  font-family:'Bebas Neue',cursive; font-size:1.3rem; letter-spacing:2px;
+  cursor:pointer; box-shadow:0 4px 14px rgba(76,175,80,.4); transition:transform .14s;
+}
+.rbtn:hover { transform:scale(1.06); }
+
+/* ═══════════════════════════════════════════════
+   GAME OVER OVERLAY
+═══════════════════════════════════════════════ */
+#overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:100;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; text-align:center; padding:20px;
+  background:radial-gradient(ellipse at 50% 30%, rgba(26,64,26,.9) 0%, rgba(0,0,0,.95) 70%);
+}
+#overlay.show { display:flex; }
+#ovTitle {
+  font-family:'Bebas Neue',cursive; font-size:3rem; letter-spacing:6px;
+  text-shadow:0 0 30px currentColor;
+}
+#ovMsg { font-size:1rem; color:#8fbc8f; line-height:1.8; max-width:340px; }
+#restartBtn {
+  background:linear-gradient(135deg,#f5c518,#e0a800); color:#111; border:none;
+  border-radius:24px; padding:11px 36px;
+  font-family:'Bebas Neue',cursive; font-size:1.4rem; letter-spacing:3px;
+  cursor:pointer; box-shadow:0 4px 18px rgba(245,197,24,.5); transition:transform .14s;
+}
+#homeBtn2 {
+  background:rgba(255,255,255,.1); color:#ddd; border:1.5px solid rgba(255,255,255,.25);
+  border-radius:24px; padding:11px 36px;
+  font-family:'Bebas Neue',cursive; font-size:1.4rem; letter-spacing:2px; cursor:pointer;
+  transition:all .15s;
+}
+#homeBtn2:hover { background:rgba(255,255,255,.18); color:#fff; border-color:#fff; }
+
+#restartBtn:hover { transform:scale(1.06); }
+#homeFromEndBtn { background:rgba(255,255,255,.1); color:#ccc; border:1.5px solid rgba(255,255,255,.25); border-radius:24px; padding:10px 28px; font-size:1rem; font-weight:700; font-family:'Nunito',sans-serif; cursor:pointer; transition:all .15s; }
+#homeFromEndBtn:hover { background:rgba(255,255,255,.18); color:#fff; transform:scale(1.04); }
+</style>
+<script defer src="qrcode-generator.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
+</head>
+<body>
+
+<!-- ════════════════ START SCREEN ════════════════ -->
+<div id="startScreen">
+  <!-- Background footballer silhouettes -->
+  <div id="ss-players" aria-hidden="true">
+    <svg width="100%" height="100%" viewBox="0 0 900 440" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sil1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1a73e8" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#1a73e8" stop-opacity="0.04"/>
+        </linearGradient>
+        <linearGradient id="sil2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff6d00" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#ff6d00" stop-opacity="0.04"/>
+        </linearGradient>
+        <filter id="glow1">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- ── LEFT PLAYER: blue, shooting pose ───────────────────────── -->
+      <g transform="translate(60, 30) scale(2.8)" fill="url(#sil1)" filter="url(#glow1)">
+        <!-- shadow -->
+        <ellipse cx="45" cy="148" rx="32" ry="6" fill="rgba(0,0,0,.25)"/>
+        <!-- rear leg straight back -->
+        <line x1="36" y1="98" x2="14" y2="130" stroke="url(#sil1)" stroke-width="14" stroke-linecap="round"/>
+        <line x1="14" y1="130" x2="8"  y2="148" stroke="url(#sil1)" stroke-width="11" stroke-linecap="round"/>
+        <!-- front leg, knee bent — shooting -->
+        <line x1="52" y1="98" x2="72" y2="115" stroke="url(#sil1)" stroke-width="14" stroke-linecap="round"/>
+        <line x1="72" y1="115" x2="88" y2="108" stroke="url(#sil1)" stroke-width="10" stroke-linecap="round"/>
+        <!-- shorts -->
+        <path d="M20 78 Q30 100 44 100 Q58 100 66 78Z" fill="url(#sil1)"/>
+        <!-- shirt -->
+        <path d="M12 36 Q14 80 22 80 L66 80 Q72 80 76 36Z" fill="url(#sil1)"/>
+        <!-- left arm back -->
+        <line x1="16" y1="44" x2="2"  y2="62" stroke="url(#sil1)" stroke-width="12" stroke-linecap="round"/>
+        <line x1="2"  y1="62" x2="0"  y2="76" stroke="url(#sil1)" stroke-width="9"  stroke-linecap="round"/>
+        <!-- right arm raised in celebration -->
+        <line x1="72" y1="44" x2="86" y2="22" stroke="url(#sil1)" stroke-width="12" stroke-linecap="round"/>
+        <line x1="86" y1="22" x2="90" y2="6"  stroke="url(#sil1)" stroke-width="9"  stroke-linecap="round"/>
+        <!-- neck -->
+        <rect x="40" y="20" width="10" height="18" rx="5" fill="url(#sil1)"/>
+        <!-- head -->
+        <circle cx="45" cy="14" r="17" fill="url(#sil1)"/>
+        <!-- hair -->
+        <path d="M28 10 Q45 0 62 10 Q58 2 45 1 Q32 2 28 10Z" fill="url(#sil1)" opacity=".6"/>
+        <!-- ball -->
+        <circle cx="96" cy="120" r="14" fill="url(#sil1)" opacity=".7"/>
+      </g>
+
+      <!-- ── RIGHT PLAYER: orange, defending/tackling pose ─────────── -->
+      <g transform="translate(780, 10) scale(-2.6, 2.6)" fill="url(#sil2)" filter="url(#glow1)">
+        <!-- shadow -->
+        <ellipse cx="45" cy="155" rx="28" ry="5" fill="rgba(0,0,0,.2)"/>
+        <!-- sliding tackle: body angled forward -->
+        <!-- rear leg extended back on ground -->
+        <line x1="28" y1="110" x2="0"  y2="150" stroke="url(#sil2)" stroke-width="13" stroke-linecap="round"/>
+        <line x1="0"  y1="150" x2="-8" y2="155" stroke="url(#sil2)" stroke-width="10" stroke-linecap="round"/>
+        <!-- front leg lunging forward -->
+        <line x1="48" y1="110" x2="72" y2="128" stroke="url(#sil2)" stroke-width="13" stroke-linecap="round"/>
+        <line x1="72" y1="128" x2="90" y2="118" stroke="url(#sil2)" stroke-width="10" stroke-linecap="round"/>
+        <!-- shorts -->
+        <path d="M16 88 Q26 110 38 110 Q50 110 60 88Z" fill="url(#sil2)"/>
+        <!-- shirt — leaning forward -->
+        <path d="M8 30 Q18 88 26 88 L60 88 Q68 88 76 30Z" fill="url(#sil2)"/>
+        <!-- left arm reaching low -->
+        <line x1="12" y1="44" x2="0"  y2="70" stroke="url(#sil2)" stroke-width="11" stroke-linecap="round"/>
+        <line x1="0"  y1="70" x2="-4" y2="84" stroke="url(#sil2)" stroke-width="8"  stroke-linecap="round"/>
+        <!-- right arm reaching far forward -->
+        <line x1="72" y1="44" x2="90" y2="30" stroke="url(#sil2)" stroke-width="11" stroke-linecap="round"/>
+        <line x1="90" y1="30" x2="96" y2="14" stroke="url(#sil2)" stroke-width="8"  stroke-linecap="round"/>
+        <!-- neck -->
+        <rect x="38" y="16" width="10" height="16" rx="5" fill="url(#sil2)"/>
+        <!-- head -->
+        <circle cx="43" cy="10" r="15" fill="url(#sil2)"/>
+      </g>
+
+      <!-- Subtle floodlight beams from top corners -->
+      <defs>
+        <radialGradient id="beam1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(40) scale(600,80)">
+          <stop offset="0%" stop-color="rgba(255,255,220,.08)"/>
+          <stop offset="100%" stop-color="rgba(255,255,220,0)"/>
+        </radialGradient>
+        <radialGradient id="beam2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(140) scale(600,80)">
+          <stop offset="0%" stop-color="rgba(255,255,220,.08)"/>
+          <stop offset="100%" stop-color="rgba(255,255,220,0)"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="0"   cy="0" rx="500" ry="120" transform="rotate(35,0,0)" fill="url(#beam1)" opacity=".7"/>
+      <ellipse cx="900" cy="0" rx="500" ry="120" transform="rotate(-35,900,0)" fill="url(#beam2)" opacity=".7"/>
+    </svg>
+  </div>
+  <h1>⚽ MATHE-KICK</h1>
+  <p>Beantworte Rechenaufgaben, bevor der Gegner dich grätscht!</p>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+    <div class="diff-label">👥 Spieler</div>
+    <div class="pcount-select">
+      <button class="pcount-btn selected" data-pc="1" onclick="selectPCount(this)">⚽ Solo<div class="pcount-sub">1 Spieler</div></button>
+      <button class="pcount-btn" data-pc="2" onclick="selectPCount(this)">👥 Duo<div class="pcount-sub">2 Spieler</div></button>
+    </div>
+  </div>
+
+  <div class="ni" id="namesBox">
+    <div class="nf n1"><label>🔵 Spieler 1</label><input id="nm1" maxlength="12" placeholder="Name" value="Spieler 1"></div>
+    <div class="nf n2" id="nm2Box"><label>🟠 Spieler 2</label><input id="nm2" maxlength="12" placeholder="Name" value="Spieler 2"></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+    <div class="diff-label">📚 Aufgabentyp</div>
+    <div class="mode-select">
+      <button class="mode-btn selected" data-mode="ek"  onclick="selectMode(this)">📐 Erweitern / Kürzen</button>
+      <button class="mode-btn"          data-mode="add" onclick="selectMode(this)">➕ Addition</button>
+      <button class="mode-btn"          data-mode="sub" onclick="selectMode(this)">➖ Subtraktion</button>
+      <button class="mode-btn"          data-mode="mul" onclick="selectMode(this)">✖️ Multiplikation</button>
+      <button class="mode-btn"          data-mode="div" onclick="selectMode(this)">➗ Division</button>
+      <button class="mode-btn"          data-mode="ggT" onclick="selectMode(this)">🔢 ggT</button>
+      <button class="mode-btn"          data-mode="kgV" onclick="selectMode(this)">🔢 kgV</button>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+    <div class="diff-label">⚡ Schwierigkeit</div>
+    <div class="diff-select">
+      <button class="diff-btn d-anf selected" data-tl="20" onclick="selectDiff(this)">🟢 Anfänger<div class="diff-sub">20 Sek./Aufgabe</div></button>
+      <button class="diff-btn d-pro"          data-tl="15" onclick="selectDiff(this)">🟡 Profi<div class="diff-sub">15 Sek./Aufgabe</div></button>
+      <button class="diff-btn d-exp"          data-tl="10" onclick="selectDiff(this)">🔴 Experte<div class="diff-sub">10 Sek./Aufgabe</div></button>
+    </div>
+  </div>
+
+  <div class="khints">
+    <div class="kh kp1"><b>🔵 Spieler 1 — Links</b>Tasten: Q · W · E · R</div>
+    <div class="kh kp2" id="kp2hint"><b>🟠 Spieler 2 — Rechts</b>Tasten: U · I · O · P</div>
+  </div>
+  <button id="startBtn">⚽ Anpfiff!</button>
+</div>
+
+<!-- ════════════════ STADIUM SCENE ════════════════ -->
+<div id="scene">
+
+  <!-- Stadium stands SVG -->
+  <div class="crowd-section">
+    <svg width="100%" height="72" viewBox="0 0 900 72" preserveAspectRatio="none">
+      <!-- Stand tiers -->
+      <rect x="0" y="0"  width="900" height="72" fill="#0d180d"/>
+      <rect x="0" y="0"  width="900" height="22" fill="#112011"/>
+      <rect x="0" y="22" width="900" height="18" fill="#142814"/>
+      <rect x="0" y="40" width="900" height="16" fill="#183018"/>
+      <rect x="0" y="56" width="900" height="16" fill="#1c381c"/>
+      <!-- Crowd row 1 -->
+      <g opacity="0.85">
+        <circle cx="15"  cy="8"  r="4" fill="#e53935"/><circle cx="30"  cy="6"  r="4" fill="#fff"/><circle cx="45"  cy="8"  r="4" fill="#29b6f6"/><circle cx="60"  cy="6"  r="4" fill="#f5c518"/>
+        <circle cx="75"  cy="8"  r="4" fill="#e53935"/><circle cx="90"  cy="6"  r="4" fill="#4caf50"/><circle cx="105" cy="8"  r="4" fill="#fff"/>   <circle cx="120" cy="6"  r="4" fill="#ff7043"/>
+        <circle cx="135" cy="8"  r="4" fill="#e53935"/><circle cx="150" cy="6"  r="4" fill="#fff"/>   <circle cx="165" cy="8"  r="4" fill="#29b6f6"/><circle cx="180" cy="6"  r="4" fill="#f5c518"/>
+        <circle cx="195" cy="8"  r="4" fill="#4caf50"/><circle cx="210" cy="6"  r="4" fill="#e53935"/><circle cx="225" cy="8"  r="4" fill="#fff"/>   <circle cx="240" cy="6"  r="4" fill="#ff7043"/>
+        <circle cx="255" cy="8"  r="4" fill="#29b6f6"/><circle cx="270" cy="6"  r="4" fill="#e53935"/><circle cx="285" cy="8"  r="4" fill="#fff"/>   <circle cx="300" cy="6"  r="4" fill="#f5c518"/>
+        <circle cx="315" cy="8"  r="4" fill="#4caf50"/><circle cx="330" cy="6"  r="4" fill="#e53935"/><circle cx="345" cy="8"  r="4" fill="#fff"/>   <circle cx="360" cy="6"  r="4" fill="#29b6f6"/>
+        <circle cx="375" cy="8"  r="4" fill="#ff7043"/><circle cx="390" cy="6"  r="4" fill="#f5c518"/><circle cx="405" cy="8"  r="4" fill="#e53935"/><circle cx="420" cy="6"  r="4" fill="#fff"/>
+        <circle cx="435" cy="8"  r="4" fill="#29b6f6"/><circle cx="450" cy="6"  r="4" fill="#4caf50"/><circle cx="465" cy="8"  r="4" fill="#e53935"/><circle cx="480" cy="6"  r="4" fill="#f5c518"/>
+        <circle cx="495" cy="8"  r="4" fill="#fff"/>   <circle cx="510" cy="6"  r="4" fill="#ff7043"/><circle cx="525" cy="8"  r="4" fill="#e53935"/><circle cx="540" cy="6"  r="4" fill="#29b6f6"/>
+        <circle cx="555" cy="8"  r="4" fill="#f5c518"/><circle cx="570" cy="6"  r="4" fill="#4caf50"/><circle cx="585" cy="8"  r="4" fill="#fff"/>   <circle cx="600" cy="6"  r="4" fill="#e53935"/>
+        <circle cx="615" cy="8"  r="4" fill="#29b6f6"/><circle cx="630" cy="6"  r="4" fill="#fff"/>   <circle cx="645" cy="8"  r="4" fill="#ff7043"/><circle cx="660" cy="6"  r="4" fill="#e53935"/>
+        <circle cx="675" cy="8"  r="4" fill="#f5c518"/><circle cx="690" cy="6"  r="4" fill="#4caf50"/><circle cx="705" cy="8"  r="4" fill="#fff"/>   <circle cx="720" cy="6"  r="4" fill="#29b6f6"/>
+        <circle cx="735" cy="8"  r="4" fill="#e53935"/><circle cx="750" cy="6"  r="4" fill="#fff"/>   <circle cx="765" cy="8"  r="4" fill="#f5c518"/><circle cx="780" cy="6"  r="4" fill="#4caf50"/>
+        <circle cx="795" cy="8"  r="4" fill="#e53935"/><circle cx="810" cy="6"  r="4" fill="#29b6f6"/><circle cx="825" cy="8"  r="4" fill="#fff"/>   <circle cx="840" cy="6"  r="4" fill="#ff7043"/>
+        <circle cx="855" cy="8"  r="4" fill="#e53935"/><circle cx="870" cy="6"  r="4" fill="#fff"/>   <circle cx="885" cy="8"  r="4" fill="#4caf50"/>
+      </g>
+      <!-- Crowd row 2 -->
+      <g opacity="0.75">
+        <circle cx="22"  cy="28" r="3.5" fill="#fff"/>  <circle cx="37"  cy="30" r="3.5" fill="#e53935"/><circle cx="52"  cy="28" r="3.5" fill="#29b6f6"/><circle cx="67"  cy="30" r="3.5" fill="#f5c518"/>
+        <circle cx="82"  cy="28" r="3.5" fill="#4caf50"/><circle cx="97"  cy="30" r="3.5" fill="#e53935"/><circle cx="112" cy="28" r="3.5" fill="#fff"/>   <circle cx="127" cy="30" r="3.5" fill="#ff7043"/>
+        <circle cx="142" cy="28" r="3.5" fill="#29b6f6"/><circle cx="157" cy="30" r="3.5" fill="#e53935"/><circle cx="172" cy="28" r="3.5" fill="#f5c518"/><circle cx="187" cy="30" r="3.5" fill="#fff"/>
+        <circle cx="202" cy="28" r="3.5" fill="#4caf50"/><circle cx="217" cy="30" r="3.5" fill="#e53935"/><circle cx="232" cy="28" r="3.5" fill="#29b6f6"/><circle cx="247" cy="30" r="3.5" fill="#fff"/>
+        <circle cx="262" cy="28" r="3.5" fill="#ff7043"/><circle cx="277" cy="30" r="3.5" fill="#f5c518"/><circle cx="292" cy="28" r="3.5" fill="#e53935"/><circle cx="307" cy="30" r="3.5" fill="#4caf50"/>
+        <circle cx="322" cy="28" r="3.5" fill="#fff"/>  <circle cx="337" cy="30" r="3.5" fill="#29b6f6"/><circle cx="352" cy="28" r="3.5" fill="#e53935"/><circle cx="367" cy="30" r="3.5" fill="#f5c518"/>
+        <circle cx="382" cy="28" r="3.5" fill="#4caf50"/><circle cx="397" cy="30" r="3.5" fill="#fff"/>   <circle cx="412" cy="28" r="3.5" fill="#e53935"/><circle cx="427" cy="30" r="3.5" fill="#29b6f6"/>
+        <circle cx="442" cy="28" r="3.5" fill="#ff7043"/><circle cx="457" cy="30" r="3.5" fill="#f5c518"/><circle cx="472" cy="28" r="3.5" fill="#e53935"/><circle cx="487" cy="30" r="3.5" fill="#fff"/>
+        <circle cx="502" cy="28" r="3.5" fill="#29b6f6"/><circle cx="517" cy="30" r="3.5" fill="#4caf50"/><circle cx="532" cy="28" r="3.5" fill="#e53935"/><circle cx="547" cy="30" r="3.5" fill="#f5c518"/>
+        <circle cx="562" cy="28" r="3.5" fill="#fff"/>  <circle cx="577" cy="30" r="3.5" fill="#e53935"/><circle cx="592" cy="28" r="3.5" fill="#29b6f6"/><circle cx="607" cy="30" r="3.5" fill="#ff7043"/>
+        <circle cx="622" cy="28" r="3.5" fill="#4caf50"/><circle cx="637" cy="30" r="3.5" fill="#e53935"/><circle cx="652" cy="28" r="3.5" fill="#fff"/>   <circle cx="667" cy="30" r="3.5" fill="#f5c518"/>
+        <circle cx="682" cy="28" r="3.5" fill="#e53935"/><circle cx="697" cy="30" r="3.5" fill="#29b6f6"/><circle cx="712" cy="28" r="3.5" fill="#fff"/>   <circle cx="727" cy="30" r="3.5" fill="#4caf50"/>
+        <circle cx="742" cy="28" r="3.5" fill="#ff7043"/><circle cx="757" cy="30" r="3.5" fill="#e53935"/><circle cx="772" cy="28" r="3.5" fill="#f5c518"/><circle cx="787" cy="30" r="3.5" fill="#fff"/>
+        <circle cx="802" cy="28" r="3.5" fill="#29b6f6"/><circle cx="817" cy="30" r="3.5" fill="#e53935"/><circle cx="832" cy="28" r="3.5" fill="#4caf50"/><circle cx="847" cy="30" r="3.5" fill="#fff"/>
+        <circle cx="862" cy="28" r="3.5" fill="#f5c518"/><circle cx="877" cy="30" r="3.5" fill="#e53935"/>
+      </g>
+      <!-- Crowd row 3 -->
+      <g opacity="0.6">
+        <circle cx="18"  cy="46" r="3" fill="#e53935"/><circle cx="33" cy="48" r="3" fill="#fff"/><circle cx="48" cy="46" r="3" fill="#4caf50"/><circle cx="63" cy="48" r="3" fill="#29b6f6"/>
+        <circle cx="78"  cy="46" r="3" fill="#f5c518"/><circle cx="93" cy="48" r="3" fill="#e53935"/><circle cx="108" cy="46" r="3" fill="#fff"/><circle cx="123" cy="48" r="3" fill="#ff7043"/>
+        <circle cx="138" cy="46" r="3" fill="#4caf50"/><circle cx="153" cy="48" r="3" fill="#e53935"/><circle cx="168" cy="46" r="3" fill="#29b6f6"/><circle cx="183" cy="48" r="3" fill="#fff"/>
+        <circle cx="198" cy="46" r="3" fill="#f5c518"/><circle cx="213" cy="48" r="3" fill="#4caf50"/><circle cx="228" cy="46" r="3" fill="#e53935"/><circle cx="243" cy="48" r="3" fill="#29b6f6"/>
+        <circle cx="258" cy="46" r="3" fill="#fff"/><circle cx="273" cy="48" r="3" fill="#e53935"/><circle cx="288" cy="46" r="3" fill="#ff7043"/><circle cx="303" cy="48" r="3" fill="#f5c518"/>
+        <circle cx="318" cy="46" r="3" fill="#4caf50"/><circle cx="333" cy="48" r="3" fill="#e53935"/><circle cx="348" cy="46" r="3" fill="#fff"/><circle cx="363" cy="48" r="3" fill="#29b6f6"/>
+        <circle cx="378" cy="46" r="3" fill="#e53935"/><circle cx="393" cy="48" r="3" fill="#f5c518"/><circle cx="408" cy="46" r="3" fill="#4caf50"/><circle cx="423" cy="48" r="3" fill="#fff"/>
+        <circle cx="438" cy="46" r="3" fill="#29b6f6"/><circle cx="453" cy="48" r="3" fill="#e53935"/><circle cx="468" cy="46" r="3" fill="#ff7043"/><circle cx="483" cy="48" r="3" fill="#f5c518"/>
+        <circle cx="498" cy="46" r="3" fill="#4caf50"/><circle cx="513" cy="48" r="3" fill="#e53935"/><circle cx="528" cy="46" r="3" fill="#29b6f6"/><circle cx="543" cy="48" r="3" fill="#fff"/>
+        <circle cx="558" cy="46" r="3" fill="#f5c518"/><circle cx="573" cy="48" r="3" fill="#4caf50"/><circle cx="588" cy="46" r="3" fill="#e53935"/><circle cx="603" cy="48" r="3" fill="#fff"/>
+        <circle cx="618" cy="46" r="3" fill="#29b6f6"/><circle cx="633" cy="48" r="3" fill="#e53935"/><circle cx="648" cy="46" r="3" fill="#ff7043"/><circle cx="663" cy="48" r="3" fill="#f5c518"/>
+        <circle cx="678" cy="46" r="3" fill="#4caf50"/><circle cx="693" cy="48" r="3" fill="#e53935"/><circle cx="708" cy="46" r="3" fill="#fff"/><circle cx="723" cy="48" r="3" fill="#29b6f6"/>
+        <circle cx="738" cy="46" r="3" fill="#e53935"/><circle cx="753" cy="48" r="3" fill="#f5c518"/><circle cx="768" cy="46" r="3" fill="#4caf50"/><circle cx="783" cy="48" r="3" fill="#fff"/>
+        <circle cx="798" cy="46" r="3" fill="#29b6f6"/><circle cx="813" cy="48" r="3" fill="#e53935"/><circle cx="828" cy="46" r="3" fill="#ff7043"/><circle cx="843" cy="48" r="3" fill="#f5c518"/>
+        <circle cx="858" cy="46" r="3" fill="#4caf50"/><circle cx="873" cy="48" r="3" fill="#e53935"/><circle cx="888" cy="46" r="3" fill="#fff"/>
+      </g>
+      <!-- Floodlight masts -->
+      <rect x="8"   y="0" width="6" height="72" fill="#2a3a2a"/>
+      <rect x="4"   y="0" width="14" height="6" fill="#ccc"/>
+      <rect x="4"   y="0" width="14" height="3" fill="#fff" opacity=".6"/>
+      <rect x="441" y="0" width="6" height="72" fill="#2a3a2a"/>
+      <rect x="437" y="0" width="14" height="6" fill="#ccc"/>
+      <rect x="437" y="0" width="14" height="3" fill="#fff" opacity=".6"/>
+      <rect x="453" y="0" width="6" height="72" fill="#2a3a2a"/>
+      <rect x="449" y="0" width="14" height="6" fill="#ccc"/>
+      <rect x="449" y="0" width="14" height="3" fill="#fff" opacity=".6"/>
+      <rect x="886" y="0" width="6" height="72" fill="#2a3a2a"/>
+      <rect x="882" y="0" width="14" height="6" fill="#ccc"/>
+      <rect x="882" y="0" width="14" height="3" fill="#fff" opacity=".6"/>
+    </svg>
+  </div>
+
+  <!-- Pitch floor in scene -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:58px;background:linear-gradient(180deg,#1a6b1a,#226022);border-top:2px solid rgba(255,255,255,.25)">
+    <!-- Center circle half -->
+    <svg width="100%" height="58" viewBox="0 0 900 58" preserveAspectRatio="none" style="position:absolute;top:0;left:0">
+      <ellipse cx="450" cy="58" rx="60" ry="40" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <line x1="450" y1="0" x2="450" y2="58" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <div id="scene-div"></div>
+  <div class="lane-label" id="lbl1">P1</div>
+  <div class="lane-label" id="lbl2">P2</div>
+
+  <!-- Goal P1 (right side of left half) -->
+  <div class="goal" id="goal1">
+    <svg width="32" height="56" viewBox="0 0 32 56" fill="none">
+      <!-- net background -->
+      <rect x="2" y="2" width="28" height="50" fill="rgba(255,255,255,0.06)" rx="1"/>
+      <!-- frame -->
+      <rect x="2" y="2" width="28" height="50" fill="none" stroke="white" stroke-width="3" rx="1"/>
+      <!-- crossbar highlight -->
+      <rect x="2" y="2" width="28" height="3" fill="rgba(255,255,255,.3)" rx="1"/>
+      <!-- net lines vertical -->
+      <line x1="10" y1="2"  x2="10" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="18" y1="2"  x2="18" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="26" y1="2"  x2="26" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <!-- net lines horizontal -->
+      <line x1="2" y1="14" x2="30" y2="14" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="2" y1="26" x2="30" y2="26" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="2" y1="38" x2="30" y2="38" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <!-- post shadow/depth -->
+      <line x1="2" y1="2" x2="2" y2="52" stroke="rgba(255,255,255,.5)" stroke-width="3"/>
+    </svg>
+  </div>
+  <!-- Goal P2 (left side of right half) -->
+  <div class="goal" id="goal2">
+    <svg width="32" height="56" viewBox="0 0 32 56" fill="none">
+      <!-- net background -->
+      <rect x="2" y="2" width="28" height="50" fill="rgba(255,255,255,0.06)" rx="1"/>
+      <!-- frame -->
+      <rect x="2" y="2" width="28" height="50" fill="none" stroke="white" stroke-width="3" rx="1"/>
+      <!-- crossbar highlight -->
+      <rect x="2" y="2" width="28" height="3" fill="rgba(255,255,255,.3)" rx="1"/>
+      <!-- net lines vertical -->
+      <line x1="10" y1="2"  x2="10" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="18" y1="2"  x2="18" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="26" y1="2"  x2="26" y2="52" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <!-- net lines horizontal -->
+      <line x1="2" y1="14" x2="30" y2="14" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="2" y1="26" x2="30" y2="26" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <line x1="2" y1="38" x2="30" y2="38" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+      <!-- post shadow/depth -->
+      <line x1="2" y1="2" x2="2" y2="52" stroke="rgba(255,255,255,.5)" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- P1: attacker with ball (blue kit) -->
+  <div class="moto" id="moto1">
+<svg width="80" height="90" viewBox="0 0 80 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- ground shadow -->
+  <ellipse cx="42" cy="88" rx="22" ry="4" fill="rgba(0,0,0,.4)"/>
+  
+  <!-- Ball -->
+  <g id="ball">
+    <circle cx="68" cy="62" r="10" fill="#f9f9f9" stroke="#222" stroke-width="1.8"/>
+    <!-- pentagon patches -->
+    <polygon points="68,53 72,58 70,64 66,64 64,58" fill="#222" opacity=".85"/>
+    <polygon points="68,53 72,58" fill="none" stroke="#222" stroke-width=".8"/>
+    <polygon points="72,58 78,57 79,63 74,67 70,64" fill="#222" opacity=".2"/>
+    <polygon points="64,58 58,59 58,65 64,67 66,64" fill="#222" opacity=".2"/>
+  </g>
+  <!-- rear leg (left, extended back) -->
+  <line x1="34" y1="56" x2="22" y2="74" stroke="#f9c784" stroke-width="9" stroke-linecap="round"/>
+  <line x1="22" y1="74" x2="18" y2="82" stroke="#1a73e8" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="15" cy="83" rx="7" ry="4" fill="#111" transform="rotate(-10,15,83)"/>
+  <!-- front leg (right, kicking forward) -->
+  <line x1="44" y1="56" x2="56" y2="66" stroke="#f9c784" stroke-width="9" stroke-linecap="round"/>
+  <line x1="56" y1="66" x2="66" y2="63" stroke="#1a73e8" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="70" cy="62" rx="7" ry="4" fill="#111" transform="rotate(-5,70,62)"/>
+  <!-- shorts -->
+  <path d="M24 44 Q30 57 39 57 Q48 57 54 44Z" fill="#0d47a1"/>
+  <!-- shirt body -->
+  <path d="M14 22 Q16 44 24 44 L54 44 Q62 44 64 22Z" fill="#1976d2"/>
+  <!-- shirt side shadow -->
+  <path d="M14 22 Q14 36 20 44" fill="none" stroke="#1565c0" stroke-width="2" opacity=".6"/>
+  <path d="M64 22 Q64 36 58 44" fill="none" stroke="#1565c0" stroke-width="2" opacity=".6"/>
+  <!-- shirt chest stripe -->
+  <path d="M26 22 L26 44 Q33 48 39 44 L39 22Z" fill="#1565c0" opacity=".45"/>
+  <!-- number -->
+  <text x="46" y="40" font-size="13" font-weight="900" fill="white" font-family="Arial Black,Arial" opacity=".95">10</text>
+  <!-- collar -->
+  <path d="M32 22 Q39 27 46 22" fill="#0d47a1" stroke="#0d47a1" stroke-width="1"/>
+  <!-- rear arm (left, swings back) -->
+  <line x1="18" y1="26" x2="7" y2="36" stroke="#1976d2" stroke-width="8" stroke-linecap="round"/>
+  <line x1="7" y1="36" x2="5" y2="46" stroke="#f9c784" stroke-width="6" stroke-linecap="round"/>
+  <!-- front arm (right, pumps forward) -->
+  <line x1="60" y1="26" x2="70" y2="33" stroke="#1976d2" stroke-width="8" stroke-linecap="round"/>
+  <line x1="70" y1="33" x2="74" y2="43" stroke="#f9c784" stroke-width="6" stroke-linecap="round"/>
+  <!-- neck -->
+  <rect x="35" y="12" width="9" height="12" rx="4" fill="#f9c784"/>
+  <!-- head -->
+  <circle cx="39" cy="10" r="14" fill="#f9c784"/>
+  <!-- hair — brown short -->
+  <path d="M25 8 Q30 0 39 0 Q48 0 53 8 Q50 3 39 2 Q28 3 25 8Z" fill="#5c3317"/>
+  <path d="M25 8 Q23 12 25 16" fill="#5c3317"/>
+  <path d="M53 8 Q55 12 53 16" fill="#5c3317"/>
+  <!-- ear left -->
+  <ellipse cx="25" cy="10" rx="3.5" ry="4.5" fill="#e8a87c"/>
+  <!-- ear right -->
+  <ellipse cx="53" cy="10" rx="3.5" ry="4.5" fill="#e8a87c"/>
+  <!-- eyes -->
+  <ellipse cx="34" cy="10" rx="3.2" ry="3" fill="white"/>
+  <circle cx="35" cy="10" r="1.8" fill="#3a2000"/>
+  <circle cx="35.8" cy="9.2" r=".6" fill="white"/>
+  <ellipse cx="44" cy="10" rx="3.2" ry="3" fill="white"/>
+  <circle cx="45" cy="10" r="1.8" fill="#3a2000"/>
+  <circle cx="45.8" cy="9.2" r=".6" fill="white"/>
+  <!-- eyebrows -->
+  <path d="M31 6.5 Q34 5 37 6.5" stroke="#5c3317" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M41 6.5 Q44 5 47 6.5" stroke="#5c3317" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <!-- mouth — smile -->
+  <path d="M35 15 Q39 18 43 15" stroke="#d4886a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>
+  </div>
+
+  <!-- P1 defender (red kit) — chases from left -->
+  <div class="boulder" id="boulder1">
+<svg width="68" height="90" viewBox="0 0 68 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="32" cy="88" rx="18" ry="4" fill="rgba(0,0,0,.4)"/>
+  <!-- rear leg -->
+  <line x1="26" y1="56" x2="14" y2="72" stroke="#f9c784" stroke-width="9" stroke-linecap="round"/>
+  <line x1="14" y1="72" x2="10" y2="80" stroke="#c62828" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="7" cy="81" rx="7" ry="4" fill="#111" transform="rotate(-8,7,81)"/>
+  <!-- front leg (aggressive stride) -->
+  <line x1="38" y1="56" x2="52" y2="64" stroke="#f9c784" stroke-width="9" stroke-linecap="round"/>
+  <line x1="52" y1="64" x2="60" y2="60" stroke="#c62828" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="63" cy="59" rx="7" ry="4" fill="#111" transform="rotate(-5,63,59)"/>
+  <!-- shorts -->
+  <path d="M16 44 Q22 57 32 57 Q42 57 48 44Z" fill="#7f0000"/>
+  <!-- shirt -->
+  <path d="M8 22 Q10 44 16 44 L48 44 Q56 44 58 22Z" fill="#d32f2f"/>
+  <path d="M8 22 Q8 36 14 44" fill="none" stroke="#c62828" stroke-width="2" opacity=".6"/>
+  <path d="M58 22 Q58 36 52 44" fill="none" stroke="#c62828" stroke-width="2" opacity=".6"/>
+  <text x="32" y="40" font-size="13" font-weight="900" fill="white" font-family="Arial Black,Arial" opacity=".95" text-anchor="middle">5</text>
+  <path d="M26 22 Q32 26 38 22" fill="#7f0000" stroke="#7f0000" stroke-width="1"/>
+  <!-- arm left (back) -->
+  <line x1="12" y1="26" x2="3" y2="35" stroke="#d32f2f" stroke-width="8" stroke-linecap="round"/>
+  <line x1="3" y1="35" x2="1" y2="45" stroke="#f9c784" stroke-width="6" stroke-linecap="round"/>
+  <!-- arm right (lunging forward aggressively) -->
+  <line x1="52" y1="26" x2="64" y2="18" stroke="#d32f2f" stroke-width="8" stroke-linecap="round"/>
+  <line x1="64" y1="18" x2="68" y2="10" stroke="#f9c784" stroke-width="6" stroke-linecap="round"/>
+  <!-- neck + head -->
+  <rect x="29" y="12" width="9" height="12" rx="4" fill="#f9c784"/>
+  <circle cx="33" cy="10" r="13" fill="#f9c784"/>
+  <!-- hair — buzzcut / close crop -->
+  <path d="M20 8 Q22 2 33 1 Q44 2 46 8 Q43 4 33 3 Q23 4 20 8Z" fill="#111"/>
+  <path d="M20 8 Q19 11 20 14" fill="#111"/>
+  <path d="M46 8 Q47 11 46 14" fill="#111"/>
+  <!-- ear left -->
+  <ellipse cx="20" cy="10" rx="3.2" ry="4.2" fill="#e8a87c"/>
+  <!-- ear right -->
+  <ellipse cx="46" cy="10" rx="3.2" ry="4.2" fill="#e8a87c"/>
+  <!-- eyes — fierce/narrow -->
+  <ellipse cx="28" cy="10" rx="3" ry="2.2" fill="white"/>
+  <circle cx="29" cy="10" r="1.6" fill="#111"/>
+  <circle cx="29.6" cy="9.3" r=".5" fill="white"/>
+  <ellipse cx="38" cy="10" rx="3" ry="2.2" fill="white"/>
+  <circle cx="39" cy="10" r="1.6" fill="#111"/>
+  <circle cx="39.6" cy="9.3" r=".5" fill="white"/>
+  <!-- angry brows — V-shaped -->
+  <path d="M24 6 L30 8" stroke="#111" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M35 8 L41 6" stroke="#111" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- grimace / set jaw -->
+  <path d="M28 15 L38 15" stroke="#c07050" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M30 14.5 L30 16" stroke="#c07050" stroke-width="1" fill="none"/>
+  <path d="M33 14.5 L33 16" stroke="#c07050" stroke-width="1" fill="none"/>
+  <path d="M36 14.5 L36 16" stroke="#c07050" stroke-width="1" fill="none"/>
+</svg>
+  </div>
+  <div class="crash-sym" id="cs1">🦵</div>
+
+  <!-- P2: attacker with ball (orange kit) -->
+  <div class="moto" id="moto2">
+<svg width="80" height="90" viewBox="0 0 80 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="42" cy="88" rx="22" ry="4" fill="rgba(0,0,0,.4)"/>
+  
+  <!-- Ball -->
+  <g id="ball">
+    <circle cx="68" cy="62" r="10" fill="#f9f9f9" stroke="#222" stroke-width="1.8"/>
+    <!-- pentagon patches -->
+    <polygon points="68,53 72,58 70,64 66,64 64,58" fill="#222" opacity=".85"/>
+    <polygon points="68,53 72,58" fill="none" stroke="#222" stroke-width=".8"/>
+    <polygon points="72,58 78,57 79,63 74,67 70,64" fill="#222" opacity=".2"/>
+    <polygon points="64,58 58,59 58,65 64,67 66,64" fill="#222" opacity=".2"/>
+  </g>
+  <!-- rear leg -->
+  <line x1="34" y1="56" x2="22" y2="74" stroke="#f0c490" stroke-width="9" stroke-linecap="round"/>
+  <line x1="22" y1="74" x2="18" y2="82" stroke="#e65100" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="15" cy="83" rx="7" ry="4" fill="#111" transform="rotate(-10,15,83)"/>
+  <!-- front leg -->
+  <line x1="44" y1="56" x2="56" y2="66" stroke="#f0c490" stroke-width="9" stroke-linecap="round"/>
+  <line x1="56" y1="66" x2="66" y2="63" stroke="#e65100" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="70" cy="62" rx="7" ry="4" fill="#111" transform="rotate(-5,70,62)"/>
+  <!-- shorts -->
+  <path d="M24 44 Q30 57 39 57 Q48 57 54 44Z" fill="#bf360c"/>
+  <!-- shirt -->
+  <path d="M14 22 Q16 44 24 44 L54 44 Q62 44 64 22Z" fill="#ff6d00"/>
+  <path d="M14 22 Q14 36 20 44" fill="none" stroke="#e65100" stroke-width="2" opacity=".6"/>
+  <path d="M64 22 Q64 36 58 44" fill="none" stroke="#e65100" stroke-width="2" opacity=".6"/>
+  <path d="M26 22 L26 44 Q33 48 39 44 L39 22Z" fill="#e65100" opacity=".45"/>
+  <text x="46" y="40" font-size="16" font-weight="900" fill="white" font-family="Arial Black,Arial" opacity=".95">7</text>
+  <path d="M32 22 Q39 27 46 22" fill="#bf360c" stroke="#bf360c" stroke-width="1"/>
+  <!-- arms -->
+  <line x1="18" y1="26" x2="7" y2="36" stroke="#ff6d00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="7" y1="36" x2="5" y2="46" stroke="#f0c490" stroke-width="6" stroke-linecap="round"/>
+  <line x1="60" y1="26" x2="70" y2="33" stroke="#ff6d00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="70" y1="33" x2="74" y2="43" stroke="#f0c490" stroke-width="6" stroke-linecap="round"/>
+  <!-- neck + head — darker skin tone -->
+  <rect x="35" y="12" width="9" height="12" rx="4" fill="#c8956c"/>
+  <circle cx="39" cy="10" r="14" fill="#c8956c"/>
+  <!-- hair — dark, different style -->
+  <path d="M26 12 Q26 3 39 1 Q52 3 52 12 Q49 5 39 4 Q29 5 26 12Z" fill="#1a0a00"/>
+  <!-- ear left -->
+  <ellipse cx="25" cy="10" rx="3.5" ry="4.5" fill="#b07850"/>
+  <!-- ear right -->
+  <ellipse cx="53" cy="10" rx="3.5" ry="4.5" fill="#b07850"/>
+  <!-- eyes -->
+  <ellipse cx="34" cy="10" rx="3.2" ry="3" fill="white"/>
+  <circle cx="35" cy="10" r="1.8" fill="#1a0a00"/>
+  <circle cx="35.8" cy="9.2" r=".6" fill="white"/>
+  <ellipse cx="44" cy="10" rx="3.2" ry="3" fill="white"/>
+  <circle cx="45" cy="10" r="1.8" fill="#1a0a00"/>
+  <circle cx="45.8" cy="9.2" r=".6" fill="white"/>
+  <!-- eyebrows -->
+  <path d="M31 6.5 Q34 5 37 6.5" stroke="#1a0a00" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M41 6.5 Q44 5 47 6.5" stroke="#1a0a00" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <!-- mouth -->
+  <path d="M35 15 Q39 18 43 15" stroke="#a06040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>
+  </div>
+
+  <!-- P2 defender (green kit) -->
+  <div class="boulder" id="boulder2">
+<svg width="68" height="90" viewBox="0 0 68 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="32" cy="88" rx="18" ry="4" fill="rgba(0,0,0,.4)"/>
+  <!-- rear leg -->
+  <line x1="26" y1="56" x2="14" y2="72" stroke="#c8956c" stroke-width="9" stroke-linecap="round"/>
+  <line x1="14" y1="72" x2="10" y2="80" stroke="#1b5e20" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="7" cy="81" rx="7" ry="4" fill="#111" transform="rotate(-8,7,81)"/>
+  <!-- front leg -->
+  <line x1="38" y1="56" x2="52" y2="64" stroke="#c8956c" stroke-width="9" stroke-linecap="round"/>
+  <line x1="52" y1="64" x2="60" y2="60" stroke="#1b5e20" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="63" cy="59" rx="7" ry="4" fill="#111" transform="rotate(-5,63,59)"/>
+  <!-- shorts -->
+  <path d="M16 44 Q22 57 32 57 Q42 57 48 44Z" fill="#1a3a1a"/>
+  <!-- shirt -->
+  <path d="M8 22 Q10 44 16 44 L48 44 Q56 44 58 22Z" fill="#388e3c"/>
+  <path d="M8 22 Q8 36 14 44" fill="none" stroke="#2e7d32" stroke-width="2" opacity=".6"/>
+  <path d="M58 22 Q58 36 52 44" fill="none" stroke="#2e7d32" stroke-width="2" opacity=".6"/>
+  <text x="32" y="40" font-size="13" font-weight="900" fill="white" font-family="Arial Black,Arial" opacity=".95" text-anchor="middle">4</text>
+  <path d="M26 22 Q32 26 38 22" fill="#1b5e20" stroke="#1b5e20" stroke-width="1"/>
+  <!-- arm left (back) -->
+  <line x1="12" y1="26" x2="3" y2="35" stroke="#388e3c" stroke-width="8" stroke-linecap="round"/>
+  <line x1="3" y1="35" x2="1" y2="45" stroke="#c8956c" stroke-width="6" stroke-linecap="round"/>
+  <!-- arm right (lunging) -->
+  <line x1="52" y1="26" x2="64" y2="18" stroke="#388e3c" stroke-width="8" stroke-linecap="round"/>
+  <line x1="64" y1="18" x2="68" y2="10" stroke="#c8956c" stroke-width="6" stroke-linecap="round"/>
+  <!-- neck + head — dark skin -->
+  <rect x="29" y="12" width="9" height="12" rx="4" fill="#8d5524"/>
+  <circle cx="33" cy="10" r="13" fill="#8d5524"/>
+  <!-- hair — short afro / tight curls -->
+  <path d="M20 10 Q20 1 33 0 Q46 1 46 10 Q43 3 33 2 Q23 3 20 10Z" fill="#1a0a00"/>
+  <path d="M20 10 Q18 14 20 16" fill="#1a0a00"/>
+  <path d="M46 10 Q48 14 46 16" fill="#1a0a00"/>
+  <!-- ear left -->
+  <ellipse cx="20" cy="10" rx="3.2" ry="4.2" fill="#7a3e10"/>
+  <!-- ear right -->
+  <ellipse cx="46" cy="10" rx="3.2" ry="4.2" fill="#7a3e10"/>
+  <!-- eyes -->
+  <ellipse cx="28" cy="10" rx="3" ry="2.2" fill="white"/>
+  <circle cx="29" cy="10" r="1.6" fill="#1a0a00"/>
+  <circle cx="29.6" cy="9.3" r=".5" fill="white"/>
+  <ellipse cx="38" cy="10" rx="3" ry="2.2" fill="white"/>
+  <circle cx="39" cy="10" r="1.6" fill="#1a0a00"/>
+  <circle cx="39.6" cy="9.3" r=".5" fill="white"/>
+  <!-- angry brows -->
+  <path d="M24 6 L30 8" stroke="#1a0a00" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M35 8 L41 6" stroke="#1a0a00" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- grimace -->
+  <path d="M28 15 L38 15" stroke="#6a3010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M30 14.5 L30 16" stroke="#6a3010" stroke-width="1"/>
+  <path d="M33 14.5 L33 16" stroke="#6a3010" stroke-width="1"/>
+  <path d="M36 14.5 L36 16" stroke="#6a3010" stroke-width="1"/>
+</svg>
+  </div>
+  <div class="crash-sym" id="cs2">🦵</div>
+
+</div>
+
+<!-- ════════════════ GRASS PITCH ════════════════ -->
+<div id="roads">
+  <div id="road1">
+    <div class="road-stripe" style="left:0px"></div>
+    <div class="road-stripe" style="left:92px"></div>
+    <div class="road-stripe" style="left:184px"></div>
+    <div class="road-stripe" style="left:276px"></div>
+    <div class="road-stripe" style="left:368px"></div>
+  </div>
+  <div id="road-div"></div>
+  <div id="road2">
+    <div class="road-stripe" style="left:0px"></div>
+    <div class="road-stripe" style="left:92px"></div>
+    <div class="road-stripe" style="left:184px"></div>
+    <div class="road-stripe" style="left:276px"></div>
+    <div class="road-stripe" style="left:368px"></div>
+  </div>
+</div>
+
+<!-- ════════════════ HOME BAR ════════════════ -->
+<div id="home-bar">
+  <button class="home-btn" id="homeBtn">🏠 Zum Start</button>
+</div>
+
+<!-- ════════════════ TIMERS ════════════════ -->
+<div id="timers">
+  <div class="thalf"><div class="tbar" id="tb1"></div></div>
+  <div class="tdiv"></div>
+  <div class="thalf"><div class="tbar" id="tb2"></div></div>
+</div>
+
+<!-- ════════════════ ARENA ════════════════ -->
+<div id="arena">
+  <div class="ppanel p1" id="panel1">
+    <div class="info-row">
+      <button class="pbtn" id="pb1">⏸</button>
+      <div class="sdisplay">Tore: <b id="sc1">0</b></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="pdots" id="dt1"></div>
+        <span class="ptext" id="pt1">0/10</span>
+      </div>
+    </div>
+    <div class="frac-area">
+      <div class="task-big">
+        <span class="task-verb"   id="vb1"></span>
+        <span class="task-factor" id="fc1"></span>
+      </div>
+      <div class="frac-box">
+        <div class="frac-num" id="tp1"></div>
+        <div class="frac-line"></div>
+        <div class="frac-num" id="bt1"></div>
+      </div>
+    </div>
+    <div class="answers" id="an1"></div>
+    <div class="pov" id="pov1">
+      <h2>⏸ PAUSE</h2>
+      <p id="pn1"></p>
+      <button class="rbtn" id="rv1">▶ Weiter!</button>
+    </div>
+  </div>
+
+  <div class="adiv"></div>
+
+  <div class="ppanel p2" id="panel2">
+    <div class="info-row">
+      <button class="pbtn" id="pb2">⏸</button>
+      <div class="sdisplay">Tore: <b id="sc2">0</b></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="pdots" id="dt2"></div>
+        <span class="ptext" id="pt2">0/10</span>
+      </div>
+    </div>
+    <div class="frac-area">
+      <div class="task-big">
+        <span class="task-verb"   id="vb2"></span>
+        <span class="task-factor" id="fc2"></span>
+      </div>
+      <div class="frac-box">
+        <div class="frac-num" id="tp2"></div>
+        <div class="frac-line"></div>
+        <div class="frac-num" id="bt2"></div>
+      </div>
+    </div>
+    <div class="answers" id="an2"></div>
+    <div class="pov" id="pov2">
+      <h2>⏸ PAUSE</h2>
+      <p id="pn2"></p>
+      <button class="rbtn" id="rv2">▶ Weiter!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ GAME OVER ════════════════ -->
+<div id="overlay">
+  <div id="ovTitle"></div>
+  <div id="ovMsg"></div>
+  <button id="restartBtn">🔄 Nochmal!</button>
+  <button id="homeFromEndBtn">🏠 Zum Start</button>
+</div>
+
+<script>
+let TL=20;const TQ=10;
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function lcm(a,b){return a*b/gcd(a,b);}
+function sf(){const p=[[1,2],[1,3],[1,4],[2,3],[3,4],[1,5],[2,5],[3,5],[4,5],[1,6],[5,6],[1,8],[3,8],[5,8],[7,8]];return p[Math.floor(Math.random()*p.length)];}
+function rnd(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function simplify(n,d){const g=gcd(Math.abs(n),Math.abs(d));return[n/g,d/g];}
+
+// Generate 3 wrong fraction answers near [cn,cd]
+function wrongsFrac(cn,cd){
+  const ws=new Set();
+  const key=(a,b)=>a+'/'+b,ok=(a,b)=>b>0&&a>0&&key(a,b)!==key(cn,cd);
+  // Always keep the same denominator so no wrong answer looks "simplified"
+  const offsets=[1,-1,2,-2,3,-3,4,-4,5,-5,6,-6];
+  for(const o of offsets){const a=cn+o;if(ok(a,cd))ws.add(key(a,cd)+'|'+a+','+cd);if(ws.size>=3)break;}
+  for(let e=1;ws.size<3;e++){const a=cn+e+10;if(ok(a,cd))ws.add(key(a,cd)+'|'+a+','+cd);if(e>30)break;}
+  return[...ws].slice(0,3).map(s=>{const[,p]=s.split('|');return p.split(',').map(Number);});
+}
+// Generate 3 wrong integer answers near correct value cv
+function wrongsInt(cv){
+  const ws=new Set();
+  const offsets=[1,-1,2,-2,3,-3,4,-4,5,-5];
+  for(const o of offsets){const v=cv+o;if(v>0&&v!==cv)ws.add(v);if(ws.size>=3)break;}
+  return[...ws].slice(0,3).map(v=>[v,0]); // d=0 signals integer display
+}
+
+function makeQ(){
+  const mode=GAME_MODE;
+  let q={mode};
+
+  if(mode==='ek'){
+    const t=Math.random()<.5?'e':'k';
+    let num,den,f,cn,cd;
+    if(t==='e'){[num,den]=sf();const g=gcd(num,den);num/=g;den/=g;f=rnd(2,5);cn=num*f;cd=den*f;}
+    else{const b=sf();const g=gcd(b[0],b[1]);const n=b[0]/g,d=b[1]/g;f=rnd(2,4);num=n*f;den=d*f;cn=n;cd=d;}
+    return{...q,t,num,den,f,cn,cd};
+  }
+
+  if(mode==='add'||mode==='sub'){
+    // two simple fractions, add or subtract, result stays positive — NOT simplified
+    let a1,a2,b1,b2,rn,rd;
+    for(let attempt=0;attempt<40;attempt++){
+      [a1,a2]=sf();[b1,b2]=sf();
+      const ld=lcm(a2,b2);
+      if(mode==='add'){rn=a1*(ld/a2)+b1*(ld/b2);}
+      else{rn=a1*(ld/a2)-b1*(ld/b2);}
+      rd=ld;
+      // keep unsimplified AND ensure denominator stays (no whole numbers)
+      if(rn>0&&rd>1)break;
+    }
+    return{...q,a1,a2,b1,b2,cn:rn,cd:rd};
+  }
+
+  if(mode==='mul'){
+    // multiply — result intentionally NOT simplified
+    // Use simple fracs; filter out cases where result would be a whole number
+    let a1,a2,b1,b2,cn,cd;
+    for(let i=0;i<30;i++){
+      [a1,a2]=sf();[b1,b2]=sf();
+      cn=a1*b1;cd=a2*b2;
+      if(cd>1)break;
+    }
+    return{...q,a1,a2,b1,b2,cn,cd};
+  }
+
+  if(mode==='div'){
+    // divide — result intentionally NOT simplified
+    let a1,a2,b1,b2,cn,cd;
+    for(let i=0;i<30;i++){
+      [a1,a2]=sf();[b1,b2]=sf();
+      cn=a1*b2;cd=a2*b1;
+      if(cd>1&&cn>0)break;
+    }
+    return{...q,a1,a2,b1,b2,cn,cd};
+  }
+
+  if(mode==='ggT'){
+    // find GCD of two numbers
+    const a=rnd(2,20),b=rnd(2,20),cv=gcd(a,b);
+    return{...q,a,b,cn:cv,cd:0};
+  }
+
+  if(mode==='kgV'){
+    // find LCM of two small numbers (keep result manageable)
+    let a,b,cv;
+    do{a=rnd(2,12);b=rnd(2,12);cv=lcm(a,b);}while(cv>60||a===b);
+    return{...q,a,b,cn:cv,cd:0};
+  }
+}
+
+function wrongs(q){
+  if(q.mode==='ggT'||q.mode==='kgV') return wrongsInt(q.cn);
+  return wrongsFrac(q.cn,q.cd);
+}
+let names=['Spieler 1','Spieler 2'],P;
+function mkP(id){return{id,score:0,qc:0,correctCount:0,answered:false,paused:false,tl:TL,ti:null,q:null,alive:true,wrongSet:new Set()};}
+// Stars removed — stadium in SVG
+function initDots(id){const w=document.getElementById('dt'+id);w.innerHTML='';for(let i=0;i<TQ;i++){const d=document.createElement('div');d.className='pdot';d.id='d'+id+'_'+i;w.appendChild(d);}document.getElementById('pt'+id).textContent='0/'+TQ;}
+function updDots(id,n){const p=P.find(x=>x&&x.id===id);for(let i=0;i<TQ;i++){const d=document.getElementById('d'+id+'_'+i);if(!d)continue;d.className='pdot';if(i<n-1){d.classList.add(p&&p.wrongSet&&p.wrongSet.has(i)?'wrong':'done');}else if(i===n-1)d.classList.add('current');}document.getElementById('pt'+id).textContent=n+'/'+TQ;}
+function startTim(p){
+  clearInterval(p.ti);
+  p.ti=setInterval(()=>{
+    if(p.paused||!p.alive)return;
+    p.tl=Math.max(0,p.tl-.1);
+    updBar(p);updBoulder(p);
+    if(p.tl<=0){
+      clearInterval(p.ti);p.answered=true;
+      // show correct answer highlighted
+      document.querySelectorAll('#an'+p.id+' .ans-btn').forEach(b=>{
+        const isInt=p.q.cd===0;
+        if(isInt?+b.dataset.n===p.q.cn:(+b.dataset.n===p.q.cn&&+b.dataset.d===p.q.cd))b.classList.add('correct');
+      });
+      p.wrongSet.add(p.qc-1);updDots(p.id,p.qc);
+      // rush defender, then auto-advance to next question
+      rush(p,false);
+    }
+  },100);
+}
+function updBar(p){document.getElementById('tb'+p.id).style.transform='scaleX('+Math.max(0,p.tl/TL)+')';}
+function resetB(p){
+  const b=document.getElementById('boulder'+p.id);
+  b.style.transition='none';b.classList.remove('catching');
+  const sv=b.querySelector('svg');if(sv)sv.style.animationPlayState='running';
+  document.getElementById('moto'+p.id).style.animationPlayState='running';
+  const hw2=Math.floor(window.innerWidth/2);
+  b.style.right='';
+  if(p.id===1){b.style.left='-70px';}
+  else{b.style.left=Math.floor(window.innerWidth/2)+'px';}
+  void b.offsetWidth;
+  // resume road stripes
+  document.querySelectorAll('#road'+p.id+' .road-stripe').forEach(e=>e.style.animationPlayState='running');
+}
+function updBoulder(p){
+  const pct=1-(p.tl/TL);
+  const b=document.getElementById('boulder'+p.id);
+  b.style.transition='left .1s linear';
+  b.style.right='';
+  const hw=Math.floor(window.innerWidth/2);
+  if(p.id===1){
+    // Solo: full width. 2P: left half only
+    const endX = (PLAYER_COUNT===1) ? window.innerWidth-172 : hw-120;
+    b.style.left=(-70+pct*(endX+70))+'px';
+  } else {
+    // P2 right half: start at left edge of right half, chase moto2 (right:100px)
+    const start=Math.floor(window.innerWidth/2);
+    const end=window.innerWidth-172; // just left of moto2
+    b.style.left=(start+pct*(end-start))+'px';
+  }
+  if(pct>.72)b.classList.add('catching');
+}
+function rush(p,go){
+  const b=document.getElementById('boulder'+p.id);
+  b.style.transition='left .45s ease-in';
+  b.style.right='';
+  const hw=Math.floor(window.innerWidth/2);
+  if(p.id===1){
+    // Solo: rush across full screen; 2P: only left half
+    const crashX = (PLAYER_COUNT===1) ? window.innerWidth-148 : hw-80;
+    b.style.left=crashX+'px';
+  } else {
+    b.style.left=(window.innerWidth-148)+'px'; // slam into moto222
+  }
+  setTimeout(()=>doCrash(p,go),480);
+}
+function doCrash(p,go){
+  const moto=document.getElementById('moto'+p.id);
+  const cs=document.getElementById('cs'+p.id);
+  const mr=moto.getBoundingClientRect(),sr=document.getElementById('scene').getBoundingClientRect();
+  cs.style.left=(mr.left-sr.left-5)+'px';cs.style.top=(mr.top-sr.top-30)+'px';
+  cs.className='crash-sym show';void cs.offsetWidth;cs.style.animation='none';void cs.offsetWidth;cs.style.animation='';
+  moto.classList.add('crash');
+  setTimeout(()=>{
+    moto.classList.remove('crash');cs.className='crash-sym';
+    if(go){p.alive=false;checkEnd();}
+    else{resetB(p);setTimeout(()=>nextQ(p),220);}
+  },950);
+}
+function fmt(n){return String(n).replace(/7/g,'<span class="s7">7</span>');}
+function rfrac(n,d){return'<div class="afrac"><div class="afnum">'+fmt(n)+'</div><div class="afline"></div><div class="afnum">'+fmt(d)+'</div></div>';}
+function nextQ(p){
+  if(!p.alive)return;
+  if(p.qc>=TQ){p.alive=false;checkEnd();return;}
+  p.answered=false;p.paused=false;
+  p.q=makeQ();const q=p.q,id=p.id;
+  renderQuestion(q,id);
+  const wa=wrongs(q);
+  const all=[[q.cn,q.cd],...wa];
+  for(let i=all.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[all[i],all[j]]=[all[j],all[i]];}
+  const cont=document.getElementById('an'+id);cont.innerHTML='';
+  all.forEach(([n,d])=>{
+    const btn=document.createElement('button');btn.className='ans-btn';
+    btn.innerHTML = d===0 ? '<div class="afnum">'+fmt(n)+'</div>' : rfrac(n,d);
+    btn.dataset.n=n;btn.dataset.d=d;
+    btn.addEventListener('click',()=>pick(p,btn,n,d));cont.appendChild(btn);
+  });
+  p.tl=TL;updBar(p);resetB(p);p.qc++;updDots(id,p.qc);startTim(p);
+}
+
+function renderQuestion(q,id){
+  const verb=document.getElementById('vb'+id);
+  const fact=document.getElementById('fc'+id);
+  const tp=document.getElementById('tp'+id);
+  const bt=document.getElementById('bt'+id);
+  const fracLine=tp.nextElementSibling; // .frac-line
+  const fracBox=tp.closest('.frac-box');
+
+  // Reset
+  fracLine.style.display='';
+  bt.style.display='';
+  fact.style.display='';
+
+  if(q.mode==='ek'){
+    verb.textContent=q.t==='e'?'Erweitere':'Kürze';
+    fact.textContent=q.t==='e'?'mit '+q.f:'durch '+q.f;
+    tp.innerHTML=fmt(q.num); bt.innerHTML=fmt(q.den);
+  }
+  else if(q.mode==='add'||q.mode==='sub'){
+    const op=q.mode==='add'?'+':'−';
+    verb.innerHTML='<span style="font-size:1.1rem;color:#aaa">Berechne</span>';
+    fact.style.display='none';
+    // Show as: a1/a2 OP b1/b2
+    tp.innerHTML='<span style="font-size:1.3rem;white-space:nowrap">'+
+      fracInline(q.a1,q.a2)+' <span style="color:var(--stripe)"> '+op+' </span> '+fracInline(q.b1,q.b2)+'</span>';
+    fracLine.style.display='none';
+    bt.style.display='none';
+  }
+  else if(q.mode==='mul'){
+    verb.innerHTML='<span style="font-size:1.1rem;color:#aaa">Berechne</span>';
+    fact.style.display='none';
+    tp.innerHTML='<span style="font-size:1.3rem;white-space:nowrap">'+
+      fracInline(q.a1,q.a2)+' <span style="color:var(--stripe)"> × </span> '+fracInline(q.b1,q.b2)+'</span>';
+    fracLine.style.display='none';
+    bt.style.display='none';
+  }
+  else if(q.mode==='div'){
+    verb.innerHTML='<span style="font-size:1.1rem;color:#aaa">Berechne</span>';
+    fact.style.display='none';
+    tp.innerHTML='<span style="font-size:1.3rem;white-space:nowrap">'+
+      fracInline(q.a1,q.a2)+' <span style="color:var(--stripe)"> ÷ </span> '+fracInline(q.b1,q.b2)+'</span>';
+    fracLine.style.display='none';
+    bt.style.display='none';
+  }
+  else if(q.mode==='ggT'){
+    verb.innerHTML='<span style="font-size:1.1rem;color:#aaa">ggT von</span>';
+    fact.style.display='none';
+    tp.innerHTML='<span style="font-size:2rem;white-space:nowrap">'+fmt(q.a)+' und '+fmt(q.b)+'</span>';
+    fracLine.style.display='none';
+    bt.style.display='none';
+  }
+  else if(q.mode==='kgV'){
+    verb.innerHTML='<span style="font-size:1.1rem;color:#aaa">kgV von</span>';
+    fact.style.display='none';
+    tp.innerHTML='<span style="font-size:2rem;white-space:nowrap">'+fmt(q.a)+' und '+fmt(q.b)+'</span>';
+    fracLine.style.display='none';
+    bt.style.display='none';
+  }
+}
+
+function fracInline(n,d){
+  return '<span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.1;font-size:.95rem;font-family:Bangers,cursive">'
+    +'<span>'+fmt(n)+'</span><span style="width:22px;height:2px;background:#aaa;display:block;margin:1px 0"></span><span>'+fmt(d)+'</span></span>';
+}
+function pick(p,btn,n,d){
+  if(p.answered||p.paused||!p.alive)return;
+  p.answered=true;clearInterval(p.ti);
+  const isInt=p.q.cd===0;
+  const ok=isInt?(+n===p.q.cn):(+n===p.q.cn&&+d===p.q.cd);
+  document.querySelectorAll('#an'+p.id+' .ans-btn').forEach(b=>{
+    if(isInt?+b.dataset.n===p.q.cn:(+b.dataset.n===p.q.cn&&+b.dataset.d===p.q.cd))b.classList.add('correct');
+  });
+  if(!ok){
+    btn.classList.add('wrong');
+    p.wrongSet.add(p.qc-1); // mark this question as wrong in dots
+    updDots(p.id,p.qc);
+    rush(p,false);
+  }
+  else{p.score+=Math.ceil(p.tl*10);p.correctCount++;document.getElementById('sc'+p.id).textContent=p.score;setTimeout(()=>nextQ(p),550);}
+}
+function togPause(p){
+  if(p.answered||!p.alive)return;
+  p.paused=!p.paused;
+  const btn=document.getElementById('pb'+p.id),ov=document.getElementById('pov'+p.id);
+  const bsv=document.querySelector('#boulder'+p.id+' svg');
+  const roadStripes=document.querySelectorAll('#road'+p.id+' .road-stripe');
+  if(p.paused){
+    clearInterval(p.ti);
+    if(bsv)bsv.style.animationPlayState='paused';
+    document.getElementById('moto'+p.id).style.animationPlayState='paused';
+    roadStripes.forEach(s=>s.style.animationPlayState='paused');
+    btn.textContent='▶';btn.classList.add('paused');
+    document.getElementById('pn'+p.id).textContent=names[p.id-1]+' hat pausiert';
+    ov.classList.add('show');
+  } else {
+    if(bsv)bsv.style.animationPlayState='running';
+    document.getElementById('moto'+p.id).style.animationPlayState='running';
+    roadStripes.forEach(s=>s.style.animationPlayState='running');
+    btn.textContent='⏸';btn.classList.remove('paused');ov.classList.remove('show');
+    startTim(p);
+  }
+}
+document.getElementById('pb1').addEventListener('click',()=>togPause(P[0]));
+document.getElementById('pb2').addEventListener('click',()=>togPause(P[1]));
+document.getElementById('rv1').addEventListener('click',()=>togPause(P[0]));
+document.getElementById('rv2').addEventListener('click',()=>togPause(P[1]));
+const K1=['q','w','e','r'],K2=['u','i','o','p'];
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  const i1=K1.indexOf(k),i2=K2.indexOf(k);
+  if(i1>=0){const b=document.querySelectorAll('#an1 .ans-btn');if(b[i1])b[i1].click();}
+  if(i2>=0){const b=document.querySelectorAll('#an2 .ans-btn');if(b[i2])b[i2].click();}
+});
+function checkEnd(){if(P.every(p=>!p.alive))setTimeout(showEnd,400);}
+function showEnd(){
+  P.forEach(p=>{clearInterval(p.ti);p.alive=false;});
+  const t=document.getElementById('ovTitle'),m=document.getElementById('ovMsg');
+  const n1=names[0],s1=P[0].score;
+  const c1=P[0].correctCount;
+  if(PLAYER_COUNT===1){
+    t.style.color='#f5c518';t.textContent='⚽ ABPFIFF!';
+    m.innerHTML='<span style="color:var(--p1)">'+n1+'</span>: <b>'+s1+' Punkte</b> &nbsp;✅ '+c1+' / '+TQ+' richtig';
+  } else {
+    const n2=names[1],s2=P[1].score,c2=P[1].correctCount;
+    if(s1>s2){t.style.color='#29b6f6';t.textContent='🏆 '+n1+' GEWINNT!';}
+    else if(s2>s1){t.style.color='#ff7043';t.textContent='🏆 '+n2+' GEWINNT!';}
+    else{t.style.color='#f5c518';t.textContent='🤝 UNENTSCHIEDEN!';}
+    m.innerHTML='<span style="color:var(--p1)">'+n1+'</span>: <b>'+s1+' Pkt</b> &nbsp;✅ '+c1+'/'+TQ+' richtig<br>'
+      +'<span style="color:var(--p2)">'+n2+'</span>: <b>'+s2+' Pkt</b> &nbsp;✅ '+c2+'/'+TQ+' richtig';
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+document.getElementById('homeBtn').addEventListener('click',()=>{
+  // Stop all timers
+  if(P){P.forEach(p=>{clearInterval(p.ti);p.alive=false;});}
+  // Hide overlays
+  document.getElementById('overlay').classList.remove('show');
+  document.querySelectorAll('.pov').forEach(o=>o.classList.remove('show'));
+  // Show start screen
+  document.getElementById('startScreen').style.display='flex';
+});
+document.getElementById('homeFromEndBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('startScreen').style.display='flex';
+});
+document.getElementById('restartBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('show');
+  startGame();
+});
+document.getElementById('homeFromEndBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('startScreen').style.display='flex';
+});
+function startGame(){
+  names[0]=document.getElementById('nm1').value.trim()||'Spieler 1';
+  names[1]=document.getElementById('nm2').value.trim()||'Spieler 2';
+  const isSolo=PLAYER_COUNT===1;
+  // Scene: show/hide P2 elements
+  ['moto2','boulder2','goal2','lbl2','cs2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=isSolo?'none':'';
+  });
+  document.getElementById('road2').style.opacity=isSolo?'0.4':'1';
+  // Apply solo class to both arena AND scene (for full-width CSS rules)
+  document.getElementById('arena').classList.toggle('solo',isSolo);
+  document.getElementById('scene').classList.toggle('solo',isSolo);
+  // Timers: hide P2 timer in solo
+  const tb2wrap=document.querySelector('#timers .thalf:last-child');
+  const tdivEl=document.querySelector('#timers .tdiv');
+  if(tb2wrap)tb2wrap.style.display=isSolo?'none':'';
+  if(tdivEl)tdivEl.style.display=isSolo?'none':'';
+  document.getElementById('lbl1').textContent=names[0];
+  if(!isSolo)document.getElementById('lbl2').textContent=names[1];
+  P=isSolo?[mkP(1)]:[mkP(1),mkP(2)];
+  const ids=isSolo?[1]:[1,2];
+  ids.forEach(id=>{
+    initDots(id);
+    document.getElementById('sc'+id).textContent=0;
+    document.getElementById('pb'+id).textContent='⏸';
+    document.getElementById('pb'+id).classList.remove('paused');
+    document.getElementById('pov'+id).classList.remove('show');
+    document.getElementById('moto'+id).classList.remove('crash');
+    document.getElementById('moto'+id).style.opacity=1;
+  });
+  P.forEach(p=>{resetB(p);nextQ(p);});
+}
+let GAME_MODE = 'ek';
+let PLAYER_COUNT = 1;
+function selectPCount(btn){
+  document.querySelectorAll('.pcount-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  PLAYER_COUNT = parseInt(btn.dataset.pc);
+  const isSolo = PLAYER_COUNT===1;
+  document.getElementById('nm2Box').style.display = isSolo?'none':'';
+  document.getElementById('kp2hint').style.display = isSolo?'none':'';
+}
+// hide P2 fields on load (solo preselected)
+setTimeout(()=>{
+  document.getElementById('nm2Box').style.display='none';
+  document.getElementById('kp2hint').style.display='none';
+},0);
+function selectMode(btn){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  GAME_MODE = btn.dataset.mode;
+}
+function selectDiff(btn){
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  TL=parseInt(btn.dataset.tl);
+}
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('startScreen').style.display='none';
+  startGame();
+});
+
+</script>
+</body>
+</html>

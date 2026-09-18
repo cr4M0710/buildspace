@@ -127,4 +127,20 @@ const posts = [
     subcategory: "mathematik",
     url: "zahlen-werkstatt.html"
    },
+   {
+    title: "SIKORE – Kopfrechentrainer",
+    excerpt: "Kostenloses Online-Tool und Arbeitsblatt-Generator mit 39 Schwierigkeitsstufen, von einfachen Additions- und Subtraktionsaufgaben bis zu komplexen Multiplikationen. (Externe Seite)",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "https://sikore.schiffner-tischer.de/"
+   },
+   {
+    title: "Bruch-Quiz (Fußball)",
+    excerpt: "Mathe-Kick für 2 Spieler: Bruchrechnen im Elfmeterschießen-Format — wer richtig rechnet, schießt aufs Tor.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "bruch-quiz-fussball.html"
+   },
 ];

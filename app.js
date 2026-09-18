@@ -89,6 +89,8 @@ function isWithinLast30Days(iso) {
   return diffDays >= 0 && diffDays <= 30;
 }
 
+const EXTERNAL_LINK_GLYPH = '<svg class="post-external-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+
 function renderPostList(list) {
   if (!list.length) {
     return '<p class="empty-state">Hier gibt es noch keine Beiträge.</p>';
@@ -97,17 +99,20 @@ function renderPostList(list) {
   return (
     '<ul class="post-list">' +
     sorted
-      .map(
-        (p) => `
+      .map((p) => {
+        const isExternal = /^https?:\/\//i.test(p.url);
+        const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
+        const externalBadge = isExternal ? EXTERNAL_LINK_GLYPH : "";
+        return `
       <li>
-        <a class="post-card" href="${p.url}">
+        <a class="post-card" href="${p.url}"${linkAttrs}>
           <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}</span>
-          <h3>${p.title}</h3>
+          <h3>${p.title}${externalBadge}</h3>
           <p class="post-excerpt">${p.excerpt}</p>
           <span class="post-meta">${formatDate(p.date)}</span>
         </a>
-      </li>`
-      )
+      </li>`;
+      })
       .join("") +
     "</ul>"
   );
