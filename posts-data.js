@@ -167,4 +167,20 @@ const posts = [
     subcategory: "mathematik",
     url: "flaechen-fuchs.html"
    },
+   {
+    title: "Zahlen-Detektiv",
+    excerpt: "Zahlenrätsel mit natürlichen Zahlen lösen: Aus mehreren Hinweisen (gerade/ungerade, Teilbarkeit, Quersumme, Ziffernanzahl) die gesuchte Zahl knacken — für 1 bis 4 Lernende am selben Gerät.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "zahlen-detektiv.html"
+   },
+   {
+    title: "Kopfrechen-Quiz",
+    excerpt: "Blitzschnelles Kopfrechnen mit Plus, Minus, Mal und Geteilt gegen die Uhr, mit Countdown pro Frage — für 1 bis 4 Lernende am selben Gerät.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "kopfrechen-quiz.html"
+   },
 ];

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kopfrechen-Quiz – Lernspiel gegen die Uhr</title>
+<meta name="description" content="Kopfrechen-Quiz zu Plus, Minus, Mal und Geteilt mit Countdown pro Frage für 1 bis 4 Spieler.">
+<style>
+  :root{
+    --bg1:#0D1B3D; --bg2:#1B3B7A; --track:#0A122B;
+    --paper:#FFFFFF; --ink:#182446; --ink-soft:#5A688F;
+    --accent:#FFC93D; --accent-dark:#E0A517;
+    --good:#1E8E5A; --good-bg:#E3F6EC;
+    --bad:#D6403A; --bad-bg:#FDEBEA;
+    --radius:20px;
+    --p1:#FF6B6B; --p2:#4D96FF; --p3:#FFC93D; --p4:#63D471;
+    --timer-good:#63D471; --timer-mid:#FFC93D; --timer-bad:#D6403A;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#161E39; --ink:#EDF1FF; --ink-soft:#9FA9CB;
+      --bad-bg:#3A2323; --good-bg:#1D3327;
+    }
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; }
+  body {
+    font-family: var(--font);
+    min-height:100vh;
+    background: radial-gradient(circle at 20% 0%, var(--bg2), var(--bg1) 60%);
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 14px 60px;
+  }
+  .wrap { width:100%; max-width:760px; }
+  .top-link {
+    display:inline-flex; align-items:center; gap:6px;
+    color:#D9E2FF; text-decoration:none; font-size:13.5px; font-weight:600;
+    margin-bottom:14px; opacity:0.85;
+  }
+  .top-link:hover { opacity:1; }
+  h1 {
+    color:#fff; font-size:clamp(1.8rem, 5vw, 2.6rem); margin:0 0 4px; font-weight:800;
+    letter-spacing:-0.02em;
+  }
+  .subtitle { color:#C7D2F7; margin:0 0 22px; font-size:15px; }
+  .card {
+    background:var(--paper); border-radius:var(--radius); padding:28px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .screen { display:none; }
+  .screen.active { display:block; }
+
+  /* ---- Setup ---- */
+  .field-label { font-weight:700; font-size:14px; margin:18px 0 8px; color:var(--ink); }
+  .field-label:first-child { margin-top:0; }
+  .choice-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .choice-btn {
+    flex:1; min-width:64px; padding:14px 10px; border-radius:14px; border:2px solid transparent;
+    background:#EEF1FB; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer;
+    transition: all 0.15s ease;
+  }
+  .choice-btn.selected { background:var(--accent); color:#3A2C00; box-shadow:0 6px 16px -4px rgba(224,165,23,0.5); }
+  .diff-btn { flex-direction:column; align-items:flex-start; text-align:left; padding:12px 14px; }
+  .diff-btn small { display:block; font-weight:500; font-size:12px; opacity:0.75; margin-top:2px; }
+  .name-inputs { display:grid; gap:10px; margin-top:4px; }
+  .name-input-row { display:flex; align-items:center; gap:10px; }
+  .name-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+  .name-input-row input {
+    flex:1; padding:10px 12px; border-radius:10px; border:1.5px solid #D8DEF0;
+    font-size:15px; font-family:inherit;
+  }
+  .start-btn {
+    width:100%; margin-top:26px; padding:15px; border:none; border-radius:14px;
+    background:linear-gradient(155deg, var(--accent), var(--accent-dark)); color:#3A2C00;
+    font-size:17px; font-weight:800; cursor:pointer; box-shadow:0 10px 24px -6px rgba(224,165,23,0.6);
+  }
+  .start-btn:active { transform:translateY(1px); }
+
+  /* ---- Game ---- */
+  .track-area { margin-bottom:22px; display:grid; gap:10px; }
+  .lane { display:flex; align-items:center; gap:10px; }
+  .lane-name { width:92px; flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--ink-soft); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lane-track { flex:1; height:26px; background:var(--track); border-radius:999px; position:relative; overflow:hidden; }
+  .lane-fill { height:100%; border-radius:999px; transition: width 0.5s cubic-bezier(.2,.9,.3,1); position:relative; }
+  .lane-runner {
+    position:absolute; top:50%; transform:translate(-50%,-50%); font-size:19px;
+    transition: left 0.5s cubic-bezier(.2,.9,.3,1); left:0%;
+  }
+  .lane.current .lane-name { color:var(--ink); }
+  .lane.current .lane-track { box-shadow:0 0 0 3px var(--accent); }
+
+  .turn-banner {
+    text-align:center; font-weight:800; font-size:15px; padding:10px 14px; border-radius:12px;
+    margin-bottom:14px; color:#fff;
+  }
+
+  .timer-wrap { margin-bottom:18px; }
+  .timer-track { height:12px; background:var(--track); border-radius:999px; overflow:hidden; }
+  .timer-fill { height:100%; width:100%; background:var(--timer-good); border-radius:999px; }
+  .timer-label { text-align:center; font-size:12px; font-weight:700; color:var(--ink-soft); margin-top:5px; }
+
+  .question-box { text-align:center; padding:6px 0 4px; }
+  .q-text { font-size:clamp(1.7rem, 7vw, 2.4rem); font-weight:800; color:var(--ink); margin:0 0 20px; letter-spacing:0.01em; }
+  .q-answer-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .q-answer-row input {
+    width:150px; padding:14px 16px; font-size:22px; text-align:center; border-radius:14px;
+    border:2px solid #D8DEF0; font-family:inherit; font-weight:700;
+  }
+  .q-answer-row input:focus { outline:none; border-color:var(--accent); }
+  .submit-btn {
+    padding:14px 22px; border:none; border-radius:14px; background:var(--accent); color:#3A2C00;
+    font-size:16px; font-weight:800; cursor:pointer;
+  }
+  .feedback {
+    text-align:center; margin-top:18px; padding:14px; border-radius:14px; font-weight:700; font-size:15px;
+    display:none;
+  }
+  .feedback.show { display:block; }
+  .feedback.good { background:var(--good-bg); color:var(--good); }
+  .feedback.bad { background:var(--bad-bg); color:var(--bad); }
+
+  /* ---- End ---- */
+  .end-emoji { font-size:56px; text-align:center; margin-bottom:6px; }
+  .end-title { text-align:center; font-size:1.6rem; font-weight:800; margin:0 0 22px; }
+  table.stats { width:100%; border-collapse:collapse; margin-bottom:24px; }
+  table.stats th, table.stats td { padding:10px 8px; text-align:left; font-size:14px; border-bottom:1px solid #EEF1FB; }
+  table.stats th { color:var(--ink-soft); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; }
+  .end-actions { display:flex; gap:10px; }
+  .end-actions button {
+    flex:1; padding:14px; border-radius:14px; border:none; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .btn-primary { background:var(--accent); color:#3A2C00; }
+  .btn-secondary { background:#EEF1FB; color:var(--ink); }
+
+  @media (max-width:480px) {
+    .card { padding:20px 16px; }
+    .lane-name { width:64px; font-size:11px; }
+  }
+</style>
+<script defer src="qrcode-generator.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
+</head>
+<body>
+
+  <div class="wrap">
+    <a class="top-link" href="index.html#/schule/mathematik">← Zurück zu Mathematik</a>
+    <h1>⚡ Kopfrechen-Quiz</h1>
+    <p class="subtitle">Blitzschnelles Kopfrechnen: Plus, Minus, Mal und Geteilt gegen die Uhr — für 1 bis 4 Spieler am selben Gerät.</p>
+
+    <div class="card">
+
+      <!-- SETUP -->
+      <section class="screen active" id="screen-setup">
+        <div class="field-label">Anzahl Spieler</div>
+        <div class="choice-row" id="player-count-row"></div>
+
+        <div class="field-label">Schwierigkeit</div>
+        <div class="choice-row" id="difficulty-row">
+          <button class="choice-btn diff-btn" data-diff="A">Leicht<small>Plus/Minus bis 20 · 15 Sek.</small></button>
+          <button class="choice-btn diff-btn selected" data-diff="B">Mittel<small>+ Mal bis 10×10 · 12 Sek.</small></button>
+          <button class="choice-btn diff-btn" data-diff="C">Schwer<small>+ Geteilt, größere Zahlen · 9 Sek.</small></button>
+        </div>
+
+        <div class="field-label">Namen (optional)</div>
+        <div class="name-inputs" id="name-inputs"></div>
+
+        <button class="start-btn" id="start-btn">⚡ Los geht's</button>
+      </section>
+
+      <!-- GAME -->
+      <section class="screen" id="screen-game">
+        <div class="track-area" id="track-area"></div>
+        <div class="turn-banner" id="turn-banner"></div>
+        <div class="timer-wrap">
+          <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+          <div class="timer-label" id="timer-label"></div>
+        </div>
+        <div class="question-box">
+          <p class="q-text" id="q-text"></p>
+          <div class="q-answer-row">
+            <input type="number" id="q-input" inputmode="numeric" step="any" autocomplete="off" placeholder="?">
+            <button class="submit-btn" id="submit-btn">Antworten</button>
+          </div>
+          <div class="feedback" id="feedback"></div>
+        </div>
+      </section>
+
+      <!-- END -->
+      <section class="screen" id="screen-end">
+        <div class="end-emoji">🏆</div>
+        <h2 class="end-title" id="end-title"></h2>
+        <table class="stats" id="stats-table"></table>
+        <div class="end-actions">
+          <button class="btn-secondary" id="restart-setup-btn">Einstellungen ändern</button>
+          <button class="btn-primary" id="play-again-btn">Nochmal spielen</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  const COLORS = ["#FF6B6B", "#4D96FF", "#FFC93D", "#63D471"];
+  const RUNNER = ["⚡", "🚀", "💨", "🔥"];
+  const TARGET = 8; // richtige Antworten zum Sieg
+
+  const TIME_LIMITS = { A: 15, B: 12, C: 9 };
+
+  let players = [];
+  let difficulty = "B";
+  let numPlayers = 2;
+  let currentPlayer = 0;
+  let currentQuestion = null;
+  let gameOver = false;
+  let awaitingNext = false;
+
+  let timerInterval = null;
+  let timeLeft = 0;
+  let timeLimit = 12;
+
+  const el = (id) => document.getElementById(id);
+
+  /* ---------- Setup screen ---------- */
+  const playerCountRow = el("player-count-row");
+  [1, 2, 3, 4].forEach((n) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn" + (n === numPlayers ? " selected" : "");
+    btn.textContent = n;
+    btn.dataset.count = n;
+    btn.addEventListener("click", () => {
+      numPlayers = n;
+      [...playerCountRow.children].forEach((b) => b.classList.toggle("selected", Number(b.dataset.count) === n));
+      renderNameInputs();
+    });
+    playerCountRow.appendChild(btn);
+  });
+
+  el("difficulty-row").addEventListener("click", (e) => {
+    const btn = e.target.closest(".diff-btn");
+    if (!btn) return;
+    difficulty = btn.dataset.diff;
+    [...el("difficulty-row").children].forEach((b) => b.classList.toggle("selected", b === btn));
+  });
+
+  function renderNameInputs() {
+    const wrap = el("name-inputs");
+    wrap.innerHTML = "";
+    for (let i = 0; i < numPlayers; i++) {
+      const row = document.createElement("div");
+      row.className = "name-input-row";
+      row.innerHTML =
+        '<span class="name-dot" style="background:' + COLORS[i] + '"></span>' +
+        '<input type="text" maxlength="16" placeholder="Spieler ' + (i + 1) + '" id="name-input-' + i + '">';
+      wrap.appendChild(row);
+    }
+  }
+  renderNameInputs();
+
+  el("start-btn").addEventListener("click", startGame);
+
+  /* ---------- Question generator ---------- */
+  function randInt(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+  function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+
+  function genQuestion(diff) {
+    const cfg = {
+      A: { ops: ["add", "sub"], addMax: 20 },
+      B: { ops: ["add", "sub", "mul"], addMax: 100, mulMin: 2, mulMax: 10 },
+      C: { ops: ["add", "sub", "mul", "div"], addMax: 200, mulMin: 3, mulMax: 12 }
+    }[diff];
+
+    const op = pick(cfg.ops);
+    let a, b, answer, prompt;
+
+    if (op === "add") {
+      a = randInt(1, cfg.addMax);
+      b = randInt(1, cfg.addMax);
+      answer = a + b;
+      prompt = a + " + " + b + " = ?";
+    } else if (op === "sub") {
+      a = randInt(1, cfg.addMax);
+      b = randInt(0, a); // Ergebnis bleibt eine natürliche Zahl (≥ 0)
+      answer = a - b;
+      prompt = a + " − " + b + " = ?";
+    } else if (op === "mul") {
+      a = randInt(cfg.mulMin, cfg.mulMax);
+      b = randInt(cfg.mulMin, cfg.mulMax);
+      answer = a * b;
+      prompt = a + " × " + b + " = ?";
+    } else { // div — so konstruiert, dass immer glatt teilbar
+      b = randInt(cfg.mulMin, cfg.mulMax);
+      answer = randInt(cfg.mulMin, cfg.mulMax);
+      a = b * answer;
+      prompt = a + " : " + b + " = ?";
+    }
+
+    return { prompt, answer };
+  }
+
+  /* ---------- Game flow ---------- */
+  function startGame() {
+    players = [];
+    for (let i = 0; i < numPlayers; i++) {
+      const input = el("name-input-" + i);
+      const name = (input && input.value.trim()) || "Spieler " + (i + 1);
+      players.push({ name: name, color: COLORS[i], correct: 0, wrong: 0 });
+    }
+    currentPlayer = 0;
+    gameOver = false;
+    timeLimit = TIME_LIMITS[difficulty] || 12;
+    showScreen("screen-game");
+    renderTrack();
+    nextQuestion();
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    el(id).classList.add("active");
+  }
+
+  function renderTrack() {
+    const area = el("track-area");
+    area.innerHTML = "";
+    players.forEach((pl, i) => {
+      const pct = Math.min(100, (pl.correct / TARGET) * 100);
+      const lane = document.createElement("div");
+      lane.className = "lane" + (i === currentPlayer && !gameOver ? " current" : "");
+      lane.innerHTML =
+        '<span class="lane-name">' + escapeHtml(pl.name) + '</span>' +
+        '<div class="lane-track">' +
+          '<div class="lane-fill" style="width:' + pct + '%; background:' + pl.color + '33;"></div>' +
+          '<span class="lane-runner" style="left:' + pct + '%;">' + RUNNER[i] + '</span>' +
+        '</div>';
+      area.appendChild(lane);
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  /* ---------- Timer ---------- */
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function updateTimerDisplay() {
+    const pct = Math.max(0, Math.min(100, (timeLeft / timeLimit) * 100));
+    const fill = el("timer-fill");
+    fill.style.width = pct + "%";
+    fill.style.background = pct > 50 ? "var(--timer-good)" : pct > 20 ? "var(--timer-mid)" : "var(--timer-bad)";
+    el("timer-label").textContent = Math.ceil(timeLeft) + " Sek.";
+  }
+
+  function startTimer() {
+    stopTimer();
+    timeLeft = timeLimit;
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeLeft -= 0.1;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        updateTimerDisplay();
+        stopTimer();
+        handleTimeout();
+        return;
+      }
+      updateTimerDisplay();
+    }, 100);
+  }
+
+  function handleTimeout() {
+    if (gameOver || awaitingNext) return;
+    awaitingNext = true;
+    const pl = players[currentPlayer];
+    pl.wrong++;
+    const fb = el("feedback");
+    fb.className = "feedback show bad";
+    fb.textContent = "⏰ Zeit abgelaufen! Richtig wäre: " + currentQuestion.answer;
+    renderTrack();
+    currentPlayer = (currentPlayer + 1) % players.length;
+    setTimeout(() => { awaitingNext = false; nextQuestion(); }, 1500);
+  }
+
+  function nextQuestion() {
+    if (gameOver) return;
+    currentQuestion = genQuestion(difficulty);
+    const pl = players[currentPlayer];
+    const banner = el("turn-banner");
+    banner.textContent = pl.name + " ist dran";
+    banner.style.background = pl.color;
+    el("q-text").textContent = currentQuestion.prompt;
+    const input = el("q-input");
+    input.value = "";
+    input.disabled = false;
+    el("submit-btn").disabled = false;
+    el("feedback").className = "feedback";
+    el("feedback").textContent = "";
+    renderTrack();
+    startTimer();
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function submitAnswer() {
+    if (gameOver || awaitingNext) return;
+    const input = el("q-input");
+    const val = parseFloat((input.value || "").replace(",", "."));
+    const fb = el("feedback");
+    if (isNaN(val)) {
+      fb.className = "feedback show bad";
+      fb.textContent = "Bitte eine Zahl eingeben.";
+      return;
+    }
+    stopTimer();
+    awaitingNext = true;
+    input.disabled = true;
+    el("submit-btn").disabled = true;
+    const pl = players[currentPlayer];
+    const correct = val === currentQuestion.answer;
+    if (correct) {
+      pl.correct++;
+      fb.className = "feedback show good";
+      fb.textContent = "✅ Richtig! " + pl.name + " hat jetzt " + pl.correct + " von " + TARGET + ".";
+    } else {
+      pl.wrong++;
+      fb.className = "feedback show bad";
+      fb.textContent = "❌ Leider falsch. Richtig wäre: " + currentQuestion.answer;
+    }
+    renderTrack();
+
+    if (pl.correct >= TARGET) {
+      gameOver = true;
+      setTimeout(showEnd, 1100);
+      return;
+    }
+
+    currentPlayer = (currentPlayer + 1) % players.length;
+    setTimeout(() => { awaitingNext = false; nextQuestion(); }, correct ? 1300 : 1500);
+  }
+
+  el("submit-btn").addEventListener("click", submitAnswer);
+  el("q-input").addEventListener("keydown", (e) => { if (e.key === "Enter") submitAnswer(); });
+
+  function showEnd() {
+    stopTimer();
+    const winner = players.reduce((a, b) => (a.correct > b.correct ? a : b));
+    el("end-title").textContent = players.length === 1
+      ? "Geschafft, " + winner.name + "! 🎉"
+      : winner.name + " gewinnt! 🎉";
+    const table = el("stats-table");
+    table.innerHTML =
+      "<tr><th>Spieler</th><th>Richtig</th><th>Falsch</th></tr>" +
+      players.map((pl) => "<tr><td>" + escapeHtml(pl.name) + "</td><td>" + pl.correct + "</td><td>" + pl.wrong + "</td></tr>").join("");
+    showScreen("screen-end");
+  }
+
+  el("play-again-btn").addEventListener("click", () => {
+    players.forEach((pl) => { pl.correct = 0; pl.wrong = 0; });
+    currentPlayer = 0;
+    gameOver = false;
+    awaitingNext = false;
+    showScreen("screen-game");
+    nextQuestion();
+  });
+
+  el("restart-setup-btn").addEventListener("click", () => {
+    stopTimer();
+    showScreen("screen-setup");
+  });
+})();
+</script>
+
+</body>
+</html>
