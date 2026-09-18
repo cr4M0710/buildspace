@@ -47,6 +47,16 @@
 
   function isShareMode() { return getShareParams().active === true; }
 
+  /* Solange eine Freigabe aktiv ist (auch wenn sie inzwischen abgelaufen ist),
+     darf per Routing nur die freigegebene Kategorie erreicht werden — die
+     Startseite, "Neueste" und andere Kategorien sind tabu. Ist gar keine
+     Freigabe aktiv, ist ganz normal alles erlaubt (regulärer Passwortfluss). */
+  function isRouteAllowed(cat) {
+    const s = getShareParams();
+    if (!s.active) return true;
+    return !!cat && s.cat === cat;
+  }
+
   function fmtRemaining(exp) {
     const ms = Math.max(0, exp - nowMs());
     const min = Math.ceil(ms / 60000);
@@ -112,7 +122,7 @@
       "#protect-share-modal .protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
       "#protect-share-modal .protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
       "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #6E6E73; text-align: center; margin: 8px 0 0; }",
-      "html.share-mode .site-logo, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
+      "html.share-mode .site-logo, html.share-mode .nav-brand, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
       "html.share-mode #protect-share-btn { display: none; }",
       ".protect-banner {",
       "  position: fixed; top: 0; left: 0; right: 0; z-index: 9997; text-align: center; font-size: 12.5px;",
@@ -317,6 +327,7 @@
     guard: guard,
     isUnlockedLocal: isUnlockedLocal,
     isShareMode: isShareMode,
+    isRouteAllowed: isRouteAllowed,
     shareStatus: shareStatus,
     addShareButton: addShareButton,
     removeShareButton: removeShareButton,

@@ -241,8 +241,36 @@ function renderSubfolderUnlocked(id, subId) {
   if (window.Protect) window.Protect.addShareButton(id);
 }
 
+/* Bei einer aktiven "Für Lernende freigeben"-Freigabe merken wir uns den
+   Hash, mit dem die Seite geöffnet wurde — das ist die einzige Route, die
+   während der Freigabe erreichbar sein soll. Start, "Neueste" und andere
+   Kategorien werden dann kommentarlos (ohne Passwortabfrage) dorthin
+   zurückgeleitet, statt angezeigt zu werden. */
+let shareHomeHash = null;
+let shareHomeCaptured = false;
+
+function ensureShareHomeHash() {
+  if (shareHomeCaptured) return;
+  shareHomeCaptured = true;
+  if (window.Protect && window.Protect.isShareMode()) {
+    shareHomeHash = location.hash || "#/";
+  }
+}
+
+function isAllowedRoute(segments) {
+  if (!(window.Protect && window.Protect.isShareMode())) return true;
+  if (segments.length === 0) return false;
+  if (segments[0] === "neueste") return false;
+  return window.Protect.isRouteAllowed(segments[0]);
+}
+
 function render() {
+  ensureShareHomeHash();
   const segments = parseHash();
+  if (!isAllowedRoute(segments)) {
+    location.hash = shareHomeHash || "#/";
+    return;
+  }
   if (segments.length === 0) {
     renderTopLevel();
   } else if (segments[0] === "neueste") {
