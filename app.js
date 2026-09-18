@@ -10,11 +10,32 @@
    Kategorien hinweg, neueste zuerst.
 --------------------------------------------------------- */
 
+/* Kleines, wiederverwendetes Set an Glyphen: der Ball (Kreis + Nahtlinien)
+   dient sowohl als große Kachel-Reserve als auch als Mini-Symbol, der
+   Controller ebenso mit/ohne Schraubenschlüssel-Zusatz. */
+const BALL_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4c2.2 2.6 2.2 12.8 0 16M6.3 7c3 1.4 8.4 1.4 11.4 0M6.3 17c3-1.4 8.4-1.4 11.4 0" stroke-linecap="round"/></svg>';
+const CONTROLLER_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10.5v3M5.5 12h3M15.3 10.8h.01M17.3 12.8h.01M15.8 14.8h.01M17.8 10.8h.01"/><path d="M7.5 7.5h9A4 4 0 0 1 20.4 12l-.6 3.7a2.3 2.3 0 0 1-4.1 1L15 15.7H9l-.7 1a2.3 2.3 0 0 1-4.1-1L3.6 12A4 4 0 0 1 7.5 7.5z"/></svg>';
+const WRENCH_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 8.7a4.6 4.6 0 0 1-6 5.1l-6.6 6.6-2.4-2.4 6.6-6.6a4.6 4.6 0 0 1 5.1-6l-3 3 2.3 2.3 3-3z"/></svg>';
+const STAR_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.97 6.19 6.83.82-5.03 4.66 1.36 6.76L12 17.77l-6.13 3.16 1.36-6.76-5.03-4.66 6.83-.82z"/></svg>';
+const BOOK_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2c-1.7-1.3-3.9-2-6.3-2-.9 0-1.8.1-2.7.3v12.6c.9-.2 1.8-.3 2.7-.3 2.4 0 4.6.7 6.3 2m0-12.6c1.7-1.3 3.9-2 6.3-2 .9 0 1.8.1 2.7.3v12.6c-.9-.2-1.8-.3-2.7-.3-2.4 0-4.6.7-6.3 2m0-12.6v12.6"/></svg>';
+
+/* Große Kachel-Icons (Startseite, Ordner-Übersicht) — anschaulich statt
+   abstrakt: Stern, aufgeschlagenes Buch, das echte HSG-Wettenberg-Logo
+   und Controller+Schraubenschlüssel für Gaming & Werkstatt. */
 const ICONS = {
-  neueste: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18" stroke-linecap="round"/></svg>',
-  schule: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path d="M3 9l9-4 9 4-9 4-9-4z" stroke-linejoin="round"/><path d="M7 11v5c0 1.1 2.2 2 5 2s5-.9 5-2v-5" stroke-linejoin="round"/></svg>',
-  handball: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4c2 2.5 2 13 0 16M6 7c3 1.5 9 1.5 12 0M6 17c3-1.5 9-1.5 12 0"/></svg>',
-  freizeit: '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10" stroke-linejoin="round" stroke-linecap="round"/></svg>'
+  neueste: STAR_GLYPH,
+  schule: BOOK_GLYPH,
+  handball: '<img src="strafenkasse/hsg-logo.png" alt="HSG Wettenberg" class="folder-icon-img">',
+  freizeit: `<span class="icon-duo">${CONTROLLER_GLYPH}<span class="icon-duo-badge">${WRENCH_GLYPH}</span></span>`
+};
+
+/* Kleine Symbole neben jedem einzelnen Beitrag in den Listen — vereinfachte
+   Varianten, die auch im Miniaturformat klar erkennbar bleiben. */
+const MINI_ICONS = {
+  neueste: STAR_GLYPH,
+  schule: BOOK_GLYPH,
+  handball: BALL_GLYPH,
+  freizeit: CONTROLLER_GLYPH
 };
 
 const folderStructure = {
@@ -68,10 +89,6 @@ function isWithinLast30Days(iso) {
   return diffDays >= 0 && diffDays <= 30;
 }
 
-function dotClassFor(category) {
-  return "dot-" + category;
-}
-
 function renderPostList(list) {
   if (!list.length) {
     return '<p class="empty-state">Hier gibt es noch keine Beiträge.</p>';
@@ -84,7 +101,7 @@ function renderPostList(list) {
         (p) => `
       <li>
         <a class="post-card" href="${p.url}">
-          <span class="post-tag"><span class="dot ${dotClassFor(p.category)}" style="background:${folderStructure[p.category] ? folderStructure[p.category].color : "var(--ink-soft)"}"></span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}</span>
+          <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}</span>
           <h3>${p.title}</h3>
           <p class="post-excerpt">${p.excerpt}</p>
           <span class="post-meta">${formatDate(p.date)}</span>
@@ -99,11 +116,11 @@ function renderPostList(list) {
 function renderTopLevel() {
   breadcrumb.innerHTML = "";
   const cards = [
-    { href: "#/neueste", label: "Neueste", color: "var(--c-neueste)", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
+    { id: "neueste", href: "#/neueste", label: "Neueste", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
     ...Object.entries(folderStructure).map(([id, f]) => ({
+      id,
       href: `#/${id}`,
       label: f.label,
-      color: f.color,
       icon: f.icon,
       count: posts.filter((p) => p.category === id).length
     }))
@@ -115,7 +132,7 @@ function renderTopLevel() {
         .map(
           (c) => `
         <a class="folder-card" href="${c.href}">
-          <span class="folder-icon" style="background:${c.color}">${c.icon}</span>
+          <span class="folder-icon icon-${c.id}">${c.icon}</span>
           <h2>${c.label}</h2>
           <span class="folder-count">${c.count === 1 ? "1 Beitrag" : c.count + " Beiträge"}</span>
         </a>`
@@ -165,8 +182,8 @@ function renderFolder(id) {
         .map(
           (c) => `
         <a class="folder-card" href="${c.href}">
-          <span class="folder-icon" style="background:${folder.color}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
+          <span class="folder-icon" style="--tile-accent:${folder.color}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
           </span>
           <h2>${c.label}</h2>
           <span class="folder-count">${c.count} Beitrag${c.count === 1 ? "" : "e"}</span>
@@ -209,3 +226,24 @@ function render() {
 
 window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", render);
+
+/* Liquid-Glass-Glanzlicht: folgt der Maus-/Fingerposition auf Karten,
+   per Event-Delegation, damit es auch nach jedem Neu-Rendern (Routing)
+   ohne erneutes Binden funktioniert. */
+function updateGlassHighlight(x, y, target) {
+  const el = target.closest(".folder-card, .post-card");
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", ((x - r.left) / r.width) * 100 + "%");
+  el.style.setProperty("--my", ((y - r.top) / r.height) * 100 + "%");
+}
+
+document.addEventListener("pointermove", (e) => updateGlassHighlight(e.clientX, e.clientY, e.target));
+document.addEventListener(
+  "touchstart",
+  (e) => {
+    const t = e.touches[0];
+    if (t) updateGlassHighlight(t.clientX, t.clientY, e.target);
+  },
+  { passive: true }
+);
