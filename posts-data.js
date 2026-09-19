@@ -25,6 +25,21 @@
                   für den Sprachumschalter oben rechts. Ohne Angabe zeigt
                   die Karte auch im Englischen den deutschen Text (die
                   Spiel-/Tool-Seite selbst bleibt in jedem Fall deutsch).
+   - tags:        (optional) Liste von Schlagwörtern, quer zur Ordner-
+                  struktur — erscheinen auf der Startseite als anklickbare
+                  Filter-Chips über alle Kategorien hinweg. Bekannte Werte
+                  (übersetztes Label siehe I18N.tagLabels in app.js):
+                  'einzelarbeit' | 'partnerarbeit' | 'gruppenarbeit'
+                    → passende Gruppengröße lt. Beschreibung des Beitrags
+                  'spiel' | 'tool'
+                    → Lernspiel/Kartenspiel vs. Planungs-/Rechen-Werkzeug
+                  'jg5' | 'jg6' | 'jg7' | 'jg8' | 'jg9' | 'jg10'
+                    → nur setzen, wenn der Beitrag wirklich für eine feste
+                      Jahrgangsstufe gedacht ist (nicht raten!)
+                  Eigene, hier nicht gelistete Tags funktionieren auch —
+                  sie tauchen als Filter-Chip auf, nur ohne übersetztes
+                  Label (dann erscheint die Tag-ID selbst als Beschriftung,
+                  am besten also sprechend wählen).
 --------------------------------------------------------- */
 
 const posts = [
@@ -36,6 +51,7 @@ const posts = [
     subcategory: "mathematik",
     url: "minigolf-winkel.html",
     emoji: "⛳",
+    tags: ["spiel", "jg6"],
     titleEn: "Minigolf – Angles – Grade 6",
     excerptEn: "Learn angle types through play"
    },
@@ -47,6 +63,7 @@ const posts = [
     subcategory: "mathematik",
     url: "mathe-warmup-generator.html",
     emoji: "🔥",
+    tags: ["tool"],
     titleEn: "Math Warm-Up Generator",
     excerptEn: "Generates warm-up exercises across 18 topic areas with A/B/C differentiation, exportable straight to PDF."
    },
@@ -58,6 +75,7 @@ const posts = [
     subcategory: "training",
     url: "hallenplan.html",
     emoji: "📐",
+    tags: ["tool"],
     titleEn: "Court Planner – Handball Training",
     excerptEn: "Training planner with a 2D/3D view: arrange players, equipment and drill shapes on the court floor via drag-and-drop."
    },
@@ -69,6 +87,7 @@ const posts = [
     subcategory: "training",
     url: "handball-anzeigetafel.html",
     emoji: "⏱️",
+    tags: ["tool"],
     titleEn: "Handball Scoreboard",
     excerptEn: "Digital scoreboard for training sessions: score, time and penalty timers at a glance."
    },
@@ -80,6 +99,7 @@ const posts = [
     subcategory: "maenner1",
     url: "strafenkasse/index.html",
     emoji: "💰",
+    tags: ["tool"],
     titleEn: "Penalty Fund – Men's 1",
     excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
    },
@@ -91,6 +111,7 @@ const posts = [
     subcategory: "maenner2",
     url: "strafenkasse/index.html",
     emoji: "💰",
+    tags: ["tool"],
     titleEn: "Penalty Fund – Men's 2",
     excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
    },
@@ -102,6 +123,7 @@ const posts = [
     subcategory: null,
     url: "wizard-kartenspiel.html",
     emoji: "🧙",
+    tags: ["spiel", "einzelarbeit", "gruppenarbeit"],
     titleEn: "Wizard – The Card Game",
     excerptEn: "Play Wizard digitally: multiplayer via PeerJS or against an AI on three difficulty levels."
    },
@@ -113,6 +135,7 @@ const posts = [
     subcategory: null,
     url: "wizard-scoreboard.html",
     emoji: "🧙",
+    tags: ["tool"],
     titleEn: "Wizard Scoreboard",
     excerptEn: "Score calculator for tabletop Wizard: enter bids and tricks won, points and stats are calculated automatically."
    },
@@ -124,6 +147,7 @@ const posts = [
     subcategory: null,
     url: "aos-pruefungstrainer.html",
     emoji: "🎓",
+    tags: ["tool", "einzelarbeit"],
     titleEn: "AoS Exam Trainer",
     excerptEn: "Multiple-choice practice on exercise science: energy systems, muscle fibre types, warm-up and the cardiovascular system."
    },
@@ -135,6 +159,7 @@ const posts = [
     subcategory: null,
     url: "nachtwache.html",
     emoji: "🌙",
+    tags: ["spiel", "einzelarbeit", "gruppenarbeit"],
     titleEn: "Night Watch",
     excerptEn: "Co-op survival game with campaign and co-op modes, weapons, boss fights and stealth."
    },
@@ -146,6 +171,7 @@ const posts = [
     subcategory: "mathematik",
     url: "zahlen-werkstatt.html",
     emoji: "🔧",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5"],
     titleEn: "Number Workshop",
     excerptEn: "Learning game on natural numbers (grade 5): reading & writing, place value, rounding, the number line and more — for up to 4 learners at once, with automatic level adjustment."
    },
@@ -157,6 +183,7 @@ const posts = [
     subcategory: "mathematik",
     url: "https://sikore.schiffner-tischer.de/",
     emoji: "🧠",
+    tags: ["tool"],
     titleEn: "SIKORE – Mental Maths Trainer",
     excerptEn: "Free online tool and worksheet generator with 39 difficulty levels, from simple addition and subtraction to complex multiplication. (External site)"
    },
@@ -168,6 +195,7 @@ const posts = [
     subcategory: "mathematik",
     url: "bruch-quiz-fussball.html",
     emoji: "⚽",
+    tags: ["spiel", "partnerarbeit"],
     titleEn: "Fraction Quiz (Football)",
     excerptEn: "A maths penalty shoot-out for 2 players: solve fraction problems — get it right and you take the shot."
    },
@@ -179,6 +207,7 @@ const posts = [
     subcategory: "mathematik",
     url: "prozent-rennen.html",
     emoji: "📊",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
     titleEn: "Percentage Race",
     excerptEn: "Learning game on percentages (base value, rate, percentage value) in race format — for 1 to 4 learners on the same device, three difficulty levels."
    },
@@ -190,6 +219,7 @@ const posts = [
     subcategory: "mathematik",
     url: "gleichungs-duell.html",
     emoji: "⚔️",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
     titleEn: "Equation Duel",
     excerptEn: "Solve linear equations for x, from a single step to x on both sides — for 1 to 4 learners on the same device."
    },
@@ -201,6 +231,7 @@ const posts = [
     subcategory: "mathematik",
     url: "flaechen-fuchs.html",
     emoji: "🦊",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
     titleEn: "Area Fox",
     excerptEn: "Calculate the perimeter and area of rectangles, squares, triangles and circles, with labelled shapes — for 1 to 4 learners on the same device."
    },
@@ -213,6 +244,7 @@ const posts = [
     url: "zahlen-detektiv.html",
     emoji: "🕵️",
     featured: true,
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
     titleEn: "Number Detective",
     excerptEn: "Solve number puzzles with natural numbers: crack the hidden number from several clues (odd/even, divisibility, digit sum, number of digits) — for 1 to 4 learners on the same device."
    },
@@ -225,6 +257,7 @@ const posts = [
     url: "kopfrechen-quiz.html",
     emoji: "⚡",
     featured: true,
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
     titleEn: "Mental Maths Quiz",
     excerptEn: "Lightning-fast mental maths with addition, subtraction, multiplication and division against the clock, with a countdown per question — for 1 to 4 learners on the same device."
    },
@@ -237,6 +270,7 @@ const posts = [
     url: "praktikumsspiel.html",
     emoji: "🎲",
     featured: true,
+    tags: ["spiel", "partnerarbeit", "gruppenarbeit"],
     titleEn: "The Internship Game",
     excerptEn: "A board game for reflecting on work experience: roll the dice, land on reflection spaces and talk about your own internship experiences — for 2 to 6 players."
    },

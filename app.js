@@ -17,6 +17,9 @@ const BALL_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const CONTROLLER_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10.5v3M5.5 12h3M15.3 10.8h.01M17.3 12.8h.01M15.8 14.8h.01M17.8 10.8h.01"/><path d="M7.5 7.5h9A4 4 0 0 1 20.4 12l-.6 3.7a2.3 2.3 0 0 1-4.1 1L15 15.7H9l-.7 1a2.3 2.3 0 0 1-4.1-1L3.6 12A4 4 0 0 1 7.5 7.5z"/></svg>';
 const WRENCH_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 8.7a4.6 4.6 0 0 1-6 5.1l-6.6 6.6-2.4-2.4 6.6-6.6a4.6 4.6 0 0 1 5.1-6l-3 3 2.3 2.3 3-3z"/></svg>';
 const STAR_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.97 6.19 6.83.82-5.03 4.66 1.36 6.76L12 17.77l-6.13 3.16 1.36-6.76-5.03-4.66 6.83-.82z"/></svg>';
+/* Ungefüllte Variante desselben Sterns fürs Favoriten-Symbol auf jeder
+   Karte — gefüllt = gemerkt, umrandet = (noch) nicht gemerkt. */
+const STAR_OUTLINE_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.5l2.97 6.19 6.83.82-5.03 4.66 1.36 6.76L12 17.77l-6.13 3.16 1.36-6.76-5.03-4.66 6.83-.82z"/></svg>';
 const BOOK_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2c-1.7-1.3-3.9-2-6.3-2-.9 0-1.8.1-2.7.3v12.6c.9-.2 1.8-.3 2.7-.3 2.4 0 4.6.7 6.3 2m0-12.6c1.7-1.3 3.9-2 6.3-2 .9 0 1.8.1 2.7.3v12.6c-.9-.2-1.8-.3-2.7-.3-2.4 0-4.6.7-6.3 2m0-12.6v12.6"/></svg>';
 
 /* Große Kachel-Icons (Startseite, Ordner-Übersicht) — anschaulich statt
@@ -103,6 +106,16 @@ const I18N = {
     langSwitchTo: "Switch to English",
     langButtonLabel: "EN",
     dateLocale: "de-DE",
+    favoritesTitle: "Favoriten",
+    favAdd: "Zu Favoriten hinzufügen",
+    favRemove: "Von Favoriten entfernen",
+    tagFilterClear: "Filter zurücksetzen",
+    tagFilterResults: (n) => (n === 1 ? "1 Treffer" : `${n} Treffer`),
+    tagFilterEmpty: "Keine Treffer für diese Auswahl.",
+    tagLabels: {
+      einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
+      spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6"
+    },
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
       mathematik: "Mathematik", arbeitslehre: "Arbeitslehre", sonstiges: "Sonstiges",
@@ -136,6 +149,16 @@ const I18N = {
     langSwitchTo: "Auf Deutsch wechseln",
     langButtonLabel: "DE",
     dateLocale: "en-GB",
+    favoritesTitle: "Favourites",
+    favAdd: "Add to favourites",
+    favRemove: "Remove from favourites",
+    tagFilterClear: "Clear filters",
+    tagFilterResults: (n) => (n === 1 ? "1 result" : `${n} results`),
+    tagFilterEmpty: "No results for this selection.",
+    tagLabels: {
+      einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Group",
+      spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6"
+    },
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
       mathematik: "Mathematics", arbeitslehre: "Vocational Studies", sonstiges: "Miscellaneous",
@@ -252,9 +275,13 @@ function renderPostList(list, opts) {
           : `<span class="post-emoji post-emoji--plain icon-badge--${p.category}" aria-hidden="true">${MINI_ICONS[p.category] || ""}</span>`;
         const title = opts.highlight ? highlightMatch(p.title, opts.highlight) : escapeHtml(p.title);
         const excerpt = opts.highlight ? highlightMatch(p.excerpt, opts.highlight) : escapeHtml(p.excerpt);
+        const fav = isFavorite(p0.url);
+        const favLabel = fav ? t("favRemove") : t("favAdd");
         return `
       <li class="post-list-item" style="--i:${i}">
-        <a class="post-card${opts.featured ? " post-card--featured" : ""}" href="${p.url}"${linkAttrs}>
+        <div class="post-card${opts.featured ? " post-card--featured" : ""}">
+          <a class="post-card-link" href="${p.url}"${linkAttrs} aria-label="${escapeHtml(p.title)}"></a>
+          <button type="button" class="post-fav-btn${fav ? " is-active" : ""}" data-url="${escapeHtml(p0.url)}" aria-pressed="${fav}" aria-label="${escapeHtml(favLabel)}" title="${escapeHtml(favLabel)}">${fav ? STAR_GLYPH : STAR_OUTLINE_GLYPH}</button>
           ${emojiBadge}
           <div class="post-card-body">
             <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderLabel(p.category) : p.category}${isNew ? `<span class="badge-new">${t("newBadge")}</span>` : ""}</span>
@@ -262,7 +289,7 @@ function renderPostList(list, opts) {
             <p class="post-excerpt">${excerpt}</p>
             <span class="post-meta">${formatDate(p.date)}</span>
           </div>
-        </a>
+        </div>
       </li>`;
       })
       .join("") +
@@ -314,6 +341,72 @@ function getRecentPosts() {
     .filter(Boolean);
 }
 
+/* ---------------------------------------------------------
+   Favoriten — im Unterschied zu "Zuletzt geöffnet" eine bewusste,
+   dauerhafte Auswahl per Stern-Symbol auf jeder Karte, unabhängig
+   vom Verlauf. Ebenfalls rein lokal im Browser gespeichert.
+--------------------------------------------------------- */
+const FAVORITES_KEY = "buildspace_favorites_v1";
+
+function getFavoriteUrls() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function isFavorite(url) {
+  return getFavoriteUrls().includes(url);
+}
+
+function toggleFavorite(url) {
+  if (!url) return;
+  try {
+    const current = getFavoriteUrls();
+    const idx = current.indexOf(url);
+    if (idx === -1) current.unshift(url);
+    else current.splice(idx, 1);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+  } catch (e) {
+    /* Favoriten sind ein Komfortfeature, kein Muss — ein blockierter
+       localStorage (z. B. privates Fenster) darf nicht die Seite stören. */
+  }
+}
+
+function getFavoritePosts() {
+  return getFavoriteUrls()
+    .map((url) => posts.find((p) => p.url === url))
+    .filter(Boolean);
+}
+
+/* ---------------------------------------------------------
+   Tags — zusätzlich zur festen Ordnerstruktur (Kategorie/Unterkategorie)
+   können Beiträge in posts-data.js beliebige Tags bekommen, z. B.
+   Gruppengröße (Einzel-/Partner-/Gruppenarbeit), Beitragsart (Spiel/Tool)
+   oder Jahrgang. Auf der Startseite lassen sie sich als Filter-Chips
+   quer über alle Ordner hinweg an- und abwählen. TAG_ORDER legt nur die
+   Anzeige-Reihenfolge bekannter Tags fest — neue, dort nicht gelistete
+   Tags aus posts-data.js tauchen automatisch (alphabetisch hinten) mit
+   auf, auch ohne dass hier etwas ergänzt wird (dann allerdings ohne
+   übersetztes Label, siehe tagLabel()).
+--------------------------------------------------------- */
+const TAG_ORDER = ["einzelarbeit", "partnerarbeit", "gruppenarbeit", "spiel", "tool", "jg5", "jg6"];
+
+function getAllTagIds() {
+  const used = new Set();
+  posts.forEach((p) => (p.tags || []).forEach((tg) => used.add(tg)));
+  const ordered = TAG_ORDER.filter((tg) => used.has(tg));
+  const extra = [...used].filter((tg) => !TAG_ORDER.includes(tg)).sort();
+  return [...ordered, ...extra];
+}
+
+function tagLabel(id) {
+  const labels = I18N[getLang()].tagLabels || {};
+  return labels[id] || id;
+}
+
 function renderTopLevel() {
   if (window.Protect) window.Protect.removeShareButton();
   document.documentElement.classList.remove("share-mode");
@@ -330,6 +423,11 @@ function renderTopLevel() {
 
   const featured = posts.filter((p) => p.featured);
   const recentPosts = getRecentPosts();
+  const favoritePosts = getFavoritePosts();
+  const tagIds = getAllTagIds();
+  // Aktive Tag-Auswahl lebt nur innerhalb dieses Renders (wie das leere
+  // Suchfeld bei jedem Seitenaufruf) — kein eigener localStorage-Schlüssel.
+  const activeTags = new Set();
 
   content.innerHTML = `
     <div class="home-search">
@@ -337,8 +435,21 @@ function renderTopLevel() {
       <input type="search" id="site-search" class="home-search-input" placeholder="${escapeHtml(t("searchPlaceholder"))}" autocomplete="off" aria-label="${escapeHtml(t("searchLabel"))}">
       <span class="home-search-hint" id="search-hint" aria-hidden="true">/</span>
     </div>
+    ${
+      tagIds.length
+        ? `<div class="tag-filter-row" id="tag-filter-row">
+             ${tagIds.map((id) => `<button type="button" class="tag-chip" data-tag="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(tagLabel(id))}</button>`).join("")}
+             <button type="button" class="tag-filter-clear" id="tag-filter-clear" hidden>${escapeHtml(t("tagFilterClear"))}</button>
+           </div>`
+        : ""
+    }
     <div id="search-results" class="search-results" hidden></div>
     <div id="home-normal">
+      ${
+        favoritePosts.length
+          ? `<h2 class="section-label section-label--favorites"><span aria-hidden="true">⭐</span> ${t("favoritesTitle")}</h2>${renderPostList(favoritePosts, { preserveOrder: true })}`
+          : ""
+      }
       ${
         recentPosts.length
           ? `<div class="section-label-row">
@@ -374,6 +485,8 @@ function renderTopLevel() {
   const homeNormal = document.getElementById("home-normal");
   const searchHint = document.getElementById("search-hint");
   const clearRecentBtn = document.getElementById("clear-recent-btn");
+  const tagFilterRow = document.getElementById("tag-filter-row");
+  const tagFilterClear = document.getElementById("tag-filter-clear");
 
   if (clearRecentBtn) {
     clearRecentBtn.addEventListener("click", () => {
@@ -389,10 +502,13 @@ function renderTopLevel() {
     });
   }
 
-  searchInput.addEventListener("input", () => {
+  /* Text-Suche und Tag-Filter grenzen gemeinsam dieselbe Trefferliste
+     ein — beide unabhängig voneinander an- und abschaltbar, damit z. B.
+     "Bruch" + "Partnerarbeit" kombiniert werden kann. */
+  function updateFilteredView() {
     const raw = searchInput.value.trim();
     const q = raw.toLowerCase();
-    if (!q) {
+    if (!q && activeTags.size === 0) {
       searchResults.hidden = true;
       searchResults.innerHTML = "";
       homeNormal.hidden = false;
@@ -404,12 +520,46 @@ function renderTopLevel() {
     // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
     const matches = posts.filter((p0) => {
       const p = localizePost(p0);
-      return p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
+      const textMatch = !q || p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
+      const tagMatch = activeTags.size === 0 || [...activeTags].every((tg) => (p0.tags || []).includes(tg));
+      return textMatch && tagMatch;
     });
-    searchResults.innerHTML = matches.length
-      ? `<h2 class="section-label">${t("searchResults")(matches.length, escapeHtml(raw))}</h2>${renderPostList(matches, { highlight: raw })}`
-      : `<p class="empty-state">${t("searchEmpty")(escapeHtml(raw))}</p>`;
-  });
+    if (!matches.length) {
+      searchResults.innerHTML = `<p class="empty-state">${q ? t("searchEmpty")(escapeHtml(raw)) : t("tagFilterEmpty")}</p>`;
+      return;
+    }
+    const heading = q ? t("searchResults")(matches.length, escapeHtml(raw)) : t("tagFilterResults")(matches.length);
+    searchResults.innerHTML = `<h2 class="section-label">${heading}</h2>${renderPostList(matches, { highlight: q ? raw : "" })}`;
+  }
+
+  searchInput.addEventListener("input", updateFilteredView);
+
+  if (tagFilterRow) {
+    tagFilterRow.querySelectorAll(".tag-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const id = chip.dataset.tag;
+        const wasActive = activeTags.has(id);
+        if (wasActive) activeTags.delete(id);
+        else activeTags.add(id);
+        chip.classList.toggle("is-active", !wasActive);
+        chip.setAttribute("aria-pressed", String(!wasActive));
+        if (tagFilterClear) tagFilterClear.hidden = activeTags.size === 0;
+        updateFilteredView();
+      });
+    });
+  }
+
+  if (tagFilterClear) {
+    tagFilterClear.addEventListener("click", () => {
+      activeTags.clear();
+      tagFilterRow.querySelectorAll(".tag-chip").forEach((chip) => {
+        chip.classList.remove("is-active");
+        chip.setAttribute("aria-pressed", "false");
+      });
+      tagFilterClear.hidden = true;
+      updateFilteredView();
+    });
+  }
 }
 
 function renderNeueste() {
@@ -675,6 +825,18 @@ document.addEventListener("DOMContentLoaded", () => {
   initHero();
 });
 
+/* ---------------------------------------------------------
+   Service Worker — macht buildspace installierbar (siehe
+   site.webmanifest) und auch offline nutzbar, z. B. bei schwachem
+   Schul-WLAN oder nach dem Hinzufügen zum iPad-Homescreen. Registrierung
+   schlägt in nicht unterstützenden Kontexten einfach folgenlos fehl.
+--------------------------------------------------------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
 /* Bei einer aktiven "Für Lernende freigeben"-Freigabe merken wir uns den
    Hash, mit dem die Seite geöffnet wurde — das ist die einzige Route, die
    während der Freigabe erreichbar sein soll. Start, "Neueste" und andere
@@ -744,9 +906,21 @@ document.addEventListener(
    geöffnet" — per Event-Delegation, damit es unabhängig davon greift,
    welche Liste gerade gerendert ist (Neueste, Kategorie, Suche, …). */
 document.addEventListener("click", (e) => {
-  const link = e.target.closest("a.post-card");
+  const link = e.target.closest(".post-card-link");
   if (!link) return;
   recordRecent(link.getAttribute("href"));
+});
+
+/* Stern-Symbol auf jeder Karte: Favorit an/aus. Liegt als eigenständiges
+   Element NEBEN dem Karten-Link (nicht darin verschachtelt), daher ohne
+   Navigations-Konflikt — ein kompletter Re-Render der aktuellen Route
+   reicht, um Favoriten-Abschnitt/-Zustand überall aufzufrischen. */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".post-fav-btn");
+  if (!btn) return;
+  e.preventDefault();
+  toggleFavorite(btn.dataset.url);
+  render();
 });
 
 /* Tastaturkürzel "/" springt ins Suchfeld auf der Startseite — nur wenn
