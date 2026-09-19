@@ -104,12 +104,26 @@ function escapeHtml(s) {
 
 const EXTERNAL_LINK_GLYPH = '<svg class="post-external-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
 
+/* Escaped Text + optional Hervorhebung des Suchbegriffs (Treffer werden in
+   <mark> gepackt, nachdem der Text bereits escaped wurde — verhindert, dass
+   die Nutzereingabe selbst als HTML interpretiert wird). */
+function highlightMatch(text, rawQuery) {
+  const escaped = escapeHtml(text);
+  if (!rawQuery) return escaped;
+  const escapedQuery = escapeHtml(rawQuery).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escapedQuery) return escaped;
+  const re = new RegExp(escapedQuery, "ig");
+  return escaped.replace(re, (m) => `<mark>${m}</mark>`);
+}
+
 function renderPostList(list, opts) {
   opts = opts || {};
   if (!list.length) {
     return '<p class="empty-state">Hier gibt es noch keine Beiträge.</p>';
   }
-  const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
+  // Beim Verlauf ("Zuletzt geöffnet") ist die Reihenfolge bereits die
+  // gewünschte (neuestes zuerst) — dort NICHT nach Datum neu sortieren.
+  const sorted = opts.preserveOrder ? list : [...list].sort((a, b) => b.date.localeCompare(a.date));
   const newestDate = latestPostDate(posts);
   return (
     '<ul class="post-list">' +
@@ -122,14 +136,16 @@ function renderPostList(list, opts) {
         const emojiBadge = p.emoji
           ? `<span class="post-emoji" aria-hidden="true">${p.emoji}</span>`
           : `<span class="post-emoji post-emoji--plain icon-badge--${p.category}" aria-hidden="true">${MINI_ICONS[p.category] || ""}</span>`;
+        const title = opts.highlight ? highlightMatch(p.title, opts.highlight) : escapeHtml(p.title);
+        const excerpt = opts.highlight ? highlightMatch(p.excerpt, opts.highlight) : escapeHtml(p.excerpt);
         return `
       <li class="post-list-item" style="--i:${i}">
         <a class="post-card${opts.featured ? " post-card--featured" : ""}" href="${p.url}"${linkAttrs}>
           ${emojiBadge}
           <div class="post-card-body">
             <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}${isNew ? '<span class="badge-new">Neu</span>' : ""}</span>
-            <h3>${escapeHtml(p.title)}${externalBadge}</h3>
-            <p class="post-excerpt">${escapeHtml(p.excerpt)}</p>
+            <h3>${title}${externalBadge}</h3>
+            <p class="post-excerpt">${excerpt}</p>
             <span class="post-meta">${formatDate(p.date)}</span>
           </div>
         </a>
@@ -138,6 +154,50 @@ function renderPostList(list, opts) {
       .join("") +
     "</ul>"
   );
+}
+
+/* ---------------------------------------------------------
+   "Zuletzt geöffnet" — merkt sich lokal im Browser (localStorage),
+   welche Beiträge zuletzt angeklickt wurden, damit man z. B. über
+   mehrere Stunden hinweg dieselbe Klasse schnell wieder zum zuletzt
+   gezeigten Spiel zurückführen kann. Rein clientseitig, pro Gerät/
+   Browser — daher der gut sichtbare "Verlauf löschen"-Button, weil
+   das Gerät oft mit wechselnden Klassen genutzt wird.
+--------------------------------------------------------- */
+const RECENT_KEY = "myhome_recent_urls_v1";
+const RECENT_MAX = 3;
+
+function getRecentUrls() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function recordRecent(url) {
+  if (!url) return;
+  try {
+    const current = getRecentUrls().filter((u) => u !== url);
+    current.unshift(url);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(current.slice(0, RECENT_MAX)));
+  } catch (e) {
+    /* localStorage kann in seltenen Fällen blockiert sein (privates
+       Fenster o. Ä.) — der Verlauf ist ein Komfortfeature, kein Muss. */
+  }
+}
+
+function clearRecent() {
+  try {
+    localStorage.removeItem(RECENT_KEY);
+  } catch (e) {}
+}
+
+function getRecentPosts() {
+  return getRecentUrls()
+    .map((url) => posts.find((p) => p.url === url))
+    .filter(Boolean);
 }
 
 function renderTopLevel() {
@@ -156,14 +216,25 @@ function renderTopLevel() {
   ];
 
   const featured = posts.filter((p) => p.featured);
+  const recentPosts = getRecentPosts();
 
   content.innerHTML = `
     <div class="home-search">
       <svg class="home-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="search" id="site-search" class="home-search-input" placeholder="Spiele, Tools &amp; Beiträge durchsuchen…" autocomplete="off" aria-label="Beiträge durchsuchen">
+      <span class="home-search-hint" id="search-hint" aria-hidden="true">/</span>
     </div>
     <div id="search-results" class="search-results" hidden></div>
     <div id="home-normal">
+      ${
+        recentPosts.length
+          ? `<div class="section-label-row">
+               <h2 class="section-label section-label--recent"><span aria-hidden="true">🕘</span> Zuletzt geöffnet</h2>
+               <button type="button" class="clear-recent-btn" id="clear-recent-btn">Verlauf löschen</button>
+             </div>
+             <div id="recent-list">${renderPostList(recentPosts, { preserveOrder: true })}</div>`
+          : ""
+      }
       ${
         featured.length
           ? `<h2 class="section-label section-label--featured"><span class="sparkle" aria-hidden="true">✨</span> Empfohlen</h2>${renderPostList(featured, { featured: true })}`
@@ -188,6 +259,22 @@ function renderTopLevel() {
   const searchInput = document.getElementById("site-search");
   const searchResults = document.getElementById("search-results");
   const homeNormal = document.getElementById("home-normal");
+  const searchHint = document.getElementById("search-hint");
+  const clearRecentBtn = document.getElementById("clear-recent-btn");
+
+  if (clearRecentBtn) {
+    clearRecentBtn.addEventListener("click", () => {
+      clearRecent();
+      renderTopLevel();
+    });
+  }
+
+  if (searchHint) {
+    searchInput.addEventListener("focus", () => { searchHint.hidden = true; });
+    searchInput.addEventListener("blur", () => {
+      if (!searchInput.value) searchHint.hidden = false;
+    });
+  }
 
   searchInput.addEventListener("input", () => {
     const raw = searchInput.value.trim();
@@ -204,7 +291,7 @@ function renderTopLevel() {
       (p) => p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
     );
     searchResults.innerHTML = matches.length
-      ? `<h2 class="section-label">${matches.length} Treffer für „${escapeHtml(raw)}“</h2>${renderPostList(matches)}`
+      ? `<h2 class="section-label">${matches.length} Treffer für „${escapeHtml(raw)}“</h2>${renderPostList(matches, { highlight: raw })}`
       : `<p class="empty-state">Keine Treffer für „${escapeHtml(raw)}“. Versuch es mit einem anderen Suchbegriff.</p>`;
   });
 }
@@ -431,3 +518,25 @@ document.addEventListener(
   },
   { passive: true }
 );
+
+/* Merkt sich per Klick auf eine Beitragskarte den Verlauf für "Zuletzt
+   geöffnet" — per Event-Delegation, damit es unabhängig davon greift,
+   welche Liste gerade gerendert ist (Neueste, Kategorie, Suche, …). */
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a.post-card");
+  if (!link) return;
+  recordRecent(link.getAttribute("href"));
+});
+
+/* Tastaturkürzel "/" springt ins Suchfeld auf der Startseite — nur wenn
+   gerade nicht ohnehin in einem Eingabefeld getippt wird. */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const active = document.activeElement;
+  const isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+  if (isTyping) return;
+  const searchInput = document.getElementById("site-search");
+  if (!searchInput) return;
+  e.preventDefault();
+  searchInput.focus();
+});
