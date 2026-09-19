@@ -21,6 +21,10 @@
    - featured:    (optional) true = erscheint oben auf der Startseite im
                   Bereich "Empfohlen", unabhängig vom Datum. Sparsam
                   einsetzen (2-4 Beiträge), sonst verliert es seinen Sinn.
+   - titleEn/excerptEn: (optional) englische Übersetzung von title/excerpt
+                  für den Sprachumschalter oben rechts. Ohne Angabe zeigt
+                  die Karte auch im Englischen den deutschen Text (die
+                  Spiel-/Tool-Seite selbst bleibt in jedem Fall deutsch).
 --------------------------------------------------------- */
 
 const posts = [
@@ -31,7 +35,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "minigolf-winkel.html",
-    emoji: "⛳"
+    emoji: "⛳",
+    titleEn: "Minigolf – Angles – Grade 6",
+    excerptEn: "Learn angle types through play"
    },
    {
     title: "Mathe Warm-up Generator",
@@ -40,7 +46,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "mathe-warmup-generator.html",
-    emoji: "🔥"
+    emoji: "🔥",
+    titleEn: "Math Warm-Up Generator",
+    excerptEn: "Generates warm-up exercises across 18 topic areas with A/B/C differentiation, exportable straight to PDF."
    },
    {
     title: "Hallenplan – Handballtraining",
@@ -49,7 +57,9 @@ const posts = [
     category: "handball",
     subcategory: "training",
     url: "hallenplan.html",
-    emoji: "📐"
+    emoji: "📐",
+    titleEn: "Court Planner – Handball Training",
+    excerptEn: "Training planner with a 2D/3D view: arrange players, equipment and drill shapes on the court floor via drag-and-drop."
    },
    {
     title: "Handball-Anzeigetafel",
@@ -58,7 +68,9 @@ const posts = [
     category: "handball",
     subcategory: "training",
     url: "handball-anzeigetafel.html",
-    emoji: "⏱️"
+    emoji: "⏱️",
+    titleEn: "Handball Scoreboard",
+    excerptEn: "Digital scoreboard for training sessions: score, time and penalty timers at a glance."
    },
    {
     title: "Strafenkasse – Männer 1",
@@ -67,7 +79,9 @@ const posts = [
     category: "handball",
     subcategory: "maenner1",
     url: "strafenkasse/index.html",
-    emoji: "💰"
+    emoji: "💰",
+    titleEn: "Penalty Fund – Men's 1",
+    excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
    },
    {
     title: "Strafenkasse – Männer 2",
@@ -76,7 +90,9 @@ const posts = [
     category: "handball",
     subcategory: "maenner2",
     url: "strafenkasse/index.html",
-    emoji: "💰"
+    emoji: "💰",
+    titleEn: "Penalty Fund – Men's 2",
+    excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
    },
    {
     title: "Wizard – Das Kartenspiel",
@@ -85,7 +101,9 @@ const posts = [
     category: "freizeit",
     subcategory: null,
     url: "wizard-kartenspiel.html",
-    emoji: "🧙"
+    emoji: "🧙",
+    titleEn: "Wizard – The Card Game",
+    excerptEn: "Play Wizard digitally: multiplayer via PeerJS or against an AI on three difficulty levels."
    },
    {
     title: "Wizard Scoreboard",
@@ -94,7 +112,9 @@ const posts = [
     category: "freizeit",
     subcategory: null,
     url: "wizard-scoreboard.html",
-    emoji: "🧙"
+    emoji: "🧙",
+    titleEn: "Wizard Scoreboard",
+    excerptEn: "Score calculator for tabletop Wizard: enter bids and tricks won, points and stats are calculated automatically."
    },
    {
     title: "AoS Prüfungstrainer",
@@ -103,7 +123,9 @@ const posts = [
     category: "freizeit",
     subcategory: null,
     url: "aos-pruefungstrainer.html",
-    emoji: "🎓"
+    emoji: "🎓",
+    titleEn: "AoS Exam Trainer",
+    excerptEn: "Multiple-choice practice on exercise science: energy systems, muscle fibre types, warm-up and the cardiovascular system."
    },
    {
     title: "Nachtwache",
@@ -112,7 +134,9 @@ const posts = [
     category: "freizeit",
     subcategory: null,
     url: "nachtwache.html",
-    emoji: "🌙"
+    emoji: "🌙",
+    titleEn: "Night Watch",
+    excerptEn: "Co-op survival game with campaign and co-op modes, weapons, boss fights and stealth."
    },
    {
     title: "Zahlen-Werkstatt",
@@ -121,7 +145,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "zahlen-werkstatt.html",
-    emoji: "🔧"
+    emoji: "🔧",
+    titleEn: "Number Workshop",
+    excerptEn: "Learning game on natural numbers (grade 5): reading & writing, place value, rounding, the number line and more — for up to 4 learners at once, with automatic level adjustment."
    },
    {
     title: "SIKORE – Kopfrechentrainer",
@@ -130,7 +156,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "https://sikore.schiffner-tischer.de/",
-    emoji: "🧠"
+    emoji: "🧠",
+    titleEn: "SIKORE – Mental Maths Trainer",
+    excerptEn: "Free online tool and worksheet generator with 39 difficulty levels, from simple addition and subtraction to complex multiplication. (External site)"
    },
    {
     title: "Bruch-Quiz (Fußball)",
@@ -139,7 +167,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "bruch-quiz-fussball.html",
-    emoji: "⚽"
+    emoji: "⚽",
+    titleEn: "Fraction Quiz (Football)",
+    excerptEn: "A maths penalty shoot-out for 2 players: solve fraction problems — get it right and you take the shot."
    },
    {
     title: "Prozent-Rennen",
@@ -148,7 +178,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "prozent-rennen.html",
-    emoji: "📊"
+    emoji: "📊",
+    titleEn: "Percentage Race",
+    excerptEn: "Learning game on percentages (base value, rate, percentage value) in race format — for 1 to 4 learners on the same device, three difficulty levels."
    },
    {
     title: "Gleichungs-Duell",
@@ -157,7 +189,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "gleichungs-duell.html",
-    emoji: "⚔️"
+    emoji: "⚔️",
+    titleEn: "Equation Duel",
+    excerptEn: "Solve linear equations for x, from a single step to x on both sides — for 1 to 4 learners on the same device."
    },
    {
     title: "Flächen-Fuchs",
@@ -166,7 +200,9 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     url: "flaechen-fuchs.html",
-    emoji: "🦊"
+    emoji: "🦊",
+    titleEn: "Area Fox",
+    excerptEn: "Calculate the perimeter and area of rectangles, squares, triangles and circles, with labelled shapes — for 1 to 4 learners on the same device."
    },
    {
     title: "Zahlen-Detektiv",
@@ -176,7 +212,9 @@ const posts = [
     subcategory: "mathematik",
     url: "zahlen-detektiv.html",
     emoji: "🕵️",
-    featured: true
+    featured: true,
+    titleEn: "Number Detective",
+    excerptEn: "Solve number puzzles with natural numbers: crack the hidden number from several clues (odd/even, divisibility, digit sum, number of digits) — for 1 to 4 learners on the same device."
    },
    {
     title: "Kopfrechen-Quiz",
@@ -186,7 +224,9 @@ const posts = [
     subcategory: "mathematik",
     url: "kopfrechen-quiz.html",
     emoji: "⚡",
-    featured: true
+    featured: true,
+    titleEn: "Mental Maths Quiz",
+    excerptEn: "Lightning-fast mental maths with addition, subtraction, multiplication and division against the clock, with a countdown per question — for 1 to 4 learners on the same device."
    },
    {
     title: "Das Praktikumsspiel",
@@ -196,6 +236,8 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "praktikumsspiel.html",
     emoji: "🎲",
-    featured: true
+    featured: true,
+    titleEn: "The Internship Game",
+    excerptEn: "A board game for reflecting on work experience: roll the dice, land on reflection spaces and talk about your own internship experiences — for 2 to 6 players."
    },
 ];

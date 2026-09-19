@@ -40,34 +40,147 @@ const MINI_ICONS = {
 
 const folderStructure = {
   schule: {
-    label: "Schule",
     color: "var(--c-schule)",
     icon: ICONS.schule,
     subfolders: [
-      { id: "mathematik", label: "Mathematik" },
-      { id: "arbeitslehre", label: "Arbeitslehre" },
-      { id: "sonstiges", label: "Sonstiges" }
+      { id: "mathematik" },
+      { id: "arbeitslehre" },
+      { id: "sonstiges" }
     ]
   },
   handball: {
-    label: "Handball",
     color: "var(--c-handball)",
     icon: ICONS.handball,
     subfolders: [
-      { id: "jugend", label: "Jugend" },
-      { id: "maenner1", label: "Männer 1" },
-      { id: "maenner2", label: "Männer 2" },
-      { id: "hallendienst", label: "Hallendienst" },
-      { id: "training", label: "Training" }
+      { id: "jugend" },
+      { id: "maenner1" },
+      { id: "maenner2" },
+      { id: "hallendienst" },
+      { id: "training" }
     ]
   },
   freizeit: {
-    label: "Freizeit",
     color: "var(--c-freizeit)",
     icon: ICONS.freizeit,
     subfolders: []
   }
 };
+
+/* ---------------------------------------------------------
+   Zweisprachigkeit (DE/EN) — der Sprachumschalter oben rechts.
+   Übersetzt wird die Navigations-/Oberflächen-Sprache der Startseite
+   sowie Titel/Beschreibung jedes Beitrags (siehe titleEn/excerptEn in
+   posts-data.js, mit deutschem Text als Fallback, falls eine
+   Übersetzung fehlt). Die einzelnen Spiel-/Tool-Seiten selbst bleiben
+   bewusst deutsch — das wäre eine eigene, deutlich größere Aufgabe.
+--------------------------------------------------------- */
+const LANG_KEY = "myhome_lang";
+
+const I18N = {
+  de: {
+    heroSub: "Materialien, Lernspiele und Tools von Marc Stroh — Mathematik, Arbeitslehre, Handball & Freizeit, gesammelt an einem Ort.",
+    greeting: { night: "Noch spät unterwegs", morning: "Guten Morgen", noon: "Schönen Mittag", day: "Guten Tag", evening: "Guten Abend" },
+    statPost: (n) => (n === 1 ? "Beitrag" : "Beiträge"),
+    statAreas: "Bereiche",
+    statNew: "diesen Monat neu",
+    searchPlaceholder: "Spiele, Tools & Beiträge durchsuchen…",
+    searchLabel: "Beiträge durchsuchen",
+    recentTitle: "Zuletzt geöffnet",
+    clearRecent: "Verlauf löschen",
+    featuredTitle: "Empfohlen",
+    categoriesTitle: "Kategorien",
+    newBadge: "Neu",
+    home: "Start",
+    emptyState: "Hier gibt es noch keine Beiträge.",
+    searchResults: (n, raw) => `${n} Treffer für „${raw}“`,
+    searchEmpty: (raw) => `Keine Treffer für „${raw}“. Versuch es mit einem anderen Suchbegriff.`,
+    latestTitle: "Neueste Beiträge",
+    latestSub: "Alle Beiträge der letzten 30 Tage, automatisch sortiert — unabhängig vom Ordner.",
+    footer: "MyHome — gebaut mit HTML, CSS & JavaScript, gehostet auf GitHub Pages.",
+    postCount: (n) => (n === 1 ? "1 Beitrag" : `${n} Beiträge`),
+    themeToDark: "Dunkelmodus aktivieren",
+    themeToLight: "Hellmodus aktivieren",
+    langSwitchTo: "Switch to English",
+    langButtonLabel: "EN",
+    dateLocale: "de-DE",
+    folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
+    subfolders: {
+      mathematik: "Mathematik", arbeitslehre: "Arbeitslehre", sonstiges: "Sonstiges",
+      jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
+      hallendienst: "Hallendienst", training: "Training"
+    }
+  },
+  en: {
+    heroSub: "Materials, learning games and tools by Marc Stroh — maths, careers education, handball & leisure, all in one place.",
+    greeting: { night: "Up late", morning: "Good morning", noon: "Good midday", day: "Good afternoon", evening: "Good evening" },
+    statPost: (n) => (n === 1 ? "post" : "posts"),
+    statAreas: "areas",
+    statNew: "new this month",
+    searchPlaceholder: "Search games, tools & posts…",
+    searchLabel: "Search posts",
+    recentTitle: "Recently opened",
+    clearRecent: "Clear history",
+    featuredTitle: "Featured",
+    categoriesTitle: "Categories",
+    newBadge: "New",
+    home: "Home",
+    emptyState: "There are no posts here yet.",
+    searchResults: (n, raw) => `${n} result${n === 1 ? "" : "s"} for “${raw}”`,
+    searchEmpty: (raw) => `No results for “${raw}”. Try a different search term.`,
+    latestTitle: "Latest posts",
+    latestSub: "All posts from the last 30 days, sorted automatically — across every folder.",
+    footer: "MyHome — built with HTML, CSS & JavaScript, hosted on GitHub Pages.",
+    postCount: (n) => (n === 1 ? "1 post" : `${n} posts`),
+    themeToDark: "Enable dark mode",
+    themeToLight: "Enable light mode",
+    langSwitchTo: "Auf Deutsch wechseln",
+    langButtonLabel: "DE",
+    dateLocale: "en-GB",
+    folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
+    subfolders: {
+      mathematik: "Mathematics", arbeitslehre: "Vocational Studies", sonstiges: "Miscellaneous",
+      jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
+      hallendienst: "Hall Duty", training: "Training"
+    }
+  }
+};
+
+function getLang() {
+  try {
+    const stored = localStorage.getItem(LANG_KEY);
+    return stored === "en" ? "en" : "de";
+  } catch (e) {
+    return "de";
+  }
+}
+
+function setLang(lang) {
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+  } catch (e) {}
+}
+
+function t(key) {
+  const val = I18N[getLang()][key];
+  return val;
+}
+
+function folderLabel(id) {
+  return I18N[getLang()].folders[id] || id;
+}
+
+function subfolderLabel(id) {
+  return I18N[getLang()].subfolders[id] || id;
+}
+
+/* Beitrag in der aktuell gewählten Sprache — fällt auf den deutschen
+   Text zurück, solange (oder falls) keine Übersetzung hinterlegt ist. */
+function localizePost(p) {
+  if (getLang() === "en" && (p.titleEn || p.excerptEn)) {
+    return { ...p, title: p.titleEn || p.title, excerpt: p.excerptEn || p.excerpt };
+  }
+  return p;
+}
 
 const content = document.getElementById("content");
 const breadcrumb = document.getElementById("breadcrumb");
@@ -79,7 +192,7 @@ function parseHash() {
 
 function formatDate(iso) {
   const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString(t("dateLocale"), { day: "numeric", month: "long", year: "numeric" });
 }
 
 function isWithinLast30Days(iso) {
@@ -119,7 +232,7 @@ function highlightMatch(text, rawQuery) {
 function renderPostList(list, opts) {
   opts = opts || {};
   if (!list.length) {
-    return '<p class="empty-state">Hier gibt es noch keine Beiträge.</p>';
+    return `<p class="empty-state">${t("emptyState")}</p>`;
   }
   // Beim Verlauf ("Zuletzt geöffnet") ist die Reihenfolge bereits die
   // gewünschte (neuestes zuerst) — dort NICHT nach Datum neu sortieren.
@@ -128,11 +241,12 @@ function renderPostList(list, opts) {
   return (
     '<ul class="post-list">' +
     sorted
-      .map((p, i) => {
+      .map((p0, i) => {
+        const p = localizePost(p0);
         const isExternal = /^https?:\/\//i.test(p.url);
         const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
         const externalBadge = isExternal ? EXTERNAL_LINK_GLYPH : "";
-        const isNew = p.date === newestDate;
+        const isNew = p0.date === newestDate;
         const emojiBadge = p.emoji
           ? `<span class="post-emoji" aria-hidden="true">${p.emoji}</span>`
           : `<span class="post-emoji post-emoji--plain icon-badge--${p.category}" aria-hidden="true">${MINI_ICONS[p.category] || ""}</span>`;
@@ -143,7 +257,7 @@ function renderPostList(list, opts) {
         <a class="post-card${opts.featured ? " post-card--featured" : ""}" href="${p.url}"${linkAttrs}>
           ${emojiBadge}
           <div class="post-card-body">
-            <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}${isNew ? '<span class="badge-new">Neu</span>' : ""}</span>
+            <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderLabel(p.category) : p.category}${isNew ? `<span class="badge-new">${t("newBadge")}</span>` : ""}</span>
             <h3>${title}${externalBadge}</h3>
             <p class="post-excerpt">${excerpt}</p>
             <span class="post-meta">${formatDate(p.date)}</span>
@@ -205,11 +319,10 @@ function renderTopLevel() {
   document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = "";
   const cards = [
-    { id: "neueste", href: "#/neueste", label: "Neueste", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
+    { id: "neueste", href: "#/neueste", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
     ...Object.entries(folderStructure).map(([id, f]) => ({
       id,
       href: `#/${id}`,
-      label: f.label,
       icon: f.icon,
       count: posts.filter((p) => p.category === id).length
     }))
@@ -221,7 +334,7 @@ function renderTopLevel() {
   content.innerHTML = `
     <div class="home-search">
       <svg class="home-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" id="site-search" class="home-search-input" placeholder="Spiele, Tools &amp; Beiträge durchsuchen…" autocomplete="off" aria-label="Beiträge durchsuchen">
+      <input type="search" id="site-search" class="home-search-input" placeholder="${escapeHtml(t("searchPlaceholder"))}" autocomplete="off" aria-label="${escapeHtml(t("searchLabel"))}">
       <span class="home-search-hint" id="search-hint" aria-hidden="true">/</span>
     </div>
     <div id="search-results" class="search-results" hidden></div>
@@ -229,26 +342,26 @@ function renderTopLevel() {
       ${
         recentPosts.length
           ? `<div class="section-label-row">
-               <h2 class="section-label section-label--recent"><span aria-hidden="true">🕘</span> Zuletzt geöffnet</h2>
-               <button type="button" class="clear-recent-btn" id="clear-recent-btn">Verlauf löschen</button>
+               <h2 class="section-label section-label--recent"><span aria-hidden="true">🕘</span> ${t("recentTitle")}</h2>
+               <button type="button" class="clear-recent-btn" id="clear-recent-btn">${t("clearRecent")}</button>
              </div>
              <div id="recent-list">${renderPostList(recentPosts, { preserveOrder: true })}</div>`
           : ""
       }
       ${
         featured.length
-          ? `<h2 class="section-label section-label--featured"><span class="sparkle" aria-hidden="true">✨</span> Empfohlen</h2>${renderPostList(featured, { featured: true })}`
+          ? `<h2 class="section-label section-label--featured"><span class="sparkle" aria-hidden="true">✨</span> ${t("featuredTitle")}</h2>${renderPostList(featured, { featured: true })}`
           : ""
       }
-      <h2 class="section-label">Kategorien</h2>
+      <h2 class="section-label">${t("categoriesTitle")}</h2>
       <div class="folder-grid">
         ${cards
           .map(
             (c, i) => `
           <a class="folder-card" href="${c.href}" style="--i:${i}">
             <span class="folder-icon icon-${c.id}">${c.icon}</span>
-            <h2>${c.label}</h2>
-            <span class="folder-count">${c.count === 1 ? "1 Beitrag" : c.count + " Beiträge"}</span>
+            <h2>${folderLabel(c.id)}</h2>
+            <span class="folder-count">${t("postCount")(c.count)}</span>
           </a>`
           )
           .join("")}
@@ -287,23 +400,26 @@ function renderTopLevel() {
     }
     homeNormal.hidden = true;
     searchResults.hidden = false;
-    const matches = posts.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
-    );
+    // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
+    // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
+    const matches = posts.filter((p0) => {
+      const p = localizePost(p0);
+      return p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
+    });
     searchResults.innerHTML = matches.length
-      ? `<h2 class="section-label">${matches.length} Treffer für „${escapeHtml(raw)}“</h2>${renderPostList(matches, { highlight: raw })}`
-      : `<p class="empty-state">Keine Treffer für „${escapeHtml(raw)}“. Versuch es mit einem anderen Suchbegriff.</p>`;
+      ? `<h2 class="section-label">${t("searchResults")(matches.length, escapeHtml(raw))}</h2>${renderPostList(matches, { highlight: raw })}`
+      : `<p class="empty-state">${t("searchEmpty")(escapeHtml(raw))}</p>`;
   });
 }
 
 function renderNeueste() {
   if (window.Protect) window.Protect.removeShareButton();
   document.documentElement.classList.remove("share-mode");
-  breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><span class="current">Neueste</span>`;
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${folderLabel("neueste")}</span>`;
   const recent = posts.filter((p) => isWithinLast30Days(p.date));
   content.innerHTML = `
-    <h1 class="section-label">Neueste Beiträge</h1>
-    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom: 28px;">Alle Beiträge der letzten 30 Tage, automatisch sortiert — unabhängig vom Ordner.</p>
+    <h1 class="section-label">${t("latestTitle")}</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom: 28px;">${t("latestSub")}</p>
     ${renderPostList(recent)}
   `;
 }
@@ -324,19 +440,19 @@ function renderFolder(id) {
 
 function renderFolderUnlocked(id) {
   const folder = folderStructure[id];
-  breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><span class="current">${folder.label}</span>`;
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${folderLabel(id)}</span>`;
 
   if (!folder.subfolders.length) {
     const list = posts.filter((p) => p.category === id);
     content.innerHTML = `
-      <h1 class="section-label">${folder.label}</h1>
+      <h1 class="section-label">${folderLabel(id)}</h1>
       ${renderPostList(list)}
     `;
   } else {
     const subCards = folder.subfolders
       .map((sf) => ({
         href: `#/${id}/${sf.id}`,
-        label: sf.label,
+        label: subfolderLabel(sf.id),
         count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length
       }))
       // Leere Unterordner blenden wir aus, statt sie als Sackgasse mit
@@ -346,7 +462,7 @@ function renderFolderUnlocked(id) {
 
     content.innerHTML = subCards.length
       ? `
-      <h1 class="section-label">${folder.label}</h1>
+      <h1 class="section-label">${folderLabel(id)}</h1>
       <div class="folder-grid">
         ${subCards
           .map(
@@ -356,15 +472,15 @@ function renderFolderUnlocked(id) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
             </span>
             <h2>${c.label}</h2>
-            <span class="folder-count">${c.count} Beitrag${c.count === 1 ? "" : "e"}</span>
+            <span class="folder-count">${t("postCount")(c.count)}</span>
           </a>`
           )
           .join("")}
       </div>
     `
       : `
-      <h1 class="section-label">${folder.label}</h1>
-      <p class="empty-state">Hier gibt es noch keine Beiträge.</p>
+      <h1 class="section-label">${folderLabel(id)}</h1>
+      <p class="empty-state">${t("emptyState")}</p>
     `;
   }
   if (window.Protect) window.Protect.addShareButton(id);
@@ -387,12 +503,12 @@ function renderSubfolder(id, subId) {
 function renderSubfolderUnlocked(id, subId) {
   const folder = folderStructure[id];
   const sub = folder.subfolders.find((s) => s.id === subId);
-  const label = sub ? sub.label : subId;
-  breadcrumb.innerHTML = `<a href="#/">Start</a><span class="sep">›</span><a href="#/${id}">${folder.label}</a><span class="sep">›</span><span class="current">${label}</span>`;
+  const label = sub ? subfolderLabel(subId) : subId;
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/${id}">${folderLabel(id)}</a><span class="sep">›</span><span class="current">${label}</span>`;
 
   const list = posts.filter((p) => p.category === id && p.subcategory === subId);
   content.innerHTML = `
-    <h1 class="section-label">${folder.label} — ${label}</h1>
+    <h1 class="section-label">${folderLabel(id)} — ${label}</h1>
     ${renderPostList(list)}
   `;
   if (window.Protect) window.Protect.addShareButton(id);
@@ -406,11 +522,12 @@ function renderSubfolderUnlocked(id, subId) {
 --------------------------------------------------------- */
 function greetingForNow() {
   const h = new Date().getHours();
-  if (h < 5) return "Noch spät unterwegs";
-  if (h < 11) return "Guten Morgen";
-  if (h < 14) return "Schönen Mittag";
-  if (h < 18) return "Guten Tag";
-  return "Guten Abend";
+  const g = t("greeting");
+  if (h < 5) return g.night;
+  if (h < 11) return g.morning;
+  if (h < 14) return g.noon;
+  if (h < 18) return g.day;
+  return g.evening;
 }
 
 function animateCount(el, target, duration) {
@@ -428,15 +545,21 @@ function initHero() {
   const greetingEl = document.getElementById("hero-greeting");
   if (greetingEl) greetingEl.textContent = greetingForNow();
 
+  const subEl = document.getElementById("hero-sub");
+  if (subEl) subEl.textContent = t("heroSub");
+
+  const footerEl = document.getElementById("site-footer-text");
+  if (footerEl) footerEl.textContent = t("footer");
+
   const statsEl = document.getElementById("hero-stats");
   if (!statsEl) return;
   const total = posts.length;
   const categories = Object.keys(folderStructure).length;
   const recent = posts.filter((p) => isWithinLast30Days(p.date)).length;
   const stats = [
-    { value: total, label: total === 1 ? "Beitrag" : "Beiträge" },
-    { value: categories, label: "Bereiche" },
-    { value: recent, label: "diesen Monat neu" }
+    { value: total, label: t("statPost")(total) },
+    { value: categories, label: t("statAreas") },
+    { value: recent, label: t("statNew") }
   ];
   statsEl.innerHTML = stats
     .map(
@@ -452,7 +575,105 @@ function initHero() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", initHero);
+/* ---------------------------------------------------------
+   Dunkel-/Hellmodus-Umschalter oben rechts. Folgt standardmäßig der
+   Systemeinstellung (siehe style.css); ein Klick merkt sich eine
+   bewusste Wahl in localStorage und überschreibt das per data-theme
+   auf <html>, bis der Umschalter erneut betätigt wird.
+--------------------------------------------------------- */
+const THEME_KEY = "myhome_theme";
+const SUN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
+const MOON_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.7 14.9A8.7 8.7 0 0 1 9.1 3.3a.6.6 0 0 0-.7-.8A9.9 9.9 0 1 0 21.5 15.6a.6.6 0 0 0-.8-.7z"/></svg>';
+
+function getStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+function getSystemTheme() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getEffectiveTheme() {
+  return getStoredTheme() || getSystemTheme();
+}
+
+function applyThemeAttribute(theme) {
+  if (theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+function updateThemeToggleUI() {
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  const effective = getEffectiveTheme();
+  const label = effective === "dark" ? t("themeToLight") : t("themeToDark");
+  btn.setAttribute("aria-label", label);
+  btn.title = label;
+  btn.innerHTML = effective === "dark" ? SUN_GLYPH : MOON_GLYPH;
+}
+
+function toggleTheme() {
+  const next = getEffectiveTheme() === "dark" ? "light" : "dark";
+  setThemeStorage(next);
+  applyThemeAttribute(next);
+  updateThemeToggleUI();
+}
+
+function setThemeStorage(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (e) {}
+}
+
+function initTheme() {
+  applyThemeAttribute(getStoredTheme());
+  updateThemeToggleUI();
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.addEventListener("click", toggleTheme);
+}
+
+/* ---------------------------------------------------------
+   Sprachumschalter oben rechts (DE/EN) — siehe I18N weiter oben.
+   Ändert nur die Oberflächensprache dieser Startseite/SPA; die
+   einzelnen Spiel-/Tool-Seiten bleiben deutsch.
+--------------------------------------------------------- */
+function updateLangToggleUI() {
+  const btn = document.getElementById("lang-toggle");
+  const labelEl = document.getElementById("lang-toggle-label");
+  if (!btn) return;
+  const label = t("langSwitchTo");
+  btn.setAttribute("aria-label", label);
+  btn.title = label;
+  if (labelEl) labelEl.textContent = t("langButtonLabel");
+  document.documentElement.lang = getLang();
+}
+
+function toggleLang() {
+  setLang(getLang() === "de" ? "en" : "de");
+  updateLangToggleUI();
+  updateThemeToggleUI();
+  initHero();
+  render();
+}
+
+function initLang() {
+  updateLangToggleUI();
+  const btn = document.getElementById("lang-toggle");
+  if (btn) btn.addEventListener("click", toggleLang);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  initLang();
+  initHero();
+});
 
 /* Bei einer aktiven "Für Lernende freigeben"-Freigabe merken wir uns den
    Hash, mit dem die Seite geöffnet wurde — das ist die einzige Route, die
