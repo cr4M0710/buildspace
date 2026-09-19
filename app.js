@@ -89,27 +89,49 @@ function isWithinLast30Days(iso) {
   return diffDays >= 0 && diffDays <= 30;
 }
 
+/* "NEU" bekommt automatisch, was auf das jeweils aktuellste Datum im
+   gesamten Bestand fällt — kein fester Tage-Schwellwert, der irgendwann
+   entweder nichts mehr markiert oder (bei einem frischen Stapel wie
+   diesem hier) fast alles. Dadurch bleibt der Hinweis immer knapp und
+   zeigt genau das, was zuletzt hinzugekommen ist. */
+function latestPostDate(list) {
+  return list.reduce((max, p) => (p.date > max ? p.date : max), "0000-00-00");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 const EXTERNAL_LINK_GLYPH = '<svg class="post-external-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
 
-function renderPostList(list) {
+function renderPostList(list, opts) {
+  opts = opts || {};
   if (!list.length) {
     return '<p class="empty-state">Hier gibt es noch keine Beiträge.</p>';
   }
   const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
+  const newestDate = latestPostDate(posts);
   return (
     '<ul class="post-list">' +
     sorted
-      .map((p) => {
+      .map((p, i) => {
         const isExternal = /^https?:\/\//i.test(p.url);
         const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
         const externalBadge = isExternal ? EXTERNAL_LINK_GLYPH : "";
+        const isNew = p.date === newestDate;
+        const emojiBadge = p.emoji
+          ? `<span class="post-emoji" aria-hidden="true">${p.emoji}</span>`
+          : `<span class="post-emoji post-emoji--plain icon-badge--${p.category}" aria-hidden="true">${MINI_ICONS[p.category] || ""}</span>`;
         return `
-      <li>
-        <a class="post-card" href="${p.url}"${linkAttrs}>
-          <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}</span>
-          <h3>${p.title}${externalBadge}</h3>
-          <p class="post-excerpt">${p.excerpt}</p>
-          <span class="post-meta">${formatDate(p.date)}</span>
+      <li class="post-list-item" style="--i:${i}">
+        <a class="post-card${opts.featured ? " post-card--featured" : ""}" href="${p.url}"${linkAttrs}>
+          ${emojiBadge}
+          <div class="post-card-body">
+            <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderStructure[p.category].label : p.category}${isNew ? '<span class="badge-new">Neu</span>' : ""}</span>
+            <h3>${escapeHtml(p.title)}${externalBadge}</h3>
+            <p class="post-excerpt">${escapeHtml(p.excerpt)}</p>
+            <span class="post-meta">${formatDate(p.date)}</span>
+          </div>
         </a>
       </li>`;
       })
@@ -133,20 +155,58 @@ function renderTopLevel() {
     }))
   ];
 
+  const featured = posts.filter((p) => p.featured);
+
   content.innerHTML = `
-    <div class="folder-grid">
-      ${cards
-        .map(
-          (c) => `
-        <a class="folder-card" href="${c.href}">
-          <span class="folder-icon icon-${c.id}">${c.icon}</span>
-          <h2>${c.label}</h2>
-          <span class="folder-count">${c.count === 1 ? "1 Beitrag" : c.count + " Beiträge"}</span>
-        </a>`
-        )
-        .join("")}
+    <div class="home-search">
+      <svg class="home-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="site-search" class="home-search-input" placeholder="Spiele, Tools &amp; Beiträge durchsuchen…" autocomplete="off" aria-label="Beiträge durchsuchen">
+    </div>
+    <div id="search-results" class="search-results" hidden></div>
+    <div id="home-normal">
+      ${
+        featured.length
+          ? `<h2 class="section-label section-label--featured"><span class="sparkle" aria-hidden="true">✨</span> Empfohlen</h2>${renderPostList(featured, { featured: true })}`
+          : ""
+      }
+      <h2 class="section-label">Kategorien</h2>
+      <div class="folder-grid">
+        ${cards
+          .map(
+            (c, i) => `
+          <a class="folder-card" href="${c.href}" style="--i:${i}">
+            <span class="folder-icon icon-${c.id}">${c.icon}</span>
+            <h2>${c.label}</h2>
+            <span class="folder-count">${c.count === 1 ? "1 Beitrag" : c.count + " Beiträge"}</span>
+          </a>`
+          )
+          .join("")}
+      </div>
     </div>
   `;
+
+  const searchInput = document.getElementById("site-search");
+  const searchResults = document.getElementById("search-results");
+  const homeNormal = document.getElementById("home-normal");
+
+  searchInput.addEventListener("input", () => {
+    const raw = searchInput.value.trim();
+    const q = raw.toLowerCase();
+    if (!q) {
+      searchResults.hidden = true;
+      searchResults.innerHTML = "";
+      homeNormal.hidden = false;
+      return;
+    }
+    homeNormal.hidden = true;
+    searchResults.hidden = false;
+    const matches = posts.filter(
+      (p) => p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
+    );
+    searchResults.innerHTML = matches.length
+      ? `<h2 class="section-label">${matches.length} Treffer für „${escapeHtml(raw)}“</h2>${renderPostList(matches)}`
+      : `<p class="empty-state">Keine Treffer für „${escapeHtml(raw)}“. Versuch es mit einem anderen Suchbegriff.</p>`;
+  });
 }
 
 function renderNeueste() {
@@ -186,19 +246,25 @@ function renderFolderUnlocked(id) {
       ${renderPostList(list)}
     `;
   } else {
-    const subCards = folder.subfolders.map((sf) => ({
-      href: `#/${id}/${sf.id}`,
-      label: sf.label,
-      count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length
-    }));
+    const subCards = folder.subfolders
+      .map((sf) => ({
+        href: `#/${id}/${sf.id}`,
+        label: sf.label,
+        count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length
+      }))
+      // Leere Unterordner blenden wir aus, statt sie als Sackgasse mit
+      // "0 Beiträge" anzuzeigen — sobald der erste Beitrag eingetragen
+      // wird, taucht die Kachel von selbst wieder auf.
+      .filter((c) => c.count > 0);
 
-    content.innerHTML = `
+    content.innerHTML = subCards.length
+      ? `
       <h1 class="section-label">${folder.label}</h1>
       <div class="folder-grid">
         ${subCards
           .map(
-            (c) => `
-          <a class="folder-card" href="${c.href}">
+            (c, i) => `
+          <a class="folder-card" href="${c.href}" style="--i:${i}">
             <span class="folder-icon" style="--tile-accent:${folder.color}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>
             </span>
@@ -208,6 +274,10 @@ function renderFolderUnlocked(id) {
           )
           .join("")}
       </div>
+    `
+      : `
+      <h1 class="section-label">${folder.label}</h1>
+      <p class="empty-state">Hier gibt es noch keine Beiträge.</p>
     `;
   }
   if (window.Protect) window.Protect.addShareButton(id);
@@ -240,6 +310,62 @@ function renderSubfolderUnlocked(id, subId) {
   `;
   if (window.Protect) window.Protect.addShareButton(id);
 }
+
+/* ---------------------------------------------------------
+   Lebendiger Hero-Kopf: eine tageszeit-abhängige Begrüßung und ein
+   paar Kennzahlen, die beim ersten Laden von 0 hochzählen. Läuft
+   einmalig beim Start, unabhängig vom Router (Kopf bleibt bei jeder
+   Route gleich stehen).
+--------------------------------------------------------- */
+function greetingForNow() {
+  const h = new Date().getHours();
+  if (h < 5) return "Noch spät unterwegs";
+  if (h < 11) return "Guten Morgen";
+  if (h < 14) return "Schönen Mittag";
+  if (h < 18) return "Guten Tag";
+  return "Guten Abend";
+}
+
+function animateCount(el, target, duration) {
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(eased * target);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function initHero() {
+  const greetingEl = document.getElementById("hero-greeting");
+  if (greetingEl) greetingEl.textContent = greetingForNow();
+
+  const statsEl = document.getElementById("hero-stats");
+  if (!statsEl) return;
+  const total = posts.length;
+  const categories = Object.keys(folderStructure).length;
+  const recent = posts.filter((p) => isWithinLast30Days(p.date)).length;
+  const stats = [
+    { value: total, label: total === 1 ? "Beitrag" : "Beiträge" },
+    { value: categories, label: "Bereiche" },
+    { value: recent, label: "diesen Monat neu" }
+  ];
+  statsEl.innerHTML = stats
+    .map(
+      (s, i) => `
+    <div class="hero-stat" style="--i:${i}">
+      <span class="hero-stat-value" data-target="${s.value}">0</span>
+      <span class="hero-stat-label">${s.label}</span>
+    </div>`
+    )
+    .join("");
+  statsEl.querySelectorAll(".hero-stat-value").forEach((el) => {
+    animateCount(el, Number(el.dataset.target), 900);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", initHero);
 
 /* Bei einer aktiven "Für Lernende freigeben"-Freigabe merken wir uns den
    Hash, mit dem die Seite geöffnet wurde — das ist die einzige Route, die

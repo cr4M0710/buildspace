@@ -6,12 +6,21 @@
    Felder:
    - title:       Titel des Beitrags
    - excerpt:     kurze Zusammenfassung (1 Satz), erscheint in der Liste
-   - date:        Datum im Format 'JJJJ-MM-TT' (wichtig für "Neueste")
+   - date:        Datum im Format 'JJJJ-MM-TT' (wichtig für "Neueste"
+                  und den "NEU"-Hinweis — der geht automatisch an den/die
+                  Beiträge mit dem jeweils aktuellsten Datum)
    - category:    'schule' | 'handball' | 'freizeit'
    - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'sonstiges'
-                  bei 'handball' → 'jugend' | 'maenner1' | 'maenner2' | 'hallendienst'
+                  bei 'handball' → 'jugend' | 'maenner1' | 'maenner2' | 'hallendienst' | 'training'
                   bei 'freizeit' → leer lassen (null)
    - url:         Pfad zur Beitragsseite, relativ zur index.html
+   - emoji:       (optional) ein einzelnes Emoji, das groß auf der Karte
+                  erscheint — am besten dasselbe, das auch im Beitrag
+                  selbst als Titel-Icon steht. Ohne Angabe zeigt die Karte
+                  nur das kleine Kategorie-Symbol.
+   - featured:    (optional) true = erscheint oben auf der Startseite im
+                  Bereich "Empfohlen", unabhängig vom Datum. Sparsam
+                  einsetzen (2-4 Beiträge), sonst verliert es seinen Sinn.
 --------------------------------------------------------- */
 
 const posts = [
@@ -21,7 +30,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "minigolf-winkel.html"
+    url: "minigolf-winkel.html",
+    emoji: "⛳"
    },
    {
     title: "Mathe Warm-up Generator",
@@ -29,7 +39,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "mathe-warmup-generator.html"
+    url: "mathe-warmup-generator.html",
+    emoji: "🔥"
    },
    {
     title: "Hallenplan – Handballtraining",
@@ -37,7 +48,8 @@ const posts = [
     date: "2026-09-18",
     category: "handball",
     subcategory: "training",
-    url: "hallenplan.html"
+    url: "hallenplan.html",
+    emoji: "📐"
    },
    {
     title: "Handball-Anzeigetafel",
@@ -45,7 +57,8 @@ const posts = [
     date: "2026-09-18",
     category: "handball",
     subcategory: "training",
-    url: "handball-anzeigetafel.html"
+    url: "handball-anzeigetafel.html",
+    emoji: "⏱️"
    },
    {
     title: "Strafenkasse – Männer 1",
@@ -53,7 +66,8 @@ const posts = [
     date: "2026-09-18",
     category: "handball",
     subcategory: "maenner1",
-    url: "strafenkasse/index.html"
+    url: "strafenkasse/index.html",
+    emoji: "💰"
    },
    {
     title: "Strafenkasse – Männer 2",
@@ -61,7 +75,8 @@ const posts = [
     date: "2026-09-18",
     category: "handball",
     subcategory: "maenner2",
-    url: "strafenkasse/index.html"
+    url: "strafenkasse/index.html",
+    emoji: "💰"
    },
    {
     title: "Wizard – Das Kartenspiel",
@@ -69,7 +84,8 @@ const posts = [
     date: "2026-09-18",
     category: "freizeit",
     subcategory: null,
-    url: "wizard-kartenspiel.html"
+    url: "wizard-kartenspiel.html",
+    emoji: "🧙"
    },
    {
     title: "Wizard Scoreboard",
@@ -77,7 +93,8 @@ const posts = [
     date: "2026-09-18",
     category: "freizeit",
     subcategory: null,
-    url: "wizard-scoreboard.html"
+    url: "wizard-scoreboard.html",
+    emoji: "🧙"
    },
    {
     title: "AoS Prüfungstrainer",
@@ -85,7 +102,8 @@ const posts = [
     date: "2026-09-18",
     category: "freizeit",
     subcategory: null,
-    url: "aos-pruefungstrainer.html"
+    url: "aos-pruefungstrainer.html",
+    emoji: "🎓"
    },
    {
     title: "Nachtwache",
@@ -93,7 +111,8 @@ const posts = [
     date: "2026-09-18",
     category: "freizeit",
     subcategory: null,
-    url: "nachtwache.html"
+    url: "nachtwache.html",
+    emoji: "🌙"
    },
    {
     title: "Zahlen-Werkstatt",
@@ -101,7 +120,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "zahlen-werkstatt.html"
+    url: "zahlen-werkstatt.html",
+    emoji: "🔧"
    },
    {
     title: "SIKORE – Kopfrechentrainer",
@@ -109,7 +129,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "https://sikore.schiffner-tischer.de/"
+    url: "https://sikore.schiffner-tischer.de/",
+    emoji: "🧠"
    },
    {
     title: "Bruch-Quiz (Fußball)",
@@ -117,7 +138,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "bruch-quiz-fussball.html"
+    url: "bruch-quiz-fussball.html",
+    emoji: "⚽"
    },
    {
     title: "Prozent-Rennen",
@@ -125,7 +147,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "prozent-rennen.html"
+    url: "prozent-rennen.html",
+    emoji: "📊"
    },
    {
     title: "Gleichungs-Duell",
@@ -133,7 +156,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "gleichungs-duell.html"
+    url: "gleichungs-duell.html",
+    emoji: "⚔️"
    },
    {
     title: "Flächen-Fuchs",
@@ -141,7 +165,8 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "flaechen-fuchs.html"
+    url: "flaechen-fuchs.html",
+    emoji: "🦊"
    },
    {
     title: "Zahlen-Detektiv",
@@ -149,7 +174,9 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "zahlen-detektiv.html"
+    url: "zahlen-detektiv.html",
+    emoji: "🕵️",
+    featured: true
    },
    {
     title: "Kopfrechen-Quiz",
@@ -157,7 +184,9 @@ const posts = [
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
-    url: "kopfrechen-quiz.html"
+    url: "kopfrechen-quiz.html",
+    emoji: "⚡",
+    featured: true
    },
    {
     title: "Das Praktikumsspiel",
@@ -165,6 +194,8 @@ const posts = [
     date: "2026-09-19",
     category: "schule",
     subcategory: "arbeitslehre",
-    url: "praktikumsspiel.html"
+    url: "praktikumsspiel.html",
+    emoji: "🎲",
+    featured: true
    },
 ];
