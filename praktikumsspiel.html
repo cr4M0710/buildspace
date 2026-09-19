@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Das Praktikumsspiel</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d14;--bg2:#13131f;--card:#1a1a2e;--card2:#1f1f35;
+  --accent:#e8ff47;--accent2:#ff6b6b;--accent3:#4ecdc4;--accent4:#a78bfa;
+  --txt:#f0f0ff;--muted:#7070a0;--border:rgba(255,255,255,0.07);
+  --font-d:'Syne',sans-serif;--font-b:'DM Sans',sans-serif;
+}
+html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--txt);font-family:var(--font-b)}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 85%,rgba(78,205,196,.09) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 50% at 85% 15%,rgba(167,139,250,.11) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%,rgba(232,255,71,.04) 0%,transparent 70%);
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px);
+}
+.screen{display:none;position:relative;z-index:1}
+.screen.active{display:block}
+
+/* MENU */
+#menu-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem}
+#menu-screen.active{display:flex}
+.menu-logo{
+  font-family:var(--font-d);font-size:clamp(18px,4vw,34px);font-weight:800;text-align:center;margin-bottom:4px;
+  background:linear-gradient(135deg,#e8ff47 0%,#4ecdc4 50%,#a78bfa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 18px rgba(232,255,71,.28));
+}
+.menu-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:2rem;letter-spacing:.08em;text-transform:uppercase}
+.menu-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.8rem;width:100%;max-width:520px}
+.player-count-row{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:1.4rem}
+.count-btn{
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(232,255,71,.3);
+  background:rgba(232,255,71,.07);cursor:pointer;font-size:20px;
+  display:flex;align-items:center;justify-content:center;color:var(--accent);
+  user-select:none;transition:background .15s;
+}
+.count-btn:hover{background:rgba(232,255,71,.18)}
+.count-display{font-size:22px;font-weight:500;min-width:30px;text-align:center;color:var(--txt);font-family:var(--font-d)}
+.count-label{font-size:13px;color:var(--muted);letter-spacing:.04em}
+.player-setup-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:1.4rem}
+.player-row{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+.player-row label{font-size:11px;color:var(--muted);min-width:54px;letter-spacing:.04em;text-transform:uppercase}
+.player-row input[type=text]{
+  flex:1;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);
+  background:rgba(255,255,255,.04);color:var(--txt);font-family:var(--font-b);outline:none;transition:border-color .15s;
+}
+.player-row input[type=text]:focus{border-color:rgba(232,255,71,.4)}
+.color-picker{display:flex;gap:5px}
+.color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s}
+.color-dot:hover{transform:scale(1.15)}
+.color-dot.selected{border-color:#fff;transform:scale(1.15)}
+.btn-start{
+  width:100%;padding:13px;font-size:16px;font-weight:700;letter-spacing:.05em;
+  border-radius:12px;border:none;cursor:pointer;background:var(--accent);color:#0d0d14;
+  font-family:var(--font-d);transition:all .15s;box-shadow:0 0 24px rgba(232,255,71,.28);
+}
+.btn-start:hover{background:#f0ff70;box-shadow:0 0 36px rgba(232,255,71,.5);transform:translateY(-1px)}
+
+/* GAME */
+#game-screen{min-height:100vh;display:none;flex-direction:column}
+#game-screen.active{display:flex}
+#hud{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;
+  background:rgba(13,13,20,.92);backdrop-filter:blur(12px);position:sticky;top:0;z-index:5;
+}
+.hud-player{display:flex;align-items:center;gap:10px}
+.player-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#0d0d14;font-family:var(--font-d);flex-shrink:0}
+.hud-name{font-size:20px;font-weight:700;color:var(--txt);font-family:var(--font-d)}
+.hud-sub{font-size:11px;color:var(--muted)}
+#dice-area{display:flex;align-items:center;gap:10px}
+#dice-canvas-wrap{
+  width:48px;height:48px;flex-shrink:0;
+  filter:drop-shadow(0 0 8px rgba(232,255,71,.5));
+  order:2;
+}
+#dice-canvas{display:block;width:48px;height:48px}
+#dice-btn{
+  padding:10px 22px;border-radius:10px;border:none;background:var(--accent);color:#0d0d14;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-d);letter-spacing:.04em;
+  transition:all .15s;box-shadow:0 0 16px rgba(232,255,71,.22);
+  order:1;
+}
+#dice-btn:disabled{opacity:.35;cursor:default;box-shadow:none}
+#dice-btn:not(:disabled):hover{background:#f0ff70;box-shadow:0 0 24px rgba(232,255,71,.5)}
+#menu-btn{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:13px;cursor:pointer;font-family:var(--font-b);transition:color .15s}
+#menu-btn:hover{color:var(--txt)}
+#players-strip{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);overflow-x:auto;background:rgba(13,13,20,.7)}
+.player-chip{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1.5px solid transparent;font-size:14px;color:var(--txt);white-space:nowrap;flex-shrink:0;transition:all .2s}
+.player-chip.active-chip{border-color:currentColor;background:rgba(255,255,255,.05);font-weight:500}
+.chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#board-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;overflow:hidden}
+#board-canvas{display:block;max-width:760px;width:100%}
+
+/* EVENT */
+#event-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+  align-items:center;justify-content:center;z-index:100;padding:1rem;backdrop-filter:blur(10px);
+}
+#event-overlay.show{display:flex}
+#event-card{
+  background:var(--card);border:1px solid rgba(255,255,255,.12);border-radius:20px;
+  padding:2.5rem 2rem 2rem;max-width:400px;width:100%;text-align:center;
+  box-shadow:0 0 60px rgba(0,0,0,.6),0 0 30px rgba(78,205,196,.08);
+  animation:popIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+#event-player-tag{font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase}
+#event-player-tag strong{color:var(--txt);font-weight:500}
+.event-emoji{font-size:52px;display:block;margin-bottom:14px;filter:drop-shadow(0 0 12px rgba(78,205,196,.4))}
+#event-text{font-size:22px;font-weight:700;color:var(--txt);line-height:1.35;margin-bottom:1.8rem;font-family:var(--font-d)}
+#event-continue-btn{
+  padding:12px 28px;background:var(--accent);color:#0d0d14;border:none;border-radius:12px;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-d);letter-spacing:.04em;
+  transition:all .15s;box-shadow:0 0 20px rgba(232,255,71,.3);
+}
+#event-continue-btn:hover{background:#f0ff70;box-shadow:0 0 30px rgba(232,255,71,.5)}
+</style>
+<script defer src="qrcode-generator.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
+</head>
+<body>
+
+<div id="menu-screen" class="screen active">
+  <div class="menu-logo">Das Praktikumsspiel</div>
+  <div class="menu-sub">So war mein Praktikum · Reflexion &amp; Austausch</div>
+  <div class="menu-box">
+    <div class="player-count-row">
+      <div class="count-btn" id="btn-minus">−</div>
+      <div class="count-display" id="count-display">3</div>
+      <div class="count-btn" id="btn-plus">+</div>
+      <div class="count-label">Spieler:innen</div>
+    </div>
+    <div class="player-setup-grid" id="player-setup"></div>
+    <button class="btn-start" id="start-btn">Spiel starten →</button>
+  </div>
+</div>
+
+<div id="game-screen" class="screen">
+  <div id="hud">
+    <div class="hud-player">
+      <div class="player-avatar" id="hud-avatar"></div>
+      <div>
+        <div class="hud-name" id="hud-name"></div>
+        <div class="hud-sub">ist am Zug</div>
+      </div>
+    </div>
+    <div id="dice-area">
+      <div id="dice-canvas-wrap"><canvas id="dice-canvas" width="144" height="144"></canvas></div>
+      <button id="dice-btn">Würfeln</button>
+    </div>
+    <button id="menu-btn">← Hauptmenü</button>
+  </div>
+  <div id="players-strip"></div>
+  <div id="board-wrap">
+    <canvas id="board-canvas"></canvas>
+  </div>
+  <div id="event-overlay">
+    <div id="event-card">
+      <div id="event-player-tag"></div>
+      <span class="event-emoji" id="event-emoji"></span>
+      <div id="event-text"></div>
+      <button id="event-continue-btn">Weiter →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PCOLS=['#e8ff47','#ff6b6b','#4ecdc4','#a78bfa','#f7931e','#38bdf8'];
+const DICE=['⚀','⚁','⚂','⚃','⚄','⚅'];
+const FIELDS=[
+  {text:"Mein erster Tag!",emoji:"🌅"},
+  {text:"Was ich jetzt richtig gut kann!",emoji:"💪"},
+  {text:"Das Beste am Praktikum war…",emoji:"🌟"},
+  {text:"Das habe ich echt gehasst!",emoji:"😤"},
+  {text:"Was ich ziemlich komisch fand:",emoji:"🤔"},
+  {text:"Das werde ich NIE lernen!",emoji:"😅"},
+  {text:"An dem Beruf stört mich…",emoji:"😬"},
+  {text:"Daran musste ich oft denken!",emoji:"💭"},
+  {text:"Das hätte mir vorher mal einer sagen sollen:",emoji:"💡"},
+  {text:"Das hätte ich gern mal gesagt!",emoji:"🗣️"},
+  {text:"Die zwei Wochen Praktikum waren…",emoji:"📅"},
+  {text:"Abends war ich immer…",emoji:"🌙"},
+  {text:"Das sehe ich jetzt ganz anders:",emoji:"👀"},
+  {text:"Jeden Morgen in der Woche…",emoji:"☀️"},
+  {text:"Darauf wurde doll geachtet:",emoji:"🔍"},
+  {text:"Das Praktikum hat mir gezeigt, dass…",emoji:"🔭"},
+  {text:"Das weiß ich jetzt für mich:",emoji:"📝"},
+  {text:"Das habe ich besonders gern gemacht!",emoji:"😍"},
+  {text:"Nächstes Mal würde ich…",emoji:"🔄"},
+  {text:"Das werde ich wirklich vermissen:",emoji:"😢"},
+  {text:"Dass die Schule wieder anfing, finde ich…",emoji:"🏫"},
+  {text:"Am letzten Tag…",emoji:"🎉"},
+  {text:"Als Herr Stroh / Herr Auriga kam…",emoji:"😳"},
+  {text:"Voll peinlich!",emoji:"🫣"},
+  {text:"Das ging gar nicht!",emoji:"😱"},
+];
+const BOARD_COUNT=25;
+
+let numPlayers=3,players=[],currentPlayer=0,gamePhase='idle';
+let cells=[],canvas,ctx,CW,CH;
+
+/* ────────────────────────────────────────────
+   BOARD GEOMETRY  – proper rectangular loop
+   
+   We use a fixed grid of COLS columns × ROWS rows.
+   The perimeter cells form the loop, traversed clockwise:
+     top row L→R, right col T→B (excl top-right),
+     bottom row R→L (excl bottom-right),
+     left col B→T (excl bottom-left & top-left)
+
+   We need total perimeter = BOARD_COUNT + 1 (the START cell).
+   COLS=9, ROWS=6: perimeter = 2*(9+6)-4 = 26 ✓
+──────────────────────────────────────────── */
+const GCOLS=9, GROWS=6;
+
+function buildCells(){
+  const pad=12;
+  const cw=Math.floor((CW-pad*2)/GCOLS);
+  const ch=Math.floor((CH-pad*2)/GROWS);
+  const ox=Math.floor((CW-cw*GCOLS)/2);
+  const oy=Math.floor((CH-ch*GROWS)/2);
+
+  /* perimeter order, clockwise starting top-left */
+  const order=[];
+  for(let c=0;c<GCOLS;c++) order.push([0,c]);               // top →
+  for(let r=1;r<GROWS;r++) order.push([r,GCOLS-1]);          // right ↓
+  for(let c=GCOLS-2;c>=0;c--) order.push([GROWS-1,c]);       // bottom ←
+  for(let r=GROWS-2;r>0;r--) order.push([r,0]);              // left ↑
+  // total = 9 + 5 + 8 + 4 = 26 ✓
+
+  cells=[];
+  order.forEach(([r,c],i)=>{
+    cells.push({
+      x:ox+c*cw, y:oy+r*ch, w:cw, h:ch,
+      field: i===0 ? null : FIELDS[(i-1)%FIELDS.length],
+      isStart: i===0
+    });
+  });
+}
+
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function drawBoard(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,CW,CH);
+
+  /* board outer background */
+  const pad=12;
+  const cw=Math.floor((CW-pad*2)/GCOLS);
+  const ch=Math.floor((CH-pad*2)/GROWS);
+  const ox=Math.floor((CW-cw*GCOLS)/2);
+  const oy=Math.floor((CH-ch*GROWS)/2);
+
+  /* board bg */
+  ctx.fillStyle='rgba(18,18,30,0.9)';
+  rr(ctx,ox-2,oy-2,cw*GCOLS+4,ch*GROWS+4,14);
+  ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.06)';
+  ctx.lineWidth=1;
+  ctx.stroke();
+
+  /* center area */
+  const cx=ox+cw, cy=oy+ch, caw=cw*(GCOLS-2), cah=ch*(GROWS-2);
+
+  // subtle center fill
+  ctx.fillStyle='rgba(13,13,22,0.7)';
+  rr(ctx,cx+3,cy+3,caw-6,cah-6,12);
+  ctx.fill();
+
+  // decorative center ring
+  ctx.strokeStyle='rgba(232,255,71,0.07)';
+  ctx.lineWidth=1;
+  rr(ctx,cx+6,cy+6,caw-12,cah-12,10);
+  ctx.stroke();
+
+  /* ── 3D TITLE in center ── */
+  const tcx=cx+caw/2, tcy=cy+cah/2;
+  ctx.save();
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  const fs1=Math.max(12,Math.min(30,Math.floor(caw/10)));
+  const fs2=Math.max(9,Math.min(18,Math.floor(caw/16)));
+
+  // 3D shadow layers
+  for(let i=7;i>0;i--){
+    ctx.font=`800 ${fs1}px 'Syne',sans-serif`;
+    ctx.fillStyle=`rgba(8,8,18,${0.6-i*0.06})`;
+    ctx.fillText('Das Praktikumsspiel',tcx+i*0.8,tcy-fs1*0.7+i*0.8);
+    ctx.font=`700 ${fs2}px 'Syne',sans-serif`;
+    ctx.fillStyle=`rgba(8,8,18,${0.5-i*0.05})`;
+    ctx.fillText('So war mein Praktikum',tcx+i*0.6,tcy+fs2*0.65+i*0.6);
+  }
+  // main gradient text
+  const g1=ctx.createLinearGradient(tcx-caw/2,0,tcx+caw/2,0);
+  g1.addColorStop(0,'#e8ff47');g1.addColorStop(0.45,'#ffffff');g1.addColorStop(1,'#4ecdc4');
+  ctx.font=`800 ${fs1}px 'Syne',sans-serif`;
+  ctx.fillStyle=g1;
+  ctx.fillText('Das Praktikumsspiel',tcx,tcy-fs1*0.7);
+
+  const g2=ctx.createLinearGradient(tcx-caw/2,0,tcx+caw/2,0);
+  g2.addColorStop(0,'#a78bfa');g2.addColorStop(1,'#4ecdc4');
+  ctx.font=`700 ${fs2}px 'Syne',sans-serif`;
+  ctx.fillStyle=g2;
+  ctx.fillText('So war mein Praktikum',tcx,tcy+fs2*0.65);
+
+  // decorative dice
+  const ds=Math.floor(Math.min(caw,cah)/8);
+  ctx.font=`${ds}px serif`;
+  ctx.fillStyle='rgba(232,255,71,0.1)';
+  ctx.fillText('🎲',tcx,tcy+fs1+fs2+ds*0.2);
+
+  ctx.restore();
+
+  /* ── draw perimeter cells ── */
+  cells.forEach((cell,i)=>{
+    const x=cell.x+1,y=cell.y+1,w=cell.w-2,h=cell.h-2;
+    if(cell.isStart){
+      // START cell
+      const sg=ctx.createLinearGradient(x,y,x+w,y+h);
+      sg.addColorStop(0,'#e8ff47');sg.addColorStop(1,'#b8d400');
+      ctx.fillStyle=sg;
+      rr(ctx,x,y,w,h,10);ctx.fill();
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='#0d0d14';
+      // fit START text so it never exceeds cell width
+      let sfs=Math.min(Math.floor(Math.min(w,h)/5),Math.floor(w/5.5));
+      sfs=Math.max(7,sfs);
+      ctx.font=`800 ${sfs}px 'Syne',sans-serif`;
+      while(ctx.measureText('START').width>w-8&&sfs>6){sfs--;ctx.font=`800 ${sfs}px 'Syne',sans-serif`;}
+      const diceFs=Math.max(10,Math.floor(Math.min(w,h)/3.8));
+      const totalH=sfs+diceFs+4;
+      ctx.fillText('START',x+w/2,y+h/2-totalH/2+sfs/2);
+      ctx.font=`${diceFs}px serif`;
+      ctx.fillText('🎲',x+w/2,y+h/2+totalH/2-diceFs/2+2);
+    } else {
+      // uniform modern light field – white bg, black text
+      ctx.fillStyle='#ffffff';
+      rr(ctx,x,y,w,h,8);ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.10)';
+      ctx.lineWidth=1;
+      ctx.stroke();
+
+      const minS=Math.min(w,h);
+      // emoji small, top
+      const efs=Math.max(10,Math.floor(minS/4.5));
+      ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.font=`${efs}px serif`;
+      ctx.fillStyle='rgba(0,0,0,.85)';
+      ctx.fillText(cell.field.emoji,x+w/2,y+3);
+
+      // auto-fit text: try decreasing font sizes until all lines fit vertically
+      const availH=h-efs-10-14; // space below emoji, above field-number
+      const mw=w-8;
+      let fs=Math.max(7,Math.floor(minS/5.5));
+      let lines=[];
+      for(let attempt=0;attempt<6;attempt++){
+        ctx.font=`500 ${fs}px 'DM Sans',sans-serif`;
+        const words=cell.field.text.split(' ');
+        let line=''; lines=[];
+        for(const wd of words){
+          const t=line?line+' '+wd:wd;
+          if(ctx.measureText(t).width>mw&&line){lines.push(line);line=wd;}else line=t;
+        }
+        lines.push(line);
+        const totalH=lines.length*(fs+2);
+        if(totalH<=availH) break;
+        fs=Math.max(6,fs-1);
+      }
+      ctx.fillStyle='#111111';
+      const lh=fs+2;
+      const textBlockH=lines.length*lh;
+      const ty=y+efs+6+(availH-textBlockH)/2;
+      lines.forEach((ln,li)=>ctx.fillText(ln,x+w/2,ty+li*lh));
+
+      // field number
+      ctx.font=`500 ${Math.max(6,fs-1)}px 'DM Sans',sans-serif`;
+      ctx.fillStyle='rgba(80,80,180,.45)';
+      ctx.textBaseline='bottom';
+      ctx.fillText(i,x+w/2,y+h-3);
+    }
+  });
+
+  drawTokens();
+}
+
+function drawTokens(){
+  if(!ctx||!players.length) return;
+  const offs=[{x:0,y:0},{x:8,y:-7},{x:-8,y:7},{x:8,y:7},{x:-8,y:-7},{x:0,y:7}];
+  players.forEach((p,pi)=>{
+    if(p.pos<0) return;
+    const idx=(p.pos+1)%cells.length;
+    const cell=cells[idx]||cells[1];
+    const off=offs[pi%offs.length];
+    const cx=cell.x+cell.w/2+off.x, cy=cell.y+cell.h/2+off.y;
+    const r=Math.max(9,Math.floor(Math.min(cell.w,cell.h)/6));
+    ctx.shadowColor=PCOLS[p.color];ctx.shadowBlur=12;
+    ctx.fillStyle=PCOLS[p.color];
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // dark text on bright token colors, white on dark
+    const bright=['#e8ff47','#4ecdc4','#f7931e','#38bdf8'];
+    ctx.fillStyle=bright.includes(PCOLS[p.color])?'#0d0d14':'#ffffff';
+    ctx.font=`700 ${Math.max(8,r-3)}px 'Syne',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(p.name[0].toUpperCase(),cx,cy);
+  });
+}
+
+function layoutBoard(){
+  const wrap=document.getElementById('board-wrap');
+  const dpr=window.devicePixelRatio||1;
+  const cssW=Math.min(wrap.clientWidth-24,760);
+  const cssH=Math.round(cssW*0.72);
+  canvas.style.width=cssW+'px';
+  canvas.style.height=cssH+'px';
+  canvas.width=Math.round(cssW*dpr);
+  canvas.height=Math.round(cssH*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  CW=cssW; CH=cssH;
+  buildCells();drawBoard();
+}
+
+function initBoard(){
+  canvas=document.getElementById('board-canvas');
+  ctx=canvas.getContext('2d');
+  layoutBoard();
+  window.addEventListener('resize',layoutBoard);
+}
+
+/* ── menu & players ── */
+function initMenu(){
+  const grid=document.getElementById('player-setup');
+  grid.innerHTML='';
+  for(let i=0;i<numPlayers;i++){
+    const name=players[i]?.name||'';
+    const col=players[i]?.color??i;
+    const row=document.createElement('div');
+    row.className='player-row';
+    row.innerHTML=`<label>Spieler ${i+1}</label>
+      <input type="text" placeholder="Name eingeben…" value="${name}" data-idx="${i}"/>
+      <div class="color-picker" data-idx="${i}">
+        ${PCOLS.map((c,ci)=>`<div class="color-dot${col===ci?' selected':''}" style="background:${c}" data-ci="${ci}" data-pi="${i}"></div>`).join('')}
+      </div>`;
+    grid.appendChild(row);
+  }
+  grid.querySelectorAll('.color-dot').forEach(dot=>{
+    dot.addEventListener('click',()=>{
+      const pi=+dot.dataset.pi;
+      grid.querySelectorAll(`.color-picker[data-idx="${pi}"] .color-dot`).forEach(d=>d.classList.remove('selected'));
+      dot.classList.add('selected');
+    });
+  });
+}
+
+function startGame(){
+  const grid=document.getElementById('player-setup');
+  players=[];
+  for(let i=0;i<numPlayers;i++){
+    const inp=grid.querySelector(`input[data-idx="${i}"]`);
+    const dot=grid.querySelector(`.color-picker[data-idx="${i}"] .color-dot.selected`);
+    players.push({name:inp.value.trim()||`Spieler ${i+1}`,color:dot?+dot.dataset.ci:i,pos:-1});
+  }
+  currentPlayer=0;gamePhase='idle';
+  showScreen('game-screen');
+  initBoard();updateHUD();updateStrip();
+  drawDice(1);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateHUD(){
+  const p=players[currentPlayer];
+  const av=document.getElementById('hud-avatar');
+  av.style.background=PCOLS[p.color];
+  av.textContent=p.name[0].toUpperCase();
+  document.getElementById('hud-name').textContent=p.name;
+  document.getElementById('dice-btn').disabled=false;
+}
+
+function updateStrip(){
+  document.getElementById('players-strip').innerHTML=players.map((p,i)=>`
+    <div class="player-chip${i===currentPlayer?' active-chip':''}" style="color:${PCOLS[p.color]}">
+      <div class="chip-dot" style="background:${PCOLS[p.color]}"></div>
+      ${p.name}
+      <span style="font-size:11px;color:var(--muted);margin-left:2px">${p.pos<0?'(Start)':'Feld '+(p.pos+1)}</span>
+    </div>`).join('');
+}
+
+/* ── SVG-style dice on canvas ── */
+const DOT_POS={
+  1:[[0.5,0.5]],
+  2:[[0.25,0.25],[0.75,0.75]],
+  3:[[0.25,0.25],[0.5,0.5],[0.75,0.75]],
+  4:[[0.25,0.25],[0.75,0.25],[0.25,0.75],[0.75,0.75]],
+  5:[[0.25,0.25],[0.75,0.25],[0.5,0.5],[0.25,0.75],[0.75,0.75]],
+  6:[[0.25,0.2],[0.75,0.2],[0.25,0.5],[0.75,0.5],[0.25,0.8],[0.75,0.8]]
+};
+
+function drawDice(n){
+  const dc=document.getElementById('dice-canvas');
+  if(!dc) return;
+  const dctx=dc.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const S=96;
+  dc.width=Math.round(S*dpr);
+  dc.height=Math.round(S*dpr);
+  dc.style.width=S+'px';
+  dc.style.height=S+'px';
+  dctx.setTransform(dpr,0,0,dpr,0,0);
+  dctx.clearRect(0,0,S,S);
+
+  // shadow
+  dctx.shadowColor='rgba(232,255,71,0.5)';
+  dctx.shadowBlur=18;
+
+  // body – bright white/cream
+  const r=18;
+  dctx.fillStyle='#f8f8f0';
+  roundRectPath(dctx,8,8,S-16,S-16,r);
+  dctx.fill();
+  dctx.shadowBlur=0;
+
+  // top-face highlight
+  const hl=dctx.createLinearGradient(8,8,8,S-8);
+  hl.addColorStop(0,'rgba(255,255,255,0.9)');
+  hl.addColorStop(1,'rgba(200,200,190,0.2)');
+  dctx.fillStyle=hl;
+  roundRectPath(dctx,8,8,S-16,S-16,r);
+  dctx.fill();
+
+  // border
+  dctx.strokeStyle='rgba(0,0,0,0.12)';
+  dctx.lineWidth=2;
+  roundRectPath(dctx,8,8,S-16,S-16,r);
+  dctx.stroke();
+
+  // 3D bottom/right edge
+  dctx.strokeStyle='rgba(0,0,0,0.08)';
+  dctx.lineWidth=3;
+  dctx.beginPath();
+  dctx.moveTo(S-8-r,S-8); dctx.lineTo(8+r,S-8);
+  dctx.quadraticCurveTo(8,S-8,8,S-8-r);
+  dctx.stroke();
+
+  // dots
+  const dots=DOT_POS[n]||DOT_POS[1];
+  const area=S-16, off=8;
+  dots.forEach(([dx,dy])=>{
+    const cx=off+area*dx, cy=off+area*dy;
+    const dr=6;
+    // dot shadow
+    dctx.fillStyle='rgba(0,0,0,0.15)';
+    dctx.beginPath();dctx.arc(cx+1,cy+2,dr,0,Math.PI*2);dctx.fill();
+    // dot
+    dctx.fillStyle='#1a1a2e';
+    dctx.beginPath();dctx.arc(cx,cy,dr,0,Math.PI*2);dctx.fill();
+    // dot shine
+    dctx.fillStyle='rgba(255,255,255,0.18)';
+    dctx.beginPath();dctx.arc(cx-2,cy-2.5,4,0,Math.PI*2);dctx.fill();
+  });
+}
+
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function rollDice(){
+  if(gamePhase!=='idle') return;
+  gamePhase='rolling';
+  document.getElementById('dice-btn').disabled=true;
+  let rolls=0;
+  drawDice(1);
+  const iv=setInterval(()=>{
+    const r=Math.floor(Math.random()*6)+1;
+    drawDice(r);
+    rolls++;
+    if(rolls>=14){
+      clearInterval(iv);
+      const f=Math.floor(Math.random()*6)+1;
+      drawDice(f);
+      movePlayer(currentPlayer,f);
+    }
+  },55);
+}
+
+function movePlayer(pi,steps){
+  const p=players[pi];let left=steps;
+  gamePhase='moving';
+  function step(){
+    if(left<=0){gamePhase='event';showEvent(pi);return;}
+    p.pos=(p.pos+1)%BOARD_COUNT;left--;
+    drawBoard();updateStrip();
+    setTimeout(step,260);
+  }
+  step();
+}
+
+function showEvent(pi){
+  const p=players[pi];
+  const idx=(p.pos+1)%cells.length;
+  const cell=cells[idx]||cells[1];
+  document.getElementById('event-player-tag').innerHTML=`<strong>${p.name}</strong> · Feld ${p.pos+1}`;
+  document.getElementById('event-emoji').textContent=cell.field.emoji;
+  document.getElementById('event-text').textContent=cell.field.text;
+  document.getElementById('event-overlay').classList.add('show');
+  document.getElementById('event-continue-btn').onclick=()=>{
+    document.getElementById('event-overlay').classList.remove('show');
+    nextPlayer();
+  };
+}
+
+function nextPlayer(){
+  currentPlayer=(currentPlayer+1)%players.length;
+  gamePhase='idle';
+  updateHUD();updateStrip();drawBoard();drawDice(1);
+}
+
+document.getElementById('btn-minus').addEventListener('click',()=>{
+  if(numPlayers>2){numPlayers--;document.getElementById('count-display').textContent=numPlayers;initMenu();}
+});
+document.getElementById('btn-plus').addEventListener('click',()=>{
+  if(numPlayers<6){numPlayers++;document.getElementById('count-display').textContent=numPlayers;initMenu();}
+});
+document.getElementById('start-btn').addEventListener('click',startGame);
+document.getElementById('dice-btn').addEventListener('click',rollDice);
+document.getElementById('menu-btn').addEventListener('click',()=>{showScreen('menu-screen');initMenu();});
+
+initMenu();
+</script>
+</body>
+</html>

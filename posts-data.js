@@ -183,4 +183,12 @@ const posts = [
     subcategory: "mathematik",
     url: "kopfrechen-quiz.html"
    },
+   {
+    title: "Das Praktikumsspiel",
+    excerpt: "Brettspiel zur Praktikumsnachbereitung: Würfeln, auf Reflexionsfelder ziehen und im Gespräch über die eigenen Praktikumserfahrungen austauschen — für 2 bis 6 Spieler.",
+    date: "2026-09-19",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "praktikumsspiel.html"
+   },
 ];
