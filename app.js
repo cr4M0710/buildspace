@@ -870,6 +870,11 @@ function isAllowedRoute(segments) {
 
 function render() {
   ensureShareHomeHash();
+  /* Falls noch ein Passwort-Fenster von der vorherigen Route offen ist (z. B.
+     wenn per Zurück-Button aus einem geschützten, noch nicht entsperrten
+     Bereich navigiert wird), erst schließen — führt die neue Route wieder in
+     einen geschützten, gesperrten Bereich, öffnet guard() es sofort neu. */
+  if (window.Protect) window.Protect.closeOverlay();
   const segments = parseHash();
   if (!isAllowedRoute(segments)) {
     location.hash = shareHomeHash || "#/";

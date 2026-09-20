@@ -332,7 +332,8 @@
     addShareButton: addShareButton,
     removeShareButton: removeShareButton,
     openShareModal: openShareModal,
-    ensureStyle: ensureStyle
+    ensureStyle: ensureStyle,
+    closeOverlay: closeOverlay
   };
 
   initStandalone();
