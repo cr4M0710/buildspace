@@ -48,6 +48,8 @@ const folderStructure = {
     subfolders: [
       { id: "mathematik" },
       { id: "arbeitslehre" },
+      { id: "faecheruebergreifend" },
+      { id: "weiterefaecher" },
       { id: "sonstiges" }
     ]
   },
@@ -118,7 +120,9 @@ const I18N = {
     },
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
-      mathematik: "Mathematik", arbeitslehre: "Arbeitslehre", sonstiges: "Sonstiges",
+      mathematik: "Mathematik", arbeitslehre: "Arbeitslehre",
+      faecheruebergreifend: "Fächerübergreifend", weiterefaecher: "Weitere Fächer",
+      sonstiges: "Sonstiges",
       jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
       hallendienst: "Hallendienst", training: "Training"
     }
@@ -161,7 +165,9 @@ const I18N = {
     },
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
-      mathematik: "Mathematics", arbeitslehre: "Vocational Studies", sonstiges: "Miscellaneous",
+      mathematik: "Mathematics", arbeitslehre: "Vocational Studies",
+      faecheruebergreifend: "Cross-curricular", weiterefaecher: "Other subjects",
+      sonstiges: "Miscellaneous",
       jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
       hallendienst: "Hall Duty", training: "Training"
     }

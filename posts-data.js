@@ -10,7 +10,8 @@
                   und den "NEU"-Hinweis — der geht automatisch an den/die
                   Beiträge mit dem jeweils aktuellsten Datum)
    - category:    'schule' | 'handball' | 'freizeit'
-   - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'sonstiges'
+   - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'faecheruebergreifend'
+                  | 'weiterefaecher' | 'sonstiges'
                   bei 'handball' → 'jugend' | 'maenner1' | 'maenner2' | 'hallendienst' | 'training'
                   bei 'freizeit' → leer lassen (null)
    - url:         Pfad zur Beitragsseite, relativ zur index.html
@@ -273,5 +274,53 @@ const posts = [
     tags: ["spiel", "partnerarbeit", "gruppenarbeit"],
     titleEn: "The Internship Game",
     excerptEn: "A board game for reflecting on work experience: roll the dice, land on reflection spaces and talk about your own internship experiences — for 2 to 6 players."
+   },
+   {
+    title: "Morgenkreis-Tafel",
+    excerpt: "Digitale Morgenkreis-Tafel fürs Klassenzimmer: Datum, Wetter, Wort des Tages, Tagesplan und Anwesenheit auf einen Blick. (Externe Seite, Medienzentrum Gießen-Vogelsberg)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "https://morgenkreis.mzgivb.de/",
+    emoji: "☀️",
+    tags: ["tool"],
+    titleEn: "Morning Circle Board",
+    excerptEn: "Digital morning-circle board for the classroom: date, weather, word of the day, daily schedule and attendance at a glance. (External site, Medienzentrum Gießen-Vogelsberg)"
+   },
+   {
+    title: "Digiscreen",
+    excerpt: "Interaktive Tafel-Oberfläche mit Bausteinen für jedes Fach: Zufallsgenerator, Gruppeneinteilung, Timer, Quiz, Ampel, Taschenrechner und mehr. (Externe Seite, Medienzentrum Gießen-Vogelsberg)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "https://digiscreen.mzgivb.de/",
+    emoji: "🖥️",
+    tags: ["tool"],
+    titleEn: "Digiscreen",
+    excerptEn: "Interactive whiteboard surface with building blocks for any subject: randomiser, group generator, timer, quiz, traffic light, calculator and more. (External site, Medienzentrum Gießen-Vogelsberg)"
+   },
+   {
+    title: "Akte Wahrheit – 1938",
+    excerpt: "Pixel-Adventure zur Propaganda-Analyse: Als verdeckter Bote untersuchst du 1938 eine fiktive NS-Propagandastelle. Geschichte, Jg. 10, 45–60 Minuten. (Externe Seite, von Sebastian Holle)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "https://akte-wahrheit-1938-holle.netlify.app/lehrkraft",
+    emoji: "🗂️",
+    tags: ["spiel", "jg10"],
+    titleEn: "Case File Truth – 1938",
+    excerptEn: "A pixel adventure on analysing propaganda: play a covert messenger investigating a fictional Nazi propaganda office in 1938. History, grade 10, 45–60 minutes. (External site, by Sebastian Holle)"
+   },
+   {
+    title: "Mission Erde – Klasse 7",
+    excerpt: "Forschungsexpedition zur Erde im Sonnensystem: sechs Missionen zu Tag/Nacht, Jahreszeiten und mehr, mit drei Schwierigkeitsstufen. Jg. 7. (Externe Seite, von Sebastian Holle)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "https://mission-erde-klasse7-september.sebastianholle.chatgpt.site/",
+    emoji: "🌍",
+    tags: ["tool", "jg7"],
+    titleEn: "Mission Earth – Grade 7",
+    excerptEn: "A research expedition on Earth's place in the solar system: six missions on day/night, the seasons and more, with three difficulty levels. Grade 7. (External site, by Sebastian Holle)"
    },
 ];
