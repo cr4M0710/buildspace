@@ -116,7 +116,8 @@ const I18N = {
     tagFilterEmpty: "Keine Treffer für diese Auswahl.",
     tagLabels: {
       einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
-      spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6"
+      spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6",
+      jg7: "Jahrgang 7", jg10: "Jahrgang 10"
     },
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
@@ -161,7 +162,8 @@ const I18N = {
     tagFilterEmpty: "No results for this selection.",
     tagLabels: {
       einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Group",
-      spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6"
+      spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6",
+      jg7: "Grade 7", jg10: "Grade 10"
     },
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
