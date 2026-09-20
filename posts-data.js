@@ -323,4 +323,16 @@ const posts = [
     titleEn: "Mission Earth – Grade 7",
     excerptEn: "A research expedition on Earth's place in the solar system: six missions on day/night, the seasons and more, with three difficulty levels. Grade 7. (External site, by Sebastian Holle)"
    },
+   {
+    title: "Parabel-Werkstatt",
+    excerpt: "Quadratische Funktionen in Normal-, Scheitelpunkt- oder Nullstellenform eingeben und Graph sowie Wertetabelle direkt nebeneinander vergleichen.",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "parabel-werkstatt.html",
+    emoji: "📈",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "Parabola Workshop",
+    excerptEn: "Enter quadratic functions in standard, vertex or intercept form and compare the graph and value table side by side."
+   },
 ];
