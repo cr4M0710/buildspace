@@ -335,4 +335,16 @@ const posts = [
     titleEn: "Parabola Workshop",
     excerptEn: "Enter quadratic functions in standard, vertex or intercept form and compare the graph and value table side by side."
    },
+   {
+    title: "Mathe-Fußball",
+    excerpt: "Zwei Teams treten in einem animierten Fußballspiel gegeneinander an und erobern das Feld, indem sie Kopfrechen-, Text- und Knobelaufgaben lösen. Schwierigkeit, Rechenart und Spielende frei einstellbar.",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "mathe-fussball.html",
+    emoji: "⚽",
+    tags: ["spiel", "partnerarbeit"],
+    titleEn: "Math Football",
+    excerptEn: "Two teams face off in an animated football match, advancing the ball by solving mental-math, word and puzzle problems. Difficulty, operation and end condition are all adjustable."
+   },
 ];

@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mathe-Fußball</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pitch-dark: #1e4d2b;
+    --pitch-mid: #2f6b3c;
+    --pitch-light: #3f8a4e;
+    --chalk: #f6f5ef;
+    --ink: #12271a;
+    --teamA: #e4572e;
+    --teamA-dark: #b6431f;
+    --teamB: #2e6f95;
+    --teamB-dark: #1f5271;
+    --amber: #f2b134;
+    --panel-bg: #ffffff;
+    --panel-bg-dim: #f1f3ef;
+    --shadow: 0 10px 30px rgba(0,0,0,.18);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  :root:not([data-theme="light"]) {
+    color-scheme: dark light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --panel-bg: #1b241d;
+      --panel-bg-dim: #141c16;
+      --chalk: #f2f4ee;
+      --ink: #eef3ee;
+    }
+  }
+  :root[data-theme="dark"] {
+    --panel-bg: #1b241d;
+    --panel-bg-dim: #141c16;
+    --chalk: #f2f4ee;
+    --ink: #eef3ee;
+  }
+  .top-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--chalk); opacity:.75; text-decoration:none; font-size:13.5px; font-weight:600;
+    margin:10px 0 0 12px;
+  }
+  .top-link:hover{ color:var(--amber); opacity:1; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: radial-gradient(120% 140% at 50% -10%, var(--pitch-light), var(--pitch-dark) 65%);
+    color: var(--chalk);
+    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .display {
+    font-family: 'Bebas Neue', 'Rubik', sans-serif;
+    letter-spacing: 0.02em;
+  }
+  #app {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    gap: 16px;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--amber);
+    outline-offset: 2px;
+  }
+  a { color: inherit; }
+
+  /* ---------- Start screen ---------- */
+  .hero {
+    text-align: center;
+    padding: 40px 12px 8px;
+  }
+  .hero .ball-emoji { font-size: 56px; display: block; margin-bottom: 4px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 9vw, 64px);
+    margin: 0;
+    line-height: 0.95;
+  }
+  .hero p { opacity: .85; max-width: 46ch; margin: 10px auto 0; line-height: 1.5; }
+  .primary-btn {
+    background: var(--amber);
+    color: #241a05;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: .04em;
+    padding: 16px 34px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .primary-btn:hover { transform: translateY(-2px); }
+  .primary-btn:active { transform: translateY(0px) scale(.98); }
+  .ghost-btn {
+    background: transparent;
+    color: var(--chalk);
+    border: 2px solid rgba(246,245,239,.4) !important;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .ghost-btn:hover { border-color: var(--chalk) !important; }
+  .center-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+  /* ---------- Settings ---------- */
+  .card {
+    background: var(--panel-bg);
+    color: var(--ink);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    margin: 0 0 4px;
+    letter-spacing: .03em;
+  }
+  .card .hint { font-size: 13px; opacity: .65; margin: 0 0 14px; }
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 22px;
+  }
+  legend {
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    opacity: .7;
+    margin-bottom: 10px;
+    padding: 0;
+  }
+  .team-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+  .team-input-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .team-input-wrap label { font-size: 13px; font-weight: 700; }
+  .team-input-wrap.A label { color: var(--teamA-dark); }
+  .team-input-wrap.B label { color: var(--teamB-dark); }
+  .team-input-wrap input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 2px solid #d8ddd3;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--panel-bg-dim);
+    color: var(--ink);
+  }
+  .team-input-wrap.A input:focus { border-color: var(--teamA); }
+  .team-input-wrap.B input:focus { border-color: var(--teamB); }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--panel-bg-dim);
+    border: 2px solid transparent;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .chip.active {
+    background: var(--pitch-mid);
+    color: #fff;
+    border-color: var(--pitch-dark);
+  }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+
+  .segmented { display: flex; gap: 8px; }
+  .segmented .seg-opt {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 12px;
+    background: var(--panel-bg-dim);
+    color: var(--ink);
+    font-weight: 700;
+    border: 2px solid transparent;
+  }
+  .segmented .seg-opt.active {
+    background: var(--pitch-mid);
+    color: #fff;
+    border-color: var(--pitch-dark);
+  }
+
+  .end-mode-row { display: flex; flex-direction: column; gap: 10px; }
+  .end-mode-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--panel-bg-dim);
+    border: 2px solid transparent;
+  }
+  .end-mode-opt.active { border-color: var(--pitch-mid); }
+  .end-mode-opt input[type="number"] {
+    width: 70px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid #d8ddd3;
+    font-family: inherit;
+    font-size: 15px;
+    background: var(--panel-bg);
+    color: var(--ink);
+  }
+  .error-msg {
+    background: #fde3df;
+    color: #7a2413;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  /* ---------- Game screen ---------- */
+  .scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(22px, 5vw, 30px);
+  }
+  .scoreboard .name { font-size: clamp(14px, 3vw, 18px); opacity: .9; letter-spacing: .02em; }
+  .scoreboard .teamA-label { color: var(--teamA); }
+  .scoreboard .teamB-label { color: var(--teamB); }
+  .scoreboard .score-num { min-width: 1.2ch; text-align: center; }
+  .scoreboard .divider { opacity: .5; font-size: 20px; }
+  .timer-badge {
+    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    background: rgba(0,0,0,.25);
+    display: inline-block;
+    margin: 0 auto;
+    padding: 4px 14px;
+    border-radius: 999px;
+  }
+
+  .pitch {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .goalbox {
+    width: 68px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.1;
+    padding: 6px 4px;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  @media (max-width: 420px) {
+    .goalbox { width: 50px; font-size: 11px; padding: 4px 3px; }
+  }
+  .goalbox.A { background: linear-gradient(135deg, var(--teamA), var(--teamA-dark)); }
+  .goalbox.B { background: linear-gradient(135deg, var(--teamB), var(--teamB-dark)); }
+  .track-wrap {
+    flex: 1;
+    position: relative;
+    height: 74px;
+    border-radius: 12px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 11.11%, rgba(255,255,255,0) 11.11% 22.22%),
+      linear-gradient(180deg, var(--pitch-light), var(--pitch-mid));
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.18);
+    overflow: hidden;
+  }
+  .track-wrap::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255,255,255,.55);
+    transform: translateX(-50%);
+  }
+  .ball {
+    position: absolute;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #fff, #dcdcdc 55%, #b8b8b8 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,.4), inset 0 0 0 2px rgba(0,0,0,.15);
+    transform: translate(-50%, -50%);
+    transition: left .45s cubic-bezier(.34,1.4,.64,1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .goal-flash {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    background: rgba(242,177,52,.92);
+    color: #241a05;
+    border-radius: 12px;
+    animation: pop .5s ease;
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .teams-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 640px) {
+    .teams-area { grid-template-columns: 1fr; }
+  }
+  .team-panel {
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: #fff;
+    position: relative;
+    transition: background .2s ease;
+  }
+  .team-panel.A { background: linear-gradient(160deg, var(--teamA), var(--teamA-dark)); }
+  .team-panel.B { background: linear-gradient(160deg, var(--teamB), var(--teamB-dark)); }
+  .team-panel.flash-correct { animation: flashGreen .55s ease; }
+  .team-panel.flash-wrong { animation: flashWrong .4s ease; }
+  @keyframes flashGreen {
+    0% { box-shadow: 0 0 0 0 rgba(90,220,120,0); }
+    30% { box-shadow: 0 0 0 8px rgba(90,220,120,.65); }
+    100% { box-shadow: 0 0 0 0 rgba(90,220,120,0); }
+  }
+  @keyframes flashWrong {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .team-panel h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: .03em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .team-panel .prompt-box {
+    background: rgba(255,255,255,.14);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    line-height: 1.35;
+  }
+  .team-panel.disabled { opacity: .55; pointer-events: none; }
+
+  .calc-display {
+    background: rgba(0,0,0,.28);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    text-align: right;
+    min-height: 36px;
+    letter-spacing: .04em;
+  }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .calc-grid button {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 0;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .calc-grid button:active { background: rgba(255,255,255,.32); }
+  .calc-grid .ok-btn { background: var(--amber); color: #241a05; grid-column: span 1; }
+  .calc-grid .clear-btn { background: rgba(0,0,0,.25); }
+
+  .mc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mc-grid button {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-radius: 10px;
+    padding: 14px 6px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .mc-grid button:active { background: rgba(255,255,255,.32); }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .icon-btn {
+    background: rgba(0,0,0,.25);
+    color: var(--chalk);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* ---------- End screen ---------- */
+  .end-wrap { text-align: center; padding: 30px 12px; }
+  .end-wrap .trophy { font-size: 54px; }
+  .end-wrap h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(30px, 7vw, 44px);
+    margin: 6px 0 2px;
+  }
+  .end-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    margin: 14px 0;
+  }
+  .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+  .footer-note { text-align: center; font-size: 12px; opacity: .55; padding-bottom: 10px; }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+</style>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
+</head>
+<body>
+<a class="top-link" href="index.html#/schule/mathematik">← Zurück zu Mathematik</a>
+<div id="app"></div>
+
+<script>
+'use strict';
+/* ======================================================================
+   MATHE-FUSSBALL — reine Spiel-Logik (getestet, siehe Begleit-Testsuite)
+   ====================================================================== */
+
+function randInt(min, max, rng) { rng = rng || Math.random; return min + Math.floor(rng() * (max - min + 1)); }
+function pick(arr, rng) { rng = rng || Math.random; return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  rng = rng || Math.random;
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+var RANGES = {
+  leicht: { add: [1, 10], sub: [1, 10], mul: [1, 5], divResult: [1, 5], divDivisor: [2, 5] },
+  mittel: { add: [5, 30], sub: [5, 30], mul: [2, 10], divResult: [2, 10], divDivisor: [2, 10] },
+  schwer: { add: [10, 100], sub: [10, 100], mul: [3, 12], divResult: [2, 12], divDivisor: [3, 12] },
+};
+
+function generateArithmetic(op, difficulty, rng) {
+  rng = rng || Math.random;
+  var r = RANGES[difficulty];
+  var a, b, answer, promptStr;
+  if (op === 'plus') {
+    a = randInt(r.add[0], r.add[1], rng);
+    b = randInt(r.add[0], r.add[1], rng);
+    answer = a + b;
+    promptStr = a + ' + ' + b;
+  } else if (op === 'minus') {
+    a = randInt(r.sub[0], r.sub[1], rng);
+    b = randInt(1, a, rng);
+    answer = a - b;
+    promptStr = a + ' − ' + b;
+  } else if (op === 'mal') {
+    a = randInt(r.mul[0], r.mul[1], rng);
+    b = randInt(r.mul[0], r.mul[1], rng);
+    answer = a * b;
+    promptStr = a + ' × ' + b;
+  } else if (op === 'geteilt') {
+    var res = randInt(r.divResult[0], r.divResult[1], rng);
+    var div = randInt(r.divDivisor[0], r.divDivisor[1], rng);
+    var dividend = res * div;
+    answer = res;
+    promptStr = dividend + ' ÷ ' + div;
+  } else {
+    throw new Error('Unbekannte Rechenart: ' + op);
+  }
+  return { type: 'calc', prompt: promptStr + ' = ?', answer: answer, meta: { op: op, difficulty: difficulty, kind: 'kopfrechnen' } };
+}
+
+var NAMES = ['Lena', 'Tom', 'Mia', 'Ben', 'Sara', 'Finn', 'Emma', 'Paul', 'Lara', 'Jonas', 'Nina', 'Leon'];
+var OBJECTS = ['Äpfel', 'Sticker', 'Murmeln', 'Bonbons', 'Stifte', 'Karten', 'Bälle', 'Muscheln'];
+
+function generateWordProblem(op, difficulty, rng) {
+  rng = rng || Math.random;
+  var r = RANGES[difficulty];
+  var name = pick(NAMES, rng);
+  var obj = pick(OBJECTS, rng);
+  var a, b, answer, promptStr;
+  if (op === 'plus') {
+    a = randInt(r.add[0], r.add[1], rng);
+    b = randInt(r.add[0], r.add[1], rng);
+    answer = a + b;
+    promptStr = name + ' hat ' + a + ' ' + obj + '. ' + name + ' bekommt noch ' + b + ' ' + obj + ' dazu. Wie viele ' + obj + ' hat ' + name + ' jetzt?';
+  } else if (op === 'minus') {
+    a = randInt(r.sub[0], r.sub[1], rng);
+    b = randInt(1, a, rng);
+    answer = a - b;
+    promptStr = name + ' hat ' + a + ' ' + obj + '. ' + name + ' verschenkt ' + b + ' davon. Wie viele ' + obj + ' bleiben übrig?';
+  } else if (op === 'mal') {
+    a = randInt(r.mul[0], r.mul[1], rng);
+    b = randInt(r.mul[0], r.mul[1], rng);
+    answer = a * b;
+    promptStr = name + ' kauft ' + b + ' Packungen mit je ' + a + ' ' + obj + '. Wie viele ' + obj + ' sind das insgesamt?';
+  } else if (op === 'geteilt') {
+    var res = randInt(r.divResult[0], r.divResult[1], rng);
+    var div = randInt(r.divDivisor[0], r.divDivisor[1], rng);
+    var dividend = res * div;
+    answer = res;
+    promptStr = name + ' verteilt ' + dividend + ' ' + obj + ' gleichmäßig auf ' + div + ' Freunde. Wie viele ' + obj + ' bekommt jeder Freund?';
+  } else {
+    throw new Error('Unbekannte Rechenart: ' + op);
+  }
+  return { type: 'calc', prompt: promptStr, answer: answer, meta: { op: op, difficulty: difficulty, kind: 'textaufgabe' } };
+}
+
+function buildOptions(answer, distractorFn, rng, count) {
+  rng = rng || Math.random;
+  count = count || 4;
+  var set = {};
+  set[answer] = true;
+  var size = 1;
+  var guard = 0;
+  while (size < count && guard < 200) {
+    guard++;
+    var cand = distractorFn();
+    if (isFinite(cand) && cand >= 0 && !set[cand]) { set[cand] = true; size++; }
+  }
+  var filler = answer + 1;
+  while (size < count) {
+    if (!set[filler] && filler >= 0) { set[filler] = true; size++; }
+    filler++;
+  }
+  var options = shuffle(Object.keys(set).map(Number), rng);
+  return { options: options, correctIndex: options.indexOf(answer) };
+}
+
+function puzzleSequence(difficulty, rng) {
+  rng = rng || Math.random;
+  var diffStep = difficulty === 'leicht' ? randInt(1, 4, rng) : difficulty === 'mittel' ? randInt(2, 7, rng) : randInt(3, 12, rng);
+  var startMax = difficulty === 'leicht' ? 10 : difficulty === 'mittel' ? 20 : 40;
+  var start = randInt(1, startMax, rng);
+  var seq = [start, start + diffStep, start + diffStep * 2, start + diffStep * 3];
+  var answer = start + diffStep * 4;
+  var res = buildOptions(answer, function () {
+    return answer + pick([-diffStep, diffStep, -2 * diffStep, 2 * diffStep, -1, 1, diffStep + 1, -diffStep - 1], rng);
+  }, rng);
+  return {
+    type: 'mc',
+    prompt: 'Wie geht die Zahlenfolge weiter? ' + seq.join(', ') + ', __?',
+    options: res.options, correctIndex: res.correctIndex, answer: answer,
+    meta: { difficulty: difficulty, kind: 'knobelaufgabe-folge' },
+  };
+}
+
+function puzzleRange(difficulty, rng) {
+  rng = rng || Math.random;
+  var span = difficulty === 'leicht' ? 15 : difficulty === 'mittel' ? 25 : 40;
+  var divisor = difficulty === 'leicht' ? randInt(2, 4, rng) : difficulty === 'mittel' ? randInt(2, 7, rng) : randInt(3, 9, rng);
+  for (var attempt = 0; attempt < 30; attempt++) {
+    var low = randInt(2, 60, rng);
+    var high = low + span;
+    var candidates = [];
+    var n;
+    for (n = low + 1; n < high; n++) { if (n % divisor === 0) candidates.push(n); }
+    if (candidates.length === 1) {
+      var answer = candidates[0];
+      var nonMultiples = [];
+      for (n = low + 1; n < high; n++) { if (n % divisor !== 0) nonMultiples.push(n); }
+      var res = buildOptions(answer, function () {
+        return pick(nonMultiples.length ? nonMultiples : [answer + 1, answer - 1, answer + 2], rng);
+      }, rng);
+      return {
+        type: 'mc',
+        prompt: 'Ich bin eine Zahl zwischen ' + low + ' und ' + high + '. Ich bin durch ' + divisor + ' teilbar. Welche Zahl bin ich?',
+        options: res.options, correctIndex: res.correctIndex, answer: answer,
+        meta: { difficulty: difficulty, kind: 'knobelaufgabe-raetsel' },
+      };
+    }
+  }
+  return puzzleSequence(difficulty, rng);
+}
+
+function puzzleTwoStep(difficulty, rng) {
+  rng = rng || Math.random;
+  var nMax = difficulty === 'leicht' ? 10 : difficulty === 'mittel' ? 20 : 40;
+  var n = randInt(2, nMax, rng);
+  var m = randInt(1, n, rng);
+  var answer = n * 2 - m;
+  var res = buildOptions(answer, function () {
+    return answer + pick([-3, -2, -1, 1, 2, 3, 4, -4], rng);
+  }, rng);
+  return {
+    type: 'mc',
+    prompt: 'Verdopple die Zahl ' + n + ' und ziehe dann ' + m + ' ab. Was erhältst du?',
+    options: res.options, correctIndex: res.correctIndex, answer: answer,
+    meta: { difficulty: difficulty, kind: 'knobelaufgabe-zweischritt' },
+  };
+}
+
+function generatePuzzle(difficulty, rng) {
+  rng = rng || Math.random;
+  var gens = [puzzleSequence, puzzleRange, puzzleTwoStep];
+  return pick(gens, rng)(difficulty, rng);
+}
+
+function generateProblem(settings, rng) {
+  rng = rng || Math.random;
+  var topics = [];
+  if (settings.topics.kopfrechnen) topics.push('kopfrechnen');
+  if (settings.topics.textaufgaben) topics.push('textaufgaben');
+  if (settings.topics.knobelaufgaben) topics.push('knobelaufgaben');
+  if (topics.length === 0) throw new Error('Mindestens ein Aufgabentyp muss aktiv sein.');
+
+  var ops = Object.keys(settings.operations).filter(function (k) { return settings.operations[k]; });
+  if (ops.length === 0) throw new Error('Mindestens eine Rechenart muss aktiv sein.');
+
+  var topic = pick(topics, rng);
+  var problem;
+  if (topic === 'kopfrechnen') problem = generateArithmetic(pick(ops, rng), settings.difficulty, rng);
+  else if (topic === 'textaufgaben') problem = generateWordProblem(pick(ops, rng), settings.difficulty, rng);
+  else problem = generatePuzzle(settings.difficulty, rng);
+  problem.id = Date.now() + '_' + Math.floor(rng() * 1e9);
+  return problem;
+}
+
+function createInitialGameState() {
+  return { ball: 4, scoreA: 0, scoreB: 0, lastGoal: null };
+}
+
+function applyCorrectAnswer(state, team) {
+  var ball = state.ball + (team === 'A' ? 1 : -1);
+  var scoreA = state.scoreA, scoreB = state.scoreB, lastGoal = null;
+  if (ball >= 8) { scoreA += 1; lastGoal = 'A'; ball = 4; }
+  else if (ball <= 0) { scoreB += 1; lastGoal = 'B'; ball = 4; }
+  return { ball: ball, scoreA: scoreA, scoreB: scoreB, lastGoal: lastGoal };
+}
+
+function checkWinner(state, settings) {
+  if (settings.endMode === 'goals') {
+    if (state.scoreA >= settings.goalsToWin) return 'A';
+    if (state.scoreB >= settings.goalsToWin) return 'B';
+  }
+  return null;
+}
+
+/* ======================================================================
+   UI-Anwendung
+   ====================================================================== */
+
+var app = document.getElementById('app');
+
+var DEFAULT_SETTINGS = {
+  teamAName: 'Team Rot',
+  teamBName: 'Team Blau',
+  difficulty: 'mittel',
+  operations: { plus: true, minus: true, mal: true, geteilt: false },
+  topics: { kopfrechnen: true, textaufgaben: true, knobelaufgaben: true },
+  endMode: 'goals',
+  goalsToWin: 3,
+  minutes: 5,
+};
+
+var state = {
+  screen: 'start',
+  settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+  game: null,
+  currentProblem: null,
+  inputA: '',
+  inputB: '',
+  flashA: '',
+  flashB: '',
+  locked: false,
+  goalFlashTeam: null,
+  timerRemaining: 0,
+  timerId: null,
+  formError: '',
+};
+
+function el(tag, attrs, children) {
+  var node = document.createElement(tag);
+  attrs = attrs || {};
+  for (var k in attrs) {
+    if (k === 'class') node.className = attrs[k];
+    else if (k === 'html') node.innerHTML = attrs[k];
+    else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') node.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] !== undefined && attrs[k] !== null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
+  }
+  (children || []).forEach(function (c) {
+    if (c === null || c === undefined) return;
+    if (typeof c === 'string' || typeof c === 'number') node.appendChild(document.createTextNode(c));
+    else node.appendChild(c);
+  });
+  return node;
+}
+
+function clearTimer() {
+  if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
+}
+
+function formatTime(sec) {
+  var m = Math.floor(sec / 60);
+  var s = sec % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+/* ---------------- START SCREEN ---------------- */
+function renderStart() {
+  app.innerHTML = '';
+  var hero = el('div', { class: 'hero' }, [
+    el('span', { class: 'ball-emoji' }, ['⚽']),
+    el('h1', { class: 'display' }, ['Mathe-Fußball']),
+    el('p', {}, ['Zwei Teams, ein Ball. Wer schneller rechnet, schießt näher aufs gegnerische Tor. 4 richtige Antworten in Folge bringen ein Tor!']),
+  ]);
+  var startBtn = el('button', {
+    class: 'primary-btn',
+    onclick: function () { state.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); state.screen = 'settings'; render(); },
+  }, ['Neues Spiel starten']);
+  var col = el('div', { class: 'center-col' }, [startBtn]);
+  app.appendChild(hero);
+  app.appendChild(col);
+  app.appendChild(el('p', { class: 'footer-note' }, ['Läuft komplett lokal im Browser – kein Internet nötig, jedes Gerät spielt unabhängig.']));
+}
+
+/* ---------------- SETTINGS SCREEN ---------------- */
+function chip(label, checked, onToggle, extraClass) {
+  return el('label', { class: 'chip' + (checked ? ' active' : '') + (extraClass ? ' ' + extraClass : '') }, [
+    el('input', { type: 'checkbox', checked: checked || undefined, onchange: onToggle }),
+    el('span', {}, [label]),
+  ]);
+}
+
+function renderSettings() {
+  app.innerHTML = '';
+  var s = state.settings;
+
+  var card = el('div', { class: 'card' });
+  card.appendChild(el('h2', {}, ['Einstellungen']));
+  card.appendChild(el('p', { class: 'hint' }, ['Lege Teams, Schwierigkeit, Aufgabentypen und das Spielende fest.']));
+
+  if (state.formError) card.appendChild(el('div', { class: 'error-msg' }, [state.formError]));
+
+  // Teams
+  var teamFs = el('fieldset');
+  teamFs.appendChild(el('legend', {}, ['Teams']));
+  var teamRow = el('div', { class: 'team-row' });
+  var aWrap = el('div', { class: 'team-input-wrap A' });
+  aWrap.appendChild(el('label', { for: 'teamAInput' }, ['Team A (links)']));
+  aWrap.appendChild(el('input', {
+    id: 'teamAInput', type: 'text', maxlength: '18', value: s.teamAName,
+    oninput: function (e) { s.teamAName = e.target.value; },
+  }));
+  var bWrap = el('div', { class: 'team-input-wrap B' });
+  bWrap.appendChild(el('label', { for: 'teamBInput' }, ['Team B (rechts)']));
+  bWrap.appendChild(el('input', {
+    id: 'teamBInput', type: 'text', maxlength: '18', value: s.teamBName,
+    oninput: function (e) { s.teamBName = e.target.value; },
+  }));
+  teamRow.appendChild(aWrap);
+  teamRow.appendChild(bWrap);
+  teamFs.appendChild(teamRow);
+  card.appendChild(teamFs);
+
+  // Schwierigkeit
+  var diffFs = el('fieldset');
+  diffFs.appendChild(el('legend', {}, ['Schwierigkeit']));
+  var seg = el('div', { class: 'segmented' });
+  [['leicht', 'Leicht'], ['mittel', 'Mittel'], ['schwer', 'Schwer']].forEach(function (pair) {
+    seg.appendChild(el('button', {
+      type: 'button',
+      class: 'seg-opt' + (s.difficulty === pair[0] ? ' active' : ''),
+      onclick: function () { s.difficulty = pair[0]; renderSettings(); },
+    }, [pair[1]]));
+  });
+  diffFs.appendChild(seg);
+  card.appendChild(diffFs);
+
+  // Rechenarten
+  var opFs = el('fieldset');
+  opFs.appendChild(el('legend', {}, ['Rechenarten']));
+  var opRow = el('div', { class: 'chip-row' });
+  [['plus', '➕ Plus'], ['minus', '➖ Minus'], ['mal', '✖️ Mal'], ['geteilt', '➗ Geteilt']].forEach(function (pair) {
+    opRow.appendChild(chip(pair[1], s.operations[pair[0]], function () {
+      s.operations[pair[0]] = !s.operations[pair[0]];
+      renderSettings();
+    }));
+  });
+  opFs.appendChild(opRow);
+  card.appendChild(opFs);
+
+  // Themen
+  var topicFs = el('fieldset');
+  topicFs.appendChild(el('legend', {}, ['Aufgabentypen']));
+  var topicRow = el('div', { class: 'chip-row' });
+  [['kopfrechnen', '🧮 Kopfrechnen'], ['textaufgaben', '📖 Textaufgaben'], ['knobelaufgaben', '🧩 Knobelaufgaben']].forEach(function (pair) {
+    topicRow.appendChild(chip(pair[1], s.topics[pair[0]], function () {
+      s.topics[pair[0]] = !s.topics[pair[0]];
+      renderSettings();
+    }));
+  });
+  topicFs.appendChild(topicRow);
+  card.appendChild(topicFs);
+
+  // Spielende
+  var endFs = el('fieldset');
+  endFs.appendChild(el('legend', {}, ['Spielende']));
+  var endRow = el('div', { class: 'end-mode-row' });
+
+  var goalsOpt = el('label', { class: 'end-mode-opt' + (s.endMode === 'goals' ? ' active' : '') });
+  goalsOpt.appendChild(el('input', {
+    type: 'radio', name: 'endMode', checked: s.endMode === 'goals' || undefined,
+    onchange: function () { s.endMode = 'goals'; renderSettings(); },
+  }));
+  goalsOpt.appendChild(el('span', {}, ['Spiel endet nach']));
+  goalsOpt.appendChild(el('input', {
+    type: 'number', min: '1', max: '20', value: s.goalsToWin,
+    oninput: function (e) { s.goalsToWin = Math.max(1, parseInt(e.target.value, 10) || 1); },
+  }));
+  goalsOpt.appendChild(el('span', {}, ['Toren']));
+  endRow.appendChild(goalsOpt);
+
+  var timeOpt = el('label', { class: 'end-mode-opt' + (s.endMode === 'time' ? ' active' : '') });
+  timeOpt.appendChild(el('input', {
+    type: 'radio', name: 'endMode', checked: s.endMode === 'time' || undefined,
+    onchange: function () { s.endMode = 'time'; renderSettings(); },
+  }));
+  timeOpt.appendChild(el('span', {}, ['Spiel endet nach']));
+  timeOpt.appendChild(el('input', {
+    type: 'number', min: '1', max: '60', value: s.minutes,
+    oninput: function (e) { s.minutes = Math.max(1, parseInt(e.target.value, 10) || 1); },
+  }));
+  timeOpt.appendChild(el('span', {}, ['Minuten']));
+  endRow.appendChild(timeOpt);
+
+  endFs.appendChild(endRow);
+  card.appendChild(endFs);
+
+  var startBtn = el('button', {
+    class: 'primary-btn',
+    onclick: function () {
+      var opsActive = Object.keys(s.operations).some(function (k) { return s.operations[k]; });
+      var topicsActive = Object.keys(s.topics).some(function (k) { return s.topics[k]; });
+      if (!opsActive) { state.formError = 'Bitte mindestens eine Rechenart auswählen.'; renderSettings(); return; }
+      if (!topicsActive) { state.formError = 'Bitte mindestens einen Aufgabentyp auswählen.'; renderSettings(); return; }
+      if (!s.teamAName.trim()) s.teamAName = 'Team A';
+      if (!s.teamBName.trim()) s.teamBName = 'Team B';
+      state.formError = '';
+      startGame();
+    },
+  }, ['⚽ Spiel starten']);
+
+  app.appendChild(card);
+  app.appendChild(el('div', { class: 'center-col' }, [
+    startBtn,
+    el('button', { class: 'ghost-btn', onclick: function () { state.screen = 'start'; render(); } }, ['Zurück']),
+  ]));
+}
+
+/* ---------------- GAME LOGIC / SCREEN ---------------- */
+function startGame() {
+  state.game = createInitialGameState();
+  state.currentProblem = generateProblem(state.settings);
+  state.inputA = ''; state.inputB = '';
+  state.flashA = ''; state.flashB = '';
+  state.locked = false;
+  state.goalFlashTeam = null;
+  clearTimer();
+  if (state.settings.endMode === 'time') {
+    state.timerRemaining = state.settings.minutes * 60;
+    state.timerId = setInterval(function () {
+      state.timerRemaining--;
+      if (state.timerRemaining <= 0) {
+        state.timerRemaining = 0;
+        clearTimer();
+        endGame();
+        return;
+      }
+      updateTimerDisplay();
+    }, 1000);
+  }
+  state.screen = 'game';
+  render();
+}
+
+function updateTimerDisplay() {
+  var badge = document.getElementById('timerBadge');
+  if (badge) badge.textContent = '⏱ ' + formatTime(state.timerRemaining);
+}
+
+function endGame() {
+  clearTimer();
+  state.screen = 'end';
+  render();
+}
+
+function submitAnswer(team, value) {
+  if (state.locked) return;
+  var p = state.currentProblem;
+  var correct = value === p.answer;
+  if (correct) {
+    state.locked = true;
+    if (team === 'A') state.flashA = 'flash-correct'; else state.flashB = 'flash-correct';
+    render();
+    var result = applyCorrectAnswer(state.game, team);
+    state.game = result;
+    var goalScored = !!result.lastGoal;
+    state.goalFlashTeam = result.lastGoal;
+
+    var pauseMs = goalScored ? 1100 : 420;
+    setTimeout(function () {
+      var winner = checkWinner(state.game, state.settings);
+      state.flashA = ''; state.flashB = '';
+      state.inputA = ''; state.inputB = '';
+      state.goalFlashTeam = null;
+      state.locked = false;
+      if (winner) { endGame(); return; }
+      state.currentProblem = generateProblem(state.settings);
+      render();
+    }, pauseMs);
+  } else {
+    if (team === 'A') { state.flashA = 'flash-wrong'; state.inputA = ''; }
+    else { state.flashB = 'flash-wrong'; state.inputB = ''; }
+    render();
+    setTimeout(function () {
+      if (team === 'A') state.flashA = ''; else state.flashB = '';
+      render();
+    }, 400);
+  }
+}
+
+function teamPanel(team) {
+  var s = state.settings;
+  var isA = team === 'A';
+  var name = isA ? s.teamAName : s.teamBName;
+  var flash = isA ? state.flashA : state.flashB;
+  var input = isA ? state.inputA : state.inputB;
+  var panel = el('div', { class: 'team-panel ' + team + (flash ? ' ' + flash : '') + (state.locked && !flash ? ' disabled' : '') });
+  panel.appendChild(el('h3', {}, [name, el('span', { 'aria-hidden': 'true' }, [isA ? '🔴' : '🔵'])]));
+
+  var promptBox = el('div', { class: 'prompt-box', 'aria-live': 'polite' }, [state.currentProblem.prompt]);
+  panel.appendChild(promptBox);
+
+  if (state.currentProblem.type === 'calc') {
+    panel.appendChild(el('div', { class: 'calc-display' }, [input.length ? input : '\u00A0']));
+    var grid = el('div', { class: 'calc-grid' });
+    var digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'];
+    digits.forEach(function (d) {
+      var isClear = d === '⌫';
+      var isOk = d === 'OK';
+      grid.appendChild(el('button', {
+        type: 'button',
+        class: isOk ? 'ok-btn' : (isClear ? 'clear-btn' : ''),
+        onclick: function () {
+          var cur = isA ? state.inputA : state.inputB;
+          if (isClear) cur = cur.slice(0, -1);
+          else if (isOk) {
+            if (cur.length === 0) return;
+            submitAnswer(team, parseInt(cur, 10));
+            return;
+          } else if (cur.length < 6) cur += d;
+          if (isA) state.inputA = cur; else state.inputB = cur;
+          render();
+        },
+      }, [d]));
+    });
+    panel.appendChild(grid);
+  } else {
+    var mcGrid = el('div', { class: 'mc-grid' });
+    state.currentProblem.options.forEach(function (opt) {
+      mcGrid.appendChild(el('button', {
+        type: 'button',
+        onclick: function () { submitAnswer(team, opt); },
+      }, [String(opt)]));
+    });
+    panel.appendChild(mcGrid);
+  }
+  return panel;
+}
+
+function renderGame() {
+  app.innerHTML = '';
+  var s = state.settings;
+  var g = state.game;
+
+  var topbar = el('div', { class: 'topbar' }, [
+    el('button', {
+      class: 'icon-btn',
+      onclick: function () {
+        if (confirm('Aktuelles Spiel abbrechen und zu den Einstellungen zurückkehren?')) {
+          clearTimer();
+          state.screen = 'settings';
+          render();
+        }
+      },
+    }, ['◀ Beenden']),
+    s.endMode === 'time' ? el('span', { class: 'timer-badge', id: 'timerBadge' }, ['⏱ ' + formatTime(state.timerRemaining)]) : el('span', {}, []),
+  ]);
+  app.appendChild(topbar);
+
+  var scoreboard = el('div', { class: 'scoreboard' }, [
+    el('span', { class: 'name teamA-label' }, [s.teamAName]),
+    el('span', { class: 'score-num' }, [String(g.scoreA)]),
+    el('span', { class: 'divider' }, [':']),
+    el('span', { class: 'score-num' }, [String(g.scoreB)]),
+    el('span', { class: 'name teamB-label' }, [s.teamBName]),
+  ]);
+  app.appendChild(scoreboard);
+
+  var pitch = el('div', { class: 'pitch' });
+  pitch.appendChild(el('div', { class: 'goalbox A' }, ['TOR ' + s.teamAName.toUpperCase()]));
+  var trackWrap = el('div', { class: 'track-wrap' });
+  var ballLeft = (g.ball / 8) * 100;
+  var ball = el('div', { class: 'ball', style: 'left:' + ballLeft + '%' }, ['⚽']);
+  trackWrap.appendChild(ball);
+  if (state.goalFlashTeam) {
+    var scorerName = state.goalFlashTeam === 'A' ? s.teamAName : s.teamBName;
+    trackWrap.appendChild(el('div', { class: 'goal-flash' }, ['⚽ TOR für ' + scorerName + '!']));
+  }
+  pitch.appendChild(trackWrap);
+  pitch.appendChild(el('div', { class: 'goalbox B' }, ['TOR ' + s.teamBName.toUpperCase()]));
+  app.appendChild(pitch);
+
+  var teamsArea = el('div', { class: 'teams-area' }, [teamPanel('A'), teamPanel('B')]);
+  app.appendChild(teamsArea);
+
+  updateTimerDisplay();
+}
+
+/* ---------------- END SCREEN ---------------- */
+function renderEnd() {
+  app.innerHTML = '';
+  var s = state.settings, g = state.game;
+  var winnerText, trophy;
+  if (g.scoreA > g.scoreB) { winnerText = s.teamAName + ' gewinnt!'; trophy = '🏆'; }
+  else if (g.scoreB > g.scoreA) { winnerText = s.teamBName + ' gewinnt!'; trophy = '🏆'; }
+  else { winnerText = 'Unentschieden!'; trophy = '🤝'; }
+
+  var wrap = el('div', { class: 'end-wrap' }, [
+    el('span', { class: 'trophy' }, [trophy]),
+    el('h2', {}, [winnerText]),
+    el('div', { class: 'end-score' }, [g.scoreA + ' : ' + g.scoreB]),
+    el('p', {}, [s.teamAName + ' vs. ' + s.teamBName]),
+  ]);
+  app.appendChild(wrap);
+
+  var btnRow = el('div', { class: 'btn-row' }, [
+    el('button', { class: 'primary-btn', onclick: function () { startGame(); } }, ['🔁 Gleiches Spiel nochmal']),
+    el('button', { class: 'ghost-btn', onclick: function () { state.screen = 'settings'; render(); } }, ['⚙️ Neue Einstellungen']),
+  ]);
+  app.appendChild(btnRow);
+}
+
+function render() {
+  if (state.screen === 'start') renderStart();
+  else if (state.screen === 'settings') renderSettings();
+  else if (state.screen === 'game') renderGame();
+  else if (state.screen === 'end') renderEnd();
+}
+
+render();
+</script>
+</body>
+</html>
