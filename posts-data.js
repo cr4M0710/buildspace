@@ -347,4 +347,28 @@ const posts = [
     titleEn: "Math Football",
     excerptEn: "Two teams face off in an animated football match, advancing the ball by solving mental-math, word and puzzle problems. Difficulty, operation and end condition are all adjustable."
    },
+   {
+    title: "Kanban-Board",
+    excerpt: "Eigenes Kanban-Board mit Login: mehrere Boards anlegen, Spalten frei benennen und Karten per Drag & Drop verschieben — ideal, um Projekt- oder Praktikumsarbeit gemeinsam zu organisieren.",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "kanban-board.html",
+    emoji: "🗂️",
+    tags: ["tool", "gruppenarbeit"],
+    titleEn: "Kanban Board",
+    excerptEn: "A login-protected Kanban board: create multiple boards, name your own columns and move cards by drag and drop — ideal for organising project or internship work together."
+   },
+   {
+    title: "Kanban-Board",
+    excerpt: "Eigenes Kanban-Board mit Login: mehrere Boards anlegen, Spalten frei benennen und Karten per Drag & Drop verschieben — für Projektarbeit in jedem Fach nutzbar.",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "kanban-board.html",
+    emoji: "🗂️",
+    tags: ["tool", "gruppenarbeit"],
+    titleEn: "Kanban Board",
+    excerptEn: "A login-protected Kanban board: create multiple boards, name your own columns and move cards by drag and drop — usable for project work in any subject."
+   },
 ];
