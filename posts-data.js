@@ -52,7 +52,7 @@ const posts = [
     subcategory: "mathematik",
     url: "minigolf-winkel.html",
     emoji: "⛳",
-    tags: ["spiel", "jg6"],
+    tags: ["spiel", "jg6", "vertretung"],
     titleEn: "Minigolf – Angles – Grade 6",
     excerptEn: "Learn angle types through play"
    },
@@ -172,7 +172,7 @@ const posts = [
     subcategory: "mathematik",
     url: "zahlen-werkstatt.html",
     emoji: "🔧",
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5", "vertretung"],
     titleEn: "Number Workshop",
     excerptEn: "Learning game on natural numbers (grade 5): reading & writing, place value, rounding, the number line and more — for up to 4 learners at once, with automatic level adjustment."
    },
@@ -196,7 +196,7 @@ const posts = [
     subcategory: "mathematik",
     url: "bruch-quiz-fussball.html",
     emoji: "⚽",
-    tags: ["spiel", "partnerarbeit"],
+    tags: ["spiel", "partnerarbeit", "vertretung"],
     titleEn: "Fraction Quiz (Football)",
     excerptEn: "A maths penalty shoot-out for 2 players: solve fraction problems — get it right and you take the shot."
    },
@@ -208,7 +208,7 @@ const posts = [
     subcategory: "mathematik",
     url: "prozent-rennen.html",
     emoji: "📊",
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Percentage Race",
     excerptEn: "Learning game on percentages (base value, rate, percentage value) in race format — for 1 to 4 learners on the same device, three difficulty levels."
    },
@@ -220,7 +220,7 @@ const posts = [
     subcategory: "mathematik",
     url: "gleichungs-duell.html",
     emoji: "⚔️",
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Equation Duel",
     excerptEn: "Solve linear equations for x, from a single step to x on both sides — for 1 to 4 learners on the same device."
    },
@@ -232,7 +232,7 @@ const posts = [
     subcategory: "mathematik",
     url: "flaechen-fuchs.html",
     emoji: "🦊",
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Area Fox",
     excerptEn: "Calculate the perimeter and area of rectangles, squares, triangles and circles, with labelled shapes — for 1 to 4 learners on the same device."
    },
@@ -245,7 +245,7 @@ const posts = [
     url: "zahlen-detektiv.html",
     emoji: "🕵️",
     featured: true,
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Number Detective",
     excerptEn: "Solve number puzzles with natural numbers: crack the hidden number from several clues (odd/even, divisibility, digit sum, number of digits) — for 1 to 4 learners on the same device."
    },
@@ -258,7 +258,7 @@ const posts = [
     url: "kopfrechen-quiz.html",
     emoji: "⚡",
     featured: true,
-    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Mental Maths Quiz",
     excerptEn: "Lightning-fast mental maths with addition, subtraction, multiplication and division against the clock, with a countdown per question — for 1 to 4 learners on the same device."
    },
@@ -343,7 +343,7 @@ const posts = [
     subcategory: "mathematik",
     url: "mathe-fussball.html",
     emoji: "⚽",
-    tags: ["spiel", "partnerarbeit"],
+    tags: ["spiel", "partnerarbeit", "vertretung"],
     titleEn: "Math Football",
     excerptEn: "Two teams face off in an animated football match, advancing the ball by solving mental-math, word and puzzle problems. Difficulty, operation and end condition are all adjustable."
    },

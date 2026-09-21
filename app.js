@@ -121,7 +121,7 @@ const I18N = {
     tagLabels: {
       einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
       spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6",
-      jg7: "Jahrgang 7", jg10: "Jahrgang 10"
+      jg7: "Jahrgang 7", jg10: "Jahrgang 10", vertretung: "Vertretungsstunde"
     },
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
@@ -168,7 +168,7 @@ const I18N = {
     tagLabels: {
       einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Group",
       spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6",
-      jg7: "Grade 7", jg10: "Grade 10"
+      jg7: "Grade 7", jg10: "Grade 10", vertretung: "Substitute-friendly"
     },
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
@@ -282,6 +282,14 @@ function renderPostList(list, opts) {
         const isExternal = /^https?:\/\//i.test(p.url);
         const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
         const externalBadge = isExternal ? EXTERNAL_LINK_GLYPH : "";
+        // Läuft gerade eine Freigabe (Kategorie, Kursmappe oder
+        // Vertretungsstunde), muss deren Kennung an jeden internen Link
+        // weitergereicht werden — sonst verlangt die nächste Seite erneut
+        // eine Anmeldung, weil die Freigabe nur für DIESEN Seitenaufruf galt.
+        const shareQS = !isExternal && window.Protect && typeof window.Protect.shareQueryString === "function"
+          ? window.Protect.shareQueryString()
+          : "";
+        const href = p.url + shareQS;
         const isNew = p0.date === newestDate;
         const emojiBadge = p.emoji
           ? `<span class="post-emoji" aria-hidden="true">${p.emoji}</span>`
@@ -293,7 +301,7 @@ function renderPostList(list, opts) {
         return `
       <li class="post-list-item" style="--i:${i}">
         <div class="post-card${opts.featured ? " post-card--featured" : ""}">
-          <a class="post-card-link" href="${p.url}"${linkAttrs} aria-label="${escapeHtml(p.title)}"></a>
+          <a class="post-card-link" href="${href}"${linkAttrs} aria-label="${escapeHtml(p.title)}"></a>
           <button type="button" class="post-fav-btn${fav ? " is-active" : ""}" data-url="${escapeHtml(p0.url)}" aria-pressed="${fav}" aria-label="${escapeHtml(favLabel)}" title="${escapeHtml(favLabel)}">${fav ? STAR_GLYPH : STAR_OUTLINE_GLYPH}</button>
           ${emojiBadge}
           <div class="post-card-body">
@@ -706,6 +714,213 @@ function renderSubfolderUnlocked(id, subId) {
 }
 
 /* ---------------------------------------------------------
+   Vertretungsstunde — feste, dauerhaft freigegebene Auswahl an
+   selbsterklärenden Lernspielen (Tag "vertretung" in posts-data.js),
+   erreichbar ganz ohne Anmeldung über index.html?vertretung=1#/vertretung
+   (siehe protect.js). Normal angemeldet ist die Seite ebenfalls
+   einsehbar, als schnelle kuratierte Liste.
+--------------------------------------------------------- */
+function renderVertretung() {
+  // Kein classList-Eingriff hier: Läuft gerade eine Vertretungsstunden-
+  // Freigabe, hat guard() beim ersten Laden bereits "share-mode" gesetzt
+  // (blendet Marken-/Navigationslinks aus) — das soll über die gesamte
+  // Sitzung hinweg so bleiben, solange /#vertretung die einzig erreichbare
+  // Route ist. Ruft Marc die Seite normal (voller Zugang) auf, ist die
+  // Klasse ohnehin nicht gesetzt.
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Vertretungsstunde</span>`;
+  const list = posts.filter((p) => (p.tags || []).includes("vertretung"));
+  content.innerHTML = `
+    <h1 class="section-label">📋 Vertretungsstunde</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;">Selbsterklärende Lernspiele ohne Vorbereitung — ideal, wenn eine Vertretungskraft ohne Vorwissen eine Klasse übernimmt. Einfach den Link teilen, kein Passwort nötig.</p>
+    ${renderPostList(list, { preserveOrder: true })}
+  `;
+}
+
+/* ---------------------------------------------------------
+   Kursmappe — kuratierte Auswahl einzelner Beiträge für genau eine
+   Stunde/Einheit, zeitlich begrenzt freigegeben über
+   ?share=1&exp=...&posts=a.html,b.html[&title=...] (siehe protect.js).
+--------------------------------------------------------- */
+function renderKursmappeView() {
+  // Kein classList-Eingriff hier — siehe renderVertretung() oben.
+  const km = window.Protect && window.Protect.kursmappeStatus ? window.Protect.kursmappeStatus() : { active: false };
+  breadcrumb.innerHTML = `<span class="current">Kursmappe</span>`;
+  if (!km.active) {
+    content.innerHTML = `<p class="empty-state">${t("emptyState")}</p>`;
+    return;
+  }
+  const list = posts.filter((p) => km.urls.indexOf(p.url) !== -1);
+  content.innerHTML = `
+    <h1 class="section-label">📚 ${km.title ? escapeHtml(km.title) : "Kursmappe"}</h1>
+    ${renderPostList(list, { preserveOrder: true })}
+  `;
+}
+
+/* ---------------------------------------------------------
+   Kursmappe erstellen — nur mit vollem Zugang (Marc) erreichbar: Beiträge
+   auswählen, Titel/Gültigkeitsdauer festlegen, Link + QR-Code erzeugen.
+--------------------------------------------------------- */
+function renderKursmappeBuilder() {
+  if (!window.Protect || window.Protect.getAccess() !== "full") {
+    location.hash = "#/";
+    return;
+  }
+  document.documentElement.classList.remove("share-mode");
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kursmappe erstellen</span>`;
+  content.innerHTML = `
+    <h1 class="section-label">🧩 Kursmappe erstellen</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Wähle die Beiträge für diese Stunde aus. Der Link zeigt Lernenden nur genau diese Auswahl — ganz ohne Anmeldung, automatisch zeitlich begrenzt.</p>
+    <div class="km-builder">
+      <label class="km-field">Titel (optional, erscheint im Hinweisbanner)
+        <input type="text" id="km-title" placeholder="z. B. Bruchrechnen – Doppelstunde" maxlength="60" />
+      </label>
+      <label class="km-field">Gültigkeitsdauer
+        <select id="km-minutes">
+          <option value="15">15 Minuten</option>
+          <option value="30" selected>30 Minuten</option>
+          <option value="45">45 Minuten</option>
+          <option value="90">90 Minuten (Doppelstunde)</option>
+          <option value="180">3 Stunden</option>
+        </select>
+      </label>
+      <div class="km-post-list">
+        ${posts
+          .map(
+            (p, i) => `
+          <label class="km-post-item">
+            <input type="checkbox" class="km-post-check" value="${escapeHtml(p.url)}" data-idx="${i}">
+            <span class="km-post-emoji">${p.emoji || ""}</span>
+            <span class="km-post-title">${escapeHtml(p.title)}</span>
+            <span class="km-post-meta">${folderLabel(p.category)}${p.subcategory ? " · " + subfolderLabel(p.subcategory) : ""}</span>
+          </label>`
+          )
+          .join("")}
+      </div>
+      <button type="button" class="protect-submit" id="km-generate" style="max-width:280px;">Link erstellen</button>
+      <div id="km-link-area" style="display:none; margin-top:18px;">
+        <div class="protect-link-row">
+          <input type="text" id="km-link-out" readonly />
+          <button class="protect-copy-btn" id="km-copy-btn">Kopieren</button>
+        </div>
+        <div class="protect-error" id="km-copy-msg" style="color:#2F6F4F;"></div>
+        <div class="protect-qr-wrap" id="km-qr-wrap"></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("km-generate").addEventListener("click", () => {
+    const checked = Array.from(document.querySelectorAll(".km-post-check:checked")).map((c) => c.value);
+    if (!checked.length) {
+      alert("Bitte mindestens einen Beitrag auswählen.");
+      return;
+    }
+    const minutes = Number(document.getElementById("km-minutes").value);
+    const title = document.getElementById("km-title").value.trim();
+    const link = window.Protect.kursmappeLinkFor(checked, minutes, title);
+    document.getElementById("km-link-out").value = link;
+    document.getElementById("km-link-area").style.display = "block";
+    if (window.Protect.renderQrCode) window.Protect.renderQrCode(document.getElementById("km-qr-wrap"), link);
+  });
+  document.getElementById("km-copy-btn").addEventListener("click", async () => {
+    const out = document.getElementById("km-link-out");
+    const msg = document.getElementById("km-copy-msg");
+    try {
+      await navigator.clipboard.writeText(out.value);
+      msg.textContent = "Link kopiert!";
+    } catch (e) {
+      out.select();
+      try {
+        document.execCommand("copy");
+        msg.textContent = "Link kopiert!";
+      } catch (e2) {
+        msg.textContent = "Bitte manuell kopieren.";
+      }
+    }
+  });
+}
+
+/* ---------------------------------------------------------
+   Kolleg:innen-Bereich — dritte Zugriffs-Ebene (Kolleg:innen-Kennwort,
+   siehe protect.js), zusätzlich zu Schule nutzbar. Aktuell ein Grundgerüst
+   mit Platz für Fortbildungsunterlagen; die Feedback-Auswertung ist bereits
+   funktionsfähig.
+--------------------------------------------------------- */
+function renderKollegen(sub) {
+  if (window.Protect) {
+    window.Protect.removeShareButton();
+    window.Protect.guard("kollegen", () => renderKollegenUnlocked(sub));
+  } else {
+    renderKollegenUnlocked(sub);
+  }
+}
+
+function renderKollegenUnlocked(sub) {
+  if (sub === "feedback") {
+    renderKollegenFeedback();
+    return;
+  }
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kolleg:innen</span>`;
+  content.innerHTML = `
+    <h1 class="section-label">🤝 Kolleg:innen-Bereich</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;">Interner Bereich für Kolleg:innen der GGL — Fortbildungsunterlagen, Vorlagen und Tool-Präsentationen aus dem iPad-Team. Noch im Aufbau.</p>
+    <div class="folder-grid">
+      <div class="folder-card is-placeholder" style="--i:0">
+        <span class="folder-icon">📎</span>
+        <h2>Fortbildungs-Vorlagen</h2>
+        <span class="folder-count">Bald verfügbar</span>
+      </div>
+      <div class="folder-card is-placeholder" style="--i:1">
+        <span class="folder-icon">🖥️</span>
+        <h2>Tool-Präsentationen</h2>
+        <span class="folder-count">Bald verfügbar</span>
+      </div>
+      <a class="folder-card" href="#/kollegen/feedback" style="--i:2">
+        <span class="folder-icon">📊</span>
+        <h2>Feedback-Auswertung</h2>
+        <span class="folder-count">Rückmeldungen zu den Tools</span>
+      </a>
+    </div>
+  `;
+}
+
+function renderKollegenFeedback() {
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/kollegen">Kolleg:innen</a><span class="sep">›</span><span class="current">Feedback-Auswertung</span>`;
+  content.innerHTML = `
+    <h1 class="section-label">📊 Feedback-Auswertung</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Rückmeldungen (👍/👎), die Lernende auf den einzelnen Werkzeug-Seiten abgegeben haben.</p>
+    <div id="feedback-agg-list"><p class="empty-state">Lade Rückmeldungen …</p></div>
+  `;
+  if (!window.Protect || typeof window.Protect.loadFirebase !== "function") return;
+  window.Protect.loadFirebase()
+    .then(({ db }) => db.collection("tool_feedback").get())
+    .then((snap) => {
+      const agg = {};
+      snap.forEach((doc) => {
+        const d = doc.data();
+        if (!d || !d.tool) return;
+        if (!agg[d.tool]) agg[d.tool] = { up: 0, down: 0 };
+        if (d.vote === "up") agg[d.tool].up++;
+        else if (d.vote === "down") agg[d.tool].down++;
+      });
+      const rows = Object.keys(agg).sort((a, b) => agg[b].up + agg[b].down - (agg[a].up + agg[a].down));
+      const el = document.getElementById("feedback-agg-list");
+      if (!el) return;
+      if (!rows.length) {
+        el.innerHTML = '<p class="empty-state">Noch keine Rückmeldungen.</p>';
+        return;
+      }
+      el.innerHTML =
+        '<table class="feedback-table"><thead><tr><th>Werkzeug</th><th>👍</th><th>👎</th></tr></thead><tbody>' +
+        rows.map((tool) => `<tr><td>${escapeHtml(tool)}</td><td>${agg[tool].up}</td><td>${agg[tool].down}</td></tr>`).join("") +
+        "</tbody></table>";
+    })
+    .catch(() => {
+      const el = document.getElementById("feedback-agg-list");
+      if (el) el.innerHTML = '<p class="empty-state">Konnte Rückmeldungen nicht laden (Firestore-Regeln prüfen).</p>';
+    });
+}
+
+/* ---------------------------------------------------------
    Lebendiger Hero-Kopf: eine tageszeit-abhängige Begrüßung und ein
    paar Kennzahlen, die beim ersten Laden von 0 hochzählen. Läuft
    einmalig beim Start, unabhängig vom Router (Kopf bleibt bei jeder
@@ -895,10 +1110,27 @@ function ensureShareHomeHash() {
 }
 
 function isAllowedRoute(segments) {
+  if (window.Protect && window.Protect.isVertretungMode && window.Protect.isVertretungMode()) {
+    return segments[0] === "vertretung";
+  }
+  if (window.Protect && window.Protect.isKursmappeMode && window.Protect.isKursmappeMode()) {
+    return segments[0] === "kursmappe";
+  }
   if (!(window.Protect && window.Protect.isShareMode())) return true;
   if (segments.length === 0) return false;
   if (segments[0] === "neueste") return false;
   return window.Protect.isRouteAllowed(segments[0]);
+}
+
+/* Blendet die beiden Verwaltungs-Links oben in der Navigation je nach
+   Zugriffs-Ebene ein/aus: "Kolleg:innen" für volle und Kolleg:innen-
+   Zugänge, "Kursmappe erstellen" nur für den vollen Zugang (Marc). */
+function updateAdminNavLinks() {
+  const access = window.Protect ? window.Protect.getAccess() : null;
+  const kollegenLink = document.getElementById("kollegen-nav-link");
+  const kursmappeLink = document.getElementById("kursmappe-nav-link");
+  if (kollegenLink) kollegenLink.style.display = access === "full" || access === "kollegen" ? "" : "none";
+  if (kursmappeLink) kursmappeLink.style.display = access === "full" ? "" : "none";
 }
 
 function render() {
@@ -912,15 +1144,30 @@ function render() {
      DOMContentLoaded-Render darf dieses Anmeldefenster nicht wegschließen,
      bevor sich jemand für Passwort oder Gast entschieden hat. */
   if (window.Protect && window.Protect.getAccess()) window.Protect.closeOverlay();
+  updateAdminNavLinks();
   const segments = parseHash();
   if (!isAllowedRoute(segments)) {
-    location.hash = shareHomeHash || "#/";
+    if (window.Protect && window.Protect.isVertretungMode && window.Protect.isVertretungMode()) {
+      location.hash = "#/vertretung";
+    } else if (window.Protect && window.Protect.isKursmappeMode && window.Protect.isKursmappeMode()) {
+      location.hash = "#/kursmappe";
+    } else {
+      location.hash = shareHomeHash || "#/";
+    }
     return;
   }
   if (segments.length === 0) {
     renderTopLevel();
   } else if (segments[0] === "neueste") {
     renderNeueste();
+  } else if (segments[0] === "vertretung") {
+    renderVertretung();
+  } else if (segments[0] === "kursmappe") {
+    renderKursmappeView();
+  } else if (segments[0] === "kursmappe-erstellen") {
+    renderKursmappeBuilder();
+  } else if (segments[0] === "kollegen") {
+    renderKollegen(segments[1]);
   } else if (segments.length === 1) {
     renderFolder(segments[0]);
   } else {
@@ -958,7 +1205,12 @@ document.addEventListener(
 document.addEventListener("click", (e) => {
   const link = e.target.closest(".post-card-link");
   if (!link) return;
-  recordRecent(link.getAttribute("href"));
+  // Während einer Freigabe (Kursmappe/Vertretungsstunde) hängt an jedem
+  // Link zusätzlich deren Kennung dran (siehe renderPostList) — im
+  // Verlauf soll aber weiterhin die reine Beitrags-URL landen, damit sie
+  // sich mit posts-data.js abgleichen lässt.
+  const href = (link.getAttribute("href") || "").split("?")[0];
+  recordRecent(href);
 });
 
 /* Stern-Symbol auf jeder Karte: Favorit an/aus. Liegt als eigenständiges

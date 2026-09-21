@@ -1,13 +1,30 @@
 /* ---------------------------------------------------------
    protect.js
    Einmalige Anmeldung für die komplette Seite: Passwort (voller
-   Zugriff) oder "Als Gast fortfahren" (Zugriff nur auf Schule).
-   Dazu weiterhin eine zeitlich begrenzte "Für Lernende freigeben"-
-   Funktion für einzelne Seiten, unabhängig von der Anmeldung.
+   Zugriff), Kolleg:innen-Kennwort (Schule + Kolleg:innen-Bereich)
+   oder "Als Gast fortfahren" (Zugriff nur auf Schule).
+
+   Dazu mehrere zeitlich begrenzte bzw. dauerhafte Freigaben,
+   unabhängig von der Anmeldung — alle über Adresszeilen-Parameter
+   gesteuert, damit sie sich als einfacher Link/QR-Code verteilen
+   lassen:
+     ?share=1&exp=...&cat=...          "Für Lernende freigeben"
+                                        (ganze Kategorie, zeitlich
+                                        begrenzt)
+     ?share=1&exp=...&posts=a.html,b.html[&title=...]
+                                        "Kursmappe" (einzelne
+                                        Beiträge, zeitlich begrenzt)
+     ?vertretung=1                     "Vertretungsstunde" (fester,
+                                        nicht ablaufender Satz an
+                                        selbsterklärenden Werkzeugen)
+     ?embed=1                          Einbettungsmodus (blendet
+                                        Navigation/Fußzeile/Rücklink/
+                                        Zusatz-Buttons aus, für ein
+                                        iFrame z. B. im Schulportal)
 
    WICHTIG: Das ist eine Komfort-Sperre für eine statische
    GitHub-Pages-Seite, keine echte Serversicherheit. Der
-   Quelltext (und damit das Passwort) ist für jeden einsehbar,
+   Quelltext (und damit die Kennwörter) ist für jeden einsehbar,
    der sich die Dateien ansieht. Für wirklich sensible Inhalte
    ist das nicht geeignet.
 --------------------------------------------------------- */
@@ -15,10 +32,57 @@
   "use strict";
 
   const PASSWORD = "mstroh_GGL#99";
-  const LABELS = { schule: "Schule", handball: "Handball", freizeit: "Freizeit", neueste: "Neueste" };
+  const KOLLEGEN_PASSWORD = "ggl-ipad-team-2026";
+  const LABELS = {
+    schule: "Schule",
+    handball: "Handball",
+    freizeit: "Freizeit",
+    neueste: "Neueste",
+    kollegen: "Kolleg:innen-Bereich"
+  };
   const ACCESS_KEY = "buildspace_access_v1";
   const LOCK_SVG =
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
+
+  /* Fest ausgewählte, selbsterklärende Lernspiele ohne jede Vorbereitung
+     — erreichbar über den dauerhaften "Vertretungsstunde"-Link, ganz
+     ohne Anmeldung. Liste hier UND das Tag "vertretung" in posts-data.js
+     halten dieselbe Auswahl fest (getrennt, weil diese Datei auch auf
+     einzelnen Werkzeug-Seiten ohne posts-data.js läuft). */
+  const VERTRETUNG_FILES = [
+    "minigolf-winkel.html",
+    "zahlen-werkstatt.html",
+    "bruch-quiz-fussball.html",
+    "prozent-rennen.html",
+    "gleichungs-duell.html",
+    "flaechen-fuchs.html",
+    "zahlen-detektiv.html",
+    "kopfrechen-quiz.html",
+    "mathe-fussball.html"
+  ];
+
+  /* Werkzeuge mit optionaler, freiwilliger Bestenliste. */
+  const HIGHSCORE_FILES = [
+    "mathe-fussball.html",
+    "bruch-quiz-fussball.html",
+    "zahlen-detektiv.html",
+    "kopfrechen-quiz.html",
+    "prozent-rennen.html",
+    "gleichungs-duell.html"
+  ];
+
+  /* Dasselbe Firebase-Projekt, das schon für die Kanban-Tools läuft —
+     wird hier nur für "Feedback pro Tool" und die Bestenlisten
+     nachgeladen (lazy), damit einfache Seiten ohne Klick auf eines der
+     beiden Widgets keinerlei zusätzliches Skript laden. */
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus",
+    authDomain: "kanban-board-281da.firebaseapp.com",
+    projectId: "kanban-board-281da",
+    storageBucket: "kanban-board-281da.firebasestorage.app",
+    messagingSenderId: "210909884248",
+    appId: "1:210909884248:web:10ffacb3a74f7b3c887f2d"
+  };
 
   /* Zeigt für "Zur Startseite" immer auf die echte Top-Level-index.html,
      egal wie tief die aktuelle Seite verschachtelt ist (z. B.
@@ -33,16 +97,23 @@
 
   function nowMs() { return Date.now(); }
 
+  function currentPageFile() {
+    const path = location.pathname;
+    const base = path.substring(path.lastIndexOf("/") + 1);
+    return base || "index.html";
+  }
+
   /* ---------------------------------------------------------
-     Zugriffs-Ebene: "full" (Passwort korrekt) oder "guest"
-     (als Gast fortgefahren, nur Schule nutzbar). Einmal gesetzt,
-     gilt es seitenübergreifend (localStorage), bis der Browser-
-     Speicher geleert wird.
+     Zugriffs-Ebene: "full" (Passwort korrekt), "kollegen"
+     (Kolleg:innen-Kennwort: Schule + Kolleg:innen-Bereich) oder
+     "guest" (als Gast fortgefahren, nur Schule nutzbar). Einmal
+     gesetzt, gilt es seitenübergreifend (localStorage), bis der
+     Browser-Speicher geleert wird.
   --------------------------------------------------------- */
   function getAccess() {
     try {
       const v = localStorage.getItem(ACCESS_KEY);
-      return v === "full" || v === "guest" ? v : null;
+      return v === "full" || v === "guest" || v === "kollegen" ? v : null;
     } catch (e) {
       return null;
     }
@@ -53,11 +124,17 @@
   function categoryAllowedForAccess(cat, access) {
     if (!cat) return true;
     if (access === "full") return true;
+    if (access === "kollegen") return cat === "schule" || cat === "kollegen";
     if (access === "guest") return cat === "schule";
     return false;
   }
   function isCategoryAllowed(cat) {
     return categoryAllowedForAccess(cat, getAccess());
+  }
+
+  function isEmbedMode() {
+    try { return new URLSearchParams(location.search).get("embed") === "1"; }
+    catch (e) { return false; }
   }
 
   function getShareParams() {
@@ -67,27 +144,85 @@
     const share = params.get("share");
     const exp = Number(params.get("exp") || 0);
     const cat = params.get("cat") || null;
-    return { active: share === "1", exp: exp, cat: cat };
+    const postsRaw = params.get("posts") || null;
+    const posts = postsRaw ? postsRaw.split(",").map((s) => s.trim()).filter(Boolean) : null;
+    const title = params.get("title") || null;
+    const vertretung = params.get("vertretung") === "1";
+    return { active: share === "1" || vertretung, exp: exp, cat: cat, posts: posts, title: title, vertretung: vertretung };
   }
 
   function shareStatus(cat) {
     const s = getShareParams();
     if (!s.active) return { active: false };
+    const isHomeApp = typeof global.render === "function";
+    if (s.vertretung) {
+      const applies = isHomeApp || VERTRETUNG_FILES.indexOf(currentPageFile()) !== -1;
+      return { active: true, valid: true, exp: null, mode: "vertretung", applies: applies, title: null };
+    }
+    if (s.posts) {
+      const valid = !!s.exp && nowMs() <= s.exp;
+      const applies = isHomeApp || s.posts.indexOf(currentPageFile()) !== -1;
+      return { active: true, valid: valid, exp: s.exp, mode: "posts", applies: applies, title: s.title, posts: s.posts };
+    }
     if (s.cat && cat && s.cat !== cat) return { active: false };
     const valid = !!s.exp && nowMs() <= s.exp;
-    return { active: true, valid: valid, exp: s.exp };
+    return { active: true, valid: valid, exp: s.exp, mode: "cat", applies: true, cat: s.cat };
   }
 
   function isShareMode() { return getShareParams().active === true; }
+  function isVertretungMode() { return getShareParams().vertretung === true; }
+  function isKursmappeMode() {
+    const s = getShareParams();
+    return s.active === true && !!s.posts && !s.vertretung;
+  }
 
-  /* Solange eine Freigabe aktiv ist (auch wenn sie inzwischen abgelaufen ist),
-     darf per Routing nur die freigegebene Kategorie erreicht werden — die
-     Startseite, "Neueste" und andere Kategorien sind tabu. Ist gar keine
-     Freigabe aktiv, ist ganz normal alles erlaubt (regulärer Anmeldefluss). */
+  function kursmappeStatus() {
+    const s = getShareParams();
+    if (!s.active || !s.posts) return { active: false };
+    return { active: true, urls: s.posts, title: s.title, exp: s.exp };
+  }
+
+  /* Solange eine Freigabe (Kategorie, Kursmappe oder Vertretungsstunde)
+     aktiv ist, darf per Routing nur die freigegebene Route erreicht
+     werden. Ist gar keine Freigabe aktiv, ist ganz normal alles erlaubt
+     (regulärer Anmeldefluss). */
   function isRouteAllowed(cat) {
     const s = getShareParams();
     if (!s.active) return true;
+    if (s.vertretung) return cat === "vertretung";
+    if (s.posts) return cat === "kursmappe";
     return !!cat && s.cat === cat;
+  }
+
+  /* Baut die Abfrageparameter der aktuell aktiven Freigabe, damit sie
+     beim Klick von der Übersicht auf einen einzelnen Beitrag mitgegeben
+     werden können — sonst würde die Freigabe auf der nächsten Seite
+     verloren gehen und dort erneut die Anmeldung verlangt. */
+  function shareQueryString() {
+    const s = getShareParams();
+    if (!s.active) return "";
+    if (s.vertretung) return "?vertretung=1";
+    const out = new URLSearchParams();
+    out.set("share", "1");
+    out.set("exp", String(s.exp));
+    if (s.posts) {
+      out.set("posts", s.posts.join(","));
+      if (s.title) out.set("title", s.title);
+    } else if (s.cat) {
+      out.set("cat", s.cat);
+    }
+    return "?" + out.toString();
+  }
+
+  function kursmappeLinkFor(urlList, minutes, title) {
+    const exp = nowMs() + minutes * 60000;
+    const base = location.origin + location.pathname;
+    const out = new URLSearchParams();
+    out.set("share", "1");
+    out.set("exp", String(exp));
+    out.set("posts", urlList.join(","));
+    if (title) out.set("title", title);
+    return base + "?" + out.toString() + "#/kursmappe";
   }
 
   function fmtRemaining(exp) {
@@ -109,30 +244,30 @@
       "  display: flex; align-items: center; justify-content: center; padding: 24px;",
       "  background: linear-gradient(135deg, rgba(109,93,251,0.35), rgba(255,79,163,0.28) 40%, rgba(34,211,238,0.28) 70%, rgba(255,180,84,0.3));",
       "  backdrop-filter: blur(36px) saturate(160%); -webkit-backdrop-filter: blur(36px) saturate(160%); }",
-      "#protect-overlay .protect-card, #protect-share-modal .protect-card {",
+      "#protect-overlay .protect-card, #protect-share-modal .protect-card, #protect-highscore-modal .protect-card {",
       "  width: 100%; max-width: 380px; background: linear-gradient(178deg, rgba(255,255,255,0.86), rgba(255,255,255,0.6));",
       "  border: 1px solid rgba(255,255,255,0.65); border-radius: 26px; padding: 32px 28px; text-align: center;",
       "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 20px 60px rgba(20,20,30,0.25);",
       "  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);",
       "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
-      "#protect-overlay .protect-icon, #protect-share-modal .protect-icon {",
+      "#protect-overlay .protect-icon, #protect-share-modal .protect-icon, #protect-highscore-modal .protect-icon {",
       "  width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px; display: flex; align-items: center; justify-content: center;",
-      "  background: linear-gradient(155deg, rgba(255,255,255,0.9), rgba(255,255,255,0.5));",
+      "  background: linear-gradient(155deg, rgba(255,255,255,0.9), rgba(255,255,255,0.5)); font-size: 24px;",
       "  box-shadow: inset 0 1px 1px rgba(255,255,255,0.8), 0 6px 16px -4px rgba(30,30,40,0.25); color: #1D1D1F; }",
-      "#protect-overlay h2, #protect-share-modal h2 { margin: 0 0 6px; font-size: 19px; font-weight: 700; color: #1D1D1F; }",
-      "#protect-overlay p.protect-sub, #protect-share-modal p.protect-sub { margin: 0 0 18px; font-size: 14px; color: #46464b; }",
-      "#protect-overlay input[type=password] {",
+      "#protect-overlay h2, #protect-share-modal h2, #protect-highscore-modal h2 { margin: 0 0 6px; font-size: 19px; font-weight: 700; color: #1D1D1F; }",
+      "#protect-overlay p.protect-sub, #protect-share-modal p.protect-sub, #protect-highscore-modal p.protect-sub { margin: 0 0 18px; font-size: 14px; color: #46464b; }",
+      "#protect-overlay input[type=password], #protect-highscore-modal input {",
       "  width: 100%; padding: 12px 14px; font-size: 16px; border-radius: 14px; border: 1px solid rgba(0,0,0,0.12);",
       "  background: rgba(255,255,255,0.7); margin-bottom: 10px; box-sizing: border-box; text-align: center; }",
-      "#protect-overlay button.protect-submit, #protect-share-modal button.protect-submit {",
+      "#protect-overlay button.protect-submit, #protect-share-modal button.protect-submit, #protect-highscore-modal button.protect-submit {",
       "  width: 100%; padding: 12px 14px; font-size: 15px; font-weight: 600; border: none; border-radius: 14px;",
       "  color: #fff; cursor: pointer; background: linear-gradient(155deg, #6D5DFB, #4B3AD6);",
       "  box-shadow: 0 6px 16px -4px rgba(109,93,251,0.55); }",
-      "#protect-overlay .protect-error, #protect-share-modal .protect-error { color: #C23B3B; font-size: 13px; margin-top: 10px; min-height: 16px; }",
+      "#protect-overlay .protect-error, #protect-share-modal .protect-error, #protect-highscore-modal .protect-error { color: #C23B3B; font-size: 13px; margin-top: 10px; min-height: 16px; }",
       "#protect-overlay .protect-expired {",
       "  background: rgba(224,72,61,0.12); border: 1px solid rgba(224,72,61,0.3); border-radius: 12px;",
       "  padding: 10px 12px; font-size: 13px; color: #a33; margin-bottom: 16px; }",
-      "#protect-overlay .protect-alt, #protect-share-modal .protect-close {",
+      "#protect-overlay .protect-alt, #protect-share-modal .protect-close, #protect-highscore-modal .protect-close {",
       "  margin-top: 14px; font-size: 12.5px; color: #6E6E73; background: none; border: none; text-decoration: underline; cursor: pointer; }",
       "#protect-overlay .protect-divider {",
       "  display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;",
@@ -154,14 +289,14 @@
       "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;",
       "  transition: transform 0.18s ease; }",
       "#protect-share-btn:hover { transform: translateY(-2px); }",
-      "#protect-share-modal {",
+      "#protect-share-modal, #protect-highscore-modal {",
       "  position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;",
       "  padding: 24px; background: rgba(20,20,30,0.35); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }",
       "#protect-share-modal select { width: 100%; padding: 10px 12px; font-size: 15px; border-radius: 12px;",
       "  border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.8); margin-bottom: 10px; box-sizing: border-box; }",
-      "#protect-share-modal .protect-link-row { display: flex; gap: 8px; }",
-      "#protect-share-modal .protect-link-row input { flex: 1; font-size: 12.5px; padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.85); }",
-      "#protect-share-modal .protect-copy-btn { padding: 10px 14px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; background: rgba(0,0,0,0.07); }",
+      "#protect-share-modal .protect-link-row, #protect-highscore-modal .protect-link-row { display: flex; gap: 8px; }",
+      "#protect-share-modal .protect-link-row input, #protect-highscore-modal .protect-link-row input { flex: 1; font-size: 12.5px; padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.85); }",
+      "#protect-share-modal .protect-copy-btn, #protect-highscore-modal .protect-copy-btn { padding: 10px 14px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; background: rgba(0,0,0,0.07); }",
       "#protect-share-modal .protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
       "#protect-share-modal .protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
       "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #6E6E73; text-align: center; margin: 8px 0 0; }",
@@ -170,7 +305,45 @@
       ".protect-banner {",
       "  position: fixed; top: 0; left: 0; right: 0; z-index: 9997; text-align: center; font-size: 12.5px;",
       "  font-weight: 600; color: #fff; padding: 8px 10px; background: linear-gradient(90deg, #6D5DFB, #22D3EE); }",
-      "@media (max-width: 480px) { #protect-share-btn span.protect-share-label { display: none; } }"
+      "@media (max-width: 480px) { #protect-share-btn span.protect-share-label { display: none; } }",
+      /* Update-Banner */
+      ".protect-update-banner {",
+      "  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 999998;",
+      "  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; border-radius: 999px;",
+      "  background: linear-gradient(155deg, rgba(30,30,38,0.92), rgba(20,20,28,0.92)); color: #fff;",
+      "  font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.35); backdrop-filter: blur(10px); }",
+      ".protect-update-banner button {",
+      "  padding: 7px 14px; border-radius: 999px; border: none; font-weight: 700; font-size: 12.5px; cursor: pointer;",
+      "  color: #1D1D1F; background: #fff; }",
+      /* Feedback-Widget */
+      ".protect-feedback-widget {",
+      "  position: fixed; left: 18px; bottom: 18px; z-index: 9998; display: flex; align-items: center; gap: 8px;",
+      "  padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6);",
+      "  background: linear-gradient(155deg, rgba(255,255,255,0.88), rgba(255,255,255,0.58));",
+      "  backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);",
+      "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 8px 24px rgba(20,20,30,0.18);",
+      "  font-size: 13px; font-weight: 600; color: #1D1D1F;",
+      "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
+      ".protect-feedback-btn { border: none; background: none; font-size: 17px; cursor: pointer; padding: 2px 3px; line-height: 1; }",
+      ".protect-feedback-btn:disabled { opacity: 0.5; cursor: default; }",
+      ".protect-feedback-thanks { opacity: 0.9; }",
+      /* Bestenlisten-Button + Panel */
+      ".protect-highscore-btn {",
+      "  position: fixed; left: 18px; bottom: 66px; z-index: 9998; display: inline-flex; align-items: center; gap: 6px;",
+      "  padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); cursor: pointer;",
+      "  background: linear-gradient(155deg, rgba(255,255,255,0.88), rgba(255,255,255,0.58));",
+      "  backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);",
+      "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 8px 24px rgba(20,20,30,0.18);",
+      "  font-size: 13px; font-weight: 600; color: #1D1D1F;",
+      "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
+      "#protect-highscore-modal .protect-hs-list { text-align: left; margin-top: 14px; max-height: 220px; overflow-y: auto; }",
+      "#protect-highscore-modal .protect-hs-list ol { list-style: decimal; margin: 0; padding-left: 20px; }",
+      "#protect-highscore-modal .protect-hs-list li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; }",
+      "#protect-highscore-modal .protect-hs-loading { font-size: 13px; color: #6E6E73; text-align: center; }",
+      /* Embed-Modus: Navigation/Fußzeile/Rücklink & Zusatz-Buttons ausblenden */
+      "html.embed-mode .site-nav, html.embed-mode .hero, html.embed-mode .site-footer, html.embed-mode .top-link,",
+      "html.embed-mode #protect-share-btn, html.embed-mode .protect-update-banner,",
+      "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -181,11 +354,17 @@
     document.documentElement.classList.remove("protect-open");
   }
 
-  /* Einmalige Anmeldung: Passwort (voller Zugriff) oder als Gast
-     fortfahren (nur Schule). onResolved wird nach jeder erfolgreichen
-     Wahl aufgerufen — der Aufrufer prüft danach selbst per
-     isCategoryAllowed(cat), ob der ursprünglich gewünschte Bereich
-     damit erreichbar ist. */
+  function checkPasswordInput(value) {
+    if (value === PASSWORD) return "full";
+    if (value === KOLLEGEN_PASSWORD) return "kollegen";
+    return null;
+  }
+
+  /* Einmalige Anmeldung: Passwort (voller Zugriff), Kolleg:innen-
+     Kennwort oder als Gast fortfahren (nur Schule). onResolved wird
+     nach jeder erfolgreichen Wahl aufgerufen — der Aufrufer prüft
+     danach selbst per isCategoryAllowed(cat), ob der ursprünglich
+     gewünschte Bereich damit erreichbar ist. */
   function showLoginOverlay(expiredHint, onResolved) {
     ensureStyle();
     document.documentElement.classList.add("protect-open");
@@ -215,8 +394,9 @@
     setTimeout(() => input.focus(), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      if (input.value === PASSWORD) {
-        setAccess("full");
+      const level = checkPasswordInput(input.value);
+      if (level) {
+        setAccess(level);
         closeOverlay();
         onResolved();
       } else {
@@ -232,10 +412,10 @@
     });
   }
 
-  /* Wird gezeigt, wenn jemand mit Gast-Zugriff einen Bereich außerhalb
-     von Schule erreichen will — bietet weiterhin die Möglichkeit, sich
-     per Passwort zum vollen Zugriff hochzustufen, statt einfach nur
-     abzuweisen. */
+  /* Wird gezeigt, wenn jemand mit Gast- oder Kolleg:innen-Zugriff einen
+     Bereich erreichen will, der für die aktuelle Ebene nicht freigegeben
+     ist — bietet weiterhin die Möglichkeit, sich per Passwort
+     hochzustufen, statt einfach nur abzuweisen. */
   function showBlockedOverlay(cat, onUpgraded) {
     ensureStyle();
     document.documentElement.classList.add("protect-open");
@@ -245,8 +425,8 @@
     wrap.innerHTML =
       '<div class="protect-card">' +
         '<div class="protect-icon">' + LOCK_SVG + "</div>" +
-        "<h2>" + label + " ist für Gäste nicht verfügbar</h2>" +
-        '<p class="protect-sub">Als Gast hast du nur Zugriff auf Schule. Mit dem vollständigen Zugangscode kannst du auch diesen Bereich freischalten.</p>' +
+        "<h2>" + label + " ist hier nicht verfügbar</h2>" +
+        '<p class="protect-sub">Mit dem passenden Zugangscode kannst du auch diesen Bereich freischalten.</p>' +
         '<form id="protect-form" autocomplete="off">' +
           '<input type="password" id="protect-input" placeholder="Passwort" autofocus />' +
           '<button type="submit" class="protect-submit">Freischalten</button>' +
@@ -262,8 +442,9 @@
     setTimeout(() => input.focus(), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      if (input.value === PASSWORD) {
-        setAccess("full");
+      const level = checkPasswordInput(input.value);
+      if (level) {
+        setAccess(level);
         closeOverlay();
         onUpgraded();
       } else {
@@ -274,6 +455,28 @@
     });
     homeBtn.addEventListener("click", function () {
       location.href = HOME_HREF + "#/";
+    });
+  }
+
+  /* Wird gezeigt, wenn ein Werkzeug über einen gültigen Kursmappen- oder
+     Vertretungsstunden-Link erreicht wird, aber selbst nicht Teil dieser
+     Auswahl ist (z. B. Adresse von Hand geändert). */
+  function showNotIncludedOverlay(s) {
+    ensureStyle();
+    document.documentElement.classList.add("protect-open");
+    const wrap = document.createElement("div");
+    wrap.id = "protect-overlay";
+    const backHash = s.mode === "vertretung" ? "#/vertretung" : "#/kursmappe";
+    wrap.innerHTML =
+      '<div class="protect-card">' +
+        '<div class="protect-icon">' + LOCK_SVG + "</div>" +
+        "<h2>Nicht Teil dieser Freigabe</h2>" +
+        '<p class="protect-sub">Dieses Werkzeug gehört nicht zur aktuell freigegebenen Auswahl.</p>' +
+        '<button type="button" class="protect-submit" id="protect-back-btn">Zurück</button>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    wrap.querySelector("#protect-back-btn").addEventListener("click", function () {
+      location.href = HOME_HREF + shareQueryString() + backHash;
     });
   }
 
@@ -291,18 +494,28 @@
   }
 
   /* cat ist optional: ohne Kategorie (z. B. die Startseite) reicht
-     irgendeine Anmeldung (Passwort ODER Gast); mit Kategorie muss diese
-     zusätzlich für die aktuelle Zugriffs-Ebene erlaubt sein (als Gast
-     nur "schule"). */
+     irgendeine Anmeldung (Passwort, Kolleg:innen-Kennwort ODER Gast);
+     mit Kategorie muss diese zusätzlich für die aktuelle Zugriffs-Ebene
+     erlaubt sein. */
   function guard(cat, onUnlock) {
     ensureStyle();
     clearBanner();
 
     const s = shareStatus(cat);
-    if (s.active && s.valid) {
+    if (s.active && s.valid && s.applies) {
       document.documentElement.classList.add("share-mode");
-      showBanner("Freigegeben zum Lernen — noch " + fmtRemaining(s.exp) + " gültig. Läuft danach automatisch ab.");
+      const label =
+        s.mode === "vertretung"
+          ? "Vertretungsstunde — Zugriff ohne Anmeldung."
+          : s.mode === "posts"
+          ? "Kursmappe" + (s.title ? " „" + s.title + "“" : "") + " — noch " + fmtRemaining(s.exp) + " gültig."
+          : "Freigegeben zum Lernen — noch " + fmtRemaining(s.exp) + " gültig. Läuft danach automatisch ab.";
+      showBanner(label);
       onUnlock();
+      return;
+    }
+    if (s.active && s.valid && !s.applies) {
+      showNotIncludedOverlay(s);
       return;
     }
     document.documentElement.classList.remove("share-mode");
@@ -425,18 +638,232 @@
     if (el) el.remove();
   }
 
+  /* ---------------------------------------------------------
+     Firebase (lazy) — dasselbe Projekt wie die Kanban-Tools, aber nur
+     für Feedback/Bestenlisten. Lädt erst beim ersten tatsächlichen
+     Bedarf (Klick), damit einfache Seiten ohne dieses Skript auskommen.
+  --------------------------------------------------------- */
+  let firebaseReadyPromise = null;
+  function loadScriptTag(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  function loadFirebase() {
+    if (firebaseReadyPromise) return firebaseReadyPromise;
+    firebaseReadyPromise = loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js")
+      .then(() =>
+        Promise.all([
+          loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"),
+          loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js")
+        ])
+      )
+      .then(() => {
+        if (!global.firebase.apps || !global.firebase.apps.length) {
+          global.firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        const db = global.firebase.firestore();
+        const auth = global.firebase.auth();
+        return new Promise((resolve, reject) => {
+          if (auth.currentUser) {
+            resolve({ db: db, auth: auth });
+            return;
+          }
+          auth.signInAnonymously()
+            .then(() => resolve({ db: db, auth: auth }))
+            .catch(reject);
+        });
+      });
+    return firebaseReadyPromise;
+  }
+
+  /* ---------------------------------------------------------
+     Leises Feedback pro Werkzeug-Seite (👍/👎). Speichert pro Gerät,
+     ob schon abgestimmt wurde, damit nicht mehrfach gezählt wird.
+  --------------------------------------------------------- */
+  function initFeedbackWidget(cat) {
+    if (!cat || isEmbedMode()) return;
+    const file = currentPageFile();
+    const voteKey = "buildspace_feedback_" + file;
+    let existingVote = null;
+    try { existingVote = localStorage.getItem(voteKey); } catch (e) {}
+
+    const wrap = document.createElement("div");
+    wrap.className = "protect-feedback-widget";
+
+    function renderThanks() {
+      wrap.innerHTML = '<span class="protect-feedback-thanks">Danke für dein Feedback! 🙌</span>';
+    }
+    function renderButtons() {
+      wrap.innerHTML =
+        '<span class="protect-feedback-label">War das hilfreich?</span>' +
+        '<button type="button" class="protect-feedback-btn" data-vote="up" aria-label="Hilfreich">👍</button>' +
+        '<button type="button" class="protect-feedback-btn" data-vote="down" aria-label="Nicht hilfreich">👎</button>';
+      wrap.querySelectorAll(".protect-feedback-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const vote = btn.dataset.vote;
+          wrap.querySelectorAll(".protect-feedback-btn").forEach((b) => (b.disabled = true));
+          loadFirebase()
+            .then(({ db }) => db.collection("tool_feedback").add({ tool: file, vote: vote, ts: Date.now() }))
+            .then(() => {
+              try { localStorage.setItem(voteKey, vote); } catch (e) {}
+              renderThanks();
+            })
+            .catch(() => {
+              /* Fail soft: Firestore-Regeln evtl. noch nicht eingerichtet — die
+                 Seite soll dadurch nicht kaputt wirken. */
+              renderThanks();
+            });
+        });
+      });
+    }
+    if (existingVote) renderThanks(); else renderButtons();
+    document.body.appendChild(wrap);
+  }
+
+  /* ---------------------------------------------------------
+     Optionale Bestenliste (Highscore) für ausgewählte Lernspiele.
+     Selbst eingetragen (Name/Kürzel + Punktzahl) statt automatisch aus
+     dem jeweiligen Spiel ausgelesen.
+  --------------------------------------------------------- */
+  function escapeHtmlLocal(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function openHighscorePanel(file) {
+    if (document.getElementById("protect-highscore-modal")) return;
+    ensureStyle();
+    const wrap = document.createElement("div");
+    wrap.id = "protect-highscore-modal";
+    wrap.innerHTML =
+      '<div class="protect-card">' +
+        '<div class="protect-icon">🏆</div>' +
+        "<h2>Bestenliste</h2>" +
+        '<p class="protect-sub">Trag deinen Highscore ein — Kürzel reicht.</p>' +
+        '<form id="protect-hs-form" autocomplete="off">' +
+          '<input type="text" id="protect-hs-name" placeholder="Name/Kürzel" maxlength="16" required />' +
+          '<input type="number" id="protect-hs-score" placeholder="Punkte" required />' +
+          '<button type="submit" class="protect-submit">Eintragen</button>' +
+        "</form>" +
+        '<div class="protect-error" id="protect-hs-msg"></div>' +
+        '<div id="protect-hs-list" class="protect-hs-list"><p class="protect-hs-loading">Lade Bestenliste …</p></div>' +
+        '<button class="protect-close" id="protect-hs-close">Schließen</button>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
+    wrap.querySelector("#protect-hs-close").addEventListener("click", () => wrap.remove());
+
+    function loadList() {
+      const listEl = wrap.querySelector("#protect-hs-list");
+      loadFirebase()
+        .then(({ db }) => db.collection("highscores").where("tool", "==", file).orderBy("score", "desc").limit(10).get())
+        .then((snap) => {
+          if (snap.empty) {
+            listEl.innerHTML = '<p class="protect-hs-loading">Noch keine Einträge — sei der/die Erste!</p>';
+            return;
+          }
+          listEl.innerHTML =
+            "<ol>" +
+            snap.docs
+              .map((d) => {
+                const v = d.data();
+                return "<li><span>" + escapeHtmlLocal(v.name) + "</span><b>" + escapeHtmlLocal(String(v.score)) + "</b></li>";
+              })
+              .join("") +
+            "</ol>";
+        })
+        .catch(() => {
+          listEl.innerHTML = '<p class="protect-hs-loading">Bestenliste gerade nicht verfügbar.</p>';
+        });
+    }
+    loadList();
+
+    wrap.querySelector("#protect-hs-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = wrap.querySelector("#protect-hs-name").value.trim().slice(0, 16);
+      const score = Number(wrap.querySelector("#protect-hs-score").value);
+      const msg = wrap.querySelector("#protect-hs-msg");
+      if (!name || !isFinite(score)) {
+        msg.textContent = "Bitte Name und Punktzahl angeben.";
+        return;
+      }
+      loadFirebase()
+        .then(({ db }) => db.collection("highscores").add({ tool: file, name: name, score: score, ts: Date.now() }))
+        .then(() => {
+          msg.textContent = "";
+          wrap.querySelector("#protect-hs-form").reset();
+          loadList();
+        })
+        .catch(() => {
+          msg.textContent = "Konnte nicht gespeichert werden. Bitte später erneut versuchen.";
+        });
+    });
+  }
+
+  function initHighscoreWidget() {
+    if (isEmbedMode()) return;
+    const file = currentPageFile();
+    if (HIGHSCORE_FILES.indexOf(file) === -1) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "protect-highscore-btn";
+    btn.innerHTML = '🏆 <span class="protect-highscore-label">Bestenliste</span>';
+    btn.addEventListener("click", () => openHighscorePanel(file));
+    document.body.appendChild(btn);
+  }
+
+  /* ---------------------------------------------------------
+     Update-Hinweis: Ein Deployment kann alte, im Hintergrund
+     geladene Seiten mit neuem Code weiterlaufen lassen — ein
+     dezenter Hinweis mit manuellem "Aktualisieren" ist hier
+     verlässlicher als ein automatischer, überraschender Reload.
+     "seenController" unterscheidet den allerersten Kontrollwechsel
+     (Erstinstallation) von einem echten späteren Update.
+  --------------------------------------------------------- */
+  function showUpdateBanner() {
+    if (document.getElementById("protect-update-banner")) return;
+    const bar = document.createElement("div");
+    bar.id = "protect-update-banner";
+    bar.className = "protect-update-banner";
+    bar.innerHTML = '<span>Neue Version verfügbar.</span><button type="button" id="protect-update-btn">Jetzt aktualisieren</button>';
+    document.body.appendChild(bar);
+    bar.querySelector("#protect-update-btn").addEventListener("click", () => location.reload());
+  }
+  function initUpdateBanner() {
+    if (!("serviceWorker" in navigator)) return;
+    let seenController = navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!seenController) {
+        seenController = navigator.serviceWorker.controller;
+        return;
+      }
+      showUpdateBanner();
+    });
+  }
+
   function initStandalone() {
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
     ensureStyle();
+    if (isEmbedMode()) document.documentElement.classList.add("embed-mode");
+    initUpdateBanner();
     function reveal() {
       document.documentElement.classList.add("protect-ready");
       document.documentElement.classList.remove("protect-open");
-      if (cat) addShareButton(cat);
+      if (cat) {
+        addShareButton(cat);
+        initFeedbackWidget(cat);
+        initHighscoreWidget();
+      }
       /* Auf der Startseite (app.js) sorgt das dafür, dass die Ordner-
-         Kacheln sofort den richtigen Zugriffsstand (voll/Gast) zeigen,
-         sobald sich jemand gerade neu angemeldet hat. Auf einzelnen
-         Werkzeug-Seiten ohne app.js existiert render() schlicht nicht. */
+         Kacheln sofort den richtigen Zugriffsstand (voll/Gast/Kolleg:in)
+         zeigen, sobald sich jemand gerade neu angemeldet hat. Auf
+         einzelnen Werkzeug-Seiten ohne app.js existiert render()
+         schlicht nicht. */
       if (typeof global.render === "function") global.render();
     }
     function run() { guard(cat || null, reveal); }
@@ -452,11 +879,19 @@
     getAccess: getAccess,
     isCategoryAllowed: isCategoryAllowed,
     isShareMode: isShareMode,
+    isVertretungMode: isVertretungMode,
+    isKursmappeMode: isKursmappeMode,
+    isEmbedMode: isEmbedMode,
+    kursmappeStatus: kursmappeStatus,
     isRouteAllowed: isRouteAllowed,
     shareStatus: shareStatus,
+    shareQueryString: shareQueryString,
+    kursmappeLinkFor: kursmappeLinkFor,
     addShareButton: addShareButton,
     removeShareButton: removeShareButton,
     openShareModal: openShareModal,
+    renderQrCode: renderQrCode,
+    loadFirebase: loadFirebase,
     ensureStyle: ensureStyle,
     closeOverlay: closeOverlay
   };

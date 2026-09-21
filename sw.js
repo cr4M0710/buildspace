@@ -56,7 +56,12 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith((async () => {
     try {
-      const net = await fetch(req);
+      // { cache: 'no-store' } zwingt den Browser, wirklich ins Netz zu gehen,
+      // statt eine evtl. noch "frische" (Cache-Control: max-age) Kopie aus
+      // seinem eigenen HTTP-Cache zurückzugeben — sonst konnte ein frisches
+      // Deployment bis zu 10 Minuten lang unbemerkt alte Dateien ausliefern,
+      // obwohl diese Strategie eigentlich "network-first" sein soll.
+      const net = await fetch(req, { cache: "no-store" });
       const cache = await caches.open(CACHE);
       cache.put(req, net.clone());
       return net;
