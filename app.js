@@ -21,6 +21,9 @@ const STAR_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.
    Karte — gefüllt = gemerkt, umrandet = (noch) nicht gemerkt. */
 const STAR_OUTLINE_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.5l2.97 6.19 6.83.82-5.03 4.66 1.36 6.76L12 17.77l-6.13 3.16 1.36-6.76-5.03-4.66 6.83-.82z"/></svg>';
 const BOOK_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2c-1.7-1.3-3.9-2-6.3-2-.9 0-1.8.1-2.7.3v12.6c.9-.2 1.8-.3 2.7-.3 2.4 0 4.6.7 6.3 2m0-12.6c1.7-1.3 3.9-2 6.3-2 .9 0 1.8.1 2.7.3v12.6c-.9-.2-1.8-.3-2.7-.3-2.4 0-4.6.7-6.3 2m0-12.6v12.6"/></svg>';
+/* Schloss-Symbol für ausgegraute Ordner-Kacheln, die im Gast-Zugriff
+   nicht nutzbar sind (siehe renderTopLevel). */
+const LOCK_GLYPH = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
 
 /* Große Kachel-Icons (Startseite, Ordner-Übersicht) — anschaulich statt
    abstrakt: Stern, aufgeschlagenes Buch, das echte HSG-Wettenberg-Logo
@@ -114,6 +117,7 @@ const I18N = {
     tagFilterClear: "Filter zurücksetzen",
     tagFilterResults: (n) => (n === 1 ? "1 Treffer" : `${n} Treffer`),
     tagFilterEmpty: "Keine Treffer für diese Auswahl.",
+    guestLocked: "Nur mit Zugangscode",
     tagLabels: {
       einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
       spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6",
@@ -160,6 +164,7 @@ const I18N = {
     tagFilterClear: "Clear filters",
     tagFilterResults: (n) => (n === 1 ? "1 result" : `${n} results`),
     tagFilterEmpty: "No results for this selection.",
+    guestLocked: "Access code required",
     tagLabels: {
       einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Group",
       spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6",
@@ -427,11 +432,20 @@ function renderTopLevel() {
       icon: f.icon,
       count: posts.filter((p) => p.category === id).length
     }))
-  ];
+  ].map((c) => ({
+    ...c,
+    // Im Gast-Zugriff ist ausschließlich Schule nutzbar — "Neueste" mischt
+    // Beiträge aller Bereiche und zählt hier bewusst mit dazu.
+    locked: window.Protect ? !window.Protect.isCategoryAllowed(c.id) : false
+  }));
 
-  const featured = posts.filter((p) => p.featured);
-  const recentPosts = getRecentPosts();
-  const favoritePosts = getFavoritePosts();
+  // Im Gast-Zugriff dürfen Favoriten/Verlauf/Empfohlen aus gesperrten
+  // Bereichen (z. B. von einer früheren Anmeldung mit vollem Zugriff)
+  // nicht auf der Startseite auftauchen.
+  const isPostAllowed = (p) => (window.Protect ? window.Protect.isCategoryAllowed(p.category) : true);
+  const featured = posts.filter((p) => p.featured && isPostAllowed(p));
+  const recentPosts = getRecentPosts().filter(isPostAllowed);
+  const favoritePosts = getFavoritePosts().filter(isPostAllowed);
   const tagIds = getAllTagIds();
   // Aktive Tag-Auswahl lebt nur innerhalb dieses Renders (wie das leere
   // Suchfeld bei jedem Seitenaufruf) — kein eigener localStorage-Schlüssel.
@@ -475,8 +489,15 @@ function renderTopLevel() {
       <h2 class="section-label">${t("categoriesTitle")}</h2>
       <div class="folder-grid">
         ${cards
-          .map(
-            (c, i) => `
+          .map((c, i) =>
+            c.locked
+              ? `
+          <div class="folder-card is-disabled" style="--i:${i}" aria-disabled="true" title="${escapeHtml(t("guestLocked"))}">
+            <span class="folder-icon icon-${c.id}">${c.icon}</span>
+            <h2>${folderLabel(c.id)}</h2>
+            <span class="folder-count folder-count--locked">${LOCK_GLYPH} ${escapeHtml(t("guestLocked"))}</span>
+          </div>`
+              : `
           <a class="folder-card" href="${c.href}" style="--i:${i}">
             <span class="folder-icon icon-${c.id}">${c.icon}</span>
             <h2>${folderLabel(c.id)}</h2>
@@ -527,6 +548,7 @@ function renderTopLevel() {
     // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
     // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
     const matches = posts.filter((p0) => {
+      if (!isPostAllowed(p0)) return false;
       const p = localizePost(p0);
       const textMatch = !q || p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
       const tagMatch = activeTags.size === 0 || [...activeTags].every((tg) => (p0.tags || []).includes(tg));
@@ -571,7 +593,18 @@ function renderTopLevel() {
 }
 
 function renderNeueste() {
-  if (window.Protect) window.Protect.removeShareButton();
+  // "Neueste" mischt Beiträge aller Bereiche — im Gast-Zugriff (nur
+  // Schule) daher genauso hinter dem Zugriffs-Check wie ein echter Ordner,
+  // sonst ließe sich die Sperre einfach per Adresszeile umgehen.
+  if (window.Protect) {
+    window.Protect.removeShareButton();
+    window.Protect.guard("neueste", () => renderNeuesteUnlocked());
+  } else {
+    renderNeuesteUnlocked();
+  }
+}
+
+function renderNeuesteUnlocked() {
   document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${folderLabel("neueste")}</span>`;
   const recent = posts.filter((p) => isWithinLast30Days(p.date));
@@ -873,8 +906,12 @@ function render() {
   /* Falls noch ein Passwort-Fenster von der vorherigen Route offen ist (z. B.
      wenn per Zurück-Button aus einem geschützten, noch nicht entsperrten
      Bereich navigiert wird), erst schließen — führt die neue Route wieder in
-     einen geschützten, gesperrten Bereich, öffnet guard() es sofort neu. */
-  if (window.Protect) window.Protect.closeOverlay();
+     einen geschützten, gesperrten Bereich, öffnet guard() es sofort neu.
+     Ausnahme: die einmalige Anmeldung ganz am Anfang (noch kein Zugriff
+     vergeben) ist NICHT an eine Route gebunden — der automatische
+     DOMContentLoaded-Render darf dieses Anmeldefenster nicht wegschließen,
+     bevor sich jemand für Passwort oder Gast entschieden hat. */
+  if (window.Protect && window.Protect.getAccess()) window.Protect.closeOverlay();
   const segments = parseHash();
   if (!isAllowedRoute(segments)) {
     location.hash = shareHomeHash || "#/";

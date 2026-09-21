@@ -1,8 +1,9 @@
 /* ---------------------------------------------------------
    protect.js
-   Einfacher, rein clientseitiger Zugriffsschutz pro Bereich
-   (Schule / Handball / Freizeit) sowie eine zeitlich begrenzte
-   "Für Lernende freigeben"-Funktion für einzelne Seiten.
+   Einmalige Anmeldung für die komplette Seite: Passwort (voller
+   Zugriff) oder "Als Gast fortfahren" (Zugriff nur auf Schule).
+   Dazu weiterhin eine zeitlich begrenzte "Für Lernende freigeben"-
+   Funktion für einzelne Seiten, unabhängig von der Anmeldung.
 
    WICHTIG: Das ist eine Komfort-Sperre für eine statische
    GitHub-Pages-Seite, keine echte Serversicherheit. Der
@@ -14,17 +15,49 @@
   "use strict";
 
   const PASSWORD = "mstroh_GGL#99";
-  const LABELS = { schule: "Schule", handball: "Handball", freizeit: "Freizeit" };
+  const LABELS = { schule: "Schule", handball: "Handball", freizeit: "Freizeit", neueste: "Neueste" };
+  const ACCESS_KEY = "buildspace_access_v1";
+  const LOCK_SVG =
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
+
+  /* Zeigt für "Zur Startseite" immer auf die echte Top-Level-index.html,
+     egal wie tief die aktuelle Seite verschachtelt ist (z. B.
+     strafenkasse/index.html lädt protect.js über "../protect.js") —
+     wir übernehmen einfach denselben relativen Pfadanteil. */
+  let HOME_HREF = "index.html";
+  (function captureHomeHref() {
+    const scriptTag = document.currentScript;
+    const raw = scriptTag && scriptTag.getAttribute("src");
+    if (raw) HOME_HREF = raw.replace(/protect\.js(?:\?.*)?$/, "index.html");
+  })();
 
   function nowMs() { return Date.now(); }
-  function unlockedKey(cat) { return "myhome_unlocked_" + cat; }
 
-  function isUnlockedLocal(cat) {
-    try { return localStorage.getItem(unlockedKey(cat)) === "1"; }
-    catch (e) { return false; }
+  /* ---------------------------------------------------------
+     Zugriffs-Ebene: "full" (Passwort korrekt) oder "guest"
+     (als Gast fortgefahren, nur Schule nutzbar). Einmal gesetzt,
+     gilt es seitenübergreifend (localStorage), bis der Browser-
+     Speicher geleert wird.
+  --------------------------------------------------------- */
+  function getAccess() {
+    try {
+      const v = localStorage.getItem(ACCESS_KEY);
+      return v === "full" || v === "guest" ? v : null;
+    } catch (e) {
+      return null;
+    }
   }
-  function setUnlockedLocal(cat) {
-    try { localStorage.setItem(unlockedKey(cat), "1"); } catch (e) {}
+  function setAccess(level) {
+    try { localStorage.setItem(ACCESS_KEY, level); } catch (e) {}
+  }
+  function categoryAllowedForAccess(cat, access) {
+    if (!cat) return true;
+    if (access === "full") return true;
+    if (access === "guest") return cat === "schule";
+    return false;
+  }
+  function isCategoryAllowed(cat) {
+    return categoryAllowedForAccess(cat, getAccess());
   }
 
   function getShareParams() {
@@ -50,7 +83,7 @@
   /* Solange eine Freigabe aktiv ist (auch wenn sie inzwischen abgelaufen ist),
      darf per Routing nur die freigegebene Kategorie erreicht werden — die
      Startseite, "Neueste" und andere Kategorien sind tabu. Ist gar keine
-     Freigabe aktiv, ist ganz normal alles erlaubt (regulärer Passwortfluss). */
+     Freigabe aktiv, ist ganz normal alles erlaubt (regulärer Anmeldefluss). */
   function isRouteAllowed(cat) {
     const s = getShareParams();
     if (!s.active) return true;
@@ -101,6 +134,16 @@
       "  padding: 10px 12px; font-size: 13px; color: #a33; margin-bottom: 16px; }",
       "#protect-overlay .protect-alt, #protect-share-modal .protect-close {",
       "  margin-top: 14px; font-size: 12.5px; color: #6E6E73; background: none; border: none; text-decoration: underline; cursor: pointer; }",
+      "#protect-overlay .protect-divider {",
+      "  display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;",
+      "  font-size: 11.5px; font-weight: 600; color: #8b8b90; text-transform: uppercase; letter-spacing: 0.06em; }",
+      "#protect-overlay .protect-divider::before, #protect-overlay .protect-divider::after {",
+      "  content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.12); }",
+      "#protect-overlay button.protect-guest-btn {",
+      "  width: 100%; padding: 12px 14px; font-size: 15px; font-weight: 600; border-radius: 14px; cursor: pointer;",
+      "  color: #1D1D1F; background: rgba(255,255,255,0.55); border: 1px solid rgba(0,0,0,0.14); }",
+      "#protect-overlay button.protect-guest-btn:hover { background: rgba(255,255,255,0.8); }",
+      "#protect-overlay .protect-guest-hint { margin: 10px 0 0; font-size: 12px; color: #6E6E73; }",
       "#protect-share-btn {",
       "  position: fixed; right: 18px; bottom: 18px; z-index: 9998; display: inline-flex; align-items: center; gap: 8px;",
       "  padding: 12px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6);",
@@ -138,7 +181,62 @@
     document.documentElement.classList.remove("protect-open");
   }
 
-  function showOverlay(cat, expiredHint, onUnlock) {
+  /* Einmalige Anmeldung: Passwort (voller Zugriff) oder als Gast
+     fortfahren (nur Schule). onResolved wird nach jeder erfolgreichen
+     Wahl aufgerufen — der Aufrufer prüft danach selbst per
+     isCategoryAllowed(cat), ob der ursprünglich gewünschte Bereich
+     damit erreichbar ist. */
+  function showLoginOverlay(expiredHint, onResolved) {
+    ensureStyle();
+    document.documentElement.classList.add("protect-open");
+    const wrap = document.createElement("div");
+    wrap.id = "protect-overlay";
+    wrap.innerHTML =
+      '<div class="protect-card">' +
+        '<div class="protect-icon">' + LOCK_SVG + "</div>" +
+        "<h2>Anmeldung</h2>" +
+        (expiredHint
+          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte anmelden.</div>'
+          : '<p class="protect-sub">Bitte melde dich an, um buildspace zu nutzen.</p>') +
+        '<form id="protect-form" autocomplete="off">' +
+          '<input type="password" id="protect-input" placeholder="Passwort" autofocus />' +
+          '<button type="submit" class="protect-submit">Anmelden</button>' +
+        "</form>" +
+        '<div class="protect-error" id="protect-error"></div>' +
+        '<div class="protect-divider"><span>oder</span></div>' +
+        '<button type="button" class="protect-guest-btn" id="protect-guest-btn">Als Gast fortfahren</button>' +
+        '<p class="protect-guest-hint">Als Gast hast du nur Zugriff auf den Bereich Schule.</p>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    const form = wrap.querySelector("#protect-form");
+    const input = wrap.querySelector("#protect-input");
+    const errorEl = wrap.querySelector("#protect-error");
+    const guestBtn = wrap.querySelector("#protect-guest-btn");
+    setTimeout(() => input.focus(), 30);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (input.value === PASSWORD) {
+        setAccess("full");
+        closeOverlay();
+        onResolved();
+      } else {
+        errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
+        input.value = "";
+        input.focus();
+      }
+    });
+    guestBtn.addEventListener("click", function () {
+      setAccess("guest");
+      closeOverlay();
+      onResolved();
+    });
+  }
+
+  /* Wird gezeigt, wenn jemand mit Gast-Zugriff einen Bereich außerhalb
+     von Schule erreichen will — bietet weiterhin die Möglichkeit, sich
+     per Passwort zum vollen Zugriff hochzustufen, statt einfach nur
+     abzuweisen. */
+  function showBlockedOverlay(cat, onUpgraded) {
     ensureStyle();
     document.documentElement.classList.add("protect-open");
     const wrap = document.createElement("div");
@@ -146,33 +244,36 @@
     const label = LABELS[cat] || cat;
     wrap.innerHTML =
       '<div class="protect-card">' +
-        '<div class="protect-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg></div>' +
-        "<h2>" + label + " ist geschützt</h2>" +
-        (expiredHint
-          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte Passwort eingeben.</div>'
-          : '<p class="protect-sub">Bitte gib das Passwort ein, um fortzufahren.</p>') +
+        '<div class="protect-icon">' + LOCK_SVG + "</div>" +
+        "<h2>" + label + " ist für Gäste nicht verfügbar</h2>" +
+        '<p class="protect-sub">Als Gast hast du nur Zugriff auf Schule. Mit dem vollständigen Zugangscode kannst du auch diesen Bereich freischalten.</p>' +
         '<form id="protect-form" autocomplete="off">' +
           '<input type="password" id="protect-input" placeholder="Passwort" autofocus />' +
           '<button type="submit" class="protect-submit">Freischalten</button>' +
         "</form>" +
         '<div class="protect-error" id="protect-error"></div>' +
+        '<button type="button" class="protect-alt" id="protect-home-btn">Zur Startseite</button>' +
       "</div>";
     document.body.appendChild(wrap);
     const form = wrap.querySelector("#protect-form");
     const input = wrap.querySelector("#protect-input");
     const errorEl = wrap.querySelector("#protect-error");
+    const homeBtn = wrap.querySelector("#protect-home-btn");
     setTimeout(() => input.focus(), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       if (input.value === PASSWORD) {
-        setUnlockedLocal(cat);
+        setAccess("full");
         closeOverlay();
-        onUnlock();
+        onUpgraded();
       } else {
         errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
         input.value = "";
         input.focus();
       }
+    });
+    homeBtn.addEventListener("click", function () {
+      location.href = HOME_HREF + "#/";
     });
   }
 
@@ -189,10 +290,14 @@
     if (b) b.remove();
   }
 
+  /* cat ist optional: ohne Kategorie (z. B. die Startseite) reicht
+     irgendeine Anmeldung (Passwort ODER Gast); mit Kategorie muss diese
+     zusätzlich für die aktuelle Zugriffs-Ebene erlaubt sein (als Gast
+     nur "schule"). */
   function guard(cat, onUnlock) {
     ensureStyle();
     clearBanner();
-    if (!cat) { onUnlock(); return; }
+
     const s = shareStatus(cat);
     if (s.active && s.valid) {
       document.documentElement.classList.add("share-mode");
@@ -201,8 +306,23 @@
       return;
     }
     document.documentElement.classList.remove("share-mode");
-    if (isUnlockedLocal(cat)) { onUnlock(); return; }
-    showOverlay(cat, s.active && !s.valid, onUnlock);
+
+    const access = getAccess();
+    if (access) {
+      if (categoryAllowedForAccess(cat, access)) {
+        onUnlock();
+      } else {
+        showBlockedOverlay(cat, onUnlock);
+      }
+      return;
+    }
+    showLoginOverlay(s.active && !s.valid, function () {
+      if (categoryAllowedForAccess(cat, getAccess())) {
+        onUnlock();
+      } else {
+        showBlockedOverlay(cat, onUnlock);
+      }
+    });
   }
 
   function shareLinkFor(cat, minutes) {
@@ -238,7 +358,7 @@
       '<div class="protect-card">' +
         '<div class="protect-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg></div>' +
         "<h2>Für Lernende freigeben</h2>" +
-        '<p class="protect-sub">Erzeuge einen Link, der diese Seite ohne Passwort öffnet — automatisch zeitlich begrenzt.</p>' +
+        '<p class="protect-sub">Erzeuge einen Link, der diese Seite ohne Anmeldung öffnet — automatisch zeitlich begrenzt.</p>' +
         '<select id="protect-minutes">' +
           '<option value="15">15 Minuten</option>' +
           '<option value="30" selected>30 Minuten</option>' +
@@ -309,13 +429,17 @@
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
     ensureStyle();
-    if (!cat) { document.documentElement.classList.add("protect-ready"); return; }
     function reveal() {
       document.documentElement.classList.add("protect-ready");
       document.documentElement.classList.remove("protect-open");
-      addShareButton(cat);
+      if (cat) addShareButton(cat);
+      /* Auf der Startseite (app.js) sorgt das dafür, dass die Ordner-
+         Kacheln sofort den richtigen Zugriffsstand (voll/Gast) zeigen,
+         sobald sich jemand gerade neu angemeldet hat. Auf einzelnen
+         Werkzeug-Seiten ohne app.js existiert render() schlicht nicht. */
+      if (typeof global.render === "function") global.render();
     }
-    function run() { guard(cat, reveal); }
+    function run() { guard(cat || null, reveal); }
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", run);
     } else {
@@ -325,7 +449,8 @@
 
   global.Protect = {
     guard: guard,
-    isUnlockedLocal: isUnlockedLocal,
+    getAccess: getAccess,
+    isCategoryAllowed: isCategoryAllowed,
     isShareMode: isShareMode,
     isRouteAllowed: isRouteAllowed,
     shareStatus: shareStatus,
