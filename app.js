@@ -492,11 +492,11 @@ function renderTopLevel() {
           .map((c, i) =>
             c.locked
               ? `
-          <div class="folder-card is-disabled" style="--i:${i}" aria-disabled="true" title="${escapeHtml(t("guestLocked"))}">
+          <a class="folder-card is-disabled" href="${c.href}" style="--i:${i}" title="${escapeHtml(t("guestLocked"))}">
             <span class="folder-icon icon-${c.id}">${c.icon}</span>
             <h2>${folderLabel(c.id)}</h2>
             <span class="folder-count folder-count--locked">${LOCK_GLYPH} ${escapeHtml(t("guestLocked"))}</span>
-          </div>`
+          </a>`
               : `
           <a class="folder-card" href="${c.href}" style="--i:${i}">
             <span class="folder-icon icon-${c.id}">${c.icon}</span>
