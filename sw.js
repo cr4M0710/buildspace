@@ -23,7 +23,22 @@ const SHELL = [
   'assets/favicon.svg',
   'assets/icon-180.png',
   'assets/icon-192.png',
-  'assets/icon-512.png'
+  'assets/icon-512.png',
+  /* Die neun Vertretungsstunden-Werkzeuge (Tag "vertretung" in
+     posts-data.js, siehe auch VERTRETUNG_FILES in protect.js) werden
+     hier mit vorab gecacht, damit "kein Internet nötig" auch beim
+     allerersten Öffnen stimmt — nicht erst, nachdem jedes Tool einmal
+     online besucht wurde. */
+  'minigolf-winkel.html',
+  'zahlen-werkstatt.html',
+  'bruch-quiz-fussball.html',
+  'prozent-rennen.html',
+  'gleichungs-duell.html',
+  'flaechen-fuchs.html',
+  'zahlen-detektiv.html',
+  'kopfrechen-quiz.html',
+  'mathe-fussball.html',
+  'vertretung/index.html'
 ];
 
 self.addEventListener('install', (event) => {

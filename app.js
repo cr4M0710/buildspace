@@ -729,11 +729,30 @@ function renderVertretung() {
   // Klasse ohnehin nicht gesetzt.
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Vertretungsstunde</span>`;
   const list = posts.filter((p) => (p.tags || []).includes("vertretung"));
+  const shortLink = location.origin + "/vertretung/";
   content.innerHTML = `
-    <h1 class="section-label">📋 Vertretungsstunde</h1>
-    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;">Selbsterklärende Lernspiele ohne Vorbereitung — ideal, wenn eine Vertretungskraft ohne Vorwissen eine Klasse übernimmt. Einfach den Link teilen, kein Passwort nötig.</p>
+    <div class="section-label-row no-print">
+      <h1 class="section-label">📋 Vertretungsstunde</h1>
+      <button type="button" class="clear-recent-btn" id="vertretung-print-btn">🖨️ Drucken</button>
+    </div>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;" class="no-print">Selbsterklärende Lernspiele ohne Vorbereitung — ideal, wenn eine Vertretungskraft ohne Vorwissen eine Klasse übernimmt. Einfach den Link teilen, kein Passwort nötig.</p>
+    <div class="print-sheet" id="vertretung-print-sheet">
+      <h2>📋 Vertretungsstunde</h2>
+      <p>Dauerhafter Link ohne Anmeldung: ${escapeHtml(shortLink)}</p>
+      <div class="protect-qr-wrap" id="vertretung-print-qr"></div>
+      <ul>${list.map((p) => `<li>${p.emoji ? p.emoji + " " : ""}${escapeHtml(p.title)}</li>`).join("")}</ul>
+    </div>
     ${renderPostList(list, { preserveOrder: true })}
   `;
+  const printBtn = document.getElementById("vertretung-print-btn");
+  if (printBtn) {
+    printBtn.addEventListener("click", () => {
+      if (window.Protect && window.Protect.renderQrCode) {
+        window.Protect.renderQrCode(document.getElementById("vertretung-print-qr"), shortLink);
+      }
+      window.print();
+    });
+  }
 }
 
 /* ---------------------------------------------------------
@@ -757,6 +776,29 @@ function renderKursmappeView() {
 }
 
 /* ---------------------------------------------------------
+   Kursmappen-Vorlagen — rein lokal im Browser gespeicherte Auswahlen
+   (Titel + Gültigkeitsdauer + Beiträge), damit sich wiederkehrende
+   Kombinationen (z. B. "Standardauswahl Jg. 6 Mathe") mit einem Klick
+   neu laden lassen, statt die Häkchen jedes Mal von Hand zu setzen. Der
+   eigentliche Freigabe-Link bleibt trotzdem wie gewohnt ein frischer,
+   zeitlich begrenzter Link — gespeichert wird nur die Auswahl selbst.
+--------------------------------------------------------- */
+const KM_PRESETS_KEY = "buildspace_km_presets_v1";
+
+function getKmPresets() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KM_PRESETS_KEY) || "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveKmPresets(list) {
+  try { localStorage.setItem(KM_PRESETS_KEY, JSON.stringify(list.slice(0, 20))); } catch (e) {}
+}
+
+/* ---------------------------------------------------------
    Kursmappe erstellen — nur mit vollem Zugang (Marc) erreichbar: Beiträge
    auswählen, Titel/Gültigkeitsdauer festlegen, Link + QR-Code erzeugen.
 --------------------------------------------------------- */
@@ -769,44 +811,114 @@ function renderKursmappeBuilder() {
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kursmappe erstellen</span>`;
   content.innerHTML = `
     <h1 class="section-label">🧩 Kursmappe erstellen</h1>
-    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Wähle die Beiträge für diese Stunde aus. Der Link zeigt Lernenden nur genau diese Auswahl — ganz ohne Anmeldung, automatisch zeitlich begrenzt.</p>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;" class="no-print">Wähle die Beiträge für diese Stunde aus. Der Link zeigt Lernenden nur genau diese Auswahl — ganz ohne Anmeldung, automatisch zeitlich begrenzt.</p>
     <div class="km-builder">
-      <label class="km-field">Titel (optional, erscheint im Hinweisbanner)
-        <input type="text" id="km-title" placeholder="z. B. Bruchrechnen – Doppelstunde" maxlength="60" />
-      </label>
-      <label class="km-field">Gültigkeitsdauer
-        <select id="km-minutes">
-          <option value="15">15 Minuten</option>
-          <option value="30" selected>30 Minuten</option>
-          <option value="45">45 Minuten</option>
-          <option value="90">90 Minuten (Doppelstunde)</option>
-          <option value="180">3 Stunden</option>
-        </select>
-      </label>
-      <div class="km-post-list">
-        ${posts
-          .map(
-            (p, i) => `
-          <label class="km-post-item">
-            <input type="checkbox" class="km-post-check" value="${escapeHtml(p.url)}" data-idx="${i}">
-            <span class="km-post-emoji">${p.emoji || ""}</span>
-            <span class="km-post-title">${escapeHtml(p.title)}</span>
-            <span class="km-post-meta">${folderLabel(p.category)}${p.subcategory ? " · " + subfolderLabel(p.subcategory) : ""}</span>
-          </label>`
-          )
-          .join("")}
+      <div class="km-form-fields no-print">
+        <div class="km-presets">
+          <div class="km-presets-header"><span>💾 Meine Vorlagen</span></div>
+          <div id="km-presets-list"></div>
+        </div>
+        <label class="km-field">Titel (optional, erscheint im Hinweisbanner)
+          <input type="text" id="km-title" placeholder="z. B. Bruchrechnen – Doppelstunde" maxlength="60" />
+        </label>
+        <label class="km-field">Gültigkeitsdauer
+          <select id="km-minutes">
+            <option value="15">15 Minuten</option>
+            <option value="30" selected>30 Minuten</option>
+            <option value="45">45 Minuten</option>
+            <option value="90">90 Minuten (Doppelstunde)</option>
+            <option value="180">3 Stunden</option>
+          </select>
+        </label>
+        <div class="km-post-list">
+          ${posts
+            .map(
+              (p, i) => `
+            <label class="km-post-item">
+              <input type="checkbox" class="km-post-check" value="${escapeHtml(p.url)}" data-idx="${i}">
+              <span class="km-post-emoji">${p.emoji || ""}</span>
+              <span class="km-post-title">${escapeHtml(p.title)}</span>
+              <span class="km-post-meta">${folderLabel(p.category)}${p.subcategory ? " · " + subfolderLabel(p.subcategory) : ""}</span>
+            </label>`
+            )
+            .join("")}
+        </div>
+        <div class="km-actions">
+          <button type="button" class="protect-submit" id="km-generate" style="max-width:280px;">Link erstellen</button>
+          <button type="button" class="protect-copy-btn" id="km-save-preset">💾 Als Vorlage speichern</button>
+        </div>
       </div>
-      <button type="button" class="protect-submit" id="km-generate" style="max-width:280px;">Link erstellen</button>
       <div id="km-link-area" style="display:none; margin-top:18px;">
-        <div class="protect-link-row">
+        <div id="km-print-sheet" class="print-sheet">
+          <h2 id="km-print-title"></h2>
+          <p id="km-print-meta"></p>
+          <ul id="km-print-list"></ul>
+        </div>
+        <div class="protect-qr-wrap" id="km-qr-wrap"></div>
+        <div class="protect-link-row no-print">
           <input type="text" id="km-link-out" readonly />
           <button class="protect-copy-btn" id="km-copy-btn">Kopieren</button>
         </div>
-        <div class="protect-error" id="km-copy-msg" style="color:#2F6F4F;"></div>
-        <div class="protect-qr-wrap" id="km-qr-wrap"></div>
+        <div class="protect-error no-print" id="km-copy-msg" style="color:#2F6F4F;"></div>
+        <button type="button" class="protect-copy-btn no-print" id="km-print-btn" style="margin-top:10px;">🖨️ Als Handzettel drucken</button>
       </div>
     </div>
   `;
+
+  function renderPresetsList() {
+    const el = document.getElementById("km-presets-list");
+    if (!el) return;
+    const presetsList = getKmPresets();
+    if (!presetsList.length) {
+      el.innerHTML = '<p class="km-presets-empty">Noch keine Vorlagen gespeichert.</p>';
+      return;
+    }
+    el.innerHTML = presetsList
+      .map(
+        (p) => `
+      <div class="km-preset-row">
+        <span class="km-preset-name">${escapeHtml(p.name)}</span>
+        <span class="km-preset-meta">${p.urls.length} Beiträge · ${p.minutes} Min.</span>
+        <button type="button" class="km-preset-load" data-id="${escapeHtml(p.id)}">Laden</button>
+        <button type="button" class="km-preset-delete" data-id="${escapeHtml(p.id)}" aria-label="Vorlage löschen">✕</button>
+      </div>`
+      )
+      .join("");
+    el.querySelectorAll(".km-preset-load").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const preset = getKmPresets().find((p) => p.id === btn.dataset.id);
+        if (!preset) return;
+        document.getElementById("km-title").value = preset.title || "";
+        document.getElementById("km-minutes").value = String(preset.minutes || 30);
+        document.querySelectorAll(".km-post-check").forEach((c) => {
+          c.checked = preset.urls.indexOf(c.value) !== -1;
+        });
+      });
+    });
+    el.querySelectorAll(".km-preset-delete").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        saveKmPresets(getKmPresets().filter((p) => p.id !== btn.dataset.id));
+        renderPresetsList();
+      });
+    });
+  }
+  renderPresetsList();
+
+  document.getElementById("km-save-preset").addEventListener("click", () => {
+    const checked = Array.from(document.querySelectorAll(".km-post-check:checked")).map((c) => c.value);
+    if (!checked.length) {
+      alert("Bitte mindestens einen Beitrag auswählen.");
+      return;
+    }
+    const titleVal = document.getElementById("km-title").value.trim();
+    const name = (prompt("Name für diese Vorlage:", titleVal || "Neue Vorlage") || "").trim();
+    if (!name) return;
+    const minutes = Number(document.getElementById("km-minutes").value);
+    const presetsList = getKmPresets();
+    presetsList.unshift({ id: String(Date.now()), name: name.slice(0, 40), title: titleVal, minutes, urls: checked });
+    saveKmPresets(presetsList);
+    renderPresetsList();
+  });
 
   document.getElementById("km-generate").addEventListener("click", () => {
     const checked = Array.from(document.querySelectorAll(".km-post-check:checked")).map((c) => c.value);
@@ -820,6 +932,17 @@ function renderKursmappeBuilder() {
     document.getElementById("km-link-out").value = link;
     document.getElementById("km-link-area").style.display = "block";
     if (window.Protect.renderQrCode) window.Protect.renderQrCode(document.getElementById("km-qr-wrap"), link);
+
+    // Handzettel-Inhalt fürs Drucken (siehe .print-sheet in style.css) —
+    // wird nur beim Drucken sichtbar, nicht am Bildschirm.
+    const chosenPosts = checked.map((url) => posts.find((p) => p.url === url)).filter(Boolean);
+    const expDate = new Date(Date.now() + minutes * 60000);
+    const expStr = expDate.toLocaleString(t("dateLocale"), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    document.getElementById("km-print-title").textContent = "📚 " + (title || "Kursmappe");
+    document.getElementById("km-print-meta").textContent = "Gültig bis " + expStr + " Uhr — kein Passwort nötig, einfach den QR-Code scannen.";
+    document.getElementById("km-print-list").innerHTML = chosenPosts
+      .map((p) => `<li>${p.emoji ? p.emoji + " " : ""}${escapeHtml(p.title)}</li>`)
+      .join("");
   });
   document.getElementById("km-copy-btn").addEventListener("click", async () => {
     const out = document.getElementById("km-link-out");
@@ -837,6 +960,7 @@ function renderKursmappeBuilder() {
       }
     }
   });
+  document.getElementById("km-print-btn").addEventListener("click", () => window.print());
 }
 
 /* ---------------------------------------------------------
@@ -859,6 +983,10 @@ function renderKollegenUnlocked(sub) {
     renderKollegenFeedback();
     return;
   }
+  if (sub === "bestenlisten") {
+    renderKollegenBestenlisten();
+    return;
+  }
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kolleg:innen</span>`;
   content.innerHTML = `
     <h1 class="section-label">🤝 Kolleg:innen-Bereich</h1>
@@ -879,15 +1007,21 @@ function renderKollegenUnlocked(sub) {
         <h2>Feedback-Auswertung</h2>
         <span class="folder-count">Rückmeldungen zu den Tools</span>
       </a>
+      <a class="folder-card" href="#/kollegen/bestenlisten" style="--i:3">
+        <span class="folder-icon">🏆</span>
+        <h2>Bestenlisten</h2>
+        <span class="folder-count">Einträge einsehen &amp; verwalten</span>
+      </a>
     </div>
   `;
 }
 
 function renderKollegenFeedback() {
+  const isFull = window.Protect && window.Protect.getAccess() === "full";
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/kollegen">Kolleg:innen</a><span class="sep">›</span><span class="current">Feedback-Auswertung</span>`;
   content.innerHTML = `
     <h1 class="section-label">📊 Feedback-Auswertung</h1>
-    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Rückmeldungen (👍/👎), die Lernende auf den einzelnen Werkzeug-Seiten abgegeben haben.</p>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Rückmeldungen (👍/👎), die Lernende auf den einzelnen Werkzeug-Seiten abgegeben haben. „Letzte 7 Tage" zeigt nur die jüngsten Stimmen.</p>
     <div id="feedback-agg-list"><p class="empty-state">Lade Rückmeldungen …</p></div>
   `;
   if (!window.Protect || typeof window.Protect.loadFirebase !== "function") return;
@@ -895,12 +1029,15 @@ function renderKollegenFeedback() {
     .then(({ db }) => db.collection("tool_feedback").get())
     .then((snap) => {
       const agg = {};
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       snap.forEach((doc) => {
         const d = doc.data();
         if (!d || !d.tool) return;
-        if (!agg[d.tool]) agg[d.tool] = { up: 0, down: 0 };
-        if (d.vote === "up") agg[d.tool].up++;
-        else if (d.vote === "down") agg[d.tool].down++;
+        if (!agg[d.tool]) agg[d.tool] = { up: 0, down: 0, up7: 0, down7: 0, comments: [] };
+        const recent = typeof d.ts === "number" && d.ts >= sevenDaysAgo;
+        if (d.vote === "up") { agg[d.tool].up++; if (recent) agg[d.tool].up7++; }
+        else if (d.vote === "down") { agg[d.tool].down++; if (recent) agg[d.tool].down7++; }
+        if (d.comment) agg[d.tool].comments.push({ vote: d.vote, comment: d.comment });
       });
       const rows = Object.keys(agg).sort((a, b) => agg[b].up + agg[b].down - (agg[a].up + agg[a].down));
       const el = document.getElementById("feedback-agg-list");
@@ -909,15 +1046,90 @@ function renderKollegenFeedback() {
         el.innerHTML = '<p class="empty-state">Noch keine Rückmeldungen.</p>';
         return;
       }
+      const allComments = rows.flatMap((tool) => agg[tool].comments.map((c) => ({ tool, ...c })));
       el.innerHTML =
-        '<table class="feedback-table"><thead><tr><th>Werkzeug</th><th>👍</th><th>👎</th></tr></thead><tbody>' +
-        rows.map((tool) => `<tr><td>${escapeHtml(tool)}</td><td>${agg[tool].up}</td><td>${agg[tool].down}</td></tr>`).join("") +
-        "</tbody></table>";
+        '<table class="feedback-table"><thead><tr><th>Werkzeug</th><th>👍</th><th>👎</th><th>Letzte 7 Tage</th>' +
+        (isFull ? "<th></th>" : "") +
+        "</tr></thead><tbody>" +
+        rows
+          .map(
+            (tool) => `<tr>
+          <td>${escapeHtml(tool)}</td>
+          <td>${agg[tool].up}</td>
+          <td>${agg[tool].down}</td>
+          <td>${agg[tool].up7}👍 / ${agg[tool].down7}👎</td>
+          ${isFull ? `<td><button type="button" class="feedback-reset-btn" data-tool="${escapeHtml(tool)}">Zurücksetzen</button></td>` : ""}
+        </tr>`
+          )
+          .join("") +
+        "</tbody></table>" +
+        (allComments.length
+          ? '<h2 class="section-label" style="margin-top:32px;">Kommentare</h2><ul class="feedback-comments">' +
+            allComments.map((c) => `<li><b>${escapeHtml(c.tool)}</b> ${c.vote === "up" ? "👍" : "👎"} — ${escapeHtml(c.comment)}</li>`).join("") +
+            "</ul>"
+          : "");
     })
     .catch(() => {
       const el = document.getElementById("feedback-agg-list");
       if (el) el.innerHTML = '<p class="empty-state">Konnte Rückmeldungen nicht laden (Firestore-Regeln prüfen).</p>';
     });
+}
+
+/* ---------------------------------------------------------
+   Bestenlisten verwalten — dieselben Highscore-Daten wie das
+   Bestenlisten-Widget auf den einzelnen Werkzeug-Seiten (protect.js),
+   hier gebündelt einsehbar; mit vollem Zugang lassen sich einzelne
+   Einträge entfernen (z. B. bei Unsinn in Name/Punktzahl).
+--------------------------------------------------------- */
+function loadHighscoreBlock(file, isFull) {
+  const body = document.querySelector(`.hs-tool-body[data-file="${CSS.escape(file)}"]`);
+  if (!body || !window.Protect || typeof window.Protect.loadFirebase !== "function") return;
+  window.Protect.loadFirebase()
+    .then(({ db }) => db.collection("highscores").where("tool", "==", file).orderBy("score", "desc").limit(10).get())
+    .then((snap) => {
+      if (!document.body.contains(body)) return;
+      if (snap.empty) {
+        body.innerHTML = '<p class="empty-state">Noch keine Einträge.</p>';
+        return;
+      }
+      body.innerHTML =
+        "<ol>" +
+        snap.docs
+          .map((d) => {
+            const v = d.data();
+            return `<li><span>${escapeHtml(v.name)}</span><b>${escapeHtml(String(v.score))}</b>${
+              isFull ? `<button type="button" class="hs-delete-btn" data-id="${escapeHtml(d.id)}" data-file="${escapeHtml(file)}" aria-label="Eintrag löschen">✕</button>` : ""
+            }</li>`;
+          })
+          .join("") +
+        "</ol>";
+    })
+    .catch(() => {
+      if (document.body.contains(body)) body.innerHTML = '<p class="empty-state">Bestenliste gerade nicht verfügbar.</p>';
+    });
+}
+
+function renderKollegenBestenlisten() {
+  const isFull = window.Protect && window.Protect.getAccess() === "full";
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/kollegen">Kolleg:innen</a><span class="sep">›</span><span class="current">Bestenlisten</span>`;
+  const files = (window.Protect && window.Protect.HIGHSCORE_FILES) || [];
+  content.innerHTML = `
+    <h1 class="section-label">🏆 Bestenlisten</h1>
+    <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Höchste Punktzahlen pro Lernspiel.${isFull ? " Einträge lassen sich hier entfernen." : ""}</p>
+    <div class="hs-tool-grid">
+      ${files
+        .map((f) => {
+          const post = posts.find((p) => p.url === f);
+          const label = post ? (post.emoji ? post.emoji + " " : "") + post.title : f;
+          return `<div class="hs-tool-block">
+          <h3>${escapeHtml(label)}</h3>
+          <div class="hs-tool-body" data-file="${escapeHtml(f)}"><p class="empty-state">Lade …</p></div>
+        </div>`;
+        })
+        .join("")}
+    </div>
+  `;
+  files.forEach((f) => loadHighscoreBlock(f, isFull));
 }
 
 /* ---------------------------------------------------------
@@ -1223,6 +1435,36 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   toggleFavorite(btn.dataset.url);
   render();
+});
+
+/* Moderation im Kolleg:innen-Bereich (nur mit vollem Zugang sichtbar
+   gerendert, hier zusätzlich noch einmal geprüft): einzelne Bestenlisten-
+   Einträge löschen oder alle Rückmeldungen zu einem Werkzeug zurücksetzen. */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".hs-delete-btn");
+  if (!btn) return;
+  if (!window.Protect || window.Protect.getAccess() !== "full") return;
+  if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+  window.Protect.loadFirebase()
+    .then(({ db }) => db.collection("highscores").doc(btn.dataset.id).delete())
+    .then(() => loadHighscoreBlock(btn.dataset.file, true))
+    .catch(() => alert("Löschen fehlgeschlagen — bitte später erneut versuchen."));
+});
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".feedback-reset-btn");
+  if (!btn) return;
+  if (!window.Protect || window.Protect.getAccess() !== "full") return;
+  if (!confirm(`Alle Rückmeldungen zu "${btn.dataset.tool}" wirklich löschen?`)) return;
+  window.Protect.loadFirebase()
+    .then(({ db }) => db.collection("tool_feedback").where("tool", "==", btn.dataset.tool).get())
+    .then((snap) => {
+      const batch = db.batch();
+      snap.forEach((doc) => batch.delete(doc.ref));
+      return batch.commit();
+    })
+    .then(() => renderKollegenFeedback())
+    .catch(() => alert("Zurücksetzen fehlgeschlagen — bitte später erneut versuchen."));
 });
 
 /* Tastaturkürzel "/" springt ins Suchfeld auf der Startseite — nur wenn

@@ -41,6 +41,7 @@
     kollegen: "Kolleg:innen-Bereich"
   };
   const ACCESS_KEY = "buildspace_access_v1";
+  const INSTALL_DISMISS_KEY = "buildspace_install_dismissed_until";
   const LOCK_SVG =
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
 
@@ -74,7 +75,12 @@
   /* Dasselbe Firebase-Projekt, das schon für die Kanban-Tools läuft —
      wird hier nur für "Feedback pro Tool" und die Bestenlisten
      nachgeladen (lazy), damit einfache Seiten ohne Klick auf eines der
-     beiden Widgets keinerlei zusätzliches Skript laden. */
+     beiden Widgets keinerlei zusätzliches Skript laden.
+     WICHTIG: kanban-board.html trägt dieselben Werte noch einmal separat
+     ein (bewusst NICHT hierher ausgelagert — die Datei ist als
+     eigenständige Vorlage gedacht, die sich z. B. eine Kollegin mit einem
+     eigenen Firebase-Projekt kopieren kann, siehe Kommentar dort). Ändert
+     sich das Projekt hier, bitte dort ebenfalls anpassen. */
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus",
     authDomain: "kanban-board-281da.firebaseapp.com",
@@ -259,10 +265,11 @@
       "#protect-overlay input[type=password], #protect-highscore-modal input {",
       "  width: 100%; padding: 12px 14px; font-size: 16px; border-radius: 14px; border: 1px solid rgba(0,0,0,0.12);",
       "  background: rgba(255,255,255,0.7); margin-bottom: 10px; box-sizing: border-box; text-align: center; }",
-      "#protect-overlay button.protect-submit, #protect-share-modal button.protect-submit, #protect-highscore-modal button.protect-submit {",
+      "button.protect-submit {",
       "  width: 100%; padding: 12px 14px; font-size: 15px; font-weight: 600; border: none; border-radius: 14px;",
       "  color: #fff; cursor: pointer; background: linear-gradient(155deg, #6D5DFB, #4B3AD6);",
-      "  box-shadow: 0 6px 16px -4px rgba(109,93,251,0.55); }",
+      "  box-shadow: 0 6px 16px -4px rgba(109,93,251,0.55);",
+      "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
       "#protect-overlay .protect-error, #protect-share-modal .protect-error, #protect-highscore-modal .protect-error { color: #C23B3B; font-size: 13px; margin-top: 10px; min-height: 16px; }",
       "#protect-overlay .protect-expired {",
       "  background: rgba(224,72,61,0.12); border: 1px solid rgba(224,72,61,0.3); border-radius: 12px;",
@@ -296,9 +303,11 @@
       "  border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.8); margin-bottom: 10px; box-sizing: border-box; }",
       "#protect-share-modal .protect-link-row, #protect-highscore-modal .protect-link-row { display: flex; gap: 8px; }",
       "#protect-share-modal .protect-link-row input, #protect-highscore-modal .protect-link-row input { flex: 1; font-size: 12.5px; padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.85); }",
-      "#protect-share-modal .protect-copy-btn, #protect-highscore-modal .protect-copy-btn { padding: 10px 14px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; background: rgba(0,0,0,0.07); }",
-      "#protect-share-modal .protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
-      "#protect-share-modal .protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
+      ".protect-copy-btn { padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer; color: #1D1D1F;",
+      "  border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.9);",
+      "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
+      ".protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
+      ".protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
       "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #6E6E73; text-align: center; margin: 8px 0 0; }",
       "html.share-mode .site-logo, html.share-mode .nav-brand, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
       "html.share-mode #protect-share-btn { display: none; }",
@@ -315,6 +324,18 @@
       ".protect-update-banner button {",
       "  padding: 7px 14px; border-radius: 999px; border: none; font-weight: 700; font-size: 12.5px; cursor: pointer;",
       "  color: #1D1D1F; background: #fff; }",
+      /* Installations-Hinweis (PWA) */
+      ".protect-install-banner {",
+      "  position: fixed; right: 18px; bottom: 78px; z-index: 9998; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;",
+      "  max-width: 280px; padding: 10px 10px 10px 16px; border-radius: 20px;",
+      "  background: linear-gradient(155deg, rgba(30,30,38,0.92), rgba(20,20,28,0.92)); color: #fff;",
+      "  font-size: 12.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.35); backdrop-filter: blur(10px);",
+      "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
+      ".protect-install-banner #protect-install-btn {",
+      "  padding: 7px 12px; border-radius: 999px; border: none; font-weight: 700; font-size: 12px; cursor: pointer;",
+      "  color: #1D1D1F; background: #fff; }",
+      ".protect-install-banner #protect-install-dismiss {",
+      "  border: none; background: none; color: rgba(255,255,255,0.7); font-size: 15px; cursor: pointer; padding: 2px 4px; line-height: 1; }",
       /* Feedback-Widget */
       ".protect-feedback-widget {",
       "  position: fixed; left: 18px; bottom: 18px; z-index: 9998; display: flex; align-items: center; gap: 8px;",
@@ -327,6 +348,10 @@
       ".protect-feedback-btn { border: none; background: none; font-size: 17px; cursor: pointer; padding: 2px 3px; line-height: 1; }",
       ".protect-feedback-btn:disabled { opacity: 0.5; cursor: default; }",
       ".protect-feedback-thanks { opacity: 0.9; }",
+      ".protect-feedback-comment-link {",
+      "  border: none; background: none; font-size: 12px; text-decoration: underline; color: #1D1D1F; cursor: pointer; padding: 0; margin-left: 2px; }",
+      ".protect-feedback-comment-input {",
+      "  font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15); width: 150px; background: rgba(255,255,255,0.85); }",
       /* Bestenlisten-Button + Panel */
       ".protect-highscore-btn {",
       "  position: fixed; left: 18px; bottom: 66px; z-index: 9998; display: inline-flex; align-items: center; gap: 6px;",
@@ -343,7 +368,13 @@
       /* Embed-Modus: Navigation/Fußzeile/Rücklink & Zusatz-Buttons ausblenden */
       "html.embed-mode .site-nav, html.embed-mode .hero, html.embed-mode .site-footer, html.embed-mode .top-link,",
       "html.embed-mode #protect-share-btn, html.embed-mode .protect-update-banner,",
-      "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }"
+      "html.embed-mode .protect-install-banner,",
+      "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }",
+      /* Druckansicht: schwebende Bedienelemente sollen nie mit ausgedruckt werden */
+      "@media print {",
+      "  #protect-share-btn, .protect-update-banner, .protect-install-banner,",
+      "  .protect-feedback-widget, .protect-highscore-btn, .protect-banner { display: none !important; }",
+      "}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -695,8 +726,31 @@
     const wrap = document.createElement("div");
     wrap.className = "protect-feedback-widget";
 
-    function renderThanks() {
-      wrap.innerHTML = '<span class="protect-feedback-thanks">Danke für dein Feedback! 🙌</span>';
+    /* docRef ist nur gesetzt, wenn das Speichern der Stimme tatsächlich
+       geklappt hat (sonst gäbe es nichts, an das ein Kommentar später per
+       update() angehängt werden könnte) — der optionale Kommentar-Link
+       erscheint dann still mit, ohne die schnelle 👍/👎-Abstimmung selbst
+       zu verlangsamen. */
+    function renderThanks(docRef) {
+      wrap.innerHTML =
+        '<span class="protect-feedback-thanks">Danke für dein Feedback! 🙌</span>' +
+        (docRef ? '<button type="button" class="protect-feedback-comment-link" id="protect-fb-comment-link">Kommentar?</button>' : "");
+      const link = wrap.querySelector("#protect-fb-comment-link");
+      if (link) link.addEventListener("click", () => renderCommentBox(docRef));
+    }
+    function renderCommentBox(docRef) {
+      wrap.innerHTML =
+        '<input type="text" class="protect-feedback-comment-input" id="protect-fb-comment-input" placeholder="Kurz sagen, warum? (optional)" maxlength="140">' +
+        '<button type="button" class="protect-feedback-btn" id="protect-fb-comment-send" aria-label="Absenden">➤</button>';
+      const input = wrap.querySelector("#protect-fb-comment-input");
+      setTimeout(() => input.focus(), 20);
+      function send() {
+        const val = input.value.trim().slice(0, 140);
+        wrap.innerHTML = '<span class="protect-feedback-thanks">Danke! 🙌</span>';
+        if (val) docRef.update({ comment: val }).catch(() => {});
+      }
+      wrap.querySelector("#protect-fb-comment-send").addEventListener("click", send);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
     }
     function renderButtons() {
       wrap.innerHTML =
@@ -709,19 +763,20 @@
           wrap.querySelectorAll(".protect-feedback-btn").forEach((b) => (b.disabled = true));
           loadFirebase()
             .then(({ db }) => db.collection("tool_feedback").add({ tool: file, vote: vote, ts: Date.now() }))
-            .then(() => {
+            .then((docRef) => {
               try { localStorage.setItem(voteKey, vote); } catch (e) {}
-              renderThanks();
+              renderThanks(docRef);
             })
             .catch(() => {
               /* Fail soft: Firestore-Regeln evtl. noch nicht eingerichtet — die
-                 Seite soll dadurch nicht kaputt wirken. */
-              renderThanks();
+                 Seite soll dadurch nicht kaputt wirken. Ohne gespeicherte
+                 Stimme gibt es auch keinen Kommentar-Link. */
+              renderThanks(null);
             });
         });
       });
     }
-    if (existingVote) renderThanks(); else renderButtons();
+    if (existingVote) renderThanks(null); else renderButtons();
     document.body.appendChild(wrap);
   }
 
@@ -845,12 +900,66 @@
     });
   }
 
+  /* ---------------------------------------------------------
+     Installations-Hinweis (PWA): Chrome/Edge feuern "beforeinstallprompt",
+     wenn eine Seite die Installationskriterien erfüllt (Manifest + Service
+     Worker, hier beides vorhanden). Ein zurückhaltender eigener Hinweis
+     statt der browsereigenen (oft übersehenen) Mini-Infoleiste — mit
+     "Nicht jetzt", das für 14 Tage nicht erneut nervt.
+  --------------------------------------------------------- */
+  let deferredInstallPrompt = null;
+  function isStandaloneDisplay() {
+    try {
+      return (
+        (global.matchMedia && global.matchMedia("(display-mode: standalone)").matches) ||
+        global.navigator.standalone === true
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+  function showInstallBanner() {
+    if (document.getElementById("protect-install-banner")) return;
+    ensureStyle();
+    const bar = document.createElement("div");
+    bar.id = "protect-install-banner";
+    bar.className = "protect-install-banner";
+    bar.innerHTML =
+      "<span>📲 buildspace zum Startbildschirm hinzufügen?</span>" +
+      '<button type="button" id="protect-install-btn">Installieren</button>' +
+      '<button type="button" id="protect-install-dismiss" aria-label="Nicht jetzt">✕</button>';
+    document.body.appendChild(bar);
+    bar.querySelector("#protect-install-btn").addEventListener("click", () => {
+      bar.remove();
+      if (!deferredInstallPrompt) return;
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      promptEvent.prompt();
+    });
+    bar.querySelector("#protect-install-dismiss").addEventListener("click", () => {
+      bar.remove();
+      try { localStorage.setItem(INSTALL_DISMISS_KEY, String(nowMs() + 14 * 24 * 60 * 60000)); } catch (e) {}
+    });
+  }
+  function initInstallPrompt() {
+    if (isEmbedMode() || isStandaloneDisplay()) return;
+    global.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      let dismissedUntil = 0;
+      try { dismissedUntil = Number(localStorage.getItem(INSTALL_DISMISS_KEY) || 0); } catch (e2) {}
+      if (dismissedUntil && nowMs() < dismissedUntil) return;
+      deferredInstallPrompt = e;
+      showInstallBanner();
+    });
+  }
+
   function initStandalone() {
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
     ensureStyle();
     if (isEmbedMode()) document.documentElement.classList.add("embed-mode");
     initUpdateBanner();
+    initInstallPrompt();
     function reveal() {
       document.documentElement.classList.add("protect-ready");
       document.documentElement.classList.remove("protect-open");
@@ -892,6 +1001,7 @@
     openShareModal: openShareModal,
     renderQrCode: renderQrCode,
     loadFirebase: loadFirebase,
+    HIGHSCORE_FILES: HIGHSCORE_FILES,
     ensureStyle: ensureStyle,
     closeOverlay: closeOverlay
   };
