@@ -742,7 +742,7 @@ function renderVertretung() {
       <div class="protect-qr-wrap" id="vertretung-print-qr"></div>
       <ul>${list.map((p) => `<li>${p.emoji ? p.emoji + " " : ""}${escapeHtml(p.title)}</li>`).join("")}</ul>
     </div>
-    ${renderPostList(list, { preserveOrder: true })}
+    <div class="no-print">${renderPostList(list, { preserveOrder: true })}</div>
   `;
   const printBtn = document.getElementById("vertretung-print-btn");
   if (printBtn) {
