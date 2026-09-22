@@ -750,7 +750,17 @@ function renderVertretung() {
       if (window.Protect && window.Protect.renderQrCode) {
         window.Protect.renderQrCode(document.getElementById("vertretung-print-qr"), shortLink);
       }
-      window.print();
+      if (window.Protect && window.Protect.printHandout) {
+        window.Protect.printHandout({
+          title: "📋 Vertretungsstunde",
+          meta: "Dauerhafter Link ohne Anmeldung: " + shortLink,
+          items: list.map((p) => (p.emoji ? p.emoji + " " : "") + p.title),
+          qrText: shortLink,
+          filename: "vertretungsstunde-handzettel.png"
+        });
+      } else {
+        window.print();
+      }
     });
   }
 }
@@ -960,7 +970,20 @@ function renderKursmappeBuilder() {
       }
     }
   });
-  document.getElementById("km-print-btn").addEventListener("click", () => window.print());
+  document.getElementById("km-print-btn").addEventListener("click", () => {
+    if (window.Protect && window.Protect.printHandout) {
+      const items = Array.from(document.querySelectorAll("#km-print-list li")).map((li) => li.textContent);
+      window.Protect.printHandout({
+        title: document.getElementById("km-print-title").textContent,
+        meta: document.getElementById("km-print-meta").textContent,
+        items: items,
+        qrText: document.getElementById("km-link-out").value,
+        filename: "kursmappe-handzettel.png"
+      });
+    } else {
+      window.print();
+    }
+  });
 }
 
 /* ---------------------------------------------------------

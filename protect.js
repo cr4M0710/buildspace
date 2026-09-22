@@ -594,6 +594,181 @@
     }
   }
 
+  /* ---------------------------------------------------------
+     Handzettel drucken -- auf iOS/iPadOS als Startbildschirm-App
+     (navigator.standalone === true) öffnet window.print() KEINEN Dialog:
+     Es fehlt schlicht die Safari-Oberfläche, die den Druckdialog anzeigen
+     würde -- eine Apple-Einschränkung, die sich seitenseitig nicht beheben
+     lässt (window.print() liefert dort keinen Fehler, tut aber nichts).
+     In der normalen Safari (Browser-Tab), auf dem Desktop und in
+     installierten Android/Desktop-PWAs funktioniert window.print() dagegen
+     ganz normal -- daher wird NUR für den iOS-Startbildschirm-Fall
+     umgeschaltet: Der Handzettel wird stattdessen als Bild gezeichnet und
+     über das native "Teilen"-Menü angeboten, von wo aus sich per AirPrint
+     drucken oder das Bild in Fotos/Dateien sichern lässt.
+  --------------------------------------------------------- */
+  function isIosHomeScreenApp() {
+    try {
+      return global.navigator.standalone === true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function wrapCanvasLines(ctx, text, maxWidth) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = "";
+    for (let i = 0; i < words.length; i += 1) {
+      const test = current ? current + " " + words[i] : words[i];
+      if (current && ctx.measureText(test).width > maxWidth) {
+        lines.push(current);
+        current = words[i];
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  const HANDOUT_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  /* Zeichnet Titel, Hinweistext, Liste und QR-Code direkt als Pixel auf ein
+     <canvas> -- der QR-Code wird dabei modulweise selbst gezeichnet (isDark/
+     getModuleCount aus qrcode-generator.js), nicht als SVG/Bild eingefügt,
+     damit keine (auf älterem WebKit bekannte) Canvas-Sicherheitsprobleme mit
+     eingebetteten SVG-Bildern auftreten können. */
+  function buildHandoutCanvas(opts) {
+    const title = opts.title || "";
+    const meta = opts.meta || "";
+    const items = opts.items || [];
+    const qrText = opts.qrText || "";
+
+    const scale = 2;
+    const width = 900;
+    const padding = 50;
+    const maxTextWidth = width - padding * 2;
+    const titleFont = "700 40px " + HANDOUT_FONT_STACK;
+    const metaFont = "22px " + HANDOUT_FONT_STACK;
+    const itemFont = "24px " + HANDOUT_FONT_STACK;
+    const titleLineHeight = 50, metaLineHeight = 30, itemLineHeight = 34, itemGap = 8;
+
+    const measure = document.createElement("canvas").getContext("2d");
+    measure.font = titleFont;
+    const titleLines = wrapCanvasLines(measure, title, maxTextWidth);
+    measure.font = metaFont;
+    const metaLines = meta ? wrapCanvasLines(measure, meta, maxTextWidth) : [];
+    measure.font = itemFont;
+    const itemLineGroups = items.map((it) => wrapCanvasLines(measure, "•  " + it, maxTextWidth - 20));
+
+    let qrProbe = null, qrModuleCount = 0, qrSize = 0;
+    const qrCellSize = 8, qrMargin = 20;
+    if (qrText && typeof global.qrcode === "function") {
+      try {
+        qrProbe = global.qrcode(0, "M");
+        qrProbe.addData(qrText);
+        qrProbe.make();
+        qrModuleCount = qrProbe.getModuleCount();
+        qrSize = qrModuleCount * qrCellSize + qrMargin * 2;
+      } catch (e) {
+        qrProbe = null;
+      }
+    }
+
+    let contentHeight = padding + titleLines.length * titleLineHeight;
+    if (metaLines.length) contentHeight += 14 + metaLines.length * metaLineHeight;
+    if (itemLineGroups.length) {
+      contentHeight += 26;
+      itemLineGroups.forEach((lines) => { contentHeight += lines.length * itemLineHeight + itemGap; });
+    }
+    if (qrSize) contentHeight += 30 + qrSize;
+    contentHeight += padding;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = contentHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, contentHeight);
+
+    let cy = padding;
+    ctx.fillStyle = "#1D1D1F";
+    ctx.font = titleFont;
+    titleLines.forEach((line) => { ctx.fillText(line, padding, cy); cy += titleLineHeight; });
+
+    if (metaLines.length) {
+      cy += 14;
+      ctx.fillStyle = "#46464b";
+      ctx.font = metaFont;
+      metaLines.forEach((line) => { ctx.fillText(line, padding, cy); cy += metaLineHeight; });
+    }
+
+    if (itemLineGroups.length) {
+      cy += 26;
+      ctx.fillStyle = "#1D1D1F";
+      ctx.font = itemFont;
+      itemLineGroups.forEach((lines) => {
+        lines.forEach((line, idx) => { ctx.fillText(line, padding + (idx === 0 ? 0 : 20), cy); cy += itemLineHeight; });
+        cy += itemGap;
+      });
+    }
+
+    if (qrSize && qrProbe) {
+      cy += 30;
+      const qx = (width - qrSize) / 2;
+      ctx.fillStyle = "#000000";
+      for (let r = 0; r < qrModuleCount; r += 1) {
+        for (let c = 0; c < qrModuleCount; c += 1) {
+          if (qrProbe.isDark(r, c)) {
+            ctx.fillRect(qx + qrMargin + c * qrCellSize, cy + qrMargin + r * qrCellSize, qrCellSize, qrCellSize);
+          }
+        }
+      }
+    }
+
+    return canvas;
+  }
+
+  function shareOrDownloadCanvas(canvas, filename, shareTitle) {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      let file = null;
+      try { file = new global.File([blob], filename, { type: "image/png" }); } catch (e) { file = null; }
+      if (file && global.navigator.canShare && global.navigator.canShare({ files: [file] })) {
+        global.navigator.share({ files: [file], title: shareTitle || "" }).catch(() => {});
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      alert('Der Handzettel wurde als Bild gespeichert. Zum Drucken: Bild öffnen und über "Teilen" → "Drucken" auswählen.');
+    }, "image/png");
+  }
+
+  /* Gemeinsamer Einstiegspunkt für alle Drucken-Knöpfe: normal einfach
+     window.print(), nur auf iOS-Startbildschirm-Apps stattdessen der
+     Bild+Teilen-Weg (siehe Kommentar oben bei isIosHomeScreenApp). */
+  function printHandout(opts) {
+    if (!isIosHomeScreenApp()) {
+      global.print();
+      return;
+    }
+    try {
+      const canvas = buildHandoutCanvas(opts || {});
+      shareOrDownloadCanvas(canvas, (opts && opts.filename) || "handzettel.png", (opts && opts.title) || "buildspace");
+    } catch (e) {
+      global.print();
+    }
+  }
+
   function openShareModal(cat) {
     ensureStyle();
     const wrap = document.createElement("div");
@@ -1000,6 +1175,7 @@
     removeShareButton: removeShareButton,
     openShareModal: openShareModal,
     renderQrCode: renderQrCode,
+    printHandout: printHandout,
     loadFirebase: loadFirebase,
     HIGHSCORE_FILES: HIGHSCORE_FILES,
     ensureStyle: ensureStyle,
