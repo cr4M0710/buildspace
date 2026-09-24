@@ -591,9 +591,35 @@
     return url.toString();
   }
 
-  function renderQrCode(container, text) {
+  /* Auf iOS-/macOS-Safari bleibt neu eingefügter Inhalt innerhalb eines
+     position:fixed-Elements mit backdrop-filter (wie hier das Freigeben-
+     Fenster) manchmal unsichtbar, bis der Browser von sich aus neu
+     zeichnet -- ein bekannter WebKit-Kompositierungs-Fehler bei dynamisch
+     per innerHTML eingefügten Inhalten. Ein minimaler, unsichtbarer
+     Opacity-Wackler auf dem umgebenden Karten-Element zwingt Safari
+     zuverlässig zu einem sofortigen Neuzeichnen. */
+  function forceRepaint(el) {
+    try {
+      const target = (el.closest && el.closest(".protect-card")) || el;
+      const prev = target.style.opacity;
+      target.style.opacity = "0.9999";
+      global.requestAnimationFrame(() => {
+        target.style.opacity = prev;
+      });
+    } catch (e) {}
+  }
+
+  function renderQrCode(container, text, retriesLeft) {
     if (!container) return;
     if (typeof global.qrcode !== "function") {
+      /* Sehr langsames Netzwerk kann dazu führen, dass qrcode-generator.js
+         (per <script defer>) beim Öffnen des Dialogs noch nicht fertig
+         geladen ist -- statt sofort aufzugeben, kurz erneut versuchen. */
+      if (retriesLeft === undefined) retriesLeft = 10;
+      if (retriesLeft > 0) {
+        global.setTimeout(() => renderQrCode(container, text, retriesLeft - 1), 200);
+        return;
+      }
       container.innerHTML = "";
       return;
     }
@@ -602,6 +628,7 @@
       qr.addData(text);
       qr.make();
       container.innerHTML = qr.createSvgTag(5, 8);
+      forceRepaint(container);
     } catch (e) {
       container.innerHTML = "";
     }
