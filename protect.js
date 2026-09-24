@@ -255,6 +255,7 @@
       "  border: 1px solid rgba(255,255,255,0.65); border-radius: 26px; padding: 32px 28px; text-align: center;",
       "  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 20px 60px rgba(20,20,30,0.25);",
       "  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);",
+      "  max-height: calc(100vh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch;",
       "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
       "#protect-overlay .protect-icon, #protect-share-modal .protect-icon, #protect-highscore-modal .protect-icon {",
       "  width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px; display: flex; align-items: center; justify-content: center;",
@@ -301,6 +302,18 @@
       "  padding: 24px; background: rgba(20,20,30,0.35); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }",
       "#protect-share-modal select { width: 100%; padding: 10px 12px; font-size: 15px; border-radius: 12px;",
       "  border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.8); margin-bottom: 10px; box-sizing: border-box; }",
+      "#protect-share-modal .protect-minutes-row {",
+      "  display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }",
+      "#protect-share-modal #protect-minutes {",
+      "  flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; font-weight: 600; text-align: center; border-radius: 12px;",
+      "  border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.8); box-sizing: border-box; }",
+      "#protect-share-modal .protect-minutes-suffix { font-size: 13px; color: #46464b; white-space: nowrap; }",
+      "#protect-share-modal .protect-minutes-presets {",
+      "  display: flex; gap: 6px; margin-bottom: 12px; }",
+      "#protect-share-modal .protect-preset-btn {",
+      "  flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 600; color: #1D1D1F; cursor: pointer;",
+      "  border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; background: rgba(255,255,255,0.6); }",
+      "#protect-share-modal .protect-preset-btn:hover { background: rgba(255,255,255,0.9); }",
       "#protect-share-modal .protect-link-row, #protect-highscore-modal .protect-link-row { display: flex; gap: 8px; }",
       "#protect-share-modal .protect-link-row input, #protect-highscore-modal .protect-link-row input { flex: 1; font-size: 12.5px; padding: 10px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.85); }",
       ".protect-copy-btn { padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer; color: #1D1D1F;",
@@ -778,13 +791,17 @@
         '<div class="protect-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg></div>' +
         "<h2>Für Lernende freigeben</h2>" +
         '<p class="protect-sub">Erzeuge einen Link, der diese Seite ohne Anmeldung öffnet — automatisch zeitlich begrenzt.</p>' +
-        '<select id="protect-minutes">' +
-          '<option value="15">15 Minuten</option>' +
-          '<option value="30" selected>30 Minuten</option>' +
-          '<option value="45">45 Minuten</option>' +
-          '<option value="90">90 Minuten (Doppelstunde)</option>' +
-          '<option value="180">3 Stunden</option>' +
-        "</select>" +
+        '<div class="protect-minutes-row">' +
+          '<input type="number" id="protect-minutes" min="1" max="1440" step="1" value="30" inputmode="numeric" />' +
+          '<span class="protect-minutes-suffix">Minuten gültig</span>' +
+        "</div>" +
+        '<div class="protect-minutes-presets">' +
+          '<button type="button" class="protect-preset-btn" data-min="15">15</button>' +
+          '<button type="button" class="protect-preset-btn" data-min="30">30</button>' +
+          '<button type="button" class="protect-preset-btn" data-min="45">45</button>' +
+          '<button type="button" class="protect-preset-btn" data-min="90">90</button>' +
+          '<button type="button" class="protect-preset-btn" data-min="180">180</button>' +
+        "</div>" +
         '<button class="protect-submit" id="protect-make-link" style="width:100%;">Link erstellen</button>' +
         '<div id="protect-link-area" style="display:none; margin-top:14px; text-align:left;">' +
           '<div class="protect-link-row">' +
@@ -800,8 +817,17 @@
     document.body.appendChild(wrap);
     wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
     wrap.querySelector("#protect-close-btn").addEventListener("click", () => wrap.remove());
+    wrap.querySelectorAll(".protect-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        wrap.querySelector("#protect-minutes").value = btn.dataset.min;
+      });
+    });
     wrap.querySelector("#protect-make-link").addEventListener("click", () => {
-      const minutes = Number(wrap.querySelector("#protect-minutes").value);
+      const minutesInput = wrap.querySelector("#protect-minutes");
+      let minutes = Math.round(Number(minutesInput.value));
+      if (!minutes || minutes < 1) minutes = 30;
+      if (minutes > 1440) minutes = 1440;
+      minutesInput.value = String(minutes);
       const link = shareLinkFor(cat, minutes);
       const out = wrap.querySelector("#protect-link-out");
       out.value = link;
