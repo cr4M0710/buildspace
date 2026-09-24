@@ -320,7 +320,7 @@
       "  border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.9);",
       "  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }",
       ".protect-qr-wrap { display: flex; justify-content: center; margin: 14px 0 4px; }",
-      ".protect-qr-wrap svg { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); }",
+      ".protect-qr-wrap svg, .protect-qr-wrap img { width: 152px; height: 152px; border-radius: 14px; background: #fff; padding: 10px; box-shadow: 0 6px 16px -4px rgba(20,20,30,0.2); box-sizing: border-box; display: block; }",
       "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #6E6E73; text-align: center; margin: 8px 0 0; }",
       "html.share-mode .site-logo, html.share-mode .nav-brand, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
       "html.share-mode #protect-share-btn { display: none; }",
@@ -591,24 +591,15 @@
     return url.toString();
   }
 
-  /* Auf iOS-/macOS-Safari bleibt neu eingefügter Inhalt innerhalb eines
-     position:fixed-Elements mit backdrop-filter (wie hier das Freigeben-
-     Fenster) manchmal unsichtbar, bis der Browser von sich aus neu
-     zeichnet -- ein bekannter WebKit-Kompositierungs-Fehler bei dynamisch
-     per innerHTML eingefügten Inhalten. Ein minimaler, unsichtbarer
-     Opacity-Wackler auf dem umgebenden Karten-Element zwingt Safari
-     zuverlässig zu einem sofortigen Neuzeichnen. */
-  function forceRepaint(el) {
-    try {
-      const target = (el.closest && el.closest(".protect-card")) || el;
-      const prev = target.style.opacity;
-      target.style.opacity = "0.9999";
-      global.requestAnimationFrame(() => {
-        target.style.opacity = prev;
-      });
-    } catch (e) {}
-  }
-
+  /* Der QR-Code wird als <img> aus einem <canvas> gezeichnet, nicht (mehr)
+     als per innerHTML eingefügtes <svg>. Grund: Auf Safari (iOS/iPadOS/
+     macOS) blieb ein per innerHTML eingefügtes SVG innerhalb dieses
+     position:fixed + backdrop-filter Fensters bei manchen Nutzenden
+     unsichtbar -- ein bekannter, hartnäckiger WebKit-Darstellungsfehler,
+     der sich nicht zuverlässig erzwingen ließ. Ein ganz normales <img>
+     mit eingebettetem Bild kennt dieses Problem nicht -- exakt dieselbe
+     Zeichenmethode (modulweise über isDark/getModuleCount) wird bereits
+     erfolgreich beim iOS-Druck-Handzettel (buildHandoutCanvas) verwendet. */
   function renderQrCode(container, text, retriesLeft) {
     if (!container) return;
     if (typeof global.qrcode !== "function") {
@@ -627,8 +618,33 @@
       const qr = global.qrcode(0, "M");
       qr.addData(text);
       qr.make();
-      container.innerHTML = qr.createSvgTag(5, 8);
-      forceRepaint(container);
+      const moduleCount = qr.getModuleCount();
+      const cellSize = 6;
+      const margin = 8;
+      const scale = 2;
+      const size = moduleCount * cellSize + margin * 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = size * scale;
+      canvas.height = size * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = "#000000";
+      for (let r = 0; r < moduleCount; r += 1) {
+        for (let c = 0; c < moduleCount; c += 1) {
+          if (qr.isDark(r, c)) {
+            ctx.fillRect(margin + c * cellSize, margin + r * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+      const img = document.createElement("img");
+      img.width = size;
+      img.height = size;
+      img.alt = "QR-Code";
+      img.src = canvas.toDataURL("image/png");
+      container.innerHTML = "";
+      container.appendChild(img);
     } catch (e) {
       container.innerHTML = "";
     }
