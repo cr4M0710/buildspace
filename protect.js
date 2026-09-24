@@ -615,15 +615,51 @@
       ". Bitte den Link oben verwenden.</div>";
   }
 
+  /* Rückmeldung eines Nutzenden ("QR-Bibliothek nicht geladen") zeigt: Das
+     ursprüngliche <script defer src="qrcode-generator.js"> schlägt auf
+     manchen Geräten/Netzwerken (z. B. schwaches Schul-WLAN) offenbar ganz
+     fehl -- reines Warten (siehe retriesLeft unten) hilft dann nicht, weil
+     window.qrcode nie gesetzt wird. Als letzter Versuch wird die Datei
+     hier deshalb aktiv per neuem <script>-Tag (mit Cache-Buster) erneut
+     angefordert, bevor endgültig aufgegeben wird. Der ursprüngliche Pfad
+     wird vom bereits vorhandenen (ggf. fehlgeschlagenen) Script-Tag
+     übernommen, damit das auch in Unterordnern (z. B. strafenkasse/)
+     korrekt funktioniert. */
+  let qrLibReloadAttempted = false;
+  function reloadQrLibrary(callback) {
+    try {
+      const existing = document.querySelector('script[src*="qrcode-generator.js"]');
+      const baseSrc = existing ? existing.src.split("?")[0] : "qrcode-generator.js";
+      const script = document.createElement("script");
+      script.src = baseSrc + "?retry=" + Date.now();
+      script.onload = () => callback(typeof global.qrcode === "function");
+      script.onerror = () => callback(false);
+      document.head.appendChild(script);
+    } catch (e) {
+      callback(false);
+    }
+  }
+
   function renderQrCode(container, text, retriesLeft) {
     if (!container) return;
     if (typeof global.qrcode !== "function") {
       /* Sehr langsames Netzwerk kann dazu führen, dass qrcode-generator.js
          (per <script defer>) beim Öffnen des Dialogs noch nicht fertig
          geladen ist -- statt sofort aufzugeben, kurz erneut versuchen. */
-      if (retriesLeft === undefined) retriesLeft = 10;
+      if (retriesLeft === undefined) retriesLeft = 15;
       if (retriesLeft > 0) {
         global.setTimeout(() => renderQrCode(container, text, retriesLeft - 1), 200);
+        return;
+      }
+      if (!qrLibReloadAttempted) {
+        qrLibReloadAttempted = true;
+        reloadQrLibrary((ok) => {
+          if (ok) {
+            renderQrCode(container, text, 0);
+          } else {
+            showQrFallback(container, "QR-Bibliothek konnte auch beim erneuten Laden nicht abgerufen werden");
+          }
+        });
         return;
       }
       showQrFallback(container, "QR-Bibliothek nicht geladen");

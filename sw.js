@@ -9,7 +9,7 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v1';
+const CACHE = 'buildspace-v2';
 const SHELL = [
   './',
   'index.html',
@@ -43,14 +43,32 @@ const SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    try {
-      const cache = await caches.open(CACHE);
-      await cache.addAll(SHELL);
-    } catch (err) {
-      /* Ein einzelner nicht erreichbarer Shell-Pfad soll die Installation
-         nicht komplett scheitern lassen — Laufzeit-Caching (siehe unten)
-         holt fehlende Dateien beim ersten Online-Besuch ohnehin nach. */
-    }
+    const cache = await caches.open(CACHE);
+    /* Wichtig: NICHT cache.addAll(SHELL) verwenden. addAll() ist
+       alles-oder-nichts -- schlägt bei schwachem Schul-WLAN eine EINZIGE
+       Datei fehl (z. B. ein größeres Icon oder eine der neun
+       Vertretungsstunden-Seiten), verwirft der Browser stillschweigend
+       ALLE bereits erfolgreich geladenen Dateien, inklusive so kleiner,
+       kritischer Dateien wie qrcode-generator.js. Genau das konnte dazu
+       führen, dass der QR-Code später dauerhaft nicht mehr angezeigt
+       wurde, obwohl das eigentliche Problem nur eine einzelne, für die
+       QR-Anzeige irrelevante Datei betraf. Stattdessen wird hier jede
+       Datei einzeln geholt: Ein Fehlschlag betrifft dann nur diese eine
+       Datei, alle anderen werden trotzdem zwischengespeichert. */
+    await Promise.allSettled(
+      SHELL.map(async (path) => {
+        try {
+          const req = new Request(path, { cache: 'no-store' });
+          const res = await fetch(req);
+          if (res && res.ok) await cache.put(path, res);
+        } catch (err) {
+          /* Einzelne fehlende/unerreichbare Datei -- kein Grund, die
+             Installation oder das Caching der übrigen Dateien
+             abzubrechen. Laufzeit-Caching (siehe fetch-Handler unten)
+             holt sie beim nächsten erfolgreichen Online-Besuch nach. */
+        }
+      })
+    );
     self.skipWaiting();
   })());
 });
