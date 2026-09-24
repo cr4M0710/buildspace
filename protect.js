@@ -600,6 +600,21 @@
      mit eingebettetem Bild kennt dieses Problem nicht -- exakt dieselbe
      Zeichenmethode (modulweise über isDark/getModuleCount) wird bereits
      erfolgreich beim iOS-Druck-Handzettel (buildHandoutCanvas) verwendet. */
+  /* Statt eine fehlgeschlagene QR-Erzeugung stillschweigend leer zu lassen
+     (was aus der Ferne kaum zu diagnostizieren ist), wird jetzt ein kurzer,
+     dezenter Hinweis samt Fehlermeldung angezeigt und zusätzlich in die
+     Konsole geloggt -- damit ein evtl. abweichendes Verhalten auf einzelnen
+     Geräten (z. B. eingeschränkte/verwaltete iPads) sich beim nächsten Mal
+     konkret benennen lässt, statt nur "geht nicht" zu sein. */
+  function showQrFallback(container, reason) {
+    try { console.error("QR-Code konnte nicht erzeugt werden:", reason); } catch (e) {}
+    container.innerHTML =
+      '<div style="font-size:11px;color:#a33;text-align:center;padding:6px 4px;line-height:1.4;">' +
+      "QR-Code konnte hier nicht angezeigt werden" +
+      (reason ? " (" + String(reason).slice(0, 120) + ")" : "") +
+      ". Bitte den Link oben verwenden.</div>";
+  }
+
   function renderQrCode(container, text, retriesLeft) {
     if (!container) return;
     if (typeof global.qrcode !== "function") {
@@ -611,7 +626,7 @@
         global.setTimeout(() => renderQrCode(container, text, retriesLeft - 1), 200);
         return;
       }
-      container.innerHTML = "";
+      showQrFallback(container, "QR-Bibliothek nicht geladen");
       return;
     }
     try {
@@ -638,15 +653,25 @@
           }
         }
       }
+      const dataUrl = canvas.toDataURL("image/png");
+      if (!dataUrl || dataUrl === "data:," || dataUrl.indexOf("data:image/png") !== 0) {
+        /* Manche eingeschränkten/verwalteten Browser (z. B. Geräte-Profile
+           mit deaktivierter Canvas-Auslese gegen Fingerprinting) liefern
+           hier stillschweigend ein leeres oder ungültiges Ergebnis statt
+           eines Fehlers -- das muss explizit geprüft werden. */
+        showQrFallback(container, "Canvas liefert kein Bild (evtl. Geräte-Einschränkung)");
+        return;
+      }
       const img = document.createElement("img");
       img.width = size;
       img.height = size;
       img.alt = "QR-Code";
-      img.src = canvas.toDataURL("image/png");
+      img.onerror = () => showQrFallback(container, "Bild konnte nicht geladen werden");
+      img.src = dataUrl;
       container.innerHTML = "";
       container.appendChild(img);
     } catch (e) {
-      container.innerHTML = "";
+      showQrFallback(container, (e && e.message) || e);
     }
   }
 
