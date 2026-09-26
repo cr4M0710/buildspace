@@ -396,24 +396,38 @@ function renderStudentsPanel() {
     ${students.length ? '<button class="btn btn-ghost" style="margin-top:12px" onclick="printStudentCodes()">Alle Codes drucken</button>' : ""}
   `;
 }
-function addStudent() {
+async function addStudent() {
   const input = document.getElementById("newStudentName");
   const pseudonym = input.value.trim();
   const msg = document.getElementById("studentMsg");
   if (!pseudonym) { msg.innerHTML = '<div class="msg msg-error">Bitte ein Kürzel/Pseudonym eingeben.</div>'; return; }
-  const code = genCode();
-  db.collection("students").doc(code).set({
-    ownerUid: currentTeacher.user.uid,
-    classId: selectedClassId,
-    pseudonym,
-    createdAt: Date.now()
-  }).then(() => {
+  const btn = document.querySelector("#studentsPanel .btn-primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Wird angelegt …"; }
+  try {
+    /* Wie bei den Team-Kanban-Codes (siehe kanban-board.html createBoards()):
+       auf einen bereits vergebenen Code pruefen, bevor er verwendet wird --
+       bei 6 Zeichen aus 32 moeglichen so gut wie nie noetig, aber kostet
+       nichts und schliesst Kollisionen sauber aus. */
+    let code, exists = true;
+    while (exists) {
+      code = genCode();
+      const snap = await db.collection("students").doc(code).get();
+      exists = snap.exists;
+    }
+    await db.collection("students").doc(code).set({
+      ownerUid: currentTeacher.user.uid,
+      classId: selectedClassId,
+      pseudonym,
+      createdAt: Date.now()
+    });
     input.value = "";
     msg.innerHTML = "";
     loadStudentsForClass(selectedClassId);
-  }).catch(err => {
+  } catch (err) {
     msg.innerHTML = `<div class="msg msg-error">Fehler: ${esc(err.message)}</div>`;
-  });
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "+ Hinzufügen"; }
+  }
 }
 function deleteStudent(code) {
   if (!confirm("Diese/n Schüler:in entfernen? Der Zugangscode funktioniert danach nicht mehr.")) return;
