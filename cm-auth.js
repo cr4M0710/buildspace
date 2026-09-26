@@ -1,13 +1,19 @@
 /* ---------------------------------------------------------
    cm-auth.js
-   Echte Anmeldung per E-Mail-Link (passwortlos, Firebase Auth) für den
-   Bereich "Classroom Management" -- ersetzt das bisherige, einfache
+   Echte Anmeldung per Google-Konto (Firebase Auth) für den Bereich
+   "Classroom Management" -- ersetzt das bisherige, einfache
    Lehrkraft-Kennwort dort durch eine individuelle Anmeldung: jede
    Lehrkraft bekommt ein eigenes Konto (statt eines geteilten Kennworts),
    muss sich aber einmalig von Marc freischalten lassen, bevor der
    Zugang tatsächlich funktioniert (Warteliste in Firestore, Sammlung
    "teachers"). So bleibt der Bereich unter Kontrolle, auch wenn
-   grundsätzlich jede E-Mail-Adresse eine Anfrage stellen kann.
+   grundsätzlich jedes Google-Konto eine Anfrage stellen kann.
+   (Ursprünglich per E-Mail-Link umgesetzt -- der Anmelde-Link landete im
+   echten Test aber zuverlässig im Spam-Ordner und dort auch nur auf dem
+   Handy, nicht auf dem Desktop, weshalb hier auf Google-Anmeldung
+   umgestellt wurde. Die Warteliste/Freischaltung und die Firestore-Regeln
+   sind davon unberührt, da beide Anmeldearten dieselbe E-Mail-Adresse in
+   request.auth.token.email liefern.)
 
    WICHTIG zum Sicherheitsmodell (bitte im Kopf behalten, bevor hier
    echte Schüler:innen-Daten hinterlegt werden): Diese Seite ist eine
@@ -40,8 +46,6 @@
      der eigenen Warteliste zu landen -- sonst könnte sich Marc versehentlich
      selbst aussperren. Bei Bedarf hier weitere Admin-Adressen ergänzen. */
   const ADMIN_EMAILS = ["marcstroh11@googlemail.com"];
-
-  const PENDING_EMAIL_KEY = "buildspace_cm_pending_email";
 
   function isAdminEmail(email) {
     return !!email && ADMIN_EMAILS.indexOf(email.toLowerCase()) !== -1;
@@ -76,46 +80,42 @@
     return readyPromise;
   }
 
-  /* Schickt den Anmelde-Link an die angegebene Adresse. actionCodeSettings.url
-     ist bewusst die aktuelle Seite (location.href), damit man nach dem Klick
-     auf den Link genau dort wieder landet, wo man sich angemeldet hat. Diese
-     Domain muss in der Firebase-Konsole unter Authentication -> Settings ->
-     Authorized domains eingetragen sein (siehe Anleitung an Marc). */
-  function sendLoginLink(email) {
+  /* Anmeldung per Google-Konto statt per E-Mail-Link -- der E-Mail-Link kam
+     bei einem echten Test zuverlässig im Spam-Ordner an (und dort nur auf
+     dem Handy, nicht auf dem Desktop), was für den täglichen Gebrauch
+     ungeeignet ist. Google-Anmeldung braucht keinen Versand, funktioniert
+     auf jedem Gerät gleich und liefert trotzdem automatisch eine echte
+     E-Mail-Adresse (in request.auth.token.email) -- die Warteliste/
+     Freischaltung unten sowie die Firestore-Regeln bleiben dadurch
+     komplett unverändert.
+     Zuerst wird ein Popup versucht (schnellste, unterbrechungsfreie
+     Variante). Schlägt das aus technischen Gründen fehl -- z. B. blockiert
+     der Browser Popups, oder die Seite läuft als installierte
+     Startbildschirm-App, wo es gar keine Popup-Fenster gibt -- wird
+     automatisch auf eine Weiterleitung (signInWithRedirect) ausgewichen,
+     die praktisch überall funktioniert. Bricht die Lehrkraft das
+     Google-Fenster selbst ab, wird das nicht als Fehler behandelt. */
+  function signInWithGoogle() {
     return init().then(({ auth }) => {
-      const actionCodeSettings = { url: location.href, handleCodeInApp: true };
-      return auth.sendSignInLinkToEmail(email, actionCodeSettings).then(() => {
-        try { localStorage.setItem(PENDING_EMAIL_KEY, email); } catch (e) {}
+      const provider = new global.firebase.auth.GoogleAuthProvider();
+      return auth.signInWithPopup(provider).catch((err) => {
+        const code = err && err.code;
+        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+          return null;
+        }
+        if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+          return auth.signInWithRedirect(provider);
+        }
+        throw err;
       });
     });
   }
 
   /* Muss auf jeder Seite, die diese Anmeldung nutzt, beim Laden aufgerufen
-     werden. Erkennt, ob die aktuelle Adresse ein Anmelde-Link ist, meldet
-     bei Bedarf an und räumt die Adresszeile danach wieder auf (die langen
-     Firebase-Parameter sollen nicht stehen bleiben). Löst mit true auf,
-     wenn tatsächlich ein Link verarbeitet wurde -- sonst false. Wird die
-     E-Mail-Adresse nicht mehr im selben Browser gefunden (z. B. Link auf
-     einem anderen Gerät geöffnet), wird sie erneut abgefragt. */
-  function completeLoginFromLink(promptForEmail) {
-    return init().then(({ auth }) => {
-      if (!auth.isSignInWithEmailLink(location.href)) return false;
-      let email = null;
-      try { email = localStorage.getItem(PENDING_EMAIL_KEY); } catch (e) {}
-      if (!email && typeof promptForEmail === "function") {
-        email = promptForEmail();
-      }
-      if (!email) return false;
-      return auth.signInWithEmailLink(email, location.href).then(() => {
-        try { localStorage.removeItem(PENDING_EMAIL_KEY); } catch (e) {}
-        try {
-          const url = new URL(location.href);
-          ["apiKey", "oobCode", "mode", "lang", "continueUrl"].forEach((k) => url.searchParams.delete(k));
-          history.replaceState(null, "", url.pathname + url.search + url.hash);
-        } catch (e) {}
-        return true;
-      });
-    });
+     werden, um eine per signInWithRedirect begonnene Anmeldung abzuschließen
+     (nach einem Popup ist das ein no-op, schadet aber nicht). */
+  function completeRedirectSignIn() {
+    return init().then(({ auth }) => auth.getRedirectResult());
   }
 
   function teacherDocRef(db, uid) {
@@ -183,8 +183,8 @@
 
   global.CmAuth = {
     init: init,
-    sendLoginLink: sendLoginLink,
-    completeLoginFromLink: completeLoginFromLink,
+    signInWithGoogle: signInWithGoogle,
+    completeRedirectSignIn: completeRedirectSignIn,
     onAuthChange: onAuthChange,
     signOut: signOut,
     listPendingTeachers: listPendingTeachers,

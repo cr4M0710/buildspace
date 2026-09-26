@@ -503,7 +503,7 @@
   }
 
   /* ---------------------------------------------------------
-     Classroom Management -- eigene, echte Anmeldung per E-Mail-Link
+     Classroom Management -- eigene, echte Anmeldung per Google-Konto
      (Firebase Auth, siehe cm-auth.js), unabhängig vom normalen
      Zugriffslevel oben. Ersetzt das frühere geteilte Lehrkraft-Kennwort:
      jede Lehrkraft bekommt ein eigenes Konto, muss aber erst von Marc
@@ -542,38 +542,28 @@
     return wrap;
   }
 
-  function showCmEmailForm(CmAuth, message) {
+  function showCmGoogleSignIn(CmAuth) {
     const wrap = renderCmGateCard(
       "<h2>Classroom Management</h2>" +
-        '<p class="protect-sub">Dieser Bereich sammelt deine eigene Unterrichtsorganisation und ist nicht für Lernende gedacht. Melde dich mit deiner E-Mail-Adresse an -- du bekommst einen Anmelde-Link zugeschickt.</p>' +
-        (message ? '<div class="protect-error" style="color:#3a7d3a;">' + message + "</div>" : "") +
-        '<form id="protect-form" autocomplete="off">' +
-          '<input type="email" id="protect-input" placeholder="E-Mail-Adresse" autofocus />' +
-          '<button type="submit" class="protect-submit">Anmelde-Link senden</button>' +
-        "</form>" +
+        '<p class="protect-sub">Dieser Bereich sammelt deine eigene Unterrichtsorganisation und ist nicht für Lernende gedacht. Melde dich mit deinem Google-Konto an.</p>' +
+        '<button type="button" class="protect-submit" id="protect-google-btn">Mit Google anmelden</button>' +
         '<div class="protect-error" id="protect-error"></div>' +
         '<button type="button" class="protect-alt" id="protect-home-btn">Zurück</button>'
     );
-    const form = wrap.querySelector("#protect-form");
-    const input = wrap.querySelector("#protect-input");
+    const btn = wrap.querySelector("#protect-google-btn");
     const errorEl = wrap.querySelector("#protect-error");
-    setTimeout(() => input.focus(), 30);
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const email = input.value.trim();
-      if (!email || email.indexOf("@") === -1) {
-        errorEl.textContent = "Bitte eine gültige E-Mail-Adresse eingeben.";
-        return;
-      }
-      form.querySelector(".protect-submit").disabled = true;
-      CmAuth.sendLoginLink(email)
-        .then(() => {
-          showCmEmailForm(CmAuth, "Link verschickt! Bitte E-Mail-Postfach (auf diesem Gerät) prüfen und den Link öffnen.");
-        })
-        .catch((err) => {
-          errorEl.textContent = "Konnte den Link nicht verschicken (" + ((err && err.message) || err) + ").";
-          form.querySelector(".protect-submit").disabled = false;
-        });
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      errorEl.textContent = "";
+      CmAuth.signInWithGoogle().catch((err) => {
+        errorEl.textContent = "Anmeldung fehlgeschlagen (" + ((err && err.message) || err) + ").";
+        btn.disabled = false;
+      });
+      /* Bei Erfolg (Popup) übernimmt der onAuthChange-Listener aus
+         guardClassroomManagement automatisch die Weiterleitung zum
+         nächsten Schritt -- hier ist nichts weiter zu tun. Bei einer
+         Weiterleitung (signInWithRedirect) verlässt die Seite ohnehin
+         gleich die aktuelle Ansicht. */
     });
     wrap.querySelector("#protect-home-btn").addEventListener("click", function () {
       closeOverlay();
@@ -618,15 +608,12 @@
     showCmLoading();
     loadCmAuth()
       .then((CmAuth) => {
-        function promptForEmail() {
-          return window.prompt("Bitte gib deine E-Mail-Adresse erneut ein, um die Anmeldung abzuschließen:");
-        }
-        CmAuth.completeLoginFromLink(promptForEmail)
+        CmAuth.completeRedirectSignIn()
           .catch(() => {})
           .then(() => {
             CmAuth.onAuthChange((info) => {
               if (!info) {
-                showCmEmailForm(CmAuth);
+                showCmGoogleSignIn(CmAuth);
                 return;
               }
               if (info.error) {
