@@ -219,7 +219,20 @@ function logoutLearner() {
 }
 
 function loadProjects() {
-  db.collection("projects").where("classId", "==", studentDoc.classId).get()
+  /* WICHTIG: nach "published" filtern, NICHT nach "classId" -- die
+     Firestore-Regel für "projects" erlaubt Lesezugriff ohne Anmeldung nur
+     für resource.data.published == true. Firestore muss bei einer Liste-
+     Abfrage beweisen können, dass ALLE potenziell passenden Dokumente die
+     Regel erfüllen; bei "classId == X" allein wären auch unveröffentlichte
+     Entwürfe derselben Klasse im potenziellen Ergebnis, die die Regel NICHT
+     erfüllen -- die gesamte Abfrage würde dann mit "Missing or insufficient
+     permissions" abgelehnt, obwohl passende veröffentlichte Projekte
+     existieren (das war genau der hier aufgetretene Fehler). Mit
+     "published == true" als Server-Filter kann Firestore das dagegen für
+     jedes Dokument im Ergebnis beweisen. classId wird stattdessen im
+     Browser gefiltert -- weiterhin nur EIN Gleichheits-where auf
+     Server-Seite, wie an anderer Stelle in diesem Projekt etabliert. */
+  db.collection("projects").where("published", "==", true).get()
     .then((snap) => {
       /* Ein Projekt bleibt nur bis zum optionalen "sichtbar bis"-Zeitpunkt
          sichtbar (siehe kurse-projekte.html isProjectVisibleNow()) -- danach
@@ -227,7 +240,7 @@ function loadProjects() {
          Datenbank weiterhin true ist. */
       projects = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((p) => p.published && (!p.visibleUntil || Date.now() < p.visibleUntil))
+        .filter((p) => p.classId === studentDoc.classId && (!p.visibleUntil || Date.now() < p.visibleUntil))
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       return loadProgress();
     })
@@ -243,13 +256,29 @@ function loadProjects() {
         `<div class="msg msg-error">Aufgaben konnten nicht geladen werden (${esc(err.message)}).</div>`;
     });
 }
+/* WICHTIG: bewusst OHNE where("code", "==", ...)-Listenabfrage. Die
+   Firestore-Regel für "taskProgress" erlaubt ohne Anmeldung nur einzelne
+   Dokument-Abrufe über die (aus Code + Aufgaben-ID zusammengesetzte,
+   schwer erratbare) Dokument-ID -- "list" bleibt dort bewusst der
+   Lehrkraft vorbehalten (siehe Regeln), sonst könnte man durch eine leere
+   oder beliebig gefilterte Listenabfrage den gesamten Fortschritt aller
+   Klassen/Schulen abgreifen und darüber sogar an fremde Zugangscodes
+   gelangen. Stattdessen wird pro sichtbarer Aufgabe gezielt genau das eine
+   erwartete Dokument (Code_AufgabenID) einzeln abgerufen -- das ist ein
+   "get", kein "list", und dafür ist der Zugriff ausdrücklich offen. */
 function loadProgress() {
-  return db.collection("taskProgress").where("code", "==", studentDoc.code).get()
-    .then((snap) => {
-      const map = {};
-      snap.docs.forEach((d) => { map[d.data().taskId] = d.data().status; });
-      return map;
-    });
+  const taskIds = [];
+  projects.forEach((p) => (p.tasks || []).forEach((t) => taskIds.push(t.id)));
+  return Promise.all(
+    taskIds.map((taskId) =>
+      db.collection("taskProgress").doc(studentDoc.code + "_" + taskId).get()
+        .then((snap) => ({ taskId, status: snap.exists ? snap.data().status : null }))
+    )
+  ).then((results) => {
+    const map = {};
+    results.forEach((r) => { if (r.status) map[r.taskId] = r.status; });
+    return map;
+  });
 }
 function renderProjects(progressByTaskId) {
   const wrap = document.getElementById("projectsWrap");
