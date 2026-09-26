@@ -41,19 +41,6 @@
     kollegen: "Kolleg:innen-Bereich"
   };
   const ACCESS_KEY = "buildspace_access_v1";
-  /* Zusätzliche, unabhängige Freischaltung nur für den Ordner "Classroom
-     Management" (Schule → Fächerübergreifend, siehe app.js). Dort sammelt
-     Marc zunehmend eigene Unterrichtsorganisation statt nur Lernwerkzeuge
-     -- das ist nicht für Lernende gedacht, auch wenn diese über
-     Gast-/Kolleg:innen-Zugriff sonst den ganzen Bereich "Schule" sehen
-     dürfen. Deshalb ein zweites, vom normalen Zugriffslevel unabhängiges
-     Kennwort-Gate direkt vor dieser einen Unterordner-Ansicht (siehe
-     guardClassroomManagement in app.js / renderSubfolderUnlocked).
-     Verwendet bewusst dasselbe Kennwort wie PASSWORD oben (genau wie schon
-     das eigene Lehrkraft-Kennwort in kanban-board.html) -- kein zweites
-     Kennwort zum Merken, aber ein eigener, unabhängiger "Bist du sicher"-
-     Schritt nur für diesen einen Ordner. */
-  const CM_UNLOCK_KEY = "buildspace_cm_unlock_v1";
   const INSTALL_DISMISS_KEY = "buildspace_install_dismissed_until";
   const LOCK_SVG =
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
@@ -516,62 +503,146 @@
   }
 
   /* ---------------------------------------------------------
-     Classroom Management -- eigenes Gate, unabhängig vom normalen
-     Zugriffslevel (siehe CM_UNLOCK_KEY oben). Einmal richtig eingegeben,
-     gilt es dauerhaft für dieses Gerät/diesen Browser (localStorage),
-     genau wie die normale Anmeldung. */
-  function isClassroomManagementUnlocked() {
-    try { return localStorage.getItem(CM_UNLOCK_KEY) === "1"; } catch (e) { return false; }
+     Classroom Management -- eigene, echte Anmeldung per E-Mail-Link
+     (Firebase Auth, siehe cm-auth.js), unabhängig vom normalen
+     Zugriffslevel oben. Ersetzt das frühere geteilte Lehrkraft-Kennwort:
+     jede Lehrkraft bekommt ein eigenes Konto, muss aber erst von Marc
+     (Admin) freigeschaltet werden (Warteliste in Firestore). onUnlock
+     bekommt { user, status, isAdmin } übergeben, damit z. B. app.js dem
+     Admin zusätzlich eine Warteliste zum Freischalten anzeigen kann. */
+  let cmAuthReadyPromise = null;
+  let CM_AUTH_SRC = "cm-auth.js";
+  (function captureCmAuthSrc() {
+    const scriptTag = document.currentScript;
+    const raw = scriptTag && scriptTag.getAttribute("src");
+    if (raw) CM_AUTH_SRC = raw.replace(/protect\.js(?:\?.*)?$/, "cm-auth.js");
+  })();
+  function loadCmAuth() {
+    if (cmAuthReadyPromise) return cmAuthReadyPromise;
+    cmAuthReadyPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = CM_AUTH_SRC;
+      s.onload = () => resolve(global.CmAuth);
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    return cmAuthReadyPromise;
   }
-  function unlockClassroomManagement() {
-    try { localStorage.setItem(CM_UNLOCK_KEY, "1"); } catch (e) {}
+
+  function renderCmGateCard(inner) {
+    let wrap = document.getElementById("protect-overlay");
+    if (!wrap) {
+      ensureStyle();
+      document.documentElement.classList.add("protect-open");
+      wrap = document.createElement("div");
+      wrap.id = "protect-overlay";
+      document.body.appendChild(wrap);
+    }
+    wrap.innerHTML = '<div class="protect-card">' + '<div class="protect-icon">' + LOCK_SVG + "</div>" + inner + "</div>";
+    return wrap;
   }
-  function showClassroomManagementGate(onUnlock) {
-    ensureStyle();
-    document.documentElement.classList.add("protect-open");
-    const wrap = document.createElement("div");
-    wrap.id = "protect-overlay";
-    wrap.innerHTML =
-      '<div class="protect-card">' +
-        '<div class="protect-icon">' + LOCK_SVG + "</div>" +
-        "<h2>Classroom Management</h2>" +
-        '<p class="protect-sub">Dieser Bereich sammelt deine eigene Unterrichtsorganisation und ist nicht für Lernende gedacht -- bitte Lehrkraft-Kennwort eingeben.</p>' +
+
+  function showCmEmailForm(CmAuth, message) {
+    const wrap = renderCmGateCard(
+      "<h2>Classroom Management</h2>" +
+        '<p class="protect-sub">Dieser Bereich sammelt deine eigene Unterrichtsorganisation und ist nicht für Lernende gedacht. Melde dich mit deiner E-Mail-Adresse an -- du bekommst einen Anmelde-Link zugeschickt.</p>' +
+        (message ? '<div class="protect-error" style="color:#3a7d3a;">' + message + "</div>" : "") +
         '<form id="protect-form" autocomplete="off">' +
-          '<input type="password" id="protect-input" placeholder="Kennwort" autofocus />' +
-          '<button type="submit" class="protect-submit">Freischalten</button>' +
+          '<input type="email" id="protect-input" placeholder="E-Mail-Adresse" autofocus />' +
+          '<button type="submit" class="protect-submit">Anmelde-Link senden</button>' +
         "</form>" +
         '<div class="protect-error" id="protect-error"></div>' +
-        '<button type="button" class="protect-alt" id="protect-home-btn">Zurück</button>' +
-      "</div>";
-    document.body.appendChild(wrap);
+        '<button type="button" class="protect-alt" id="protect-home-btn">Zurück</button>'
+    );
     const form = wrap.querySelector("#protect-form");
     const input = wrap.querySelector("#protect-input");
     const errorEl = wrap.querySelector("#protect-error");
-    const backBtn = wrap.querySelector("#protect-home-btn");
     setTimeout(() => input.focus(), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      if (input.value === PASSWORD) {
-        unlockClassroomManagement();
-        closeOverlay();
-        onUnlock();
-      } else {
-        errorEl.textContent = "Falsches Kennwort — bitte erneut versuchen.";
-        input.value = "";
-        input.focus();
+      const email = input.value.trim();
+      if (!email || email.indexOf("@") === -1) {
+        errorEl.textContent = "Bitte eine gültige E-Mail-Adresse eingeben.";
+        return;
       }
+      form.querySelector(".protect-submit").disabled = true;
+      CmAuth.sendLoginLink(email)
+        .then(() => {
+          showCmEmailForm(CmAuth, "Link verschickt! Bitte E-Mail-Postfach (auf diesem Gerät) prüfen und den Link öffnen.");
+        })
+        .catch((err) => {
+          errorEl.textContent = "Konnte den Link nicht verschicken (" + ((err && err.message) || err) + ").";
+          form.querySelector(".protect-submit").disabled = false;
+        });
     });
-    backBtn.addEventListener("click", function () {
+    wrap.querySelector("#protect-home-btn").addEventListener("click", function () {
       closeOverlay();
       location.hash = "#/schule";
     });
   }
+
+  function showCmPending(CmAuth, email) {
+    renderCmGateCard(
+      "<h2>Zugang wartet auf Freischaltung</h2>" +
+        '<p class="protect-sub">Angemeldet als <strong>' + escapeHtmlLocal(email || "") + "</strong>. Marc muss diesen Zugang erst freischalten, bevor Classroom Management nutzbar ist.</p>" +
+        '<button type="button" class="protect-alt" id="protect-cm-logout">Abmelden</button>'
+    ).querySelector("#protect-cm-logout").addEventListener("click", function () {
+      CmAuth.signOut();
+    });
+  }
+
+  function showCmLoadError(CmAuth, err) {
+    renderCmGateCard(
+      "<h2>Anmeldung nicht erreichbar</h2>" +
+        '<p class="protect-sub">Die Anmeldung für Classroom Management konnte nicht geladen werden (evtl. kein Netzwerkzugriff auf Google/Firebase). Bitte Internetverbindung prüfen und erneut versuchen.</p>' +
+        '<div class="protect-error">' + escapeHtmlLocal((err && err.message) || String(err)) + "</div>" +
+        '<button type="button" class="protect-submit" id="protect-cm-retry">Erneut versuchen</button>' +
+        '<button type="button" class="protect-alt" id="protect-home-btn">Zurück</button>'
+    );
+    document.getElementById("protect-cm-retry").addEventListener("click", () => location.reload());
+    document.getElementById("protect-home-btn").addEventListener("click", () => {
+      closeOverlay();
+      location.hash = "#/schule";
+    });
+  }
+
+  /* Blendet einen kurzen "Lädt…"-Zustand ein, solange die erste Antwort
+     von Firebase noch aussteht -- verhindert, dass beim Öffnen kurz eine
+     leere Fläche zu sehen ist, bevor der eigentliche Anmeldezustand
+     feststeht. */
+  function showCmLoading() {
+    renderCmGateCard("<h2>Classroom Management</h2><p class=\"protect-sub\">Lädt…</p>");
+  }
+
   function guardClassroomManagement(onUnlock) {
-    if (isClassroomManagementUnlocked()) {
-      onUnlock();
-      return;
-    }
-    showClassroomManagementGate(onUnlock);
+    showCmLoading();
+    loadCmAuth()
+      .then((CmAuth) => {
+        function promptForEmail() {
+          return window.prompt("Bitte gib deine E-Mail-Adresse erneut ein, um die Anmeldung abzuschließen:");
+        }
+        CmAuth.completeLoginFromLink(promptForEmail)
+          .catch(() => {})
+          .then(() => {
+            CmAuth.onAuthChange((info) => {
+              if (!info) {
+                showCmEmailForm(CmAuth);
+                return;
+              }
+              if (info.error) {
+                showCmLoadError(CmAuth, info.error);
+                return;
+              }
+              if (info.status === "approved") {
+                closeOverlay();
+                onUnlock(info);
+                return;
+              }
+              showCmPending(CmAuth, info.user.email);
+            });
+          });
+      })
+      .catch((err) => showCmLoadError(null, err));
   }
 
   /* Wird gezeigt, wenn ein Werkzeug über einen gültigen Kursmappen- oder
@@ -1382,8 +1453,7 @@
     HIGHSCORE_FILES: HIGHSCORE_FILES,
     ensureStyle: ensureStyle,
     closeOverlay: closeOverlay,
-    guardClassroomManagement: guardClassroomManagement,
-    isClassroomManagementUnlocked: isClassroomManagementUnlocked
+    guardClassroomManagement: guardClassroomManagement
   };
 
   initStandalone();

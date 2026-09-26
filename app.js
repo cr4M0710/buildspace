@@ -708,13 +708,17 @@ function renderSubfolderUnlocked(id, subId) {
      überhaupt erreicht hat (Passwort, Kolleg:innen-Kennwort, Gast oder
      Freigabe-Link) -- alle Wege laufen hier zusammen. */
   if (id === "schule" && subId === "faecheruebergreifend" && window.Protect && typeof window.Protect.guardClassroomManagement === "function") {
-    window.Protect.guardClassroomManagement(() => renderSubfolderContent(id, subId));
+    window.Protect.guardClassroomManagement((cmAuthInfo) => renderSubfolderContent(id, subId, cmAuthInfo));
     return;
   }
   renderSubfolderContent(id, subId);
 }
 
-function renderSubfolderContent(id, subId) {
+/* cmAuthInfo ist nur bei "schule/faecheruebergreifend" gesetzt (siehe oben)
+   und enthält { user, status, isAdmin } aus der Classroom-Management-
+   Anmeldung -- für den Admin (Marc) blenden wir hier zusätzlich eine
+   Warteliste ein, um neu angemeldete Lehrkräfte freizuschalten. */
+function renderSubfolderContent(id, subId, cmAuthInfo) {
   const folder = folderStructure[id];
   const sub = folder.subfolders.find((s) => s.id === subId);
   const label = sub ? subfolderLabel(subId) : subId;
@@ -723,9 +727,59 @@ function renderSubfolderContent(id, subId) {
   const list = posts.filter((p) => p.category === id && p.subcategory === subId);
   content.innerHTML = `
     <h1 class="section-label">${folderLabel(id)} — ${label}</h1>
+    ${cmAuthInfo ? '<div id="cm-account-bar" class="cm-account-bar"></div>' : ""}
+    ${cmAuthInfo && cmAuthInfo.isAdmin ? '<div id="cm-admin-panel" class="cm-admin-panel"></div>' : ""}
     ${renderPostList(list)}
   `;
   if (window.Protect) window.Protect.addShareButton(id);
+  if (cmAuthInfo) renderCmAccountBar(cmAuthInfo);
+  if (cmAuthInfo && cmAuthInfo.isAdmin) renderCmAdminPanel();
+}
+
+function renderCmAccountBar(cmAuthInfo) {
+  const bar = document.getElementById("cm-account-bar");
+  if (!bar) return;
+  bar.innerHTML =
+    `<span>Angemeldet als <strong>${cmAuthInfo.user.email}</strong></span>` +
+    `<button type="button" id="cm-logout-btn" class="cm-logout-btn">Abmelden</button>`;
+  bar.querySelector("#cm-logout-btn").addEventListener("click", () => {
+    if (window.CmAuth) window.CmAuth.signOut().then(() => location.reload());
+  });
+}
+
+function renderCmAdminPanel() {
+  const panel = document.getElementById("cm-admin-panel");
+  if (!panel || !window.CmAuth) return;
+  panel.innerHTML = `<p class="muted small">Lade Warteliste…</p>`;
+  window.CmAuth.listPendingTeachers().then((pending) => {
+    if (!pending.length) {
+      panel.innerHTML = "";
+      return;
+    }
+    panel.innerHTML =
+      `<h2 class="cm-admin-title">Warteliste (${pending.length})</h2>` +
+      pending
+        .map(
+          (p) =>
+            `<div class="cm-admin-row" data-uid="${p.uid}"><span>${p.email}</span><button type="button" class="cm-approve-btn">Freischalten</button></div>`
+        )
+        .join("");
+    panel.querySelectorAll(".cm-approve-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest(".cm-admin-row");
+        const uid = row.dataset.uid;
+        btn.disabled = true;
+        btn.textContent = "Wird freigeschaltet…";
+        window.CmAuth.approveTeacher(uid).then(() => {
+          row.remove();
+          const title = panel.querySelector(".cm-admin-title");
+          const remaining = panel.querySelectorAll(".cm-admin-row").length;
+          if (!remaining) panel.innerHTML = "";
+          else if (title) title.textContent = `Warteliste (${remaining})`;
+        });
+      });
+    });
+  });
 }
 
 /* ---------------------------------------------------------
