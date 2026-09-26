@@ -75,7 +75,25 @@
   .status-select.status-fertig{color:var(--accent);border-color:var(--accent);}
 
   .empty-hint{color:var(--ink-soft);font-size:.92rem;padding:10px 4px;}
+
+  .richtext-content{line-height:1.5;font-size:.92rem;}
+  .richtext-content h3{font-size:1rem;margin:.5em 0 .2em;}
+  .richtext-content ul,.richtext-content ol{margin:.3em 0;padding-left:1.3em;}
+  .richtext-content p{margin:.4em 0;}
+
+  .chip-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:5px 12px;font-size:.8rem;text-decoration:none;}
+  a.chip{cursor:pointer;}
+  .chip button{border:none;background:none;color:inherit;cursor:pointer;font-size:.9em;padding:0;line-height:1;}
+
+  .task-submission{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+  .task-submission label{margin-top:0;}
+  .task-submission textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.88rem;font-family:inherit;min-height:70px;background:#fffefc;color:var(--ink);}
+  .task-item{display:block;padding:14px 0;border-bottom:1px solid var(--border);}
+  .task-item:last-child{border-bottom:none;}
+  .task-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 </style>
+<script defer src="richtext.js"></script>
 </head>
 <body>
 
@@ -139,6 +157,7 @@ const FIREBASE_CONFIG = {
 const CODE_KEY = "lernbereich_code";
 
 let db = null;
+let storage = null; // firebase.storage(), für Datei-Abgaben
 let studentDoc = null; // { code, pseudonym, classId, ownerUid }
 let projects = [];
 
@@ -148,12 +167,16 @@ function esc(s) {
 
 function ensureFirebase() {
   if (window.firebase && (firebase.apps || []).length) return Promise.resolve();
-  return Promise.all([
-    loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"),
-    loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js")
-  ]).then(() => {
-    firebase.initializeApp(FIREBASE_CONFIG);
-  });
+  return loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js")
+    .then(() => Promise.all([
+      loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"),
+      /* Storage: damit Lernende eigene Dateien zu einer Aufgabe abgeben
+         können (siehe uploadSubmissionFile()). */
+      loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js")
+    ]))
+    .then(() => {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    });
 }
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -189,6 +212,7 @@ function tryCode(code) {
   ensureFirebase()
     .then(() => {
       db = firebase.firestore();
+      storage = firebase.storage();
       return db.collection("students").doc(code).get();
     })
     .then((snap) => {
@@ -272,11 +296,11 @@ function loadProgress() {
   return Promise.all(
     taskIds.map((taskId) =>
       db.collection("taskProgress").doc(studentDoc.code + "_" + taskId).get()
-        .then((snap) => ({ taskId, status: snap.exists ? snap.data().status : null }))
+        .then((snap) => ({ taskId, data: snap.exists ? snap.data() : null }))
     )
   ).then((results) => {
     const map = {};
-    results.forEach((r) => { if (r.status) map[r.taskId] = r.status; });
+    results.forEach((r) => { if (r.data) map[r.taskId] = r.data; });
     return map;
   });
 }
@@ -286,24 +310,48 @@ function renderProjects(progressByTaskId) {
     wrap.innerHTML = '<p class="empty-hint">Für dich sind aktuell keine Projekte freigegeben. Frag gerne deine Lehrkraft.</p>';
     return;
   }
-  const statusLabel = { offen: "Offen", in_arbeit: "In Arbeit", fertig: "Fertig" };
   wrap.innerHTML = projects.map((p) => `
     <div class="card project-card">
       <h3>${esc(p.title)}</h3>
-      ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : ""}
-      ${(p.tasks || []).length ? (p.tasks || []).map((t) => {
-        const status = progressByTaskId[t.id] || "offen";
-        return `
-          <div class="task-item">
-            <span class="task-title">${esc(t.title)}</span>
-            <select class="status-select status-${status}" onchange="updateStatus('${t.id}', this)">
-              ${Object.keys(statusLabel).map((s) => `<option value="${s}" ${s === status ? "selected" : ""}>${statusLabel[s]}</option>`).join("")}
-            </select>
-          </div>
-        `;
-      }).join("") : '<p class="empty-hint">Noch keine Aufgaben in diesem Projekt.</p>'}
+      ${p.description ? `<div class="richtext-content project-desc">${RichText.sanitize(p.description)}</div>` : ""}
+      ${(p.tasks || []).length ? (p.tasks || []).map((t) => renderTaskItem(t, progressByTaskId[t.id])).join("") : '<p class="empty-hint">Noch keine Aufgaben in diesem Projekt.</p>'}
     </div>
   `).join("");
+}
+/* Eine einzelne Aufgabe: Status, ausführliche (formatierte) Beschreibung,
+   Links/Dateien der Lehrkraft zum Anklicken/Herunterladen, sowie die
+   eigene Abgabe (Text + Dateien) der/des Lernenden. */
+function renderTaskItem(t, entry) {
+  const statusLabel = { offen: "Offen", in_arbeit: "In Arbeit", fertig: "Fertig" };
+  const status = (entry && entry.status) || "offen";
+  const links = t.links || [];
+  const files = t.files || [];
+  const subFiles = (entry && entry.submissionFiles) || [];
+  const subText = (entry && entry.submissionText) || "";
+  return `
+    <div class="task-item">
+      <div class="task-head">
+        <span class="task-title">${esc(t.title)}</span>
+        <select class="status-select status-${status}" onchange="updateStatus('${t.id}', this)">
+          ${Object.keys(statusLabel).map((s) => `<option value="${s}" ${s === status ? "selected" : ""}>${statusLabel[s]}</option>`).join("")}
+        </select>
+      </div>
+      ${t.description ? `<div class="richtext-content">${RichText.sanitize(t.description)}</div>` : ""}
+      ${links.length ? `<div class="chip-list">${links.map((l) => `<a class="chip" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">🔗 ${esc(l.label)}</a>`).join("")}</div>` : ""}
+      ${files.length ? `<div class="chip-list">${files.map((f) => `<a class="chip" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(f.name)}</a>`).join("")}</div>` : ""}
+      <div class="task-submission">
+        <label>Deine Abgabe</label>
+        <textarea id="subText-${t.id}" placeholder="Text zur Bearbeitung dieser Aufgabe…">${esc(subText)}</textarea>
+        ${subFiles.length ? `<div class="chip-list">${subFiles.map((f) => `<span class="chip"><a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">📎 ${esc(f.name)}</a> <button type="button" title="Entfernen" onclick="removeSubmissionFile('${t.id}','${f.id}')">✕</button></span>`).join("")}</div>` : ""}
+        <input type="file" id="subFileInput-${t.id}" class="hidden" onchange="uploadSubmissionFile('${t.id}', this)">
+        <div class="row" style="margin-top:8px;gap:8px">
+          <button class="btn btn-sm" type="button" onclick="document.getElementById('subFileInput-${t.id}').click()">📎 Datei hochladen</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="saveSubmissionText('${t.id}')">Text speichern</button>
+        </div>
+        <div id="subMsg-${t.id}"></div>
+      </div>
+    </div>
+  `;
 }
 function updateStatus(taskId, selectEl) {
   const status = selectEl.value;
@@ -317,6 +365,67 @@ function updateStatus(taskId, selectEl) {
     updatedAt: Date.now()
   }, { merge: true }).catch((err) => {
     alert("Speichern fehlgeschlagen: " + (err && err.message));
+  });
+}
+function saveSubmissionText(taskId) {
+  const textarea = document.getElementById("subText-" + taskId);
+  const msg = document.getElementById("subMsg-" + taskId);
+  const docId = studentDoc.code + "_" + taskId;
+  db.collection("taskProgress").doc(docId).set({
+    code: studentDoc.code,
+    ownerUid: studentDoc.ownerUid,
+    taskId,
+    submissionText: textarea.value,
+    updatedAt: Date.now()
+  }, { merge: true })
+    .then(() => { if (msg) { msg.innerHTML = '<div class="msg" style="background:var(--accent-soft);color:var(--accent)">Gespeichert.</div>'; setTimeout(() => { if (msg) msg.innerHTML = ""; }, 2000); } })
+    .catch((err) => { if (msg) msg.innerHTML = `<div class="msg msg-error">Speichern fehlgeschlagen (${esc(err.message)}).</div>`; });
+}
+/* Datei-Abgabe einer/eines Lernenden: Ablagepfad enthält den eigenen
+   Zugangscode und die Aufgaben-ID (beide schwer erratbar) -- dasselbe
+   "Sicherheit durch Unerratbarkeit"-Modell wie beim Zugangscode selbst,
+   siehe Storage-Regeln. */
+function uploadSubmissionFile(taskId, inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = "";
+  if (!file) return;
+  const msg = document.getElementById("subMsg-" + taskId);
+  if (file.size > 20 * 1024 * 1024) { msg.innerHTML = '<div class="msg msg-error">Datei zu groß (max. 20 MB).</div>'; return; }
+  msg.innerHTML = '<div class="msg">Wird hochgeladen …</div>';
+  const fileId = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "-" + Math.random())).slice(0, 24);
+  const path = `submissions/${studentDoc.ownerUid}/${studentDoc.code}_${taskId}/${fileId}_${file.name}`;
+  const docId = studentDoc.code + "_" + taskId;
+  storage.ref().child(path).put(file)
+    .then((snap) => snap.ref.getDownloadURL())
+    .then((url) => db.collection("taskProgress").doc(docId).get().then((snap) => {
+      const existingFiles = (snap.exists && snap.data().submissionFiles) || [];
+      return db.collection("taskProgress").doc(docId).set({
+        code: studentDoc.code,
+        ownerUid: studentDoc.ownerUid,
+        taskId,
+        submissionFiles: existingFiles.concat([{ id: fileId, name: file.name, url, path, size: file.size }]),
+        updatedAt: Date.now()
+      }, { merge: true });
+    }))
+    .then(() => loadProjects())
+    .catch((err) => { msg.innerHTML = `<div class="msg msg-error">Fehler beim Hochladen (${esc(err.message)}).</div>`; });
+}
+function removeSubmissionFile(taskId, fileId) {
+  const docId = studentDoc.code + "_" + taskId;
+  db.collection("taskProgress").doc(docId).get().then((snap) => {
+    const data = snap.exists ? snap.data() : {};
+    const files = data.submissionFiles || [];
+    const file = files.find((f) => f.id === fileId);
+    const remaining = files.filter((f) => f.id !== fileId);
+    const finish = () => db.collection("taskProgress").doc(docId).set({
+      code: studentDoc.code,
+      ownerUid: studentDoc.ownerUid,
+      taskId,
+      submissionFiles: remaining,
+      updatedAt: Date.now()
+    }, { merge: true }).then(() => loadProjects());
+    if (file && file.path) storage.ref().child(file.path).delete().then(finish).catch(finish);
+    else finish();
   });
 }
 

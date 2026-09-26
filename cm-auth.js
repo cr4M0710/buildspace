@@ -68,14 +68,19 @@
       .then(() =>
         Promise.all([
           loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"),
-          loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js")
+          loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"),
+          /* Storage: für Datei-Anhänge an Aufgaben (Kurse & Projekte) --
+             das Laden hier (statt separat auf jeder Seite) sorgt dafür,
+             dass firebase.storage() überall verfügbar ist, wo cm-auth.js
+             bereits eingebunden ist. */
+          loadScriptTag("https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js")
         ])
       )
       .then(() => {
         if (!global.firebase.apps || !global.firebase.apps.length) {
           global.firebase.initializeApp(FIREBASE_CONFIG);
         }
-        return { db: global.firebase.firestore(), auth: global.firebase.auth() };
+        return { db: global.firebase.firestore(), auth: global.firebase.auth(), storage: global.firebase.storage() };
       });
     return readyPromise;
   }
