@@ -277,7 +277,6 @@ const FIREBASE_CONFIG = {
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // ohne 0/O/1/I/L
 
 let db = null;
-let storage = null; // firebase.storage(), für Datei-Anhänge an Aufgaben
 let currentTeacher = null; // { user, status, isAdmin }
 let myClasses = [];
 let myStudentsByClass = {}; // classId -> [ {code, pseudonym, createdAt} ]
@@ -370,7 +369,6 @@ function boot() {
     currentTeacher = cmAuthInfo;
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    storage = firebase.storage();
     renderAccountBar();
     document.getElementById("view-loading").classList.add("hidden");
     document.getElementById("view-app").classList.remove("hidden");
@@ -741,13 +739,16 @@ function renderProjectCard(p) {
 }
 /* Eine einzelne Aufgabe: Titel direkt editierbar, darunter optional eine
    ausführliche formatierte Beschreibung (siehe richtext.js -- Fett/Kursiv/
-   Überschrift/Listen/Link, ähnlich einfachen fobizz-Aufgaben) sowie Links
-   und Dateien, die im Lernbereich zum Anklicken/Herunterladen erscheinen. */
+   Überschrift/Listen/Link, ähnlich einfachen fobizz-Aufgaben) sowie Links,
+   die im Lernbereich zum Anklicken erscheinen.
+   BEWUSST OHNE Datei-Upload: Cloud Storage würde in diesem Firebase-Projekt
+   ein kostenpflichtiges Upgrade (Blaze-Tarif) voraussetzen, das Marc nicht
+   möchte. Für Material zum Herunterladen nutzt Marc stattdessen einen Link
+   (z. B. auf eine Datei bei Google Drive) über die Link-Funktion unten. */
 function renderTaskCard(p, t) {
   const key = taskEditorKey(p.id, t.id);
   const open = openTaskEditors.has(key);
   const links = t.links || [];
-  const files = t.files || [];
   return `
     <div class="task-card">
       <div class="task-card-head">
@@ -755,10 +756,10 @@ function renderTaskCard(p, t) {
         <button class="btn btn-ghost btn-sm" style="flex:0 0 auto" onclick="toggleTaskEditor('${p.id}', '${t.id}')">${open ? "Schließen" : "✎ Details"}</button>
         <button class="btn btn-ghost btn-sm" style="flex:0 0 auto" onclick="removeTask('${p.id}', '${t.id}')">✕</button>
       </div>
-      ${!open && (t.description || links.length || files.length) ? `
+      ${!open && (t.description || links.length) ? `
         <div class="task-preview">
           ${t.description ? `<div class="richtext-content small muted">${RichText.sanitize(t.description)}</div>` : ""}
-          ${links.length || files.length ? `<div class="small muted" style="margin-top:4px">${links.length ? "🔗 " + links.length + " Link(s)" : ""}${links.length && files.length ? " · " : ""}${files.length ? "📎 " + files.length + " Datei(en)" : ""}</div>` : ""}
+          ${links.length ? `<div class="small muted" style="margin-top:4px">🔗 ${links.length} Link(s)</div>` : ""}
         </div>
       ` : ""}
       ${open ? `
@@ -768,7 +769,7 @@ function renderTaskCard(p, t) {
           <button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="saveTaskDescription('${p.id}', '${t.id}')">Beschreibung speichern</button>
           <div id="taskDescMsg-${p.id}-${t.id}"></div>
 
-          <label style="margin-top:16px">Links für Lernende</label>
+          <label style="margin-top:16px">Links für Lernende (z. B. zu Material bei Google Drive)</label>
           ${links.length ? `<div class="chip-list">${links.map(l => `
             <span class="chip"><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">🔗 ${esc(l.label)}</a> <button type="button" title="Entfernen" onclick="removeTaskLink('${p.id}','${t.id}','${l.id}')">✕</button></span>
           `).join("")}</div>` : '<p class="empty-hint" style="padding:4px 0">Noch keine Links.</p>'}
@@ -777,14 +778,6 @@ function renderTaskCard(p, t) {
             <input type="text" id="newLinkUrl-${p.id}-${t.id}" placeholder="https://…">
             <button class="btn btn-sm" style="flex:0 0 auto" onclick="addTaskLink('${p.id}','${t.id}')">+ Link</button>
           </div>
-
-          <label style="margin-top:16px">Dateien für Lernende (max. 20 MB je Datei)</label>
-          ${files.length ? `<div class="chip-list">${files.map(f => `
-            <span class="chip"><a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">📎 ${esc(f.name)}</a> <button type="button" title="Entfernen" onclick="removeTaskFile('${p.id}','${t.id}','${f.id}')">✕</button></span>
-          `).join("")}</div>` : '<p class="empty-hint" style="padding:4px 0">Noch keine Dateien.</p>'}
-          <input type="file" id="taskFileInput-${p.id}-${t.id}" class="hidden" onchange="uploadTaskFile('${p.id}','${t.id}', this)">
-          <button class="btn btn-sm" onclick="document.getElementById('taskFileInput-${p.id}-${t.id}').click()">📎 Datei hochladen</button>
-          <div id="taskFileMsg-${p.id}-${t.id}"></div>
         </div>
       ` : ""}
     </div>
@@ -879,21 +872,15 @@ function addTask(projectId) {
   const title = input.value.trim();
   if (!title) return;
   const p = myProjects.find(x => x.id === projectId);
-  const tasks = (p.tasks || []).concat([{ id: uid(), title, description: "", links: [], files: [] }]);
+  const tasks = (p.tasks || []).concat([{ id: uid(), title, description: "", links: [] }]);
   db.collection("projects").doc(projectId).update({ tasks }).then(() => loadProjects());
 }
 function removeTask(projectId, taskId) {
-  if (!confirm("Diese Aufgabe (inkl. Beschreibung, Links und Dateien) löschen?")) return;
+  if (!confirm("Diese Aufgabe (inkl. Beschreibung und Links) löschen?")) return;
   const p = myProjects.find(x => x.id === projectId);
-  const t = (p.tasks || []).find(x => x.id === taskId);
   const tasks = (p.tasks || []).filter(x => x.id !== taskId);
   openTaskEditors.delete(taskEditorKey(projectId, taskId));
-  db.collection("projects").doc(projectId).update({ tasks }).then(() => {
-    // Zugehörige, in Storage abgelegte Dateien mit aufräumen (Fehler dabei
-    // sind unkritisch -- das Projekt-Update ist bereits durch).
-    ((t && t.files) || []).forEach(f => { if (f.path) storage.ref().child(f.path).delete().catch(() => {}); });
-    loadProjects();
-  });
+  db.collection("projects").doc(projectId).update({ tasks }).then(() => loadProjects());
 }
 function updateTaskTitle(projectId, taskId, value) {
   const title = value.trim();
@@ -938,43 +925,6 @@ function removeTaskLink(projectId, taskId, linkId) {
   const t = (p.tasks || []).find(x => x.id === taskId);
   t.links = (t.links || []).filter(l => l.id !== linkId);
   db.collection("projects").doc(projectId).update({ tasks: p.tasks }).then(() => renderProjectsForSelectedClass());
-}
-/* Datei-Upload für eine Aufgabe (nur Lehrkraft, siehe Storage-Regeln):
-   Ablagepfad enthält die eigene UID, damit die Storage-Regeln greifen
-   können ("nur die anmeldete Lehrkraft darf unter ihrer eigenen UID
-   schreiben") -- Lesen/Herunterladen bleibt für Lernende ohne Anmeldung
-   offen, siehe Kommentar bei FIREBASE_CONFIG oben. */
-function uploadTaskFile(projectId, taskId, inputEl) {
-  const file = inputEl.files && inputEl.files[0];
-  inputEl.value = "";
-  if (!file) return;
-  const msg = document.getElementById(`taskFileMsg-${projectId}-${taskId}`);
-  if (file.size > 20 * 1024 * 1024) { msg.innerHTML = '<div class="msg msg-error">Datei zu groß (max. 20 MB).</div>'; return; }
-  msg.innerHTML = '<div class="msg">Wird hochgeladen …</div>';
-  const fileId = uid();
-  const path = `taskFiles/${currentTeacher.user.uid}/${projectId}/${taskId}/${fileId}_${file.name}`;
-  storage.ref().child(path).put(file)
-    .then(snap => snap.ref.getDownloadURL())
-    .then(url => {
-      const p = myProjects.find(x => x.id === projectId);
-      const t = (p.tasks || []).find(x => x.id === taskId);
-      t.files = (t.files || []).concat([{ id: fileId, name: file.name, url, path, size: file.size }]);
-      return db.collection("projects").doc(projectId).update({ tasks: p.tasks });
-    })
-    .then(() => renderProjectsForSelectedClass())
-    .catch(err => { msg.innerHTML = `<div class="msg msg-error">Fehler beim Hochladen: ${esc(err.message)}</div>`; });
-}
-function removeTaskFile(projectId, taskId, fileId) {
-  if (!confirm("Diese Datei entfernen?")) return;
-  const p = myProjects.find(x => x.id === projectId);
-  const t = (p.tasks || []).find(x => x.id === taskId);
-  const file = (t.files || []).find(f => f.id === fileId);
-  const finish = () => {
-    t.files = (t.files || []).filter(f => f.id !== fileId);
-    db.collection("projects").doc(projectId).update({ tasks: p.tasks }).then(() => renderProjectsForSelectedClass());
-  };
-  if (file && file.path) storage.ref().child(file.path).delete().then(finish).catch(finish);
-  else finish();
 }
 
 /* ---------- Fortschritt ---------- */
@@ -1030,7 +980,7 @@ function renderProgressView() {
               ${tasks.map(t => {
                 const entry = progressEntries[s.code + "_" + t.id];
                 const status = (entry && entry.status) || "offen";
-                const hasSubmission = !!(entry && (entry.submissionText || (entry.submissionFiles || []).length));
+                const hasSubmission = !!(entry && entry.submissionText);
                 return `<td>
                   <span class="status-badge status-${status}">${statusLabel[status] || status}</span>
                   ${hasSubmission ? `<button class="btn btn-ghost btn-sm" style="margin-left:6px" title="Abgabe ansehen" onclick="showSubmission('${s.code}','${t.id}')">📄</button>` : ""}
@@ -1045,19 +995,21 @@ function renderProgressView() {
       wrap.innerHTML = `<div class="msg msg-error">Fortschritt konnte nicht geladen werden (${esc(err.message)}).</div>`;
     });
 }
-/* Zeigt Text- und Datei-Abgabe einer/eines Lernenden zu einer Aufgabe in
-   einem einfachen Modal an (siehe #submissionModal im Markup oben). */
+/* Zeigt die Text-Abgabe einer/eines Lernenden zu einer Aufgabe in einem
+   einfachen Modal an (siehe #submissionModal im Markup oben).
+   BEWUSST OHNE Datei-Abgaben hier: die kommen per Mail (IServ) direkt bei
+   Marc an, nicht über die Website -- siehe Kommentar bei
+   submissionMailtoLink() in lernbereich.html. */
 function showSubmission(code, taskId) {
   const entry = progressEntries[code + "_" + taskId];
   const project = myProjects.find(p => (p.tasks || []).some(t => t.id === taskId));
   const task = project && (project.tasks || []).find(t => t.id === taskId);
   const student = Object.values(myStudentsByClass).reduce((a, b) => a.concat(b), []).find(s => s.code === code);
-  const files = (entry && entry.submissionFiles) || [];
   document.getElementById("submissionModalBody").innerHTML = `
     <h3>${esc(task ? task.title : "Aufgabe")}</h3>
     <p class="small muted">${esc(student ? student.pseudonym : code)} (${esc(code)})</p>
     ${entry && entry.submissionText ? `<div class="submission-text">${esc(entry.submissionText)}</div>` : '<p class="empty-hint">Kein Text abgegeben.</p>'}
-    ${files.length ? `<label style="margin-top:14px">Abgegebene Dateien</label><div class="chip-list">${files.map(f => `<a class="chip" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(f.name)}</a>`).join("")}</div>` : ""}
+    <p class="small muted" style="margin-top:14px">Falls eine Datei abgegeben wurde, kommt diese per E-Mail bei dir an (nicht hier in der App sichtbar).</p>
   `;
   document.getElementById("submissionModal").classList.remove("hidden");
 }
