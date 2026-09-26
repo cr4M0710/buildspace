@@ -41,6 +41,19 @@
     kollegen: "Kolleg:innen-Bereich"
   };
   const ACCESS_KEY = "buildspace_access_v1";
+  /* Zusätzliche, unabhängige Freischaltung nur für den Ordner "Classroom
+     Management" (Schule → Fächerübergreifend, siehe app.js). Dort sammelt
+     Marc zunehmend eigene Unterrichtsorganisation statt nur Lernwerkzeuge
+     -- das ist nicht für Lernende gedacht, auch wenn diese über
+     Gast-/Kolleg:innen-Zugriff sonst den ganzen Bereich "Schule" sehen
+     dürfen. Deshalb ein zweites, vom normalen Zugriffslevel unabhängiges
+     Kennwort-Gate direkt vor dieser einen Unterordner-Ansicht (siehe
+     guardClassroomManagement in app.js / renderSubfolderUnlocked).
+     Verwendet bewusst dasselbe Kennwort wie PASSWORD oben (genau wie schon
+     das eigene Lehrkraft-Kennwort in kanban-board.html) -- kein zweites
+     Kennwort zum Merken, aber ein eigener, unabhängiger "Bist du sicher"-
+     Schritt nur für diesen einen Ordner. */
+  const CM_UNLOCK_KEY = "buildspace_cm_unlock_v1";
   const INSTALL_DISMISS_KEY = "buildspace_install_dismissed_until";
   const LOCK_SVG =
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
@@ -500,6 +513,65 @@
     homeBtn.addEventListener("click", function () {
       location.href = HOME_HREF + "#/";
     });
+  }
+
+  /* ---------------------------------------------------------
+     Classroom Management -- eigenes Gate, unabhängig vom normalen
+     Zugriffslevel (siehe CM_UNLOCK_KEY oben). Einmal richtig eingegeben,
+     gilt es dauerhaft für dieses Gerät/diesen Browser (localStorage),
+     genau wie die normale Anmeldung. */
+  function isClassroomManagementUnlocked() {
+    try { return localStorage.getItem(CM_UNLOCK_KEY) === "1"; } catch (e) { return false; }
+  }
+  function unlockClassroomManagement() {
+    try { localStorage.setItem(CM_UNLOCK_KEY, "1"); } catch (e) {}
+  }
+  function showClassroomManagementGate(onUnlock) {
+    ensureStyle();
+    document.documentElement.classList.add("protect-open");
+    const wrap = document.createElement("div");
+    wrap.id = "protect-overlay";
+    wrap.innerHTML =
+      '<div class="protect-card">' +
+        '<div class="protect-icon">' + LOCK_SVG + "</div>" +
+        "<h2>Classroom Management</h2>" +
+        '<p class="protect-sub">Dieser Bereich sammelt deine eigene Unterrichtsorganisation und ist nicht für Lernende gedacht -- bitte Lehrkraft-Kennwort eingeben.</p>' +
+        '<form id="protect-form" autocomplete="off">' +
+          '<input type="password" id="protect-input" placeholder="Kennwort" autofocus />' +
+          '<button type="submit" class="protect-submit">Freischalten</button>' +
+        "</form>" +
+        '<div class="protect-error" id="protect-error"></div>' +
+        '<button type="button" class="protect-alt" id="protect-home-btn">Zurück</button>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    const form = wrap.querySelector("#protect-form");
+    const input = wrap.querySelector("#protect-input");
+    const errorEl = wrap.querySelector("#protect-error");
+    const backBtn = wrap.querySelector("#protect-home-btn");
+    setTimeout(() => input.focus(), 30);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (input.value === PASSWORD) {
+        unlockClassroomManagement();
+        closeOverlay();
+        onUnlock();
+      } else {
+        errorEl.textContent = "Falsches Kennwort — bitte erneut versuchen.";
+        input.value = "";
+        input.focus();
+      }
+    });
+    backBtn.addEventListener("click", function () {
+      closeOverlay();
+      location.hash = "#/schule";
+    });
+  }
+  function guardClassroomManagement(onUnlock) {
+    if (isClassroomManagementUnlocked()) {
+      onUnlock();
+      return;
+    }
+    showClassroomManagementGate(onUnlock);
   }
 
   /* Wird gezeigt, wenn ein Werkzeug über einen gültigen Kursmappen- oder
@@ -1309,7 +1381,9 @@
     loadFirebase: loadFirebase,
     HIGHSCORE_FILES: HIGHSCORE_FILES,
     ensureStyle: ensureStyle,
-    closeOverlay: closeOverlay
+    closeOverlay: closeOverlay,
+    guardClassroomManagement: guardClassroomManagement,
+    isClassroomManagementUnlocked: isClassroomManagementUnlocked
   };
 
   initStandalone();

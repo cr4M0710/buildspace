@@ -126,7 +126,7 @@ const I18N = {
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
       mathematik: "Mathematik", arbeitslehre: "Arbeitslehre",
-      faecheruebergreifend: "Fächerübergreifend", weiterefaecher: "Weitere Fächer",
+      faecheruebergreifend: "Classroom Management", weiterefaecher: "Weitere Fächer",
       sonstiges: "Sonstiges",
       jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
       hallendienst: "Hallendienst", training: "Training"
@@ -173,7 +173,7 @@ const I18N = {
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
       mathematik: "Mathematics", arbeitslehre: "Vocational Studies",
-      faecheruebergreifend: "Cross-curricular", weiterefaecher: "Other subjects",
+      faecheruebergreifend: "Classroom Management", weiterefaecher: "Other subjects",
       sonstiges: "Miscellaneous",
       jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
       hallendienst: "Hall Duty", training: "Training"
@@ -700,6 +700,21 @@ function renderSubfolder(id, subId) {
 }
 
 function renderSubfolderUnlocked(id, subId) {
+  /* "Classroom Management" (Schule → faecheruebergreifend) sammelt Marcs
+     eigene Unterrichtsorganisation statt nur allgemeine Lernwerkzeuge --
+     deshalb ein eigenes, vom normalen Zugriffslevel unabhängiges Gate
+     direkt vor dieser einen Unterordner-Ansicht (siehe protect.js). Gilt
+     unabhängig davon, wie der/die Aufrufende die Kategorie "Schule"
+     überhaupt erreicht hat (Passwort, Kolleg:innen-Kennwort, Gast oder
+     Freigabe-Link) -- alle Wege laufen hier zusammen. */
+  if (id === "schule" && subId === "faecheruebergreifend" && window.Protect && typeof window.Protect.guardClassroomManagement === "function") {
+    window.Protect.guardClassroomManagement(() => renderSubfolderContent(id, subId));
+    return;
+  }
+  renderSubfolderContent(id, subId);
+}
+
+function renderSubfolderContent(id, subId) {
   const folder = folderStructure[id];
   const sub = folder.subfolders.find((s) => s.id === subId);
   const label = sub ? subfolderLabel(subId) : subId;
