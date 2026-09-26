@@ -147,12 +147,23 @@
      kein Netz zu Google/gstatic.com -- soll nicht einfach unsichtbar
      hängen bleiben, siehe Kommentar in protect.js), sonst callback
      ({ user, status, isAdmin }) mit status "pending" oder "approved".
-     Läuft bei jeder Änderung des Anmeldestatus erneut. */
+     Läuft bei jeder Änderung des Anmeldestatus erneut.
+     WICHTIG: Anonyme Sitzungen zählen hier als "nicht angemeldet". Diese
+     Seite meldet Besucher:innen bereits im Hintergrund anonym bei Firebase
+     an (für das Feedback-Widget und die Bestenlisten, siehe protect.js/
+     loadFirebase) -- dieselbe Firebase-App/Auth-Instanz wird von
+     Classroom Management mitbenutzt. Ohne diese Prüfung würde
+     onAuthStateChanged sofort mit dieser anonymen Sitzung feuern, und
+     ensureTeacherDoc bricht dabei mit "Missing or insufficient
+     permissions" ab, weil anonyme Firebase-Nutzer keinen E-Mail-Anspruch
+     (request.auth.token.email) im Token haben -- genau das war die
+     eigentliche Ursache des Berechtigungsfehlers, unabhängig davon, ob
+     per E-Mail-Link oder Google angemeldet wurde. */
   function onAuthChange(callback) {
     init()
       .then(({ db, auth }) => {
         auth.onAuthStateChanged((user) => {
-          if (!user) {
+          if (!user || user.isAnonymous) {
             callback(null);
             return;
           }
