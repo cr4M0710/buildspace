@@ -303,7 +303,7 @@
   <div id="view-teacher-print" class="hidden">
     <div class="card no-print">
       <div class="row" style="align-items:center">
-        <div><h2 style="margin:0">Codes zum Verteilen</h2>
+        <div><h2 style="margin:0" id="printTitle">Codes zum Verteilen</h2>
         <p class="muted small" style="margin:4px 0 0">Ausdrucken, ausschneiden und pro Gruppe austeilen. Jede Gruppe scannt ihren Code oder gibt ihn manuell ein.</p></div>
         <div style="text-align:right">
           <button class="btn btn-accent" onclick="window.print()">🖨️ Drucken</button>
@@ -320,6 +320,7 @@
     <div class="overview-toolbar">
       <h2 style="margin:0;flex:1">Meine Boards</h2>
       <select id="classFilter" onchange="renderOverview()" style="max-width:220px"></select>
+      <button class="btn btn-ghost" onclick="reprintBoards()">🖨️ QR-Codes</button>
       <button class="btn btn-primary" onclick="goCreate()">+ Neue Boards</button>
       <button class="btn btn-ghost" onclick="location.reload()">↻</button>
     </div>
@@ -2879,6 +2880,7 @@ async function createBoards() {
       });
       created.push({ code, groupName: name });
     }
+    document.getElementById("printTitle").textContent = "Codes zum Verteilen";
     renderPrintGrid(created, className);
     show("view-teacher-print");
   } catch (e) {
@@ -2891,18 +2893,43 @@ async function createBoards() {
 function renderPrintGrid(list, className) {
   const grid = document.getElementById("printGrid");
   grid.innerHTML = list.map(item => {
+    /* item.className (vorhanden bei bereits gespeicherten Boards, z. B. beim
+       späteren erneuten Drucken über reprintBoards()) hat Vorrang vor dem
+       gemeinsamen className-Parameter -- wichtig, wenn ohne Klassen-Filter
+       Boards mehrerer Klassen/Kurse gemeinsam gedruckt werden. */
+    const cls = item.className || className;
     const url = pageUrlForCode(item.code);
     const qr = qrcode(0, "M");
     qr.addData(url);
     qr.make();
     const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
     return `<div class="print-card">
-      <div class="group-name">${esc(item.groupName)}${className ? " · " + esc(className) : ""}</div>
+      <div class="group-name">${esc(item.groupName)}${cls ? " · " + esc(cls) : ""}</div>
       ${svg}
       <div class="code-big">${item.code}</div>
       <div class="print-hint">QR scannen oder Code eingeben auf<br>${esc(location.origin + location.pathname)}</div>
     </div>`;
   }).join("");
+}
+
+/* Erlaubt es, die QR-Code-/Zugangscode-Liste einer Klasse/eines Kurses
+   auch lange nach dem ursprünglichen Anlegen jederzeit erneut aufzurufen
+   und auszudrucken (z. B. wenn ein Zettel verloren ging) -- nutzt dieselbe
+   Druckansicht wie direkt nach dem Erzeugen neuer Boards, nur gespeist aus
+   den bereits vorhandenen Boards statt aus einer frischen Erstellung.
+   Berücksichtigt den aktuell in der Übersicht gewählten Klassen-Filter;
+   ohne Filter werden alle eigenen, nicht archivierten Boards gedruckt. */
+function reprintBoards() {
+  const filterClass = document.getElementById("classFilter").value;
+  const list = allBoards.filter(b => !b.archived && (!filterClass || b.className === filterClass));
+  if (list.length === 0) {
+    alert("Keine aktiven Boards zum Drucken vorhanden" + (filterClass ? ' für "' + filterClass + '"' : "") + ".");
+    return;
+  }
+  document.getElementById("printTitle").textContent =
+    "Codes zum Verteilen" + (filterClass ? " — " + filterClass : "");
+  renderPrintGrid(list, filterClass);
+  show("view-teacher-print");
 }
 
 /* ---------- teacher: overview ---------- */
