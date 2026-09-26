@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lernbereich</title>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#ffffff;
+    --ink:#211f2c;
+    --ink-soft:#6b6878;
+    --border:#e6e2d8;
+    --primary:#4a3fe0;
+    --primary-soft:#eeecfd;
+    --accent:#0e9488;
+    --accent-soft:#e2f5f2;
+    --warn:#c8890a;
+    --warn-soft:#fbf0dc;
+    --danger:#c9382e;
+    --danger-soft:#fbe9e7;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(30,25,60,.05), 0 8px 24px -12px rgba(30,25,60,.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    line-height:1.45;
+  }
+  h1,h2,h3{margin:0 0 .3em; letter-spacing:-.01em;}
+  button{font-family:inherit;}
+  .hidden{display:none !important;}
+
+  .shell{max-width:760px;margin:0 auto;padding:24px 18px 60px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;margin-bottom:16px;}
+  .brand .dot{width:11px;height:11px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--accent));display:inline-block;}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;}
+  .muted{color:var(--ink-soft);}
+  .small{font-size:.85rem;}
+
+  .btn{appearance:none;border:1px solid transparent;border-radius:10px;padding:11px 16px;font-size:.95rem;font-weight:650;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:transform .05s ease, opacity .15s;background:var(--primary-soft);color:var(--primary);}
+  .btn:hover{opacity:.85;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-block{width:100%;justify-content:center;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+  .btn-sm{padding:6px 11px;font-size:.78rem;border-radius:8px;}
+
+  input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:1.1rem;letter-spacing:.15em;text-transform:uppercase;text-align:center;font-family:inherit;background:#fffefc;color:var(--ink);}
+  input:focus{outline:2px solid var(--primary);outline-offset:1px;}
+  label{display:block;font-weight:650;font-size:.85rem;margin:0 0 8px;color:var(--ink-soft);}
+
+  .msg{padding:10px 13px;border-radius:10px;font-size:.86rem;margin-top:12px;}
+  .msg-error{background:var(--danger-soft);color:var(--danger);}
+
+  .who-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .who-bar button{background:none;border:none;color:var(--primary);text-decoration:underline;cursor:pointer;font:inherit;padding:0;font-size:.85rem;}
+  .pseudonym-pill{font-weight:800;font-size:1.05rem;background:var(--primary-soft);color:var(--primary);padding:5px 14px;border-radius:999px;}
+
+  .project-card{margin-bottom:16px;}
+  .project-card h3{margin-bottom:4px;}
+  .project-desc{color:var(--ink-soft);font-size:.9rem;margin-bottom:14px;}
+
+  .task-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .task-item:last-child{border-bottom:none;}
+  .task-title{flex:1;}
+  .status-select{border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;font-family:inherit;background:#fffefc;text-transform:none;letter-spacing:normal;}
+  .status-select.status-offen{color:#777;}
+  .status-select.status-in_arbeit{color:var(--warn);border-color:var(--warn);}
+  .status-select.status-fertig{color:var(--accent);border-color:var(--accent);}
+
+  .empty-hint{color:var(--ink-soft);font-size:.92rem;padding:10px 4px;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="brand"><span class="dot"></span> Lernbereich</div>
+
+  <div id="view-code" class="card">
+    <h2>Zugang mit Code</h2>
+    <p class="muted small">Gib deinen persönlichen Zugangscode ein, den du von deiner Lehrkraft bekommen hast.</p>
+    <label for="codeInput" style="margin-top:14px">Zugangscode</label>
+    <input type="text" id="codeInput" maxlength="6" placeholder="Z. B. AB3XQ9" autocomplete="off" autocapitalize="characters">
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="submitCode()">Weiter</button>
+    <div id="codeMsg"></div>
+  </div>
+
+  <div id="view-loading" class="card hidden">
+    <p class="muted">Lädt…</p>
+  </div>
+
+  <div id="view-tasks" class="hidden">
+    <div class="who-bar">
+      <span class="pseudonym-pill" id="pseudonymPill"></span>
+      <button type="button" onclick="logoutLearner()">Anderer Zugangscode</button>
+    </div>
+    <div id="projectsWrap"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   LERNBEREICH (für Schüler:innen)
+   -------------------------------------------------------------------------
+   Kein eigenes Konto nötig: Der individuelle Zugangscode (von der Lehrkraft
+   in kurse-projekte.html vergeben) IST der Schlüssel -- er entspricht
+   direkt der Firestore-Dokument-ID in der Sammlung "students" (dasselbe
+   "Sicherheit durch Unerratbarkeit"-Modell wie beim bestehenden
+   Team-Kanban-Tool, siehe dortiger Code-Mechanismus). Es werden nur
+   Kürzel/Pseudonyme angezeigt, niemals Klarnamen.
+
+   Der Code kann entweder eingetippt werden oder über einen Link mit
+   ?code=XXXXXX direkt übernommen werden (siehe "Link kopieren" in
+   kurse-projekte.html).
+
+   BEWUSST OHNE protect.js/data-category: Andere Werkzeug-Seiten dieser
+   Website verlangen zusätzlich das allgemeine Seiten-Kennwort (Voll-/
+   Kolleg:innen-/Gast-Zugang), bevor überhaupt etwas sichtbar wird (siehe
+   guard() in protect.js). Für den Lernbereich soll ausdrücklich NUR der
+   individuelle Zugangscode die Hürde sein -- ein zusätzliches, Schüler:
+   innen unbekanntes Seiten-Kennwort würde genau das verhindern, wofür
+   dieses Tool gedacht ist. Feedback-/Bestenlisten-Widget und
+   Installations-Banner (die protect.js sonst mitbringt) fehlen hier
+   deshalb bewusst. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus",
+  authDomain: "kanban-board-281da.firebaseapp.com",
+  projectId: "kanban-board-281da",
+  storageBucket: "kanban-board-281da.firebasestorage.app",
+  messagingSenderId: "210909884248",
+  appId: "1:210909884248:web:10ffacb3a74f7b3c887f2d"
+};
+const CODE_KEY = "lernbereich_code";
+
+let db = null;
+let studentDoc = null; // { code, pseudonym, classId, ownerUid }
+let projects = [];
+
+function esc(s) {
+  return (s == null ? "" : String(s)).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function ensureFirebase() {
+  if (window.firebase && (firebase.apps || []).length) return Promise.resolve();
+  return Promise.all([
+    loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"),
+    loadScript("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js")
+  ]).then(() => {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  });
+}
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function boot() {
+  const params = new URLSearchParams(location.search);
+  const codeFromLink = (params.get("code") || "").trim().toUpperCase();
+  let storedCode = "";
+  try { storedCode = localStorage.getItem(CODE_KEY) || ""; } catch (e) {}
+  const code = codeFromLink || storedCode;
+  if (code) {
+    document.getElementById("codeInput").value = code;
+    tryCode(code);
+  }
+}
+function submitCode() {
+  const code = document.getElementById("codeInput").value.trim().toUpperCase();
+  if (!code) return;
+  tryCode(code);
+}
+function tryCode(code) {
+  const msg = document.getElementById("codeMsg");
+  msg.innerHTML = "";
+  document.getElementById("view-code").classList.add("hidden");
+  document.getElementById("view-loading").classList.remove("hidden");
+  ensureFirebase()
+    .then(() => {
+      db = firebase.firestore();
+      return db.collection("students").doc(code).get();
+    })
+    .then((snap) => {
+      if (!snap.exists) {
+        document.getElementById("view-loading").classList.add("hidden");
+        document.getElementById("view-code").classList.remove("hidden");
+        msg.innerHTML = '<div class="msg msg-error">Diesen Zugangscode gibt es nicht. Bitte prüfen und erneut versuchen.</div>';
+        return;
+      }
+      studentDoc = { code, ...snap.data() };
+      try { localStorage.setItem(CODE_KEY, code); } catch (e) {}
+      document.getElementById("pseudonymPill").textContent = studentDoc.pseudonym;
+      loadProjects();
+    })
+    .catch((err) => {
+      document.getElementById("view-loading").classList.add("hidden");
+      document.getElementById("view-code").classList.remove("hidden");
+      msg.innerHTML = `<div class="msg msg-error">Fehler beim Laden (${esc(err.message)}). Bitte erneut versuchen.</div>`;
+    });
+}
+function logoutLearner() {
+  try { localStorage.removeItem(CODE_KEY); } catch (e) {}
+  studentDoc = null;
+  document.getElementById("codeInput").value = "";
+  document.getElementById("view-tasks").classList.add("hidden");
+  document.getElementById("view-loading").classList.add("hidden");
+  document.getElementById("view-code").classList.remove("hidden");
+}
+
+function loadProjects() {
+  db.collection("projects").where("classId", "==", studentDoc.classId).get()
+    .then((snap) => {
+      projects = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((p) => p.published)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return loadProgress();
+    })
+    .then((progressByTaskId) => {
+      document.getElementById("view-loading").classList.add("hidden");
+      document.getElementById("view-tasks").classList.remove("hidden");
+      renderProjects(progressByTaskId);
+    })
+    .catch((err) => {
+      document.getElementById("view-loading").classList.add("hidden");
+      document.getElementById("view-tasks").classList.remove("hidden");
+      document.getElementById("projectsWrap").innerHTML =
+        `<div class="msg msg-error">Aufgaben konnten nicht geladen werden (${esc(err.message)}).</div>`;
+    });
+}
+function loadProgress() {
+  return db.collection("taskProgress").where("code", "==", studentDoc.code).get()
+    .then((snap) => {
+      const map = {};
+      snap.docs.forEach((d) => { map[d.data().taskId] = d.data().status; });
+      return map;
+    });
+}
+function renderProjects(progressByTaskId) {
+  const wrap = document.getElementById("projectsWrap");
+  if (!projects.length) {
+    wrap.innerHTML = '<p class="empty-hint">Für dich sind aktuell keine Projekte freigegeben. Frag gerne deine Lehrkraft.</p>';
+    return;
+  }
+  const statusLabel = { offen: "Offen", in_arbeit: "In Arbeit", fertig: "Fertig" };
+  wrap.innerHTML = projects.map((p) => `
+    <div class="card project-card">
+      <h3>${esc(p.title)}</h3>
+      ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : ""}
+      ${(p.tasks || []).length ? (p.tasks || []).map((t) => {
+        const status = progressByTaskId[t.id] || "offen";
+        return `
+          <div class="task-item">
+            <span class="task-title">${esc(t.title)}</span>
+            <select class="status-select status-${status}" onchange="updateStatus('${t.id}', this)">
+              ${Object.keys(statusLabel).map((s) => `<option value="${s}" ${s === status ? "selected" : ""}>${statusLabel[s]}</option>`).join("")}
+            </select>
+          </div>
+        `;
+      }).join("") : '<p class="empty-hint">Noch keine Aufgaben in diesem Projekt.</p>'}
+    </div>
+  `).join("");
+}
+function updateStatus(taskId, selectEl) {
+  const status = selectEl.value;
+  selectEl.className = "status-select status-" + status;
+  const docId = studentDoc.code + "_" + taskId;
+  db.collection("taskProgress").doc(docId).set({
+    code: studentDoc.code,
+    ownerUid: studentDoc.ownerUid,
+    taskId,
+    status,
+    updatedAt: Date.now()
+  }, { merge: true }).catch((err) => {
+    alert("Speichern fehlgeschlagen: " + (err && err.message));
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

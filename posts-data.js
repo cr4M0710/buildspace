@@ -371,4 +371,16 @@ const posts = [
     titleEn: "Team Kanban",
     excerptEn: "A shared Kanban board unlocked with a team passcode instead of individual logins: create multiple boards, name your own columns and move cards by drag and drop — usable for project work in any subject."
    },
+   {
+    title: "Kurse & Projekte",
+    excerpt: "Eigene Klassen/Kurse anlegen, Lernende per Kürzel/Pseudonym und individuellem Zugangscode verwalten (keine Klarnamen), Projekte mit Aufgaben zusammenstellen und veröffentlichen, und den Fortschritt aller Lernenden in einer Übersicht verfolgen.",
+    date: "2026-09-26",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "kurse-projekte.html",
+    emoji: "📚",
+    tags: ["tool", "unterrichtsorganisation"],
+    titleEn: "Courses & Projects",
+    excerptEn: "Create your own classes/courses, manage learners by pseudonym and individual access code (no real names), put together and publish projects with tasks, and track every learner's progress in one overview."
+   },
 ];

@@ -172,6 +172,8 @@
 
   /* ---- overview table ---- */
   .overview-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+  .teacher-account-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:10px;}
+  .teacher-account-bar button{background:none;border:none;color:var(--primary);text-decoration:underline;cursor:pointer;font:inherit;padding:0;}
   .board-list{display:flex;flex-direction:column;gap:8px;}
   .board-row{
     display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);
@@ -277,18 +279,6 @@
     </div>
   </div>
 
-  <!-- TEACHER AUTH -->
-  <div id="view-teacher-auth" class="hidden">
-    <div class="card center-card">
-      <h2>Lehrkraft-Bereich</h2>
-      <p class="muted small">Bitte Kennwort eingeben.</p>
-      <input type="password" id="teacherPassInput" placeholder="Kennwort" autofocus>
-      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="submitTeacherPass()">Anmelden</button>
-      <div id="teacherAuthMsg"></div>
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="goStart()">Zurück</button>
-    </div>
-  </div>
-
   <!-- TEACHER CREATE -->
   <div id="view-teacher-create" class="hidden">
     <div class="card">
@@ -326,8 +316,9 @@
 
   <!-- TEACHER OVERVIEW -->
   <div id="view-teacher-overview" class="hidden">
+    <div class="teacher-account-bar small muted" id="teacherAccountBar"></div>
     <div class="overview-toolbar">
-      <h2 style="margin:0;flex:1">Aktive Boards</h2>
+      <h2 style="margin:0;flex:1">Meine Boards</h2>
       <select id="classFilter" onchange="renderOverview()" style="max-width:220px"></select>
       <button class="btn btn-primary" onclick="goCreate()">+ Neue Boards</button>
       <button class="btn btn-ghost" onclick="location.reload()">↻</button>
@@ -2723,10 +2714,6 @@ const firebaseConfig = {
   appId: "1:210909884248:web:10ffacb3a74f7b3c887f2d"
 };
 
-// Frei wählbares Kennwort für den Lehrkraft-Bereich (kein echter Schutz,
-// verhindert nur zufälliges Anklicken durch Schüler:innen).
-const TEACHER_PASSCODE = "mstroh_GGL#99";
-
 /* ========================================================================= */
 
 firebase.initializeApp(firebaseConfig);
@@ -2752,6 +2739,7 @@ let suppressRender = false;
 let pendingSnapshot = null;
 let popupShown = false;
 let draggedCardId = null;
+let currentTeacher = null; // { user, status, isAdmin } von CmAuth, siehe goTeacherAuth()
 
 /* ---------- helpers ---------- */
 function uid() {
@@ -2777,7 +2765,7 @@ function timeAgo(ts) {
   return "vor " + d + " Tag(en)";
 }
 function show(id) {
-  ["view-start", "view-teacher-auth", "view-teacher-create", "view-teacher-print",
+  ["view-start", "view-teacher-create", "view-teacher-print",
     "view-teacher-overview", "view-student-entry", "view-loading", "view-board"
   ].forEach(v => document.getElementById(v).classList.toggle("hidden", v !== id));
   document.getElementById("view-teacher-detail").classList.add("hidden");
@@ -2786,7 +2774,7 @@ function show(id) {
 function topbarFor(id) {
   if (id === "view-teacher-overview" || id === "view-teacher-create" || id === "view-teacher-print") {
     return `<button class="btn btn-ghost btn-sm" onclick="goOverview()">Übersicht</button>
-            <button class="btn btn-ghost btn-sm" onclick="goStart()">Abmelden</button>`;
+            <button class="btn btn-ghost btn-sm" onclick="teacherSignOut()">Abmelden</button>`;
   }
   if (id === "view-board") {
     return `<button class="btn btn-ghost btn-sm" onclick="goStart()">Board verlassen</button>`;
@@ -2813,19 +2801,33 @@ function goStart() {
   setUrlCode(null);
   show("view-start");
 }
+/* Lehrkraft-Zugang läuft jetzt über dieselbe echte, individuelle
+   Google-Anmeldung wie der Bereich "Classroom Management" (siehe
+   protect.js/cm-auth.js) statt über ein geteiltes Kennwort. Dadurch
+   gehört jedes Board seiner erstellenden Lehrkraft (ownerUid), und die
+   Übersicht zeigt nur noch die eigenen Boards -- siehe goOverview(). */
 function goTeacherAuth() {
-  if (sessionStorage.getItem("tk_teacher_ok") === "1") { goOverview(); return; }
-  show("view-teacher-auth");
-  setTimeout(() => document.getElementById("teacherPassInput").focus(), 50);
-}
-function submitTeacherPass() {
-  const val = document.getElementById("teacherPassInput").value;
-  if (val === TEACHER_PASSCODE) {
-    sessionStorage.setItem("tk_teacher_ok", "1");
-    goOverview();
-  } else {
-    document.getElementById("teacherAuthMsg").innerHTML = `<div class="msg msg-error">Falsches Kennwort.</div>`;
+  if (currentTeacher) { goOverview(); return; }
+  if (!window.Protect || !window.Protect.guardClassroomManagement) {
+    show("view-start");
+    return;
   }
+  window.Protect.guardClassroomManagement((cmAuthInfo) => {
+    currentTeacher = cmAuthInfo;
+    goOverview();
+  });
+}
+function renderTeacherAccountBar() {
+  const bar = document.getElementById("teacherAccountBar");
+  if (!bar || !currentTeacher) return;
+  bar.innerHTML =
+    `Angemeldet als <strong>${esc(currentTeacher.user.email)}</strong> · ` +
+    `<button type="button" onclick="teacherSignOut()">Abmelden</button>`;
+}
+function teacherSignOut() {
+  if (window.CmAuth) window.CmAuth.signOut();
+  currentTeacher = null;
+  goStart();
 }
 function goCreate() {
   document.getElementById("createMsg").innerHTML = "";
@@ -2866,6 +2868,7 @@ async function createBoards() {
       }
       const now = Date.now();
       await db.collection("boards").doc(code).set({
+        ownerUid: currentTeacher ? currentTeacher.user.uid : null,
         groupName: name,
         className: className,
         columns: DEFAULT_COLUMNS(),
@@ -2905,10 +2908,18 @@ function renderPrintGrid(list, className) {
 /* ---------- teacher: overview ---------- */
 function goOverview() {
   show("view-teacher-overview");
+  renderTeacherAccountBar();
   if (unsubOverview) unsubOverview();
-  unsubOverview = db.collection("boards").orderBy("lastActive", "desc").limit(300)
+  if (!currentTeacher) return;
+  /* Bewusst ohne .orderBy() in der Abfrage: "where ownerUid ==" kombiniert
+     mit orderBy auf einem anderen Feld (lastActive) verlangt in Firestore
+     einen eigens angelegten Composite-Index -- ohne den bricht die Abfrage
+     lautlos ab (siehe derselbe Bug + Fix bei der Lehrkraft-Warteliste in
+     cm-auth.js). Sortierung passiert deshalb hier im Browser. */
+  unsubOverview = db.collection("boards").where("ownerUid", "==", currentTeacher.user.uid)
     .onSnapshot(snap => {
-      allBoards = snap.docs.map(d => ({ code: d.id, ...d.data() }));
+      allBoards = snap.docs.map(d => ({ code: d.id, ...d.data() }))
+        .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0));
       renderOverview();
     }, err => {
       document.getElementById("boardList").innerHTML = `<div class="msg msg-error">Verbindung fehlgeschlagen: ${esc(err.message)}</div>`;
