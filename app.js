@@ -756,28 +756,43 @@ function renderCmAdminPanel() {
       panel.innerHTML = "";
       return;
     }
+    renderCmAdminPanelList(panel, pending);
+  }).catch((err) => {
     panel.innerHTML =
-      `<h2 class="cm-admin-title">Warteliste (${pending.length})</h2>` +
-      pending
-        .map(
-          (p) =>
-            `<div class="cm-admin-row" data-uid="${p.uid}"><span>${p.email}</span><button type="button" class="cm-approve-btn">Freischalten</button></div>`
-        )
-        .join("");
-    panel.querySelectorAll(".cm-approve-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const row = btn.closest(".cm-admin-row");
-        const uid = row.dataset.uid;
-        btn.disabled = true;
-        btn.textContent = "Wird freigeschaltet…";
-        window.CmAuth.approveTeacher(uid).then(() => {
+      '<p class="muted small" style="color:#C23B3B;">Warteliste konnte nicht geladen werden (' +
+      ((err && err.message) || err) +
+      ').</p>';
+  });
+}
+
+function renderCmAdminPanelList(panel, pending) {
+  panel.innerHTML =
+    `<h2 class="cm-admin-title">Warteliste (${pending.length})</h2>` +
+    pending
+      .map(
+        (p) =>
+          `<div class="cm-admin-row" data-uid="${p.uid}"><span>${p.email}</span><button type="button" class="cm-approve-btn">Freischalten</button></div>`
+      )
+      .join("");
+  panel.querySelectorAll(".cm-approve-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest(".cm-admin-row");
+      const uid = row.dataset.uid;
+      btn.disabled = true;
+      btn.textContent = "Wird freigeschaltet…";
+      window.CmAuth.approveTeacher(uid)
+        .then(() => {
           row.remove();
           const title = panel.querySelector(".cm-admin-title");
           const remaining = panel.querySelectorAll(".cm-admin-row").length;
           if (!remaining) panel.innerHTML = "";
           else if (title) title.textContent = `Warteliste (${remaining})`;
+        })
+        .catch((err) => {
+          btn.disabled = false;
+          btn.textContent = "Freischalten fehlgeschlagen -- erneut versuchen";
+          try { console.error("Freischalten fehlgeschlagen:", err); } catch (e) {}
         });
-      });
     });
   });
 }

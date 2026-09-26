@@ -181,11 +181,23 @@
     return init().then(({ auth }) => auth.signOut());
   }
 
-  /* ---- Admin: Warteliste einsehen/freischalten ---- */
+  /* ---- Admin: Warteliste einsehen/freischalten ----
+     Sortiert bewusst erst im Browser nach createdAt, statt es Firestore
+     per orderBy() erledigen zu lassen: Eine Gleichheits-Abfrage
+     (where status == "pending") kombiniert mit orderBy auf einem ANDEREN
+     Feld verlangt in Firestore einen eigens angelegten Composite-Index,
+     den es hier nicht gibt -- die Abfrage bricht dann mit
+     "failed-precondition" ab (Warteliste blieb bei "Lade Warteliste…"
+     hängen, siehe app.js). Ohne orderBy() reicht der automatische
+     Einzelfeld-Index für "where status ==", kein manueller Index nötig. */
   function listPendingTeachers() {
     return init().then(({ db }) =>
-      db.collection("teachers").where("status", "==", "pending").orderBy("createdAt", "asc").get()
-    ).then((snap) => snap.docs.map((d) => ({ uid: d.id, email: d.data().email, createdAt: d.data().createdAt })));
+      db.collection("teachers").where("status", "==", "pending").get()
+    ).then((snap) =>
+      snap.docs
+        .map((d) => ({ uid: d.id, email: d.data().email, createdAt: d.data().createdAt }))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+    );
   }
 
   function approveTeacher(uid) {
