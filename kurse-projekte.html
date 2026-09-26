@@ -110,9 +110,18 @@
     margin:14px 0 0 18px;
   }
   .top-link:hover{ color:var(--primary); }
+
+  .random-gen-box{background:var(--bg);border:1.5px dashed var(--border);border-radius:10px;padding:12px;margin-top:14px;}
+  .random-gen-box .row{align-items:flex-end;}
+  .random-gen-box input[type=number]{width:100%;}
+  .expired-pill{font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--danger-soft);color:var(--danger);}
+  .visible-until-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+  .visible-until-row input[type=datetime-local]{width:auto;padding:6px 8px;font-size:.82rem;}
+  .visible-until-row label{margin:0;white-space:nowrap;}
 </style>
 <script defer data-category="schule" src="protect.js"></script>
 <script defer src="cursor.js"></script>
+<script defer src="qrcode-generator.js"></script>
 </head>
 <body>
 
@@ -246,6 +255,37 @@ function uid() {
   return (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "-" + Math.random())).slice(0, 24);
 }
 
+/* Wortlisten fuer automatisch erzeugte Pseudonyme (siehe generateRandomStudents()).
+   Absichtlich neutral/kindgerecht gehalten und ohne jeden Bezug zu echten
+   Namen -- Kollisionen innerhalb einer Klasse werden zusaetzlich per
+   usedSet in randomPseudonym() vermieden. */
+const NAME_ADJECTIVES = ["Blaue", "Rote", "Grüne", "Gelbe", "Lila", "Orange", "Silberne", "Goldene", "Mutige", "Schnelle", "Kluge", "Wilde", "Stille", "Freche", "Coole", "Helle", "Dunkle", "Bunte", "Flinke", "Ruhige"];
+const NAME_ANIMALS = ["Eule", "Fuchs", "Delfin", "Panda", "Tiger", "Adler", "Wolf", "Hase", "Biene", "Qualle", "Krake", "Falke", "Luchs", "Otter", "Waschbär", "Igel", "Pinguin", "Koala", "Löwe", "Reh"];
+function randomPseudonym(usedSet) {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const combo = NAME_ADJECTIVES[Math.floor(Math.random() * NAME_ADJECTIVES.length)] + " " + NAME_ANIMALS[Math.floor(Math.random() * NAME_ANIMALS.length)];
+    if (!usedSet.has(combo)) { usedSet.add(combo); return combo; }
+  }
+  /* Wortpool erschöpft (sehr große Klasse) -- fortlaufende Nummer anhängen,
+     damit auch dann noch jedes Pseudonym eindeutig bleibt. */
+  const base = NAME_ADJECTIVES[Math.floor(Math.random() * NAME_ADJECTIVES.length)] + " " + NAME_ANIMALS[Math.floor(Math.random() * NAME_ANIMALS.length)];
+  let n = 2;
+  while (usedSet.has(base + " " + n)) n++;
+  const combo = base + " " + n;
+  usedSet.add(combo);
+  return combo;
+}
+function toDatetimeLocalValue(ms) {
+  const d = new Date(ms);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatDateTime(ms) {
+  const d = new Date(ms);
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /* ---------- Start: über dieselbe echte Anmeldung wie Classroom Management ----------
    WICHTIG zur Reihenfolge: Diese Seite trägt data-category="schule" auf dem
    protect.js-Script-Tag, genau wie kanban-board.html -- das sorgt zuerst für
@@ -357,7 +397,7 @@ function selectClass(classId) {
 function loadStudentsForClass(classId) {
   const panel = document.getElementById("studentsPanel");
   panel.innerHTML = '<p class="muted small">Lädt Schüler:innen…</p>';
-  db.collection("students").where("ownerUid", "==", currentTeacher.user.uid).get()
+  return db.collection("students").where("ownerUid", "==", currentTeacher.user.uid).get()
     .then(snap => {
       const all = snap.docs.map(d => ({ code: d.id, ...d.data() }));
       myStudentsByClass[classId] = all.filter(s => s.classId === classId).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -382,6 +422,19 @@ function renderStudentsPanel() {
     <input type="text" id="newStudentName" placeholder="z. B. Delfin-17 oder Team Blau">
     <button class="btn btn-primary" style="margin-top:8px" onclick="addStudent()">+ Hinzufügen</button>
     <div id="studentMsg"></div>
+
+    <div class="random-gen-box">
+      <div class="small muted" style="margin-bottom:8px">Schnellstart: direkt mehrere Schüler:innen mit zufälligen Pseudonymen anlegen und die Zugangscode-Liste ausdrucken.</div>
+      <div class="row">
+        <div>
+          <label for="randomStudentCount">Anzahl</label>
+          <input type="number" id="randomStudentCount" min="1" max="60" value="25">
+        </div>
+        <button class="btn btn-accent" id="generateRandomBtn" style="flex:0 0 auto" onclick="generateRandomStudents()">🎲 Zufällige Namen erzeugen &amp; drucken</button>
+      </div>
+      <div id="randomGenMsg"></div>
+    </div>
+
     <div style="margin-top:16px">
       ${students.length ? students.map(s => `
         <div class="student-row">
@@ -393,8 +446,44 @@ function renderStudentsPanel() {
         </div>
       `).join("") : '<p class="empty-hint">Noch keine Schüler:innen in dieser Klasse.</p>'}
     </div>
-    ${students.length ? '<button class="btn btn-ghost" style="margin-top:12px" onclick="printStudentCodes()">Alle Codes drucken</button>' : ""}
+    ${students.length ? '<button class="btn btn-ghost" style="margin-top:12px" onclick="printStudentCodes()">🖨️ Alle Codes drucken</button>' : ""}
   `;
+}
+async function generateRandomStudents() {
+  const countInput = document.getElementById("randomStudentCount");
+  const count = Math.max(1, Math.min(60, parseInt(countInput.value) || 0));
+  const msg = document.getElementById("randomGenMsg");
+  const btn = document.getElementById("generateRandomBtn");
+  btn.disabled = true;
+  btn.textContent = "Wird erzeugt …";
+  msg.innerHTML = "";
+  try {
+    const usedPseudonyms = new Set((myStudentsByClass[selectedClassId] || []).map(s => s.pseudonym));
+    for (let i = 0; i < count; i++) {
+      const pseudonym = randomPseudonym(usedPseudonyms);
+      /* Wie bei addStudent(): auf bereits vergebenen Code pruefen, bevor er
+         verwendet wird. */
+      let code, exists = true;
+      while (exists) {
+        code = genCode();
+        const snap = await db.collection("students").doc(code).get();
+        exists = snap.exists;
+      }
+      await db.collection("students").doc(code).set({
+        ownerUid: currentTeacher.user.uid,
+        classId: selectedClassId,
+        pseudonym,
+        createdAt: Date.now()
+      });
+    }
+    await loadStudentsForClass(selectedClassId);
+    printStudentCodes();
+  } catch (err) {
+    msg.innerHTML = `<div class="msg msg-error">Fehler: ${esc(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🎲 Zufällige Namen erzeugen & drucken";
+  }
 }
 async function addStudent() {
   const input = document.getElementById("newStudentName");
@@ -438,17 +527,55 @@ function copyStudentLink(code) {
   const url = `${base}?code=${code}`;
   navigator.clipboard?.writeText(url).catch(() => {});
 }
+/* Druckansicht mit QR-Code je Schüler:in (analog zum Team-Kanban-Ausdruck in
+   kanban-board.html): QR + Link führen direkt zu lernbereich.html mit dem
+   Code vorausgefüllt, darunter eine Zeile zum Aufschreiben des echten
+   Namens per Hand -- die Zuordnung "Pseudonym <-> echter Name" bleibt so
+   ausschließlich auf dem Papier und wird nie digital gespeichert. */
 function printStudentCodes() {
   const cls = myClasses.find(c => c.id === selectedClassId);
   const students = myStudentsByClass[selectedClassId] || [];
+  if (!students.length) { alert("Diese Klasse hat noch keine Schüler:innen."); return; }
+  if (!window.qrcode) {
+    alert("Die QR-Code-Bibliothek ist noch nicht bereit. Bitte kurz warten und erneut versuchen.");
+    return;
+  }
   const base = location.origin + location.pathname.replace(/kurse-projekte\.html$/, "lernbereich.html");
+  const cardsHtml = students.map(s => {
+    const url = `${base}?code=${s.code}`;
+    const qr = qrcode(0, "M");
+    qr.addData(url);
+    qr.make();
+    const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    return `<div class="print-card">
+      <div class="pseudonym-name">${esc(s.pseudonym)}</div>
+      ${svg}
+      <div class="code-big">${s.code}</div>
+      <div class="print-hint">QR scannen oder Zugangscode eingeben auf<br>${esc(base)}</div>
+      <div class="name-line">Name: <span class="name-blank"></span></div>
+    </div>`;
+  }).join("");
   const w = window.open("", "_blank");
-  w.document.write(`<html><head><title>Zugangscodes ${esc(cls ? cls.name : "")}</title></head><body style="font-family:sans-serif;padding:24px">
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Zugangscodes ${esc(cls ? cls.name : "")}</title>
+    <style>
+      body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#211f2c;padding:24px;margin:0;}
+      h2{margin:0 0 4px;}
+      p{margin:0 0 18px;color:#6b6878;font-size:.9rem;}
+      .print-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+      .print-card{border:1.5px dashed #cbc6b8;border-radius:12px;padding:14px;text-align:center;break-inside:avoid;}
+      .print-card .pseudonym-name{font-weight:800;margin-bottom:6px;font-size:.95rem;}
+      .print-card svg{width:100%;height:auto;max-width:130px;}
+      .print-card .code-big{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;letter-spacing:.2em;font-size:1.1rem;margin-top:8px;}
+      .print-card .print-hint{font-size:.68rem;color:#6b6878;margin-top:4px;word-break:break-all;}
+      .print-card .name-line{margin-top:14px;font-size:.82rem;text-align:left;border-top:1px dashed #cbc6b8;padding-top:10px;}
+      .print-card .name-blank{display:inline-block;border-bottom:1px solid #211f2c;width:75%;height:1em;vertical-align:middle;}
+      @media print { .print-grid{grid-template-columns:1fr 1fr 1fr;} }
+      @media(max-width:700px){ .print-grid{grid-template-columns:1fr 1fr;} }
+    </style></head><body>
     <h2>${esc(cls ? cls.name : "")} — Zugangscodes</h2>
-    <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
-      <tr><th>Kürzel</th><th>Code</th><th>Link</th></tr>
-      ${students.map(s => `<tr><td>${esc(s.pseudonym)}</td><td style="font-weight:bold">${s.code}</td><td>${esc(base)}?code=${s.code}</td></tr>`).join("")}
-    </table>
+    <p>Ausschneiden und pro Person austeilen. Zugangscode eingeben oder QR scannen auf ${esc(base)} -- den echten Namen bitte nur handschriftlich eintragen, nicht digital speichern.</p>
+    <div class="print-grid">${cardsHtml}</div>
   </body></html>`);
   w.document.close();
   w.print();
@@ -479,6 +606,9 @@ function renderProjectsForSelectedClass() {
     <label>Neues Projekt/Modul</label>
     <input type="text" id="newProjectTitle" placeholder="z. B. Woche 3: Bruchrechnen">
     <textarea id="newProjectDesc" rows="2" placeholder="Kurze Beschreibung (optional)" style="margin-top:6px"></textarea>
+    <label for="newProjectVisibleUntil">Sichtbar bis (optional)</label>
+    <input type="datetime-local" id="newProjectVisibleUntil">
+    <div class="field-hint">Nach diesem Zeitpunkt wird das Projekt für Lernende automatisch wieder ausgeblendet. Leer lassen für kein Limit.</div>
     <button class="btn btn-primary" style="margin-top:8px" onclick="createProject('${classId}')">+ Anlegen</button>
     <div id="projectMsg"></div>
     <div style="margin-top:18px">
@@ -486,14 +616,29 @@ function renderProjectsForSelectedClass() {
     </div>
   `;
 }
+/* Ein Projekt ist für Lernende nur sichtbar, wenn es veröffentlicht ist UND
+   (falls gesetzt) das individuelle "sichtbar bis"-Datum noch nicht erreicht
+   ist -- siehe dieselbe Prüfung in lernbereich.html loadProjects(). Läuft
+   das Datum ab, bleibt "published" in der Datenbank zwar true, das Projekt
+   wird aber automatisch nicht mehr ausgeliefert ("abgelaufen"), ohne dass
+   die Lehrkraft manuell zurückziehen muss. */
+function isProjectVisibleNow(p) {
+  return !!p.published && (!p.visibleUntil || Date.now() < p.visibleUntil);
+}
 function renderProjectCard(p) {
   const tasks = p.tasks || [];
+  const expired = p.published && p.visibleUntil && Date.now() >= p.visibleUntil;
+  const statusPill = isProjectVisibleNow(p)
+    ? `<span class="published-pill">veröffentlicht${p.visibleUntil ? " bis " + esc(formatDateTime(p.visibleUntil)) : ""}</span>`
+    : expired
+      ? `<span class="expired-pill">abgelaufen (war sichtbar bis ${esc(formatDateTime(p.visibleUntil))})</span>`
+      : '<span class="draft-pill">Entwurf</span>';
   return `
     <div class="card" style="margin-bottom:14px">
       <div class="row" style="align-items:center">
         <div>
           <strong>${esc(p.title)}</strong>
-          ${p.published ? '<span class="published-pill">veröffentlicht</span>' : '<span class="draft-pill">Entwurf</span>'}
+          ${statusPill}
           ${p.description ? `<div class="small muted" style="margin-top:4px">${esc(p.description)}</div>` : ""}
         </div>
         <div style="text-align:right">
@@ -513,12 +658,20 @@ function renderProjectCard(p) {
         <input type="text" id="newTaskTitle-${p.id}" placeholder="Neue Aufgabe…">
         <button class="btn btn-sm" style="flex:0 0 auto" onclick="addTask('${p.id}')">+ Aufgabe</button>
       </div>
+      <div class="visible-until-row">
+        <label for="visibleUntil-${p.id}">Sichtbar bis</label>
+        <input type="datetime-local" id="visibleUntil-${p.id}" value="${p.visibleUntil ? toDatetimeLocalValue(p.visibleUntil) : ""}">
+        <button class="btn btn-ghost btn-sm" onclick="saveVisibleUntil('${p.id}')">Übernehmen</button>
+        ${p.visibleUntil ? `<button class="btn btn-ghost btn-sm" onclick="clearVisibleUntil('${p.id}')">Kein Limit</button>` : ""}
+      </div>
     </div>
   `;
 }
 function createProject(classId) {
   const title = document.getElementById("newProjectTitle").value.trim();
   const description = document.getElementById("newProjectDesc").value.trim();
+  const visibleUntilRaw = document.getElementById("newProjectVisibleUntil").value;
+  const visibleUntil = visibleUntilRaw ? new Date(visibleUntilRaw).getTime() : null;
   const msg = document.getElementById("projectMsg");
   if (!title) { msg.innerHTML = '<div class="msg msg-error">Bitte einen Titel eingeben.</div>'; return; }
   db.collection("projects").add({
@@ -528,6 +681,7 @@ function createProject(classId) {
     description,
     tasks: [],
     published: false,
+    visibleUntil,
     createdAt: Date.now()
   }).then(() => loadProjects()).catch(err => {
     msg.innerHTML = `<div class="msg msg-error">Fehler: ${esc(err.message)}</div>`;
@@ -539,6 +693,17 @@ function deleteProject(projectId) {
 }
 function toggleProjectPublished(projectId, published) {
   db.collection("projects").doc(projectId).update({ published }).then(() => loadProjects());
+}
+function saveVisibleUntil(projectId) {
+  const input = document.getElementById("visibleUntil-" + projectId);
+  const val = input.value;
+  if (!val) { alert("Bitte ein Datum/eine Uhrzeit wählen, oder \"Kein Limit\" nutzen, um ein bestehendes Limit zu entfernen."); return; }
+  const ms = new Date(val).getTime();
+  if (isNaN(ms)) { alert("Ungültiges Datum."); return; }
+  db.collection("projects").doc(projectId).update({ visibleUntil: ms }).then(() => loadProjects());
+}
+function clearVisibleUntil(projectId) {
+  db.collection("projects").doc(projectId).update({ visibleUntil: null }).then(() => loadProjects());
 }
 function addTask(projectId) {
   const input = document.getElementById("newTaskTitle-" + projectId);

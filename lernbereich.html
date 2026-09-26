@@ -221,9 +221,13 @@ function logoutLearner() {
 function loadProjects() {
   db.collection("projects").where("classId", "==", studentDoc.classId).get()
     .then((snap) => {
+      /* Ein Projekt bleibt nur bis zum optionalen "sichtbar bis"-Zeitpunkt
+         sichtbar (siehe kurse-projekte.html isProjectVisibleNow()) -- danach
+         verschwindet es hier automatisch, auch wenn "published" in der
+         Datenbank weiterhin true ist. */
       projects = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((p) => p.published)
+        .filter((p) => p.published && (!p.visibleUntil || Date.now() < p.visibleUntil))
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       return loadProgress();
     })
