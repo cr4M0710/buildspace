@@ -383,4 +383,27 @@ const posts = [
     titleEn: "Courses & Projects",
     excerptEn: "Create your own classes/courses, manage learners by pseudonym and individual access code (no real names), put together and publish projects with tasks, and track every learner's progress in one overview."
    },
+   {
+    title: "Märkte & Preise – Lernwerkstatt WAT 9",
+    excerpt: "Drei Lernwege zum Thema Märkte und Preise für den WAT-Unterricht in Jg. 9, mit fertigen Arbeitsblättern für 8 Doppelstunden. Unterrichtsfälle und Preise sind fiktiv. (Externe Seite, von Sebastian Holle)",
+    date: "2026-09-26",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "https://maerkte-preise-lernwerkstatt.sebastianholle.chatgpt.site/#lernen",
+    emoji: "🛒",
+    tags: ["tool", "jg9"],
+    titleEn: "Markets & Prices – WAT 9 Learning Studio",
+    excerptEn: "Three learning pathways on markets and prices for Grade 9 Economics/Work/Technology classes, with ready-made worksheets for 8 double lessons. Teaching cases and prices are fictional. (External site, by Sebastian Holle)"
+   },
+   {
+    title: "Lern-RPG aus dem Lehrplan – Anleitung",
+    excerpt: "Anleitung für Lehrkräfte: mit Claude oder ChatGPT aus dem eigenen Lehrplan ein kleines Pixel-Rollenspiel plus Arbeitsblatt erstellen lassen – inklusive Prompt-Vorlage und Tipps zur Fehlerbehebung. (Externe Seite, KILehrkraft.de)",
+    date: "2026-09-26",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "https://kilehrkraft.de/anleitungen/lern-rpg-aus-dem-lehrplan.html",
+    emoji: "🎮",
+    titleEn: "Curriculum Learning RPG – Guide",
+    excerptEn: "A guide for teachers: use Claude or ChatGPT to turn your own curriculum into a small pixel role-playing game plus worksheet – including a prompt template and troubleshooting tips. (External site, KILehrkraft.de)"
+   },
 ];
