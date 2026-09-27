@@ -149,10 +149,11 @@
     // 51,4%-Marke bei jeder Fensterbreite exakt korrekt.
     (function () {
       var HERO_TARGET_PCT = 0.514;
-      // Anteil, den der reine Schriftzug "buildspace" (ohne Icon) im Video
-      // an der Bildhöhe einnimmt -- ausgemessen am Video-Standbild, an dem
-      // der Schriftzug voll sichtbar ist (187px von 1080px Bildhöhe).
-      var TEXT_HEIGHT_FRAC = 187 / 1080;
+      // Native Auflösung des Videos und die darin ausgemessene Schriftzug-
+      // höhe (187px bei voller 1080px Bildhöhe).
+      var VIDEO_NATIVE_W = 1920;
+      var VIDEO_NATIVE_H = 1080;
+      var TEXT_HEIGHT_PX = 187;
 
       function alignHeroTitle() {
         var hero = document.getElementById("hero");
@@ -194,10 +195,27 @@
         var scaleBox = document.getElementById("hero-bg-scale");
         var title = document.getElementById("hero-title");
         if (!hero || !scaleBox || !title) return;
-        var heroH = hero.getBoundingClientRect().height;
+        var heroRect = hero.getBoundingClientRect();
+        var heroW = heroRect.width;
+        var heroH = heroRect.height;
         var titleH = getTextHeight(title);
-        var naturalTextHeight = heroH * TEXT_HEIGHT_FRAC;
-        if (naturalTextHeight <= 0 || titleH <= 0) return;
+        if (heroW <= 0 || heroH <= 0 || titleH <= 0) return;
+        // object-fit:cover skaliert das Video anhand DER Achse, die stärker
+        // vergrößert werden muss, damit die Box vollständig bedeckt ist --
+        // welche das ist, hängt vom Seitenverhältnis der Box ab. Die Box ist
+        // zwar per aspect-ratio:16/9 definiert, wird aber durch min-/
+        // max-height (siehe CSS) auf vielen Fensterbreiten davon abweichend
+        // gerendert: Bei breiten, aber durch max-height:720px gedeckelten
+        // Fenstern wird die Box BREITER als 16:9 -- dann skaliert cover
+        // anhand der Breite (und beschneidet oben/unten), nicht anhand der
+        // Höhe. Nur heroH zu verwenden (wie zuvor) unterschätzte den
+        // tatsächlich gerenderten Schriftzug in genau diesem, sehr üblichen
+        // Fall drastisch -- das Video wirkte dadurch deutlich zu groß.
+        var videoAR = VIDEO_NATIVE_W / VIDEO_NATIVE_H;
+        var heroAR = heroW / heroH;
+        var renderScale = (heroAR > videoAR) ? (heroW / VIDEO_NATIVE_W) : (heroH / VIDEO_NATIVE_H);
+        var naturalTextHeight = TEXT_HEIGHT_PX * renderScale;
+        if (naturalTextHeight <= 0) return;
         var scale = titleH / naturalTextHeight;
         // Sinnvolle Grenzen, falls sich Layout/Schrift stark ändern.
         scale = Math.max(0.15, Math.min(1.2, scale));
