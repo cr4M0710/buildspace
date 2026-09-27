@@ -29,14 +29,13 @@
 
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ---------- Showreel als Hintergrund-Animation des Hero-Bereichs ----------
-     Das Video zeigt dieselben vier Aurora-Farbflecken wie der ruhende
-     Seitenhintergrund (body::before) und baut daraus animiert das
-     buildspace-Logo auf. Damit der eingeblendete Schriftzug im Video optisch
-     exakt dort landet, wo der echte <h1>-Schriftzug sitzt, behält der
-     Hero-Bereich das 16:9-Seitenverhältnis der Videoquelle (kein Zuschneiden),
-     und der Inhalt wird auf denselben Mittelpunkt zentriert wie das
-     Logo im Video (horizontal 50%, vertikal ~51%). */
+  /* ---------- Animierter Hero-Hintergrund (reines CSS, kein Video) ----------
+     Statt eines eingebetteten Videos (Autoplay-Probleme auf manchen Handys,
+     aufwändiges Nachbauen der Größenanpassung an den echten Titel) laufen
+     hier dieselben vier Aurora-Farbflecken wie im ruhenden Seitenhintergrund
+     (body::before), nur etwas lebendiger animiert und dichter um die Mitte
+     des Hero-Bereichs verteilt -- so bleibt es "clean und dynamisch", ganz
+     ohne Datei-Ladezeit, Autoplay-Handling oder Skalierungs-Rechnerei. */
   .hero {
     position: relative;
     overflow: hidden;
@@ -46,53 +45,48 @@
     min-height: min(560px, 88vh);
     max-height: 720px;
     padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .hero-bg { position: absolute; inset: 0; z-index: 0; }
-  /* .hero-bg-scale wird per JS (scaleHeroVideo(), s.u.) verkleinert, damit der
-     im Video eingeblendete Schriftzug genauso groß erscheint wie der echte
-     <h1>-Schriftzug -- der Skalierungs-Nullpunkt liegt exakt auf dessen
-     Mitte (50% / 51,4%), sodass die Ausrichtung dabei erhalten bleibt.
-     Video und Vignette liegen zusammen in diesem Wrapper, damit beide
-     gemeinsam kleiner werden und der Rand dabei immer weich bleibt. */
-  .hero-bg-scale {
-    position: absolute; inset: 0;
-    transform-origin: 50% 51.4%;
-    /* Blendet das Video selbst weich in volle Transparenz aus (nicht nur
-       optisch überdeckt) -- da es jetzt kleiner ist als der Hero-Bereich,
-       würde eine reine Überdeckung sonst eine sichtbare rechteckige Kante
-       hinterlassen. Darunter scheint der echte Seitenhintergrund (dieselben
-       Aurora-Farbflecken) weich durch, ohne "Box"-Optik. */
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    overflow: hidden;
+    /* Weiche runde Kante statt sichtbarer rechteckiger Box -- darunter
+       scheint der echte Seitenhintergrund weich durch. */
     -webkit-mask-image: radial-gradient(58% 62% at 50% 51%, #000 0%, #000 48%, transparent 88%);
     mask-image: radial-gradient(58% 62% at 50% 51%, #000 0%, #000 48%, transparent 88%);
   }
-  .hero-bg-scale video {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
+  .hero-bg::before {
+    content: '';
+    position: absolute;
+    inset: -25%;
+    background-image:
+      radial-gradient(26% 28% at 26% 68%, color-mix(in srgb, var(--aurora-1) 70%, transparent), transparent 70%),
+      radial-gradient(24% 26% at 74% 28%, color-mix(in srgb, var(--aurora-2) 65%, transparent), transparent 70%),
+      radial-gradient(22% 24% at 40% 24%, color-mix(in srgb, var(--aurora-3) 60%, transparent), transparent 70%),
+      radial-gradient(24% 26% at 64% 74%, color-mix(in srgb, var(--aurora-4) 60%, transparent), transparent 70%);
+    filter: blur(46px) saturate(150%);
+    opacity: var(--aurora-opacity);
+    animation: heroAuroraDrift 16s ease-in-out infinite alternate;
   }
-  /* Das Video selbst ist (wie das Ausgangsbild) hell/pastellfarben und hat
-     keine eigene Dunkelmodus-Variante -- im Dunkelmodus daher wie die
-     Aurora im Hintergrund (--aurora-opacity) gedimmt, statt als grelle
-     helle Fläche vor dem dunklen Hintergrund zu stehen. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .hero-bg-scale video { opacity: 0.6; filter: brightness(0.8) saturate(1.15); }
+  @keyframes heroAuroraDrift {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+    50%  { transform: translate3d(3%, -3.5%, 0) rotate(7deg) scale(1.1); }
+    100% { transform: translate3d(-3.5%, 3%, 0) rotate(-6deg) scale(1); }
   }
-  :root[data-theme="dark"] .hero-bg-scale video { opacity: 0.6; filter: brightness(0.8) saturate(1.15); }
-  /* Zusätzlicher dezenter Kontrast unter dem Text, damit er über dem Video
-     lesbar bleibt -- die eigentliche weiche Kante kommt bereits von der
-     Maske oben. */
-  .hero-bg-scale::after {
+  @media (prefers-reduced-motion: reduce) {
+    .hero-bg::before { animation: none; }
+  }
+  /* Zusätzlicher dezenter Kontrast unter dem Text, damit er über den
+     Farbflecken lesbar bleibt. */
+  .hero-bg::after {
     content: '';
     position: absolute; inset: 0;
-    background: radial-gradient(46% 50% at 50% 51%, color-mix(in srgb, var(--bg) 32%, transparent) 0%, transparent 72%);
+    background: radial-gradient(46% 50% at 50% 51%, color-mix(in srgb, var(--bg) 42%, transparent) 0%, transparent 72%);
   }
   .hero-bg[hidden] { display: none; }
-  /* .hero-inner wird per JS (alignHeroTitle(), s.u.) senkrecht so positioniert,
-     dass die Mitte des <h1> exakt auf die Mitte des im Video eingeblendeten
-     Schriftzugs trifft (gemessen: 51,4% der Video-Höhe) — unabhängig von
-     Fensterbreite, Schriftgröße oder Zeilenumbruch. */
-  .hero-inner { position: absolute; left: 0; right: 0; top: 0; text-align: center; z-index: 1; }
+  .hero-inner { position: relative; text-align: center; z-index: 1; }
   @media (max-width: 560px) {
     .hero { min-height: min(560px, 94vh); }
   }
@@ -126,12 +120,7 @@
   </nav>
 
   <header class="hero" id="hero">
-    <div class="hero-bg" id="hero-bg" aria-hidden="true">
-      <div class="hero-bg-scale" id="hero-bg-scale">
-        <video id="hero-video" src="assets/buildspace-showreel.mp4" poster="assets/buildspace-showreel-poster.jpg"
-               autoplay muted defaultMuted loop playsinline webkit-playsinline="true" preload="auto"></video>
-      </div>
-    </div>
+    <div class="hero-bg" id="hero-bg" aria-hidden="true"></div>
     <div class="hero-inner" id="hero-inner">
       <p class="hero-eyebrow" id="hero-greeting">Willkommen</p>
       <h1 id="hero-title">buildspace</h1>
@@ -139,102 +128,6 @@
       <div class="hero-stats" id="hero-stats"></div>
     </div>
   </header>
-  <script>
-    // Positioniert #hero-inner so, dass die Mitte des <h1> exakt auf die
-    // Mitte des im Showreel eingeblendeten "buildspace"-Schriftzugs trifft.
-    // Gemessen wurde: Schriftzug+Icon sitzen im Video bei ca. 51,4% der
-    // Bildhöhe (horizontal ist beides ohnehin zentriert = 50%). Da .hero das
-    // 16:9-Seitenverhältnis des Videos hat (bzw. bei sehr schmalen/hohen
-    // Fenstern nur seitlich, nie senkrecht beschnitten wird), bleibt diese
-    // 51,4%-Marke bei jeder Fensterbreite exakt korrekt.
-    (function () {
-      var HERO_TARGET_PCT = 0.514;
-      // Native Auflösung des Videos und die darin ausgemessene Schriftzug-
-      // höhe (187px bei voller 1080px Bildhöhe).
-      var VIDEO_NATIVE_W = 1920;
-      var VIDEO_NATIVE_H = 1080;
-      var TEXT_HEIGHT_PX = 187;
-
-      function alignHeroTitle() {
-        var hero = document.getElementById("hero");
-        var inner = document.getElementById("hero-inner");
-        var title = document.getElementById("hero-title");
-        if (!hero || !inner || !title) return;
-        var heroH = hero.getBoundingClientRect().height;
-        var innerRect = inner.getBoundingClientRect();
-        var titleRect = title.getBoundingClientRect();
-        var titleCenterInInner = (titleRect.top - innerRect.top) + titleRect.height / 2;
-        var targetTitleCenter = heroH * HERO_TARGET_PCT;
-        // titleCenterInInner ist relativ zu #hero-inner und bleibt beim
-        // Verschieben von #hero-inner unverändert -- daher hier absolut
-        // setzen, nicht auf den bisherigen "top"-Wert aufaddieren.
-        inner.style.top = (targetTitleCenter - titleCenterInInner) + "px";
-      }
-
-      // Höhe nur des eigentlichen Textinhalts (ohne die "::after"-Trennlinie
-      // unter dem Titel, die sonst als Teil der Element-Höhe mitgezählt und
-      // den Vergleich verfälschen würde) -- per Range so nah wie möglich an
-      // der tatsächlichen Buchstabenhöhe der Schrift.
-      function getTextHeight(el) {
-        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        var node = walker.nextNode();
-        if (!node) return el.getBoundingClientRect().height;
-        var range = document.createRange();
-        range.selectNodeContents(node);
-        return range.getBoundingClientRect().height;
-      }
-
-      // Verkleinert das Video (samt Vignette) so, dass sein eingeblendeter
-      // Schriftzug exakt so groß wird wie der echte <h1>-Schriftzug -- damit
-      // das Video am Ende optisch "in" den echten Titel übergeht, statt
-      // größer oder kleiner als dieser zu wirken. Skaliert wird um den
-      // Punkt (50%, 51,4%), also exakt um die Schriftzug-Mitte -- die
-      // Ausrichtung von alignHeroTitle() bleibt dadurch unverändert exakt.
-      function scaleHeroVideo() {
-        var hero = document.getElementById("hero");
-        var scaleBox = document.getElementById("hero-bg-scale");
-        var title = document.getElementById("hero-title");
-        if (!hero || !scaleBox || !title) return;
-        var heroRect = hero.getBoundingClientRect();
-        var heroW = heroRect.width;
-        var heroH = heroRect.height;
-        var titleH = getTextHeight(title);
-        if (heroW <= 0 || heroH <= 0 || titleH <= 0) return;
-        // object-fit:cover skaliert das Video anhand DER Achse, die stärker
-        // vergrößert werden muss, damit die Box vollständig bedeckt ist --
-        // welche das ist, hängt vom Seitenverhältnis der Box ab. Die Box ist
-        // zwar per aspect-ratio:16/9 definiert, wird aber durch min-/
-        // max-height (siehe CSS) auf vielen Fensterbreiten davon abweichend
-        // gerendert: Bei breiten, aber durch max-height:720px gedeckelten
-        // Fenstern wird die Box BREITER als 16:9 -- dann skaliert cover
-        // anhand der Breite (und beschneidet oben/unten), nicht anhand der
-        // Höhe. Nur heroH zu verwenden (wie zuvor) unterschätzte den
-        // tatsächlich gerenderten Schriftzug in genau diesem, sehr üblichen
-        // Fall drastisch -- das Video wirkte dadurch deutlich zu groß.
-        var videoAR = VIDEO_NATIVE_W / VIDEO_NATIVE_H;
-        var heroAR = heroW / heroH;
-        var renderScale = (heroAR > videoAR) ? (heroW / VIDEO_NATIVE_W) : (heroH / VIDEO_NATIVE_H);
-        var naturalTextHeight = TEXT_HEIGHT_PX * renderScale;
-        if (naturalTextHeight <= 0) return;
-        var scale = titleH / naturalTextHeight;
-        // Sinnvolle Grenzen, falls sich Layout/Schrift stark ändern.
-        scale = Math.max(0.15, Math.min(1.2, scale));
-        scaleBox.style.transform = "scale(" + scale.toFixed(4) + ")";
-      }
-
-      function updateHero() {
-        alignHeroTitle();
-        scaleHeroVideo();
-      }
-      window.alignHeroTitle = updateHero;
-      updateHero();
-      window.addEventListener("resize", updateHero);
-      window.addEventListener("load", updateHero);
-      // Erneut ausrichten, nachdem app.js die Kennzahlen (#hero-stats) und
-      // die Begrüßung befüllt hat, falls sich dadurch Zeilenumbrüche ändern.
-      setTimeout(updateHero, 300);
-    })();
-  </script>
 
   <main class="wrap">
     <div id="content"></div>
@@ -251,53 +144,5 @@
   <script defer src="protect.js"></script>
   <script defer src="cursor.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Showreel läuft als Hintergrund-Animation des Hero-Bereichs auf jeder
-    // Route (der Hero-Titel steht ja auch überall oben). Bei "Bewegung
-    // reduzieren" bleibt es auf dem ersten Bild (Poster) stehen.
-    //
-    // Mobile Browser (v.a. iOS Safari, Android-WebViews mit Datensparmodus)
-    // lehnen den allerersten play()-Aufruf gelegentlich noch ab, weil das
-    // "muted" noch nicht als Eigenschaft (nicht nur als HTML-Attribut)
-    // gesetzt ist oder das Video noch nicht genug geladen hat -- daher wird
-    // hier zusätzlich die "muted"-Eigenschaft per JS erzwungen und an
-    // mehreren späteren Zeitpunkten (sobald mehr geladen ist, bzw. bei der
-    // ersten Berührung der Seite) erneut versucht.
-    (function () {
-      var video = document.getElementById("hero-video");
-      if (!video) return;
-      video.muted = true;
-      video.defaultMuted = true;
-      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-      var retryEvents = ["loadedmetadata", "loadeddata", "canplay", "canplaythrough"];
-      var gestureEvents = ["touchstart", "pointerdown", "click"];
-
-      function tryPlay() {
-        if (reduce.matches) { video.pause(); return; }
-        video.muted = true;
-        var p = video.play();
-        if (p && p.catch) p.catch(function () { /* nächster Versuch folgt per Event */ });
-      }
-      function onGesture() {
-        tryPlay();
-        gestureEvents.forEach(function (evt) {
-          document.removeEventListener(evt, onGesture);
-        });
-      }
-
-      if (reduce.addEventListener) reduce.addEventListener("change", tryPlay);
-      else if (reduce.addListener) reduce.addListener(tryPlay);
-
-      retryEvents.forEach(function (evt) { video.addEventListener(evt, tryPlay); });
-      gestureEvents.forEach(function (evt) {
-        document.addEventListener(evt, onGesture, { passive: true });
-      });
-
-      tryPlay();
-      window.addEventListener("load", tryPlay);
-      setTimeout(tryPlay, 500);
-      setTimeout(tryPlay, 1500);
-    })();
-  </script>
 </body>
 </html>
