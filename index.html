@@ -29,22 +29,54 @@
 
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ---------- Showreel im Hero (nur auf der Startseite) ---------- */
-  .hero-reel {
-    max-width: var(--max-width);
-    margin: 44px auto 0;
-    aspect-ratio: 16 / 9;
-    border-radius: var(--radius-lg);
+  /* ---------- Showreel als Hintergrund-Animation des Hero-Bereichs ----------
+     Das Video zeigt dieselben vier Aurora-Farbflecken wie der ruhende
+     Seitenhintergrund (body::before) und baut daraus animiert das
+     buildspace-Logo auf. Damit der eingeblendete Schriftzug im Video optisch
+     exakt dort landet, wo der echte <h1>-Schriftzug sitzt, behält der
+     Hero-Bereich das 16:9-Seitenverhältnis der Videoquelle (kein Zuschneiden),
+     und der Inhalt wird auf denselben Mittelpunkt zentriert wie das
+     Logo im Video (horizontal 50%, vertikal ~51%). */
+  .hero {
+    position: relative;
     overflow: hidden;
-    background: #F5F5F7;
-    box-shadow: 0 20px 50px rgba(var(--glass-shadow), 0.14), 0 0 0 1px var(--divider);
+    isolation: isolate;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: min(560px, 88vh);
+    max-height: 720px;
+    padding: 0 24px;
   }
-  .hero-reel video { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .hero-reel[hidden] { display: none; }
+  .hero-bg { position: absolute; inset: 0; z-index: 0; }
+  .hero-bg video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Weiche Vignette: blendet die Videoränder in die Seitenfarbe (--bg) über
+     und hebt den Text zur Mitte hin dezent vom Hintergrund ab. */
+  .hero-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(58% 62% at 50% 51%, color-mix(in srgb, var(--bg) 40%, transparent) 0%, transparent 62%),
+      linear-gradient(to bottom, var(--bg) 0%, transparent 14%, transparent 82%, var(--bg) 100%),
+      linear-gradient(to right, var(--bg) 0%, transparent 9%, transparent 91%, var(--bg) 100%);
+  }
+  .hero-bg[hidden] { display: none; }
+  /* .hero-inner wird per JS (alignHeroTitle(), s.u.) senkrecht so positioniert,
+     dass die Mitte des <h1> exakt auf die Mitte des im Video eingeblendeten
+     Schriftzugs trifft (gemessen: 51,4% der Video-Höhe) — unabhängig von
+     Fensterbreite, Schriftgröße oder Zeilenumbruch. */
+  .hero-inner { position: absolute; left: 0; right: 0; top: 0; text-align: center; z-index: 1; }
   @media (max-width: 560px) {
-    .hero-reel { margin-top: 28px; border-radius: var(--radius-sm); }
+    .hero { min-height: min(560px, 94vh); }
   }
-  @media print { .hero-reel { display: none !important; } }
+  @media (max-width: 340px) {
+    .hero { min-height: min(610px, 96vh); }
+  }
+  @media print { .hero-bg { display: none !important; } }
 </style>
 </head>
 <body>
@@ -70,17 +102,52 @@
     </div>
   </nav>
 
-  <header class="hero">
-    <p class="hero-eyebrow" id="hero-greeting">Willkommen</p>
-    <h1>buildspace</h1>
-    <p class="hero-sub" id="hero-sub">Materialien, Lernspiele und Tools von Marc Stroh — Mathematik, Arbeitslehre, Handball &amp; Freizeit, gesammelt an einem Ort.</p>
-    <div class="hero-stats" id="hero-stats"></div>
-    <div class="hero-reel" id="hero-reel">
-      <video src="assets/buildspace-showreel.mp4" poster="assets/buildspace-showreel-poster.jpg"
-             autoplay muted loop playsinline preload="metadata"
-             aria-label="Showreel: verspielte Formen und Farben von buildspace"></video>
+  <header class="hero" id="hero">
+    <div class="hero-bg" id="hero-bg" aria-hidden="true">
+      <video id="hero-video" src="assets/buildspace-showreel.mp4" poster="assets/buildspace-showreel-poster.jpg"
+             autoplay muted loop playsinline preload="metadata"></video>
+    </div>
+    <div class="hero-inner" id="hero-inner">
+      <p class="hero-eyebrow" id="hero-greeting">Willkommen</p>
+      <h1 id="hero-title">buildspace</h1>
+      <p class="hero-sub" id="hero-sub">Materialien, Lernspiele und Tools von Marc Stroh — Mathematik, Arbeitslehre, Handball &amp; Freizeit, gesammelt an einem Ort.</p>
+      <div class="hero-stats" id="hero-stats"></div>
     </div>
   </header>
+  <script>
+    // Positioniert #hero-inner so, dass die Mitte des <h1> exakt auf die
+    // Mitte des im Showreel eingeblendeten "buildspace"-Schriftzugs trifft.
+    // Gemessen wurde: Schriftzug+Icon sitzen im Video bei ca. 51,4% der
+    // Bildhöhe (horizontal ist beides ohnehin zentriert = 50%). Da .hero das
+    // 16:9-Seitenverhältnis des Videos hat (bzw. bei sehr schmalen/hohen
+    // Fenstern nur seitlich, nie senkrecht beschnitten wird), bleibt diese
+    // 51,4%-Marke bei jeder Fensterbreite exakt korrekt.
+    (function () {
+      var HERO_TARGET_PCT = 0.514;
+      function alignHeroTitle() {
+        var hero = document.getElementById("hero");
+        var inner = document.getElementById("hero-inner");
+        var title = document.getElementById("hero-title");
+        if (!hero || !inner || !title) return;
+        var heroH = hero.getBoundingClientRect().height;
+        var innerRect = inner.getBoundingClientRect();
+        var titleRect = title.getBoundingClientRect();
+        var titleCenterInInner = (titleRect.top - innerRect.top) + titleRect.height / 2;
+        var targetTitleCenter = heroH * HERO_TARGET_PCT;
+        // titleCenterInInner ist relativ zu #hero-inner und bleibt beim
+        // Verschieben von #hero-inner unverändert -- daher hier absolut
+        // setzen, nicht auf den bisherigen "top"-Wert aufaddieren.
+        inner.style.top = (targetTitleCenter - titleCenterInInner) + "px";
+      }
+      window.alignHeroTitle = alignHeroTitle;
+      alignHeroTitle();
+      window.addEventListener("resize", alignHeroTitle);
+      window.addEventListener("load", alignHeroTitle);
+      // Erneut ausrichten, nachdem app.js die Kennzahlen (#hero-stats) und
+      // die Begrüßung befüllt hat, falls sich dadurch Zeilenumbrüche ändern.
+      setTimeout(alignHeroTitle, 300);
+    })();
+  </script>
 
   <main class="wrap">
     <div id="content"></div>
@@ -98,20 +165,20 @@
   <script defer src="cursor.js"></script>
   <script src="app.js"></script>
   <script>
-    // Showreel nur auf der Startseite zeigen; bei "Bewegung reduzieren" angehalten lassen.
+    // Showreel läuft als Hintergrund-Animation des Hero-Bereichs auf jeder
+    // Route (der Hero-Titel steht ja auch überall oben). Bei "Bewegung
+    // reduzieren" bleibt es auf dem ersten Bild (Poster) stehen.
     (function () {
-      var box = document.getElementById("hero-reel");
-      if (!box) return;
-      var video = box.querySelector("video");
+      var video = document.getElementById("hero-video");
+      if (!video) return;
       var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-      function update() {
-        var home = location.hash === "" || location.hash === "#" || location.hash === "#/";
-        box.hidden = !home;
-        if (!home || reduce.matches) { video.pause(); }
+      function apply() {
+        if (reduce.matches) { video.pause(); }
         else { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
       }
-      window.addEventListener("hashchange", update);
-      update();
+      if (reduce.addEventListener) reduce.addEventListener("change", apply);
+      else if (reduce.addListener) reduce.addListener(apply);
+      apply();
     })();
   </script>
 </body>
