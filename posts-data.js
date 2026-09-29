@@ -418,4 +418,16 @@ const posts = [
     titleEn: "Function Ladder",
     excerptEn: "A quiz on linear and quadratic functions where you climb a ladder – solo or live with the class."
    },
+   {
+    title: "Minispiele",
+    excerpt: "Fünf Klassiker für zwischendurch: Mühle, Dame, MiniGolf, Billard und Sudoku.",
+    date: "2026-09-29",
+    category: "freizeit",
+    subcategory: null,
+    url: "minispiele.html",
+    emoji: "🎯",
+    tags: ["spiel"],
+    titleEn: "Mini Games",
+    excerptEn: "Five classics for a quick break: Nine Men's Morris, Checkers, Mini Golf, Billiards and Sudoku."
+   },
 ];
