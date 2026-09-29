@@ -406,4 +406,16 @@ const posts = [
     titleEn: "Curriculum Learning RPG – Guide",
     excerptEn: "A guide for teachers: use Claude or ChatGPT to turn your own curriculum into a small pixel role-playing game plus worksheet – including a prompt template and troubleshooting tips. (External site, KILehrkraft.de)"
    },
+   {
+    title: "Funktionsleiter",
+    excerpt: "Quiz zu linearen und quadratischen Funktionen zum Hochklettern – allein oder live mit der Klasse.",
+    date: "2026-09-29",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "funktionsleiter.html",
+    emoji: "🪜",
+    tags: ["spiel"],
+    titleEn: "Function Ladder",
+    excerptEn: "A quiz on linear and quadratic functions where you climb a ladder – solo or live with the class."
+   },
 ];
