@@ -1,0 +1,71 @@
+# CLAUDE.md – buildspace
+
+Persönliche Sammlung von Marc Stroh (Lehrer an einer IGS in Hessen, Mathematik & Arbeitslehre, Jg. 5–10; Handball bei der HSG Wettenberg). Live unter https://buildspaceos.de (GitHub Pages, Branch `main`).
+
+Reines HTML/CSS/JS, **kein Framework, kein Build-Schritt**. Was im Repo liegt, ist sofort die Website.
+
+## Aufbau
+
+- `index.html` – Startseite, lädt `posts-data.js` und danach `app.js`
+- `posts-data.js` – **die** Liste aller Beiträge (`const posts = [ … ]`). Jede Karte auf der Seite kommt von hier.
+- `app.js` – Ordner-Navigation, Suche, Tag-Filter, Übersetzungen (`I18N`)
+- `protect.js` – Login/Schutz für Classroom Management (Firebase)
+- Tool-/Spielseiten liegen als einzelne `.html`-Dateien **im Root** (z. B. `hallenplan.html`, `minigolf-winkel.html`)
+
+## Standardaufgabe: neues Tool / neuen Beitrag einstellen
+
+Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, immer beides erledigen:
+
+1. **HTML-Datei anlegen** im Root, Dateiname = kurzer Slug, Kleinbuchstaben, Bindestriche, keine Umlaute (`bruch-memory.html`).
+2. **Eintrag in `posts-data.js` ergänzen** – ans **Ende** des Arrays anhängen, im selben Format wie die bestehenden Einträge (3 Leerzeichen Einrückung, doppelte Anführungszeichen, Komma nach jedem Objekt).
+
+### Felder eines Eintrags
+
+```js
+   {
+    title: "Bruch-Memory",
+    excerpt: "Ein Satz, was das Tool macht.",
+    date: "JJJJ-MM-TT",          // heutiges Datum
+    category: "schule",
+    subcategory: "mathematik",
+    url: "bruch-memory.html",
+    emoji: "🧩",
+    tags: ["spiel", "partnerarbeit"],
+    titleEn: "Fraction Memory",
+    excerptEn: "One sentence in English."
+   },
+```
+
+- `category` / `subcategory` – nur diese Werte:
+  - `schule` → `mathematik` | `arbeitslehre` | `faecheruebergreifend` (= „Classroom Management“) | `weiterefaecher` | `sonstiges`
+  - `handball` → `jugend` | `maenner1` | `maenner2` | `hallendienst` | `training`
+  - `freizeit` → `subcategory: null`
+- `tags` (optional): `spiel` oder `tool`; Gruppengröße `einzelarbeit` | `partnerarbeit` | `gruppenarbeit`; `vertretung` = ohne Lehrkraft selbsterklärend nutzbar; `jg5`–`jg10` **nur**, wenn das Tool eindeutig für einen Jahrgang gedacht ist – nicht raten.
+- `titleEn` / `excerptEn` immer mitliefern.
+- `featured: true` **nur**, wenn Marc es ausdrücklich will.
+- Externe Links: `url` ist die volle https-Adresse, im `excerpt` am Ende „(Externe Seite, …)“ vermerken.
+
+Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
+
+## Regeln für Tool-Seiten
+
+- **Eine eigenständige Datei**: CSS und JS inline, keine lokalen Abhängigkeiten. Externe Bibliotheken nur per CDN (bevorzugt cdnjs), mit fester Version.
+- Sprache Deutsch, `<html lang="de">`, `<meta charset="UTF-8">`, `<title>` = Titel aus `posts-data.js`.
+- **Muss auf iPad und iPhone gut funktionieren** (Marcs Hauptgeräte, Schüler-iPads): Touch-Bedienung, keine Hover-Abhängigkeit, ausreichend große Bedienelemente, responsives Layout, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
+- Speichern nur per `localStorage` (mit try/catch). Keine `window.storage`- oder Claude-API-Aufrufe – die gibt es auf GitHub Pages nicht.
+- Unterricht: Differenzierung nach A/B/C-Kurs mitdenken, wenn es sich anbietet. Schülerdaten nur als Pseudonyme, keine echten Namen.
+- Keine API-Keys, Passwörter oder Tokens in Dateien schreiben.
+
+## Nicht ohne ausdrücklichen Auftrag ändern
+
+- `app.js`, `index.html`, `protect.js`, `cursor.js`, Firebase-Konfiguration
+- Bestehende Einträge in `posts-data.js` (außer Marc bittet darum)
+- Umbenennen oder Löschen bestehender HTML-Dateien (sonst brechen geteilte Links und QR-Codes)
+
+Neue Tags, Kategorien oder Übersetzungen brauchen ggf. Änderungen in `app.js` (`I18N.tagLabels`, `subfolders`) – dann vorher kurz Bescheid geben.
+
+## Vor dem Abschluss prüfen
+
+- `node -e "require('fs'); eval(require('fs').readFileSync('posts-data.js','utf8')+';console.log(posts.length)')"` läuft ohne Fehler
+- `url` im Eintrag stimmt exakt mit dem Dateinamen überein
+- Commit-Nachricht auf Deutsch, kurz: `Neues Tool: Bruch-Memory`
