@@ -454,4 +454,16 @@ const posts = [
     titleEn: "Blob Guard",
     excerptEn: "Percentage learning game: the class defends the school bag against the blobs together, or two students face off in a duel."
    },
+   {
+    title: "Lichtlabor Klasse 7",
+    excerpt: "Interaktives Lichtlabor für Klasse 7 zum Ausprobieren und Entdecken. (Externe Seite)",
+    date: "2026-09-30",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "https://lichtlabor-klasse-7.sebastianholle.chatgpt.site/",
+    emoji: "💡",
+    tags: ["tool", "jg7"],
+    titleEn: "Light Lab Grade 7",
+    excerptEn: "Interactive light lab for grade 7 to experiment and explore. (External site)"
+   },
 ];
