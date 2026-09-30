@@ -442,16 +442,4 @@ const posts = [
     titleEn: "Paw Happiness",
     excerptEn: "Pick one of four shelter puppies, give it a name and take care of it."
    },
-   {
-    title: "Lernspiel-Baukasten (KI-Prompt)",
-    excerpt: "Kopiervorlage mit Kurzanleitung: Mit diesem Auftrag baut eine KI dir ein eigenes Lernspiel für deinen Unterricht.",
-    date: "2026-09-30",
-    category: "schule",
-    subcategory: "sonstiges",
-    url: "lernspiel-prompt.html",
-    emoji: "🛠️",
-    tags: ["tool"],
-    titleEn: "Learning Game Builder (AI Prompt)",
-    excerptEn: "Copy-and-paste template with short guide: this prompt lets an AI build your own classroom learning game."
-   },
 ];
