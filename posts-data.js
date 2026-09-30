@@ -430,4 +430,16 @@ const posts = [
     titleEn: "Mini Games",
     excerptEn: "Five classics for a quick break: Nine Men's Morris, Checkers, Mini Golf, Billiards and Sudoku."
    },
+   {
+    title: "Pfotenglück",
+    excerpt: "Such dir einen von vier Welpen aus dem Tierheim aus, gib ihm einen Namen und kümmere dich um ihn.",
+    date: "2026-09-30",
+    category: "freizeit",
+    subcategory: null,
+    url: "pfotengluck.html",
+    emoji: "🐶",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Paw Happiness",
+    excerptEn: "Pick one of four shelter puppies, give it a name and take care of it."
+   },
 ];
