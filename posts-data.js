@@ -442,4 +442,16 @@ const posts = [
     titleEn: "Paw Happiness",
     excerptEn: "Pick one of four shelter puppies, give it a name and take care of it."
    },
+   {
+    title: "Klecks-Wache",
+    excerpt: "Prozentrechnung-Lernspiel: Die Klasse verteidigt gemeinsam den Schulranzen gegen die Kleckse oder zwei Lernende treten im Duell an.",
+    date: "2026-09-30",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "klecks-wache.html",
+    emoji: "🎒",
+    tags: ["spiel", "gruppenarbeit", "jg7"],
+    titleEn: "Blob Guard",
+    excerptEn: "Percentage learning game: the class defends the school bag against the blobs together, or two students face off in a duel."
+   },
 ];
