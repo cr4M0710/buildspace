@@ -466,4 +466,16 @@ const posts = [
     titleEn: "Light Lab Grade 7",
     excerptEn: "Interactive light lab for grade 7 to experiment and explore. (External site)"
    },
+   {
+    title: "Prozentinsel",
+    excerpt: "3D-Lernspiel zur Prozentrechnung: Die Insel erkunden, Rätsel lösen und am Ende die Burg erobern.",
+    date: "2026-10-01",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "prozentinsel.html",
+    emoji: "🏝️",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Percent Island",
+    excerptEn: "3D learning game on percentages: explore the island, solve puzzles and conquer the castle at the end."
+   },
 ];

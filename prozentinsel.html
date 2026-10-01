@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Prozentinsel – 3D-Lernspiel zur Prozentrechnung</title>
+<style>
+:root{
+  --ink:#1b2a3a; --ink-2:#4b5c6e; --panel:#ffffff; --panel-2:#eef4fa; --line:#cfdce8;
+  --hud:rgba(255,255,255,.93);
+  --brand:#1f8a5b; --brand-ink:#ffffff; --blue:#2467b8; --gold:#f2b632;
+  --bad:#a52a1d; --bad-bg:#fdecea; --good:#14703f; --good-bg:#e4f5eb;
+  --tip-bg:#fff4d1; --tip-ink:#5c4000; --backdrop:rgba(10,25,40,.30);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#eef4fb; --ink-2:#b4c2d1; --panel:#1f2c3a; --panel-2:#2a3b4d; --line:#3d5064;
+    --hud:rgba(31,44,58,.93);
+    --brand:#3dc28a; --brand-ink:#06261a; --blue:#7db6f5; --gold:#f2b632;
+    --bad:#ff9d8f; --bad-bg:#44262b; --good:#6fdca2; --good-bg:#1d3b2c;
+    --tip-bg:#3b3419; --tip-ink:#ffe6a3; --backdrop:rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#eef4fb; --ink-2:#b4c2d1; --panel:#1f2c3a; --panel-2:#2a3b4d; --line:#3d5064;
+  --hud:rgba(31,44,58,.93);
+  --brand:#3dc28a; --brand-ink:#06261a; --blue:#7db6f5; --gold:#f2b632;
+  --bad:#ff9d8f; --bad-bg:#44262b; --good:#6fdca2; --good-bg:#1d3b2c;
+  --tip-bg:#3b3419; --tip-ink:#ffe6a3; --backdrop:rgba(0,0,0,.45);
+}
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+html,body{
+  margin:0; height:100%; overflow:hidden; background:#9fdcf5; color:var(--ink);
+  font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent; touch-action:none; overscroll-behavior:none;
+}
+#c{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; outline:none; }
+button{ font-family:inherit; }
+input{ font-family:inherit; -webkit-user-select:text; user-select:text; }
+
+/* ---------- HUD ---------- */
+#hud{ position:fixed; inset:0; pointer-events:none; z-index:5; }
+body[data-mode="start"] #hud{ display:none; }
+.panel{ background:var(--hud); border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.18); pointer-events:auto; }
+#stats{
+  position:absolute; top:calc(env(safe-area-inset-top,0px) + 10px); left:calc(env(safe-area-inset-left,0px) + 10px);
+  padding:10px 14px; min-width:196px; max-width:min(58vw,300px);
+}
+#stats .row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; font-size:17px; font-weight:700; }
+#stats .row small{ font-size:14px; font-weight:600; color:var(--ink-2); }
+#dots{ display:flex; gap:6px; margin:8px 0 6px; }
+#dots i{ flex:1; height:10px; border-radius:6px; background:var(--line); }
+#dots i.done{ background:var(--brand); }
+#dots i.now{ background:var(--gold); }
+#goal{ font-size:14px; color:var(--ink-2); line-height:1.25; }
+#topbtns{
+  position:absolute; top:calc(env(safe-area-inset-top,0px) + 10px); right:calc(env(safe-area-inset-right,0px) + 10px);
+  display:flex; gap:8px; pointer-events:auto;
+}
+.hbtn{
+  min-height:52px; min-width:52px; padding:0 14px; border:0; border-radius:16px; background:var(--hud); color:var(--ink);
+  font-size:17px; font-weight:700; box-shadow:0 4px 18px rgba(0,0,0,.18); cursor:pointer; touch-action:manipulation;
+  display:flex; align-items:center; gap:8px;
+}
+.hbtn:active{ transform:scale(.97); }
+.hbtn .ico{ font-size:22px; line-height:1; }
+@media (max-width:640px){ .hbtn .lbl{ display:none; } }
+#act{
+  position:absolute; right:calc(env(safe-area-inset-right,0px) + 22px); bottom:calc(env(safe-area-inset-bottom,0px) + 34px);
+  min-height:68px; max-width:min(60vw,360px); padding:10px 24px; border:0; border-radius:22px;
+  background:var(--brand); color:var(--brand-ink); font-size:20px; font-weight:800; line-height:1.15;
+  box-shadow:0 6px 22px rgba(0,0,0,.3); pointer-events:auto; cursor:pointer; touch-action:manipulation; text-align:left;
+}
+#act small{ display:block; font-size:13px; font-weight:600; opacity:.9; }
+#act[hidden]{ display:none; }
+#toast{
+  position:absolute; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 118px); transform:translateX(-50%);
+  max-width:min(88vw,560px); padding:12px 18px; border-radius:16px; background:var(--panel); color:var(--ink);
+  font-size:17px; font-weight:600; text-align:center; line-height:1.3; box-shadow:0 6px 24px rgba(0,0,0,.28);
+  border:2px solid var(--gold);
+}
+#toast[hidden]{ display:none; }
+#hintCard{
+  position:absolute; left:50%; top:calc(env(safe-area-inset-top,0px) + 82px); transform:translateX(-50%);
+  width:min(92vw,420px); padding:14px 16px; display:flex; gap:14px; align-items:center;
+}
+#hintCard[hidden]{ display:none; }
+#hintArrow{ flex:none; width:54px; height:54px; border-radius:50%; background:var(--panel-2); display:grid; place-items:center; border:2px solid var(--line); }
+#hintArrow svg{ width:30px; height:30px; transition:transform .1s linear; }
+#hintTxt{ font-size:17px; line-height:1.3; }
+#hintTxt b{ display:block; font-size:18px; margin-bottom:2px; }
+#joy{
+  position:absolute; left:calc(env(safe-area-inset-left,0px) + 26px); bottom:calc(env(safe-area-inset-bottom,0px) + 30px);
+  width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.30); border:3px solid rgba(255,255,255,.85);
+  display:none; touch-action:none; pointer-events:auto;
+}
+body.touch #joy{ display:block; }
+body:not([data-mode="play"]) #joy{ opacity:.35; }
+#knob{
+  position:absolute; left:50%; top:50%; width:68px; height:68px; margin:-34px 0 0 -34px; border-radius:50%;
+  background:rgba(255,255,255,.95); box-shadow:0 3px 10px rgba(0,0,0,.3); pointer-events:none;
+}
+
+/* ---------- Overlays / Karten ---------- */
+.overlay{
+  position:fixed; inset:0; z-index:20; display:flex; align-items:flex-start; justify-content:center; background:var(--backdrop);
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);
+  overflow:auto; touch-action:pan-y; -webkit-overflow-scrolling:touch;
+}
+.overlay[hidden]{ display:none; }
+.card{
+  background:var(--panel); color:var(--ink); border-radius:24px; width:100%; max-width:640px; margin:auto;
+  padding:20px 22px; box-shadow:0 14px 44px rgba(0,0,0,.35);
+}
+.overlay.top .card{ margin:0 auto; }
+.card h1{ margin:0 0 6px; font-size:clamp(30px,6vw,42px); line-height:1.05; letter-spacing:-.01em; }
+.card h2{ margin:0 0 8px; font-size:24px; line-height:1.15; }
+.card p{ margin:8px 0; font-size:18px; line-height:1.4; }
+.lead{ font-size:19px; color:var(--ink-2); }
+.btn{
+  min-height:52px; padding:10px 20px; border-radius:15px; border:2px solid var(--line); background:var(--panel-2); color:var(--ink);
+  font-size:18px; font-weight:700; cursor:pointer; touch-action:manipulation;
+}
+.btn:active{ transform:scale(.98); }
+.btn.primary{ background:var(--brand); border-color:var(--brand); color:var(--brand-ink); }
+.btn.danger{ background:var(--bad-bg); border-color:var(--bad); color:var(--bad); }
+.btn[hidden]{ display:none; }
+.btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.btns .btn{ flex:1 1 180px; }
+.ctrl{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+@media (max-width:560px){ .ctrl{ grid-template-columns:1fr; } }
+.ctrl div{ background:var(--panel-2); border-radius:16px; padding:12px 14px; font-size:16px; line-height:1.4; }
+.ctrl b{ display:block; font-size:18px; margin-bottom:4px; }
+.diamond{ color:#d99a00; font-weight:800; }
+
+/* Aufgabe */
+.head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.tag{ background:var(--tip-bg); color:var(--tip-ink); border-radius:999px; padding:5px 12px; font-size:15px; font-weight:800; }
+#dStep{ font-size:15px; font-weight:700; color:var(--ink-2); }
+#dClose{ margin-left:auto; width:48px; height:48px; border-radius:50%; border:2px solid var(--line); background:var(--panel-2); color:var(--ink); font-size:22px; cursor:pointer; touch-action:manipulation; }
+.who{ font-size:17px; font-weight:800; color:var(--blue); }
+.q{ font-size:clamp(21px,3.4vw,26px); line-height:1.35; margin:6px 0 14px; font-weight:600; }
+.tips{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.tips div{ background:var(--tip-bg); color:var(--tip-ink); border-radius:14px; padding:10px 14px; font-size:18px; line-height:1.35; }
+.tips div.sol{ background:var(--good-bg); color:var(--good); font-weight:700; }
+.arow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+#dIn{
+  width:150px; height:60px; font-size:28px; font-weight:700; text-align:center; border-radius:15px; border:3px solid var(--line);
+  background:var(--panel); color:var(--ink); outline:none;
+}
+#dIn:focus{ border-color:var(--blue); }
+#dIn.bad{ border-color:var(--bad); }
+#dUnit{ font-size:21px; font-weight:700; color:var(--ink-2); }
+#dCheck{ min-height:60px; margin-left:auto; }
+.fb{ margin-top:12px; border-radius:14px; padding:12px 14px; font-size:18px; line-height:1.4; }
+.fb:empty{ display:none; }
+.fb.good{ background:var(--good-bg); color:var(--good); }
+.fb.bad{ background:var(--bad-bg); color:var(--bad); }
+.fb.warn{ background:var(--tip-bg); color:var(--tip-ink); }
+.fb b{ display:block; font-size:20px; margin-bottom:2px; }
+#mapCv{ width:100%; max-width:560px; aspect-ratio:1/1; display:block; margin:8px auto; border-radius:18px; background:#8fd0f0; }
+.legend{ display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center; font-size:15px; color:var(--ink-2); }
+#fatal{ position:fixed; inset:0; z-index:99; display:none; place-items:center; padding:24px; background:#9fdcf5; color:#1b2a3a; text-align:center; font-size:20px; }
+.stat{ display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:19px; }
+.stat:last-of-type{ border-bottom:0; }
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body data-mode="start">
+<canvas id="c" aria-label="3D-Spielwelt Prozentinsel"></canvas>
+
+<div id="hud">
+  <div id="stats" class="panel" aria-live="polite">
+    <div class="row"><span>⭐ <span id="pts">0 / 0</span></span><small>Punkte</small></div>
+    <div class="row"><span id="areasTxt">0 von 5 Bereichen</span></div>
+    <div id="dots"></div>
+    <div id="goal"></div>
+  </div>
+  <div id="topbtns">
+    <button class="hbtn" id="btnMap" aria-label="Karte öffnen"><span class="ico">🗺️</span><span class="lbl">Karte</span></button>
+    <button class="hbtn" id="btnHint" aria-label="Hinweis anzeigen"><span class="ico">💡</span><span class="lbl">Hinweis</span></button>
+    <button class="hbtn" id="btnMenu" aria-label="Menü öffnen"><span class="ico">☰</span><span class="lbl">Menü</span></button>
+  </div>
+  <div id="hintCard" class="panel" hidden>
+    <div id="hintArrow"><svg viewBox="0 0 24 24" id="hintSvg"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#1f8a5b" stroke="#0e5636" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+    <div id="hintTxt"></div>
+  </div>
+  <div id="toast" role="status" hidden></div>
+  <button id="act" hidden></button>
+  <div id="joy" aria-label="Joystick"><div id="knob"></div></div>
+</div>
+
+<!-- Start -->
+<div class="overlay" id="ovStart">
+  <div class="card">
+    <h1>🏝️ Prozentinsel</h1>
+    <p class="lead">Erkunde die Insel und löse Rätsel zur Prozentrechnung. Jeder gelöste Bereich öffnet den Weg zum nächsten – am Ende wartet die Burg.</p>
+    <div id="ctrlStart"></div>
+    <div class="btns" id="startBtns"></div>
+  </div>
+</div>
+
+<!-- Anleitung -->
+<div class="overlay" id="ovHelp" hidden>
+  <div class="card">
+    <h2>Steuerung</h2>
+    <div id="ctrlHelp"></div>
+    <div class="btns"><button class="btn primary" id="helpBack">Zurück zum Spiel</button></div>
+  </div>
+</div>
+
+<!-- Aufgabe -->
+<div class="overlay top" id="ovTask" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="dWho">
+    <div class="head"><span class="tag" id="dTag"></span><span id="dStep"></span><button id="dClose" aria-label="Schließen">✕</button></div>
+    <div class="who" id="dWho"></div>
+    <p class="q" id="dQ"></p>
+    <div class="tips" id="dTips"></div>
+    <div class="arow" id="dAnswerRow">
+      <input id="dIn" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Deine Antwort">
+      <span id="dUnit"></span>
+      <button class="btn primary" id="dCheck">Prüfen</button>
+    </div>
+    <div class="fb" id="dFb" role="status" aria-live="polite"></div>
+    <div class="btns">
+      <button class="btn" id="dTip">💡 Tipp</button>
+      <button class="btn primary" id="dNext" hidden>Weiter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Karte -->
+<div class="overlay" id="ovMap" hidden>
+  <div class="card">
+    <h2>Karte der Prozentinsel</h2>
+    <canvas id="mapCv" width="640" height="640" aria-label="Inselkarte"></canvas>
+    <div class="legend"><span>🔒 gesperrt</span><span>📍 offen</span><span>✅ geschafft</span><span>▲ du</span></div>
+    <div class="btns"><button class="btn primary" id="mapClose">Schließen</button></div>
+  </div>
+</div>
+
+<!-- Menü -->
+<div class="overlay" id="ovMenu" hidden>
+  <div class="card">
+    <h2>Pause</h2>
+    <div class="btns" style="flex-direction:column">
+      <button class="btn primary" id="menuResume">Weiterspielen</button>
+      <button class="btn" id="menuHelp">Steuerung ansehen</button>
+      <button class="btn danger" id="menuRestart">Spiel neu starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- Neustart bestätigen -->
+<div class="overlay" id="ovConfirm" hidden>
+  <div class="card">
+    <h2>Wirklich neu starten?</h2>
+    <p>Alle gelösten Aufgaben und Punkte werden gelöscht.</p>
+    <div class="btns">
+      <button class="btn" id="confNo">Abbrechen</button>
+      <button class="btn danger" id="confYes">Ja, neu starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ende -->
+<div class="overlay" id="ovWin" hidden>
+  <div class="card">
+    <h1>🏰 Geschafft!</h1>
+    <p class="lead">Du hast das Abschlussrätsel gelöst und die Prozentinsel erobert.</p>
+    <div id="winStats"></div>
+    <div class="btns">
+      <button class="btn" id="winStay">Weiter erkunden</button>
+      <button class="btn primary" id="winAgain">Nochmal spielen</button>
+    </div>
+  </div>
+</div>
+
+<div id="fatal"><div id="fatalTxt"></div></div>
+<noscript><div style="position:fixed;inset:0;z-index:99;background:#fff;color:#000;padding:24px;font:20px sans-serif">Für dieses Spiel wird JavaScript benötigt.</div></noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* =====================================================================
+   1) INHALTE – hier können später Aufgaben und Bereiche ergänzt werden
+   ---------------------------------------------------------------------
+   AREAS:  Reihenfolge = Freischalt-Reihenfolge (jeder Bereich öffnet den nächsten)
+   TASKS:  eine Aufgabe = ein mathematischer Schwerpunkt
+           kind: W = Prozentwert, G = Grundwert, p = Prozentsatz, R = Rabatt
+           traps: [[falscher Wert, Hinweistext], ...] für typische Fehler
+   Die Objekte in der Welt (OBJS) verweisen über "tasks" auf Aufgaben-IDs.
+   ===================================================================== */
+const AREAS = [
+  {id:'markt',  name:'Marktplatz',  icon:'🏪', x:0,   z:0,  R:0,  clear:12},
+  {id:'super',  name:'Supermarkt',  icon:'🛒', x:24,  z:-8, R:10, clear:13},
+  {id:'hoehle', name:'Schatzhöhle', icon:'💎', x:28,  z:18, R:10, clear:13},
+  {id:'fabrik', name:'Fabrik',      icon:'🏭', x:2,   z:28, R:10, clear:13},
+  {id:'burg',   name:'Burg',        icon:'🏰', x:-27, z:6,  R:12, clear:15}
+];
+
+const TASK_LIST = [
+ {id:'m1', tag:'Prozentwert', kind:'W', who:'Obsthändlerin Berta', unit:'Äpfel', ans:50,
+  q:'Auf meinem Stand liegen 200 Äpfel. 25 % davon sind rot. Wie viele rote Äpfel sind das?',
+  tips:['25 % sind ein Viertel (¼) vom Ganzen.','Teile 200 durch 4.'],
+  sol:'200 : 4 = 50. Es sind 50 rote Äpfel.',
+  traps:[[25,'25 ist der Prozentsatz – der steht schon in der Aufgabe. Gesucht ist die Anzahl der roten Äpfel.'],
+         [200,'200 sind alle Äpfel (100 %). Gesucht ist nur ein Teil davon.'],
+         [800,'Du hast mit 4 malgenommen. 25 % ist ein Viertel – da musst du teilen.']]},
+ {id:'m2', tag:'Prozentwert', kind:'W', who:'Münzbrunnen', unit:'Münzen', ans:12,
+  q:'Im Brunnen glitzern 80 Münzen. 15 % davon sind aus Gold. Wie viele Goldmünzen sind das?',
+  tips:['10 % von 80 sind 8 (durch 10 teilen).','15 % = 10 % + 5 %. Und 5 % sind die Hälfte von 10 %.'],
+  sol:'10 % = 8, 5 % = 4, zusammen 8 + 4 = 12 Goldmünzen.',
+  traps:[[15,'15 ist der Prozentsatz – der steht schon in der Aufgabe.'],
+         [8,'8 sind erst 10 %. Du brauchst noch 5 % dazu.'],
+         [4,'4 sind erst 5 %. Du brauchst noch 10 % dazu.'],
+         [1200,'Du hast 80 · 15 gerechnet. Der Prozentsatz muss noch durch 100 geteilt werden.']]},
+
+ {id:'s1', tag:'Rabatt', kind:'R', who:'Preisschild', unit:'€', ans:20,
+  q:'Eine Jacke kostet 80 €. Heute gibt es 25 % Rabatt. Wie viel Euro sparst du?',
+  tips:['25 % sind ein Viertel. Der Rabatt ist ein Viertel vom Preis.','Teile 80 € durch 4.'],
+  sol:'80 € : 4 = 20 €. Du sparst 20 €.',
+  traps:[[60,'60 € ist der neue Preis. Gesucht ist, wie viel du sparst – also der Rabatt.'],
+         [25,'25 ist der Prozentsatz. Gesucht sind die gesparten Euro.']]},
+ {id:'s2', tag:'Rabatt', kind:'R', who:'Kassiererin Lena', unit:'€', ans:204,
+  q:'Ein Fahrrad kostet 240 €. Du bekommst 15 % Rabatt. Wie viel Euro musst du bezahlen?',
+  tips:['Berechne zuerst den Rabatt: 10 % von 240 € sind 24 €. 5 % sind die Hälfte davon.','Der Rabatt beträgt 24 € + 12 € = 36 €. Ziehe ihn vom alten Preis ab.'],
+  sol:'240 € − 36 € = 204 €. Du bezahlst 204 €.',
+  traps:[[36,'36 € ist der Rabatt. Gesucht ist der neue Preis: Ziehe den Rabatt vom alten Preis ab.'],
+         [276,'Bei einem Rabatt wird es billiger, nicht teurer. Du hast den Rabatt addiert.'],
+         [225,'Du hast 15 € abgezogen. Aber 15 % von 240 € sind nicht 15 €.']]},
+
+ {id:'h1', tag:'Grundwert', kind:'G', who:'Schatztruhe mit Zahlenschloss', unit:'Goldstücke', ans:150,
+  q:'Auf dem Schloss steht: 20 % aller Goldstücke in der Truhe sind 30 Stück. Wie viele Goldstücke liegen insgesamt in der Truhe? Das ist der Code.',
+  tips:['20 % sind 30 Stück. Wie viel sind dann 10 %? (Die Hälfte.)','10 % sind 15 Stück. 100 % sind 10-mal so viel.'],
+  sol:'30 : 2 = 15 für 10 %. Dann 15 · 10 = 150 Goldstücke.',
+  traps:[[30,'30 Stück sind nur 20 %. Gesucht ist die Gesamtzahl (100 %).'],
+         [6,'Du hast 20 % von 30 berechnet. Aber 30 sind schon die 20 % – gesucht ist das Ganze.'],
+         [50,'Du hast 30 und 20 addiert. 20 ist ein Prozentsatz, keine Anzahl.'],
+         [60,'60 wären 40 %. Gesucht sind 100 %.']]},
+ {id:'h2', tag:'Grundwert', kind:'G', who:'Gnom Grübel', unit:'Edelsteine', ans:120,
+  q:'Ich sammle Edelsteine! 5 % meiner Edelsteine sind blau – das sind 6 Stück. Wie viele Edelsteine habe ich insgesamt?',
+  tips:['5 % sind 6 Stück. 10 % sind doppelt so viel.','10 % sind 12 Stück. 100 % sind 10-mal so viel.'],
+  sol:'6 · 2 = 12 für 10 %. Dann 12 · 10 = 120 Edelsteine.',
+  traps:[[6,'6 Stück sind nur 5 %. Gesucht ist die Gesamtzahl (100 %).'],
+         [12,'12 sind erst 10 %. Du brauchst 100 %.'],
+         [30,'Du hast 6 · 5 gerechnet. 100 % ist aber 20-mal so viel wie 5 %.'],
+         [0.3,'Du hast 5 % von 6 berechnet. 6 sind aber schon die 5 %.']]},
+
+ {id:'f1', tag:'Prozentsatz', kind:'p', who:'Prüfmaschine', unit:'%', ans:5,
+  q:'Die Maschine hat 200 Spielzeuge geprüft. 10 davon sind defekt. Wie viel Prozent sind defekt?',
+  tips:['Prozentsatz = Teil : Ganzes. Hier: 10 von 200.','Wandle den Bruch 10/200 in Hundertstel um: 10/200 = 5/100.'],
+  sol:'10/200 = 5/100 = 5 %.',
+  traps:[[0.05,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent (mal 100).'],
+         [20,'Du hast 200 : 10 gerechnet. Teile den Teil (10) durch das Ganze (200).'],
+         [10,'10 ist die Anzahl der defekten Spielzeuge. Gesucht ist der Prozentsatz.']]},
+ {id:'f2', tag:'Prozentsatz', kind:'p', who:'Vorarbeiter Jonas', unit:'%', ans:25,
+  q:'In unserer Fabrik arbeiten 80 Personen. 20 davon arbeiten in der Nachtschicht. Wie viel Prozent arbeiten nachts?',
+  tips:['Welcher Bruchteil ist das? Wie oft passt 20 in 80?','20 passt 4-mal in 80. Also ist es ein Viertel – und ein Viertel sind wie viel Prozent?'],
+  sol:'20/80 = 1/4 = 25/100 = 25 %.',
+  traps:[[0.25,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent.'],
+         [4,'Du hast 80 : 20 gerechnet. Teile den Teil (20) durch das Ganze (80).'],
+         [20,'20 ist die Anzahl der Nachtschicht-Personen. Gesucht ist der Prozentsatz.']]},
+
+ {id:'b1', tag:'Rabatt', kind:'R', who:'Burgtor', unit:'€', ans:120,
+  q:'Auf dem Tor steht ein Rätsel: Ein Schild kostet 150 €. Der Schmied gibt 20 % Rabatt. Wie viel Euro kostet das Schild jetzt?',
+  tips:['Berechne zuerst den Rabatt: 10 % von 150 € sind 15 €.','20 % sind doppelt so viel: 30 €. Ziehe sie von 150 € ab.'],
+  sol:'150 € − 30 € = 120 €.',
+  traps:[[30,'30 € ist der Rabatt. Gesucht ist der Preis nach dem Rabatt.'],
+         [180,'Ein Rabatt macht es billiger. Du hast den Rabatt addiert.'],
+         [130,'Du hast 20 € abgezogen. Aber 20 % von 150 € sind nicht 20 €.']]},
+
+ {id:'k1', tag:'Prozentwert', kind:'W', who:'König Max – Frage 1', unit:'Goldtaler', ans:140,
+  q:'In der Schatzkammer liegen 400 Goldtaler. 35 % davon bekommen die Ritter. Wie viele Goldtaler sind das?',
+  tips:['10 % von 400 sind 40.','35 % = 30 % + 5 %. 30 % sind 120, 5 % sind 20.'],
+  sol:'120 + 20 = 140 Goldtaler.',
+  traps:[[35,'35 ist der Prozentsatz – der steht schon in der Aufgabe.'],
+         [14000,'Du hast 400 · 35 gerechnet. Teile noch durch 100.'],
+         [40,'40 sind erst 10 %. Du brauchst 35 %.']]},
+ {id:'k2', tag:'Grundwert', kind:'G', who:'König Max – Frage 2', unit:'Personen', ans:60,
+  q:'Auf der Burg leben 18 Ritter. Das sind 30 % aller Burgbewohner. Wie viele Personen leben insgesamt auf der Burg?',
+  tips:['30 % sind 18. 10 % sind ein Drittel davon.','10 % sind 6. 100 % sind 10-mal so viel.'],
+  sol:'18 : 3 = 6 für 10 %. Dann 6 · 10 = 60 Personen.',
+  traps:[[18,'18 sind nur 30 %. Gesucht ist die Gesamtzahl (100 %).'],
+         [6,'6 sind erst 10 %. Du brauchst 100 %.'],
+         [54,'Du hast mal 3 gerechnet. 30 % mal 3 sind 90 %, nicht 100 %.'],
+         [5.4,'Du hast 30 % von 18 berechnet. 18 sind aber schon die 30 %.']]},
+ {id:'k3', tag:'Prozentsatz', kind:'p', who:'König Max – Frage 3', unit:'%', ans:70,
+  q:'Im Thronsaal hängen 50 Kerzen. 35 davon brennen. Wie viel Prozent der Kerzen brennen?',
+  tips:['Prozentsatz = Teil : Ganzes. Hier: 35 von 50.','Erweitere den Bruch auf 100: 35/50 = ?/100 (mit 2 erweitern).'],
+  sol:'35/50 = 70/100 = 70 %.',
+  traps:[[0.7,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent.'],
+         [30,'30 % sind die Kerzen, die NICHT brennen. Gesucht sind die brennenden.'],
+         [15,'15 Kerzen brennen nicht. Gesucht ist der Prozentsatz der brennenden Kerzen.']]},
+ {id:'k4', tag:'Sachaufgabe', kind:'R', who:'König Max – Frage 4', unit:'%', ans:25,
+  q:'Ein Schwert kostet 160 €. Nach einem Rabatt zahlst du nur noch 120 €. Wie viel Prozent Rabatt sind das?',
+  tips:['Berechne zuerst, wie viel Euro der Rabatt ist: 160 € − 120 € = 40 €.','Wie viel Prozent sind 40 € von 160 €? Wie oft passt 40 in 160?'],
+  sol:'Rabatt 40 €. 40/160 = 1/4 = 25 %.',
+  traps:[[40,'40 € ist der Rabatt in Euro. Gesucht ist der Rabatt in Prozent.'],
+         [75,'75 % bezahlst du (120 von 160). Der Rabatt ist der Rest zu 100 %.'],
+         [0.25,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent.']]}
+];
+const TASKS = {}; TASK_LIST.forEach(t => TASKS[t.id] = t);
+
+const GENERIC = {
+  W:'Gesucht ist der Prozentwert, also ein Teil vom Ganzen. Rechne zuerst 10 % oder 1 % aus und vervielfache dann.',
+  G:'Gesucht ist der Grundwert, also das Ganze (100 %). Rechne erst aus, wie viel 10 % oder 1 % sind.',
+  p:'Gesucht ist der Prozentsatz. Vergleiche den Teil mit dem Ganzen (Teil : Ganzes) und schreibe das Ergebnis in Prozent.',
+  R:'Lies die Frage noch einmal genau: Sind die gesparten Euro, der neue Preis oder der Prozentsatz gesucht? Berechne zuerst den Rabatt in Euro.'
+};
+
+/* ---------- Hilfsfunktionen ---------- */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const ease = t => t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+const angDiff = (a,b) => Math.atan2(Math.sin(b-a), Math.cos(b-a));
+
+function parseAnswer(raw){
+  let s = String(raw||'').trim().replace(/\s+/g,'');
+  if(!s) return null;
+  if(/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,'');
+  const m = s.match(/^(-?\d+(?:[.,]\d+)?)(?:€|%|[A-Za-zÄÖÜäöüß]+\.?)?$/);
+  if(!m) return null;
+  const v = parseFloat(m[1].replace(',','.'));
+  return isFinite(v) ? v : null;
+}
+
+function showFatal(msg){
+  $('fatalTxt').textContent = msg;
+  $('fatal').style.display = 'grid';
+}
+if(typeof THREE === 'undefined'){ showFatal('Die 3D-Bibliothek konnte nicht geladen werden. Bitte prüfe die Internetverbindung und lade die Seite neu.'); return; }
+
+/* =====================================================================
+   2) SPIELSTAND
+   ===================================================================== */
+const STORE_KEY = 'prozentinsel-v1';
+let prog = {};   // taskId -> {done, tips, wrong, sol}
+function loadProg(){
+  try{ const s = localStorage.getItem(STORE_KEY); if(s){ const o = JSON.parse(s); if(o && typeof o==='object') prog = o; } }catch(_){ prog = {}; }
+}
+function saveProg(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(prog)); }catch(_){} }
+function clearProg(){ prog = {}; try{ localStorage.removeItem(STORE_KEY); }catch(_){} }
+const getProg = id => prog[id] || (prog[id] = {done:false, tips:0, wrong:0, sol:false});
+const taskDone = id => !!(prog[id] && prog[id].done);
+const OBJS = [];   // wird beim Bau der Welt gefüllt
+const objDone = o => o.tasks.every(taskDone);
+const areaObjs = i => OBJS.filter(o => o.area === AREAS[i].id);
+const areaDone = i => { const l = areaObjs(i); return l.length>0 && l.every(objDone); };
+const areaUnlocked = i => i === 0 || areaDone(i-1);
+const pointsNow = () => TASK_LIST.filter(t => taskDone(t.id)).length;
+const doneAreas = () => AREAS.filter((a,i) => areaDone(i)).length;
+
+/* =====================================================================
+   3) THREE.JS GRUNDLAGEN
+   ===================================================================== */
+const canvas = $('c');
+let renderer;
+try{
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+}catch(e){
+  showFatal('Dein Browser kann die 3D-Welt nicht darstellen (WebGL fehlt oder ist ausgeschaltet).'); return;
+}
+let pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+renderer.setPixelRatio(pixelRatio);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fdcf5);
+scene.fog = new THREE.Fog(0x9fdcf5, 70, 170);
+const camera = new THREE.PerspectiveCamera(55, 1, .3, 260);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8fb878, .95));
+const sun = new THREE.DirectionalLight(0xfff2d6, .75); sun.position.set(30,50,20); scene.add(sun);
+
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/Math.max(1,h);
+  camera.fov = camera.aspect < 1 ? 70 : 55;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+/* Geometrien/Materialien werden wiederverwendet (Performance) */
+const GC = {}; const geo = (k,f) => GC[k] || (GC[k] = f());
+const flat = g => { const n = g.index ? g.toNonIndexed() : g; n.computeVertexNormals(); return n; };
+const gBox  = (w,h,d) => geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w,h,d));
+const gCyl  = (rt,rb,h,s=8) => geo(`c${rt},${rb},${h},${s}`, () => flat(new THREE.CylinderGeometry(rt,rb,h,s)));
+const gCone = (r,h,s=8) => geo(`k${r},${h},${s}`, () => flat(new THREE.ConeGeometry(r,h,s)));
+const gIco  = (r,d=0) => geo(`i${r},${d}`, () => flat(new THREE.IcosahedronGeometry(r,d)));
+const MC = {}, BC = {};
+const mat  = c => MC[c] || (MC[c] = new THREE.MeshLambertMaterial({color:c}));
+const bmat = c => BC[c] || (BC[c] = new THREE.MeshBasicMaterial({color:c}));
+function mesh(parent,g,m,x=0,y=0,z=0){ const o = new THREE.Mesh(g,m); o.position.set(x,y,z); if(parent) parent.add(o); return o; }
+const box  = (p,w,h,d,c,x,y,z)      => mesh(p, gBox(w,h,d), mat(c), x,y,z);
+const cyl  = (p,rt,rb,h,c,x,y,z,s=8) => mesh(p, gCyl(rt,rb,h,s), mat(c), x,y,z);
+const cone = (p,r,h,c,x,y,z,s=8)     => mesh(p, gCone(r,h,s), mat(c), x,y,z);
+const ico  = (p,r,c,x,y,z,d=0)       => mesh(p, gIco(r,d), mat(c), x,y,z);
+
+/* Kollisionen: Kreise und achsenparallele Rechtecke (Weltkoordinaten) */
+const circles = [], rects = [];
+const cCircle = (x,z,r) => { const c = {x,z,r,on:true}; circles.push(c); return c; };
+const cRect = (x,z,w,d) => { const b = {x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,on:true}; rects.push(b); return b; };
+
+/* Tweens */
+let tweens = [];
+function tween(dur, fn, end){ tweens.push({t:0,dur,fn,end}); }
+function stepTweens(dt){
+  for(let i = tweens.length-1; i>=0; i--){
+    const w = tweens[i]; w.t += dt; const p = Math.min(1, w.t/w.dur); w.fn(ease(p));
+    if(p >= 1){ tweens.splice(i,1); if(w.end) w.end(); }
+  }
+}
+function animTo(obj,key,target,dur,instant,after){
+  if(instant){ obj[key] = target; if(after) after(); return; }
+  const from = obj[key]; tween(dur, p => { obj[key] = lerp(from,target,p); }, after);
+}
+
+/* Schilder/Beschriftungen als Canvas-Sprites (immer lesbar) */
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+const FONT = 'ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, Arial, sans-serif';
+function canvasSprite(cw,ch,worldW,draw){
+  const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  const ctx = cv.getContext('2d'); draw(ctx,cw,ch);
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false, fog:false}));
+  sp.scale.set(worldW, worldW*ch/cw, 1);
+  sp.userData.redraw = fn => { ctx.clearRect(0,0,cw,ch); fn(ctx,cw,ch); tex.needsUpdate = true; };
+  return sp;
+}
+function drawLabel(text,state){
+  return (ctx,w,h) => {
+    const bg = state==='locked' ? 'rgba(52,64,80,.92)' : state==='done' ? 'rgba(20,132,72,.95)' : 'rgba(255,255,255,.96)';
+    rr(ctx,6,6,w-12,h-12,(h-12)/2); ctx.fillStyle = bg; ctx.fill();
+    ctx.fillStyle = state==='open' ? '#1b2a3a' : '#ffffff';
+    ctx.font = `bold 54px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const icon = state==='locked' ? '🔒 ' : state==='done' ? '✅ ' : '';
+    ctx.fillText(icon+text, w/2, h/2+3);
+  };
+}
+function drawGateSign(name){
+  return (ctx,w,h) => {
+    rr(ctx,8,8,w-16,h-16,26); ctx.fillStyle = '#c4944f'; ctx.fill();
+    ctx.lineWidth = 10; ctx.strokeStyle = '#6b4a22'; ctx.stroke();
+    ctx.fillStyle = '#4a1a10'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold 62px ${FONT}`; ctx.fillText('🔒 Gesperrt', w/2, 70);
+    ctx.font = `600 40px ${FONT}`; ctx.fillText('Löse zuerst:', w/2, 140);
+    ctx.font = `bold 56px ${FONT}`; ctx.fillText(name, w/2, 205);
+  };
+}
+function drawPriceTag(ctx,w,h){
+  rr(ctx,6,6,w-12,h-12,34); ctx.fillStyle = '#d62f3f'; ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(46,46,14,0,7); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 50px ${FONT}`; ctx.fillText('JACKE', w/2+14, 62);
+  ctx.font = `bold 112px ${FONT}`; ctx.fillText('80 €', w/2, 148);
+  rr(ctx,w/2-92,190,184,56,28); ctx.fillStyle = '#ffd23f'; ctx.fill();
+  ctx.fillStyle = '#3a1b00'; ctx.font = `bold 40px ${FONT}`; ctx.fillText('−25 %', w/2, 220);
+}
+function drawMachine(ctx,w,h){
+  rr(ctx,6,6,w-12,h-12,24); ctx.fillStyle = '#0f1d17'; ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = '#6b7784'; ctx.stroke();
+  ctx.fillStyle = '#58f29a'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 38px ${FONT}`; ctx.fillText('SPIELZEUG-PRÜFER', 34, 52);
+  ctx.font = `600 44px ${FONT}`;
+  ctx.fillText('geprüft:  200', 34, 112); ctx.fillText('defekt:     10', 34, 168); ctx.fillText('Prozent:    ?', 34, 224);
+}
+function drawBanner(text,color){
+  return (ctx,w,h) => {
+    rr(ctx,6,6,w-12,h-12,30); ctx.fillStyle = color; ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = `bold 66px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, w/2, h/2+4);
+  };
+}
+
+/* Personen (Spielfigur und NPCs) */
+function person(parent,x,z,o){
+  const g = new THREE.Group(); g.position.set(x,0,z); parent.add(g);
+  const pants = o.pants || 0x374151;
+  let legL = null, legR = null;
+  if(o.robe) cyl(g,.5,.85,1.3,o.robe,0,.65,0,8);
+  else { legL = box(g,.3,.75,.34,pants,-.2,.38,0); legR = box(g,.3,.75,.34,pants,.2,.38,0); }
+  cyl(g,.46,.56,1.0,o.body,0,1.25,0,7);
+  const armL = box(g,.2,.8,.22,o.body,-.66,1.3,0), armR = box(g,.2,.8,.22,o.body,.66,1.3,0);
+  ico(g,.42,o.skin||0xf2c9a0,0,2.0,0,1);
+  ico(g,.055,0x222222,-.15,2.05,.37); ico(g,.055,0x222222,.15,2.05,.37);
+  switch(o.hat){
+    case 'cap':    cyl(g,.44,.46,.22,o.hatColor,0,2.42,0,8); box(g,.6,.06,.42,o.hatColor,0,2.32,.4); break;
+    case 'helmet': { const h = ico(g,.5,o.hatColor,0,2.28,0,1); h.scale.y = .75; break; }
+    case 'hair':   { const h = ico(g,.46,o.hatColor,0,2.2,-.05,1); h.scale.y = .7; break; }
+    case 'crown':
+      cyl(g,.4,.4,.28,0xf4c430,0,2.5,0,8);
+      for(let k=0;k<5;k++){ const a = k/5*Math.PI*2; cone(g,.09,.28,0xf4c430,Math.cos(a)*.34,2.78,Math.sin(a)*.34,4); }
+      if(o.beard) { const b = cone(g,.3,.7,0xf2f2f2,0,1.62,.3,6); b.rotation.x = Math.PI; }
+      break;
+    case 'gnome':
+      cone(g,.5,1.2,0xd33f3f,0,3.0,0,7);
+      { const b = cone(g,.34,.8,0xf5f5f5,0,1.62,.3,6); b.rotation.x = Math.PI; }
+      break;
+  }
+  g.userData = {legL,legR,armL,armR};
+  return g;
+}
+function animPerson(g,phase,amt){
+  const u = g.userData, s = Math.sin(phase)*.8*amt;
+  if(u.legL){ u.legL.rotation.x = s; u.legR.rotation.x = -s; }
+  u.armL.rotation.x = -s*.8; u.armR.rotation.x = s*.8;
+  g.position.y = Math.abs(Math.sin(phase))*.1*amt;
+}
+const shadowGeo = new THREE.CircleGeometry(.75,14); shadowGeo.rotateX(-Math.PI/2);
+const shadowMat = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.22, depthWrite:false});
+function blobShadow(parent,x,z,s=1){ const m = new THREE.Mesh(shadowGeo, shadowMat); m.position.set(x,.12,z); m.scale.set(s,1,s); parent.add(m); return m; }
+
+/* Interaktive Objekte */
+const hitMeshes = [];
+const markerGeo = new THREE.OctahedronGeometry(.38,0);
+function addObj(def){
+  const hit = new THREE.Mesh(gCyl(def.hitR,def.hitR,def.hitH,8), new THREE.MeshBasicMaterial({visible:false}));
+  hit.position.set(def.x, def.hitH/2, def.z); hit.userData.objId = def.id; scene.add(hit); hitMeshes.push(hit);
+  const mk = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({color:0xffc928}));
+  mk.position.set(def.x, def.markerY, def.z); scene.add(mk);
+  const o = Object.assign({marker:mk, markerBase:def.markerY, hit, fx:null}, def);
+  OBJS.push(o); return o;
+}
+const objById = id => OBJS.find(o => o.id === id);
+
+/* =====================================================================
+   4) WELT BAUEN
+   ===================================================================== */
+const fences = [];   // {area, group, shown}
+const labels = [];   // {area, sprite, state}
+let buildSeed = 7;
+function rnd(){ buildSeed |= 0; buildSeed = buildSeed + 0x6D2B79F5 | 0; let t = Math.imul(buildSeed ^ buildSeed>>>15, 1|buildSeed); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14)>>>0)/4294967296; }
+
+function distSeg(px,pz,a,b){
+  const dx = b.x-a.x, dz = b.z-a.z, l2 = dx*dx+dz*dz;
+  let t = ((px-a.x)*dx + (pz-a.z)*dz)/l2; t = clamp(t,0,1);
+  return Math.hypot(px-(a.x+t*dx), pz-(a.z+t*dz));
+}
+function areaGroup(a){ const g = new THREE.Group(); g.position.set(a.x,0,a.z); scene.add(g); return g; }
+function disc(g,r,c){ return cyl(g,r,r,.08,c,0,.04,0,36); }
+
+function buildIsland(){
+  cyl(scene,52,54,2,0x7ccf6e,0,-1,0,48);
+  cyl(scene,59,61,1.6,0xf1dd9d,0,-.85,0,48);
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900,900), new THREE.MeshLambertMaterial({color:0x45b0e6}));
+  sea.rotation.x = -Math.PI/2; sea.position.y = -.5; scene.add(sea);
+
+  // Wege
+  for(let i=1;i<AREAS.length;i++){
+    const a = AREAS[i-1], b = AREAS[i], dx = b.x-a.x, dz = b.z-a.z, len = Math.hypot(dx,dz);
+    const p = box(scene,len,.04,3.4,0xe6d6a2,(a.x+b.x)/2,.02,(a.z+b.z)/2);
+    p.rotation.y = Math.atan2(-dz,dx);
+  }
+  // Bäume, Felsen
+  const trees = [];
+  for(let n=0; n<700 && trees.length<62; n++){
+    const r = 8 + rnd()*42, ang = rnd()*Math.PI*2, x = Math.cos(ang)*r, z = Math.sin(ang)*r;
+    if(Math.hypot(x,z) > 49) continue;
+    if(AREAS.some(a => Math.hypot(x-a.x,z-a.z) < a.clear)) continue;
+    if(Math.hypot(x-0,z-15) < 9) continue; // Startkamera frei halten
+    let nearPath = false;
+    for(let i=1;i<AREAS.length;i++) if(distSeg(x,z,AREAS[i-1],AREAS[i]) < 4){ nearPath = true; break; }
+    if(nearPath) continue;
+    if(trees.some(t => Math.hypot(x-t.x,z-t.z) < 3.4)) continue;
+    trees.push({x,z});
+    const s = .8 + rnd()*.5, g = new THREE.Group(); g.position.set(x,0,z); g.scale.setScalar(s); scene.add(g);
+    cyl(g,.25,.35,1.5,0x8a5a2b,0,.75,0,6);
+    if(rnd() < .55){ cone(g,1.5,2.2,0x3f9e4d,0,2.5,0,7); cone(g,1.1,1.8,0x4cb85a,0,3.7,0,7); }
+    else { ico(g,1.5,rnd()<.5?0x56b85b:0x6fc765,0,2.9,0,1); }
+    cCircle(x,z,.8*s);
+  }
+  for(let n=0, k=0; n<200 && k<14; n++){
+    const r = 10 + rnd()*40, ang = rnd()*Math.PI*2, x = Math.cos(ang)*r, z = Math.sin(ang)*r;
+    if(Math.hypot(x,z) > 50) continue;
+    if(AREAS.some(a => Math.hypot(x-a.x,z-a.z) < a.clear)) continue;
+    let nearPath = false;
+    for(let i=1;i<AREAS.length;i++) if(distSeg(x,z,AREAS[i-1],AREAS[i]) < 3.5){ nearPath = true; break; }
+    if(nearPath || trees.some(t => Math.hypot(x-t.x,z-t.z) < 2.5)) continue;
+    k++; const s = .6 + rnd()*.8; const rk = ico(scene,s,0x9ea3a8,x,s*.4,z); rk.scale.y = .7; cCircle(x,z,s*.9);
+  }
+  // Wolken
+  for(let k=0;k<7;k++){
+    const g = new THREE.Group(), a = k/7*Math.PI*2 + .3, r = 60 + rnd()*40;
+    g.position.set(Math.cos(a)*r, 32 + rnd()*10, Math.sin(a)*r); scene.add(g);
+    for(let j=0;j<4;j++){ const s = 4 + rnd()*3; const c = ico(g,s,0xffffff,(j-1.5)*5,rnd()*1.5,rnd()*3,1); c.scale.y = .55; }
+  }
+}
+
+/* Absperrung (Zaun) um gesperrte Bereiche + Schild am Weg */
+function buildFence(a,i){
+  const prev = AREAS[i-1], R = a.R, n = Math.round(2*Math.PI*R/2.4), da = Math.PI*2/n;
+  const g = new THREE.Group(); scene.add(g);
+  const post = new THREE.InstancedMesh(gBox(.4,1.9,.4), mat(0x8a5a2b), n);
+  const chord = 2*R*Math.sin(da/2) + .2, Rm = R*Math.cos(da/2);
+  const rail1 = new THREE.InstancedMesh(gBox(chord,.16,.14), mat(0xc4944f), n);
+  const rail2 = new THREE.InstancedMesh(gBox(chord,.16,.14), mat(0xc4944f), n);
+  const d = new THREE.Object3D();
+  for(let k=0;k<n;k++){
+    const A = k*da;
+    d.position.set(a.x+R*Math.cos(A), .95, a.z+R*Math.sin(A)); d.rotation.set(0,0,0); d.updateMatrix(); post.setMatrixAt(k,d.matrix);
+    const Am = A + da/2, psi = Math.atan2(-Math.cos(Am), -Math.sin(Am));
+    d.position.set(a.x+Rm*Math.cos(Am), 1.5, a.z+Rm*Math.sin(Am)); d.rotation.set(0,psi,0); d.updateMatrix(); rail1.setMatrixAt(k,d.matrix);
+    d.position.y = .85; d.updateMatrix(); rail2.setMatrixAt(k,d.matrix);
+  }
+  [post,rail1,rail2].forEach(m => { m.frustumCulled = false; g.add(m); });
+  const A0 = Math.atan2(prev.z-a.z, prev.x-a.x), sx = a.x + (R+1)*Math.cos(A0), sz = a.z + (R+1)*Math.sin(A0);
+  cyl(g,.14,.14,3.2,0x6b4a22,sx,1.6,sz,6);
+  const sign = canvasSprite(512,256,4.6,drawGateSign(prev.name)); sign.position.set(sx,3.9,sz); g.add(sign);
+  fences.push({area:a, idx:i, group:g, shown:true});
+}
+function addAreaLabel(a,y){
+  const sp = canvasSprite(512,128,9,drawLabel(a.name,'open')); sp.position.set(a.x,y,a.z); scene.add(sp);
+  labels.push({area:a, sprite:sp, state:'open'});
+}
+
+/* ---- Marktplatz ---- */
+function stall(g,a,lx,lz,c1,c2,goods){
+  box(g,3.4,.9,1.3,0x9b6b36,lx,.45,lz);
+  [[-1.8,-1.4],[1.8,-1.4],[-1.8,1.4],[1.8,1.4]].forEach(p => cyl(g,.08,.08,2.8,0x6b4a22,lx+p[0],1.4,lz+p[1]-.2,6));
+  for(let k=0;k<5;k++) box(g,.84,.16,3.2,k%2?c2:c1,lx-1.68+k*.84,2.85,lz-.2);
+  [-1,0,1].forEach((o,j) => {
+    box(g,.8,.3,.7,0x8a5a2b,lx+o*1.05,1.05,lz);
+    for(let t=0;t<3;t++) ico(g,.18,goods[(j+t)%goods.length],lx+o*1.05+(t-1)*.22,1.3,lz+(t%2)*.12-.06);
+  });
+  cRect(a.x+lx,a.z+lz,3.6,1.5);
+}
+function buildMarkt(a){
+  const g = areaGroup(a); disc(g,9.5,0xdccfb2);
+  cyl(g,2.4,2.6,.9,0xb9b4a8,0,.45,0,12); cyl(g,2.0,2.0,.2,0x5ec6ee,0,.88,0,12);
+  cyl(g,.35,.45,2.3,0xc9c4b8,0,1.9,0,8); cyl(g,1.1,.7,.35,0xb9b4a8,0,3.1,0,10); cyl(g,.55,.55,.15,0x5ec6ee,0,3.3,0,8);
+  for(let k=0;k<7;k++){ const A = k/7*Math.PI*2; cyl(g,.14,.14,.04,0xf4c430,Math.cos(A)*1.3,1.0,Math.sin(A)*1.3,8); }
+  cCircle(a.x,a.z,2.7);
+  addObj({id:'o_m2',area:a.id,name:'Münzbrunnen',tasks:['m2'],x:a.x,z:a.z,hitR:2.9,hitH:4,markerY:4.6});
+
+  stall(g,a,-6.5,-5.2,0xd94f4f,0xffffff,[0xe03c3c,0xf29b2e,0x7cc44f]);
+  stall(g,a,6.5,-5.2,0x3b82c4,0xffffff,[0xe3b26b,0xd29a50,0xf0cf90]);
+  stall(g,a,-7.3,5.6,0xf2b632,0xffffff,[0xf29b2e,0xf2d94a,0x7cc44f]);
+  stall(g,a,7.3,5.6,0x2fa36b,0xffffff,[0xe03c3c,0x8e5bd0,0xf29b2e]);
+  const berta = person(g,-6.5,-6.9,{body:0xd94f4f,hat:'cap',hatColor:0xfff3d6,skin:0xf0c39c});
+  blobShadow(g,-6.5,-6.9);
+  addObj({id:'o_m1',area:a.id,name:'Obsthändlerin Berta',tasks:['m1'],x:a.x-6.5,z:a.z-6.9,hitR:1.5,hitH:3.4,markerY:3.7});
+  cCircle(a.x-6.5,a.z-6.9,.7);
+  // Kisten & Laternen
+  [[-2.6,7.5],[2.8,7.8],[3.4,-8.1]].forEach(p => { box(g,1,.8,1,0x9b6b36,p[0],.4,p[1]); });
+  [[-4,2.8],[4,2.8]].forEach(p => { cyl(g,.1,.1,3,0x4b5563,p[0],1.5,p[1],6); ico(g,.3,0xfff2a8,p[0],3.1,p[1],1); cCircle(a.x+p[0],a.z+p[1],.3); });
+  addAreaLabel(a,8.5);
+}
+
+/* ---- Supermarkt ---- */
+function buildSuper(a){
+  const g = areaGroup(a); disc(g,9.5,0xcfd8e3);
+  box(g,13,4.6,5,0xf5f1e6,0,2.3,-5.8); box(g,13.2,1,5.2,0x2f9e6f,0,4.1,-5.8); box(g,14,.35,6,0xd64545,0,4.8,-5.8);
+  box(g,3,3,.12,0x7fb7d6,0,1.5,-3.28); box(g,2.6,1.8,.12,0x9fd0ea,-4.2,2.2,-3.28); box(g,2.6,1.8,.12,0x9fd0ea,4.2,2.2,-3.28);
+  cRect(a.x,a.z-5.8,13,5);
+  const sign = canvasSprite(512,128,8,drawBanner('🛒 SUPERMARKT','#2f9e6f')); sign.position.set(0,6.6,-4.2); g.add(sign);
+  // Preisschild
+  cyl(g,.12,.12,2.4,0x4b5563,-4.5,1.2,1.0,6); box(g,1.4,.2,1.4,0x4b5563,-4.5,.1,1.0);
+  const tag = canvasSprite(384,256,3.6,drawPriceTag); tag.position.set(-4.5,3.9,1.0); g.add(tag);
+  cCircle(a.x-4.5,a.z+1.0,.9);
+  addObj({id:'o_s1',area:a.id,name:'Preisschild',tasks:['s1'],x:a.x-4.5,z:a.z+1.0,hitR:2.2,hitH:5,markerY:6.2});
+  // Kasse
+  box(g,3.2,1.0,1.3,0x6c8ebf,4.8,.5,1.3); box(g,.8,.5,.6,0x222831,5.6,1.25,1.3);
+  cRect(a.x+4.8,a.z+1.3,3.3,1.4);
+  person(g,4.8,-.5,{body:0x2f9e6f,hat:'hair',hatColor:0x5a3a22,skin:0xe9b98c}); blobShadow(g,4.8,-.5);
+  cCircle(a.x+4.8,a.z-.5,.7);
+  addObj({id:'o_s2',area:a.id,name:'Kassiererin Lena',tasks:['s2'],x:a.x+4.8,z:a.z-.5,hitR:1.5,hitH:3.4,markerY:3.7});
+  // Deko: Einkaufswagen, Kisten
+  [[-1.2,4.2],[.4,4.6]].forEach(p => { box(g,1,.12,.7,0x9aa5b1,p[0],.35,p[1]); box(g,1,.5,.7,0xc7d0da,p[0],.7,p[1]); cRect(a.x+p[0],a.z+p[1],1.1,.8); });
+  [[-7,-.5],[-7.1,.7]].forEach(p => { box(g,1.1,.8,1,0xf29b2e,p[0],.4,p[1]); cRect(a.x+p[0],a.z+p[1],1.2,1.1); });
+  addAreaLabel(a,9);
+}
+
+/* ---- Schatzhöhle ---- */
+function buildHoehle(a){
+  const g = areaGroup(a); disc(g,9.5,0xa79f90);
+  const mound = ico(g,1,0x8b857a,0,2.2,7.8,1); mound.scale.set(8,6,5.5);
+  ico(g,2.6,0x7d776c,-6.5,1.2,5.6,1); ico(g,2.6,0x7d776c,6.6,1.2,5.8,1); ico(g,2,0x6f6a60,-4,.9,10.2,1);
+  cCircle(a.x,a.z+7.8,5.8); cCircle(a.x-6.5,a.z+5.6,2.5); cCircle(a.x+6.6,a.z+5.8,2.5);
+  const dark = new THREE.Mesh(new THREE.CircleGeometry(2.3,16,0,Math.PI), bmat(0x14141c)); dark.position.set(0,.1,2.1); g.add(dark);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(2.4,.6,6,12,Math.PI), mat(0x6f6a60)); arch.position.set(0,.1,2.0); g.add(arch);
+  [[-3.8,.5,1.2,0x7de3ff],[3.9,.5,.9,0xff8bd1],[-5.2,.4,3.0,0xffe066],[5.1,.4,3.2,0x7de3ff],[-2.3,.4,3.4,0xff8bd1],[2.6,.4,3.6,0xffe066]].forEach(c => {
+    const k = cone(g,.28,1.3,c[3],c[0],c[1]+.35,c[2],5); k.material = bmat(c[3]); k.rotation.z = (c[0]>0?-1:1)*.12;
+  });
+  // Schatztruhe
+  const chest = new THREE.Group(); chest.position.set(0,0,-.8); g.add(chest);
+  box(chest,1.9,.9,1.2,0x8a5a2b,0,.45,0); box(chest,2.0,.2,1.25,0xf2c14e,0,.3,0); box(chest,2.0,.2,1.25,0xf2c14e,0,.75,0);
+  const lidPivot = new THREE.Group(); lidPivot.position.set(0,.9,-.6); chest.add(lidPivot);
+  box(lidPivot,1.9,.4,1.2,0x9b6b36,0,.2,.6); box(lidPivot,2.0,.14,1.25,0xf2c14e,0,.2,.6);
+  const lock = box(chest,.34,.4,.14,0xcfd6de,0,.85,.64);
+  const coins = new THREE.Group(); coins.visible = false; chest.add(coins);
+  for(let k=0;k<9;k++) ico(coins,.22,0xffd23f,(k%3-1)*.5,1.0+(k>5?.2:0),(Math.floor(k/3)-1)*.28,0);
+  const glow = new THREE.PointLight(0xffd25a,0,7); glow.position.set(0,1.6,0); chest.add(glow);
+  blobShadow(g,0,-.8,2.2);
+  cCircle(a.x,a.z-.8,1.3);
+  const o1 = addObj({id:'o_h1',area:a.id,name:'Schatztruhe',tasks:['h1'],x:a.x,z:a.z-.8,hitR:1.9,hitH:3,markerY:3.4});
+  o1.fx = { set(done,inst){
+    animTo(lidPivot.rotation,'x',done?-1.15:0,.9,inst);
+    coins.visible = done; lock.visible = !done; glow.intensity = done?1.2:0;
+  }};
+  person(g,-3.7,-.4,{body:0x4a8f5a,hat:'gnome',hatColor:0xd33f3f,skin:0xf0c39c,pants:0x5a3a22}); blobShadow(g,-3.7,-.4);
+  cCircle(a.x-3.7,a.z-.4,.7);
+  addObj({id:'o_h2',area:a.id,name:'Gnom Grübel',tasks:['h2'],x:a.x-3.7,z:a.z-.4,hitR:1.5,hitH:3.8,markerY:4.4});
+  addAreaLabel(a,10);
+}
+
+/* ---- Fabrik ---- */
+function buildFabrik(a){
+  const g = areaGroup(a); disc(g,9.5,0xb5b9bf);
+  box(g,11,5.5,6,0xc9ced6,-1,2.75,-5.5); cRect(a.x-1,a.z-5.5,11,6);
+  [-3.5,0,3.5].forEach(x => { box(g,3.4,.8,6.4,0x7b8794,x-1,5.9,-5.5); box(g,3.2,.9,.12,0x9fd0ea,x-1,6.6,-8.6); });
+  box(g,3,3.5,.15,0x4b5563,-1,1.75,-2.45);
+  cyl(g,.8,1,9,0xb64a3a,-5.8,4.5,-6,8); cyl(g,.86,.86,1.2,0xf5f5f5,-5.8,7.4,-6,8); cyl(g,.95,.95,.3,0x4b5563,-5.8,9.1,-6,8);
+  ico(g,.7,0xe9edf2,-5.4,10.4,-6,1); ico(g,.95,0xe9edf2,-4.8,11.6,-6,1); ico(g,1.2,0xe9edf2,-4,13,-6,1);
+  cCircle(a.x-5.8,a.z-6,1.1);
+  const sign = canvasSprite(512,128,8,drawBanner('🏭 SPIELZEUGFABRIK','#5b6b7d')); sign.position.set(-1,8.2,-2.6); g.add(sign);
+  // Prüfmaschine mit Förderband
+  box(g,6,.7,1.4,0x454c58,3.8,.35,2.2); box(g,6,.08,1.1,0x222831,3.8,.74,2.2);
+  box(g,.5,2.4,2.0,0x6b7784,3.0,1.5,2.2); box(g,.5,2.4,2.0,0x6b7784,4.6,1.5,2.2); box(g,2.1,.6,2.0,0x8a96a3,3.8,2.7,2.2);
+  const lampMat = new THREE.MeshBasicMaterial({color:0xe53935});
+  mesh(g,gCyl(.3,.3,.4,8),lampMat,3.8,3.2,2.2);
+  const toyColors = [0x3b82c4,0xf2b632,0x2fa36b,0xe53935,0x8e5bd0,0xf29b2e];
+  toyColors.forEach((c,k) => box(g,.45,.45,.45,c,.9+k*1.0,1.0,2.2));
+  const scr = canvasSprite(512,256,4.4,drawMachine); scr.position.set(3.8,5.2,2.2); g.add(scr);
+  cRect(a.x+3.8,a.z+2.2,6.1,1.6);
+  const o1 = addObj({id:'o_f1',area:a.id,name:'Prüfmaschine',tasks:['f1'],x:a.x+3.8,z:a.z+2.2,hitR:2.6,hitH:6,markerY:7.7});
+  o1.fx = { set(done){ lampMat.color.setHex(done?0x43a047:0xe53935); } };
+  person(g,-4.2,0,{body:0xf2b632,hat:'helmet',hatColor:0xffd23f,skin:0xe3ae80,pants:0x2d3748}); blobShadow(g,-4.2,0);
+  cCircle(a.x-4.2,a.z,.7);
+  addObj({id:'o_f2',area:a.id,name:'Vorarbeiter Jonas',tasks:['f2'],x:a.x-4.2,z:a.z,hitR:1.5,hitH:3.6,markerY:4.0});
+  [[6.8,-1.8],[6.9,-3.2],[-7.4,3.6]].forEach(p => { box(g,1.2,1.0,1.2,0xc8924f,p[0],.5,p[1]); cRect(a.x+p[0],a.z+p[1],1.3,1.3); });
+  addAreaLabel(a,15);
+}
+
+/* ---- Burg ---- */
+function buildBurg(a){
+  const g = areaGroup(a); disc(g,11,0x8fd27a); box(g,14,.1,12,0xcfc7b6,0,.06,0);
+  const stone = 0xc4bdb0;
+  const wall = (x,z,w,d) => { box(g,w,4.6,d,stone,x,2.3,z); box(g,w+.1,.3,d+.1,0xa9a295,x,4.7,z); cRect(a.x+x,a.z+z,w,d); };
+  wall(-4.5,6,5,1); wall(4.5,6,5,1); wall(0,-6,14,1); wall(-7,0,1,12); wall(7,0,1,12);
+  box(g,4.6,1.0,1.2,stone,0,4.1,6); // Torbogen
+  [[-7,-6],[7,-6],[-7,6],[7,6]].forEach(p => {
+    cyl(g,1.5,1.6,7,0xd2ccbf,p[0],3.5,p[1],8); cone(g,2.1,2.6,0xc0392b,p[0],8.3,p[1],8); cCircle(a.x+p[0],a.z+p[1],1.7);
+  });
+  box(g,7,6.5,4,0xd2ccbf,0,3.25,-3.6); cone(g,5.3,3,0xb03a2e,0,8,-3.6,4).rotation.y = Math.PI/4;
+  box(g,1.6,2.6,.12,0x5a3a22,0,1.3,-1.55); cRect(a.x,a.z-3.6,7,4);
+  cyl(g,.06,.06,2.4,0x4b5563,0,10.6,-3.6,6); box(g,1.2,.7,.06,0xe53935,.6,11.4,-3.6);
+  box(g,2.2,.03,6,0xc0392b,0,.12,2.4);
+  [[-2.4,3],[2.4,3]].forEach(p => { cyl(g,.1,.1,2.2,0x4b5563,p[0],1.1,p[1],6); ico(g,.28,0xff9f2e,p[0],2.4,p[1],1).material = bmat(0xff9f2e); });
+  // Tor
+  const gate = new THREE.Group(); gate.position.set(0,0,6); g.add(gate);
+  for(let k=0;k<7;k++) box(gate,.2,3.6,.2,0x4a4036,-1.8+k*.6,1.8,0);
+  box(gate,4,.2,.25,0x4a4036,0,3.5,0); box(gate,4,.2,.25,0x4a4036,0,2.0,0); box(gate,4,.2,.25,0x4a4036,0,.6,0);
+  const gateRect = cRect(a.x,a.z+6,4,1);
+  const tor = addObj({id:'o_b1',area:a.id,name:'Burgtor',tasks:['b1'],x:a.x,z:a.z+6,hitR:2.4,hitH:4.4,markerY:6.0});
+  tor.fx = { set(done,inst){ animTo(gate.position,'y',done?4.2:0,1.4,inst); gateRect.on = !done; } };
+  // König
+  person(g,0,.8,{body:0x7b3fa0,robe:0x7b3fa0,hat:'crown',beard:true,skin:0xf0c39c}); blobShadow(g,0,.8,1.2);
+  cCircle(a.x,a.z+.8,.8);
+  addObj({id:'o_b2',area:a.id,name:'König Max',tasks:['k1','k2','k3','k4'],x:a.x,z:a.z+.8,hitR:1.6,hitH:3.6,markerY:4.2,
+          requires:'o_b1', requiresMsg:'Das Burgtor ist noch verschlossen. Löse zuerst das Rätsel am Tor.'});
+  addAreaLabel(a,13);
+}
+
+/* Alles bauen */
+buildIsland();
+buildMarkt(AREAS[0]); buildSuper(AREAS[1]); buildHoehle(AREAS[2]); buildFabrik(AREAS[3]); buildBurg(AREAS[4]);
+for(let i=1;i<AREAS.length;i++) buildFence(AREAS[i],i);
+
+/* Spielfigur */
+const playerRoot = new THREE.Group(); scene.add(playerRoot);
+const playerModel = person(playerRoot,0,0,{body:0x2f80ed,hat:'cap',hatColor:0xff6b3d,skin:0xf2c9a0,pants:0x2d3a55});
+box(playerModel,.6,.8,.3,0xffb020,0,1.3,-.5);
+const pShadow = blobShadow(playerRoot,0,0,1);
+const player = {x:0, z:7, ang:Math.PI, phase:0, speed:7.2};
+
+/* =====================================================================
+   5) WELTZUSTAND (aus Spielstand abgeleitet)
+   ===================================================================== */
+function applyObjects(inst){
+  OBJS.forEach((o,k) => {
+    const done = objDone(o);
+    o.marker.material.color.setHex(done ? 0x37c871 : 0xffc928);
+    o.marker.scale.setScalar(done ? .7 : 1);
+    o.marker.visible = !o.requires || objDone(objById(o.requires));
+    if(o.fx) o.fx.set(done, inst);
+  });
+}
+function applyFences(inst){
+  fences.forEach(f => {
+    const open = areaUnlocked(f.idx);
+    f.area.locked = !open;
+    if(open === !f.shown) return;
+    if(inst){ f.group.position.y = open ? -3 : 0; f.group.visible = !open; f.shown = !open; }
+    else if(open){
+      f.shown = false;
+      animTo(f.group.position,'y',-3,1.1,false,() => { f.group.visible = false; });
+    }else{ f.shown = true; f.group.visible = true; f.group.position.y = 0; }
+  });
+  updateLabels();
+}
+function updateLabels(){
+  labels.forEach(l => {
+    const i = AREAS.indexOf(l.area);
+    const st = areaDone(i) ? 'done' : (areaUnlocked(i) ? 'open' : 'locked');
+    if(st !== l.state){ l.state = st; l.sprite.userData.redraw(drawLabel(l.area.name, st)); }
+  });
+}
+function applyAll(inst){ applyObjects(inst); applyFences(inst); }
+
+/* =====================================================================
+   6) EINGABE: Bewegung, Kamera, Tippen
+   ===================================================================== */
+let mode = 'start';   // start | play | dialog | cine | map | menu | help | confirm | win
+function setMode(m){ mode = m; document.body.dataset.mode = m; if(m !== 'play') releaseInput(); }
+const keys = {up:false,down:false,left:false,right:false};
+const joy = {x:0, y:0, id:null};
+const cam = {yaw:0, pitch:.5, dist:10};
+let isTouch = false;
+function setTouch(){ if(!isTouch){ isTouch = true; document.body.classList.add('touch'); } }
+try{ if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) setTouch(); }catch(_){}
+function releaseInput(){ keys.up = keys.down = keys.left = keys.right = false; resetJoy(); look = null; }
+
+const KEYMAP = {KeyW:'up',ArrowUp:'up',KeyS:'down',ArrowDown:'down',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right'};
+window.addEventListener('keydown', e => {
+  const k = KEYMAP[e.code];
+  if(mode === 'play'){
+    if(k){ keys[k] = true; e.preventDefault(); return; }
+    if((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && !(e.target && e.target.tagName === 'BUTTON')){
+      e.preventDefault(); const o = nearest(); if(o) openObject(o); return;
+    }
+    if(e.code === 'KeyM'){ openMap(); return; }
+    if(e.code === 'Escape'){ openMenu(); return; }
+  }else if(mode === 'cine'){ skipCine(); }
+  else if(e.code === 'Escape'){
+    if(mode === 'dialog') closeTask(); else if(mode === 'map') closeMap(); else if(mode === 'menu') closeMenu();
+  }
+});
+window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if(k) keys[k] = false; });
+window.addEventListener('blur', releaseInput);
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('contextmenu', e => { if(e.target === canvas) e.preventDefault(); });
+
+/* Joystick */
+const joyEl = $('joy'), knob = $('knob');
+function resetJoy(){ joy.x = joy.y = 0; joy.id = null; knob.style.transform = 'translate(0,0)'; }
+function joyMove(e){
+  const r = joyEl.getBoundingClientRect(), R = r.width/2, maxR = R - 12;
+  let dx = e.clientX - (r.left+R), dy = e.clientY - (r.top+R); const l = Math.hypot(dx,dy);
+  if(l > maxR){ dx = dx/l*maxR; dy = dy/l*maxR; }
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+  const nx = dx/maxR, ny = dy/maxR, m = Math.hypot(nx,ny);
+  if(m < .12){ joy.x = joy.y = 0; } else { joy.x = nx; joy.y = ny; }
+}
+joyEl.addEventListener('pointerdown', e => {
+  if(mode !== 'play') return; setTouch(); joy.id = e.pointerId;
+  try{ joyEl.setPointerCapture(e.pointerId); }catch(_){} joyMove(e); e.preventDefault();
+});
+joyEl.addEventListener('pointermove', e => { if(e.pointerId === joy.id) joyMove(e); });
+const joyEnd = e => { if(e.pointerId === joy.id) resetJoy(); };
+joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+
+/* Umschauen (Ziehen) + Tippen/Klicken zum Interagieren */
+let look = null;
+canvas.addEventListener('pointerdown', e => {
+  if(e.pointerType === 'touch') setTouch();
+  if(mode === 'cine'){ skipCine(); return; }
+  if(mode !== 'play' || look) return;
+  if(e.pointerType === 'mouse' && e.button !== 0) return;
+  look = {id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, t:performance.now(), moved:false};
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+});
+canvas.addEventListener('pointermove', e => {
+  if(!look || e.pointerId !== look.id) return;
+  const dx = e.clientX - look.x, dy = e.clientY - look.y; look.x = e.clientX; look.y = e.clientY;
+  if(Math.hypot(e.clientX-look.sx, e.clientY-look.sy) > 9) look.moved = true;
+  if(look.moved){
+    cam.yaw -= dx*.006; cam.pitch = clamp(cam.pitch + dy*.004, .12, 1.25);
+  }
+});
+const lookEnd = e => {
+  if(!look || e.pointerId !== look.id) return;
+  const l = look; look = null;
+  if(e.type === 'pointerup' && !l.moved && performance.now()-l.t < 450) tapAt(e.clientX, e.clientY);
+};
+canvas.addEventListener('pointerup', lookEnd); canvas.addEventListener('pointercancel', lookEnd);
+
+const raycaster = new THREE.Raycaster();
+function tapAt(cx,cy){
+  const r = canvas.getBoundingClientRect();
+  camera.updateMatrixWorld(); scene.updateMatrixWorld();
+  raycaster.setFromCamera({x:((cx-r.left)/r.width)*2-1, y:-((cy-r.top)/r.height)*2+1}, camera);
+  const hits = raycaster.intersectObjects(hitMeshes, false);
+  if(!hits.length) return;
+  const o = objById(hits[0].object.userData.objId); if(!o) return;
+  if(Math.hypot(player.x-o.x, player.z-o.z) > 9.5){ toast('Gehe näher heran, um „' + o.name + '“ anzusprechen.'); return; }
+  openObject(o);
+}
+
+/* Kollisionen */
+let ringHit = null;
+function collide(){
+  const pr = .6;
+  for(let pass=0; pass<2; pass++){
+    for(const c of circles){
+      if(!c.on) continue;
+      const dx = player.x-c.x, dz = player.z-c.z, d = Math.hypot(dx,dz), m = c.r+pr;
+      if(d < m){ const k = d>1e-6 ? m/d : 1; player.x = c.x + (d>1e-6?dx*k:m); player.z = c.z + (d>1e-6?dz*k:0); }
+    }
+    for(const b of rects){
+      if(!b.on) continue;
+      const cx = clamp(player.x,b.x0,b.x1), cz = clamp(player.z,b.z0,b.z1), dx = player.x-cx, dz = player.z-cz, d2 = dx*dx+dz*dz;
+      if(d2 < pr*pr){
+        if(d2 > 1e-8){ const d = Math.sqrt(d2); player.x = cx + dx/d*pr; player.z = cz + dz/d*pr; }
+        else{
+          const l = player.x-b.x0, r = b.x1-player.x, t = player.z-b.z0, bt = b.z1-player.z, m = Math.min(l,r,t,bt);
+          if(m === l) player.x = b.x0-pr; else if(m === r) player.x = b.x1+pr; else if(m === t) player.z = b.z0-pr; else player.z = b.z1+pr;
+        }
+      }
+    }
+    for(const a of AREAS){
+      if(!a.locked) continue;
+      const dx = player.x-a.x, dz = player.z-a.z, d = Math.hypot(dx,dz), m = a.R + pr + .2;
+      if(d < m){ const k = m/(d||1e-6); player.x = a.x + dx*k; player.z = a.z + dz*k; ringHit = a; }
+    }
+  }
+  const d0 = Math.hypot(player.x,player.z);
+  if(d0 > 55){ player.x *= 55/d0; player.z *= 55/d0; }
+}
+
+/* =====================================================================
+   7) UI: HUD, Hinweise, Karte, Aufgaben-Dialog
+   ===================================================================== */
+let toastTimer = 0;
+function toast(msg,ms=2800){
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
+function currentAreaIdx(){ for(let i=0;i<AREAS.length;i++) if(!areaDone(i)) return i; return -1; }
+function updateHUD(){
+  $('pts').textContent = pointsNow() + ' / ' + TASK_LIST.length;
+  $('areasTxt').textContent = doneAreas() + ' von ' + AREAS.length + ' Bereichen';
+  const cur = currentAreaIdx(), dots = $('dots');
+  if(dots.children.length !== AREAS.length){ dots.innerHTML = AREAS.map(() => '<i></i>').join(''); }
+  AREAS.forEach((a,i) => { dots.children[i].className = areaDone(i) ? 'done' : (i === cur ? 'now' : ''); });
+  if(cur < 0) $('goal').textContent = 'Alle Bereiche geschafft! 🎉';
+  else{
+    const open = areaObjs(cur).filter(o => !objDone(o)).length;
+    $('goal').textContent = 'Ziel: ' + AREAS[cur].icon + ' ' + AREAS[cur].name + ' (' + open + (open===1?' Aufgabe':' Aufgaben') + ' offen)';
+  }
+}
+
+/* Nächstes Ziel / Hinweis-Pfeil */
+function goalTarget(){
+  const cur = currentAreaIdx(); if(cur < 0) return null;
+  let best = null, bd = 1e9;
+  areaObjs(cur).forEach(o => {
+    if(objDone(o)) return;
+    if(o.requires && !objDone(objById(o.requires))) return;
+    const d = Math.hypot(player.x-o.x, player.z-o.z); if(d < bd){ bd = d; best = o; }
+  });
+  return best ? {obj:best, area:AREAS[cur], dist:bd} : null;
+}
+let hintOn = false, hintTimer = 0;
+function showHint(){
+  const t = goalTarget(); if(!t){ toast('Du hast alles geschafft!'); return; }
+  hintOn = true; $('hintCard').hidden = false;
+  $('hintTxt').innerHTML = '<b>Nächstes Ziel: ' + t.obj.name + '</b>' + t.area.icon + ' ' + t.area.name + ' – noch ca. <span id="hintDist">' + Math.round(t.dist) + '</span> Meter. Folge dem Pfeil.';
+  clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 14000);
+}
+function hideHint(){ hintOn = false; $('hintCard').hidden = true; }
+function updateHint(){
+  if(!hintOn) return;
+  const t = goalTarget(); if(!t){ hideHint(); return; }
+  const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+  const dx = t.obj.x-player.x, dz = t.obj.z-player.z;
+  const a = Math.atan2(dx*rx+dz*rz, dx*fx+dz*fz);
+  $('hintSvg').style.transform = 'rotate(' + a + 'rad)';
+  const d = $('hintDist'); if(d) d.textContent = Math.round(t.dist);
+}
+
+/* Interagieren-Knopf */
+function canInteract(o){
+  const i = AREAS.findIndex(a => a.id === o.area);
+  if(!areaUnlocked(i)) return {ok:false, msg:'Dieser Bereich ist noch gesperrt. Schließe zuerst „' + AREAS[i-1].name + '“ ab.'};
+  if(o.requires && !objDone(objById(o.requires))) return {ok:false, msg:o.requiresMsg || 'Das geht noch nicht.'};
+  return {ok:true};
+}
+let nearObj = null;
+function nearest(){
+  let best = null, bd = 6.5;
+  for(const o of OBJS){
+    const d = Math.hypot(player.x-o.x, player.z-o.z);
+    if(d < bd && canInteract(o).ok){ bd = d; best = o; }
+  }
+  return best;
+}
+function updateAct(){
+  const o = mode === 'play' ? nearest() : null;
+  if(o !== nearObj){
+    nearObj = o; const b = $('act');
+    if(o){ b.hidden = false; b.innerHTML = (objDone(o) ? '✅ ' : '💬 ') + o.name + '<small>' + (objDone(o) ? 'Noch einmal ansehen' : 'Aufgabe öffnen') + (isTouch ? '' : ' (Taste E)') + '</small>'; }
+    else b.hidden = true;
+  }
+}
+$('act').addEventListener('click', () => { if(nearObj) openObject(nearObj); });
+
+/* Karte */
+let mapOn = false;
+function openMap(){ hideHint(); setMode('map'); $('ovMap').hidden = false; mapOn = true; drawMap(); }
+function closeMap(){ mapOn = false; $('ovMap').hidden = true; setMode('play'); }
+function drawMap(){
+  const cv = $('mapCv'), ctx = cv.getContext('2d'); if(!ctx) return;
+  const S = cv.width, sc = S/2/63, X = x => S/2 + x*sc, Y = z => S/2 + z*sc;
+  ctx.clearRect(0,0,S,S); ctx.fillStyle = '#8fd0f0'; ctx.fillRect(0,0,S,S);
+  ctx.beginPath(); ctx.arc(S/2,S/2,60*sc,0,7); ctx.fillStyle = '#f1dd9d'; ctx.fill();
+  ctx.beginPath(); ctx.arc(S/2,S/2,52*sc,0,7); ctx.fillStyle = '#8fd27c'; ctx.fill();
+  ctx.strokeStyle = '#e6d6a2'; ctx.lineWidth = 3.4*sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); AREAS.forEach((a,i) => { if(i) ctx.lineTo(X(a.x),Y(a.z)); else ctx.moveTo(X(a.x),Y(a.z)); }); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  AREAS.forEach((a,i) => {
+    const st = areaDone(i) ? 'done' : (areaUnlocked(i) ? 'open' : 'locked'), r = Math.max(a.R,9.5)*sc;
+    ctx.beginPath(); ctx.arc(X(a.x),Y(a.z),r,0,7);
+    ctx.fillStyle = st==='done' ? '#2fa36b' : st==='open' ? '#ffffff' : '#6b7684'; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = st==='open' ? '#f2b632' : 'rgba(0,0,0,.25)'; ctx.stroke();
+    ctx.font = (r*.9) + 'px ' + FONT; ctx.fillStyle = '#000'; ctx.fillText(st==='locked' ? '🔒' : a.icon, X(a.x), Y(a.z)-r*.1);
+    ctx.font = 'bold 26px ' + FONT; ctx.lineWidth = 6; ctx.strokeStyle = '#ffffff'; ctx.strokeText(a.name, X(a.x), Y(a.z)+r+20);
+    ctx.fillStyle = '#1b2a3a'; ctx.fillText(a.name, X(a.x), Y(a.z)+r+20);
+  });
+  const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw);
+  ctx.save(); ctx.translate(X(player.x),Y(player.z)); ctx.rotate(Math.atan2(fx,-fz));
+  ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(14,14); ctx.lineTo(0,7); ctx.lineTo(-14,14); ctx.closePath();
+  ctx.fillStyle = '#e8453c'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
+}
+
+/* Aufgaben-Dialog */
+const dlg = {obj:null, tid:null};
+function openObject(o){
+  const c = canInteract(o); if(!c.ok){ toast(c.msg); return; }
+  hideHint(); setMode('dialog'); dlg.obj = o;
+  let tid = o.tasks.find(t => !taskDone(t)); if(!tid) tid = o.tasks[o.tasks.length-1];
+  $('ovTask').hidden = false; showTask(tid); $('ovTask').scrollTop = 0;
+}
+function renderTips(){
+  const t = TASKS[dlg.tid], p = getProg(dlg.tid), box = $('dTips'); let h = '';
+  for(let i=0;i<p.tips;i++) h += '<div>💡 Tipp ' + (i+1) + ': ' + t.tips[i] + '</div>';
+  if(p.sol || p.done) h += '<div class="sol">🔑 Lösung: ' + t.sol + '</div>';
+  box.innerHTML = h;
+  const tb = $('dTip');
+  if(p.done){ tb.hidden = true; }
+  else if(p.tips < t.tips.length){ tb.hidden = false; tb.textContent = '💡 Tipp ' + (p.tips+1) + ' von ' + t.tips.length; }
+  else if(!p.sol){ tb.hidden = false; tb.textContent = '🔑 Lösung zeigen'; }
+  else tb.hidden = true;
+}
+function setFb(kind,html){ const f = $('dFb'); f.className = 'fb' + (kind ? ' ' + kind : ''); f.innerHTML = html || ''; }
+function showTask(tid){
+  dlg.tid = tid; const t = TASKS[tid], p = getProg(tid), n = dlg.obj.tasks.length, idx = dlg.obj.tasks.indexOf(tid);
+  $('dTag').textContent = t.tag; $('dStep').textContent = n > 1 ? 'Frage ' + (idx+1) + ' von ' + n : '';
+  $('dWho').textContent = t.who; $('dQ').textContent = t.q; $('dUnit').textContent = t.unit;
+  const inp = $('dIn'); inp.value = ''; inp.className = '';
+  setFb('', ''); renderTips();
+  const next = $('dNext');
+  if(p.done){
+    $('dAnswerRow').hidden = true; next.hidden = false; next.textContent = 'Schließen';
+    setFb('good', '<b>✅ Schon gelöst</b>' + t.sol);
+  }else{
+    $('dAnswerRow').hidden = false; next.hidden = true;
+    if(!isTouch) setTimeout(() => { try{ inp.focus(); }catch(_){} }, 30);
+  }
+}
+function checkAnswer(){
+  const t = TASKS[dlg.tid], p = getProg(dlg.tid); if(p.done) return;
+  const v = parseAnswer($('dIn').value), inp = $('dIn');
+  if(v === null){ inp.className = 'bad'; setFb('warn', 'Bitte gib eine Zahl ein, zum Beispiel 25 oder 12,5.'); return; }
+  if(Math.abs(v - t.ans) < 1e-6){
+    p.done = true; saveProg(); inp.className = ''; try{ inp.blur(); }catch(_){}
+    const more = dlg.obj.tasks.some(x => !taskDone(x));
+    $('dAnswerRow').hidden = true; renderTips();
+    setFb('good', '<b>🎉 Richtig! +1 Punkt</b>' + t.sol);
+    const nx = $('dNext'); nx.hidden = false; nx.textContent = more ? 'Nächste Frage' : 'Weiter';
+    onTaskSolved();
+  }else{
+    p.wrong++; saveProg(); inp.className = 'bad';
+    const trap = (t.traps || []).find(x => Math.abs(x[0]-v) < 1e-6);
+    let msg = trap ? trap[1] : GENERIC[t.kind];
+    if(p.wrong >= 2 && (p.tips < t.tips.length)) msg += ' Der Tipp-Knopf hilft dir Schritt für Schritt.';
+    setFb('bad', '<b>Noch nicht ganz.</b>' + msg + '<br>Versuche es noch einmal!');
+    inp.select && inp.select();
+  }
+}
+let pendingReveal = -1, pendingWin = false;
+function onTaskSolved(){
+  applyObjects(false); updateLabels(); updateHUD();
+  const i = AREAS.findIndex(a => a.id === dlg.obj.area);
+  if(areaDone(i)){
+    if(i < AREAS.length-1) pendingReveal = i+1; else pendingWin = true;
+  }
+}
+function closeTask(){
+  $('ovTask').hidden = true; try{ $('dIn').blur(); }catch(_){}
+  setMode('play'); dlg.obj = null;
+  if(pendingReveal >= 0){ const i = pendingReveal; pendingReveal = -1; startCine(i); }
+  else if(pendingWin){ pendingWin = false; setTimeout(showWin, 500); }
+  else applyFences(false);
+}
+$('dClose').addEventListener('click', closeTask);
+$('dCheck').addEventListener('click', checkAnswer);
+$('dIn').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); checkAnswer(); } e.stopPropagation(); });
+$('dTip').addEventListener('click', () => {
+  const t = TASKS[dlg.tid], p = getProg(dlg.tid); if(p.done) return;
+  if(p.tips < t.tips.length) p.tips++; else p.sol = true;
+  saveProg(); renderTips();
+});
+$('dNext').addEventListener('click', () => {
+  const next = dlg.obj.tasks.find(x => !taskDone(x));
+  if(next) showTask(next); else closeTask();
+});
+
+/* Kamerafahrt: zeigt, welcher Bereich sich geöffnet hat */
+let cine = null;
+const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+const dPos = new THREE.Vector3(), dLook = new THREE.Vector3(), vPos = new THREE.Vector3(), vLook = new THREE.Vector3();
+function startCine(i){
+  const a = AREAS[i], p = AREAS[i-1], dx = p.x-a.x, dz = p.z-a.z, l = Math.hypot(dx,dz);
+  vPos.set(a.x + dx/l*(a.R+18), 13, a.z + dz/l*(a.R+18)); vLook.set(a.x, 1.5, a.z);
+  cine = {t:0, dur:4.2, idx:i, fired:false};
+  setMode('cine'); toast('🔓 ' + a.icon + ' ' + a.name + ' ist jetzt offen!', 3600);
+}
+function skipCine(){ if(cine && cine.t < 3) cine.t = 3; }
+function stepCine(dt){
+  cine.t += dt;
+  if(!cine.fired && cine.t > 1.0){ cine.fired = true; applyFences(false); }
+  if(cine.t >= cine.dur){
+    if(!cine.fired) applyFences(false);
+    cine = null; setMode('play'); return 0;
+  }
+  const t = cine.t; return t < 1 ? ease(t) : t < 3 ? 1 : ease(1 - (t-3)/(cine.dur-3));
+}
+
+/* Menü, Start, Neustart, Ende */
+function ctrlHTML(){
+  return '<div class="ctrl"><div><b>💻 Am PC</b>Laufen: <b style="display:inline">W A S D</b> oder Pfeiltasten<br>Umschauen: Maustaste gedrückt halten und ziehen<br>Aufgabe öffnen: auf ein <span class="diamond">◆</span> klicken oder Taste <b style="display:inline">E</b></div>'
+       + '<div><b>📱 Am iPad</b>Laufen: Joystick links unten<br>Umschauen: mit dem Finger über die Welt wischen<br>Aufgabe öffnen: auf ein <span class="diamond">◆</span> tippen oder den grünen Knopf drücken</div></div>'
+       + '<p style="font-size:16px;color:var(--ink-2)">Die gelben <span class="diamond">◆</span> zeigen, wo es eine Aufgabe gibt. Mit „Karte“ und „Hinweis“ findest du den Weg.</p>';
+}
+function buildStart(){
+  $('ctrlStart').innerHTML = ctrlHTML(); $('ctrlHelp').innerHTML = ctrlHTML();
+  const has = pointsNow() > 0, b = $('startBtns');
+  b.innerHTML = has
+    ? '<button class="btn primary" id="sGo">▶ Weiterspielen</button><button class="btn" id="sNew">Neu beginnen</button>'
+    : '<button class="btn primary" id="sGo">▶ Spiel starten</button>';
+  $('sGo').addEventListener('click', startPlay);
+  const n = $('sNew'); if(n) n.addEventListener('click', () => { resetGame(); startPlay(); });
+}
+function startPlay(){
+  $('ovStart').hidden = true; camPos.set(0,0,0); snapCamera(); setMode('play'); updateHUD();
+  setTimeout(() => { if(mode === 'play' && pointsNow() === 0) toast('Gehe zur Obsthändlerin Berta oder zum Münzbrunnen auf dem Marktplatz.', 5000); }, 600);
+}
+function openMenu(){ hideHint(); setMode('menu'); $('ovMenu').hidden = false; }
+function closeMenu(){ $('ovMenu').hidden = true; setMode('play'); }
+function resetGame(){
+  clearProg(); tweens = []; pendingReveal = -1; pendingWin = false; cine = null;
+  applyAll(true); player.x = 0; player.z = 7; player.ang = Math.PI; cam.yaw = 0; cam.pitch = .5;
+  hideHint(); updateHUD(); nearObj = null; snapCamera();
+}
+function showWin(){
+  const tot = TASK_LIST.length, tips = TASK_LIST.reduce((s,t) => s + (prog[t.id] ? prog[t.id].tips : 0), 0),
+        wrong = TASK_LIST.reduce((s,t) => s + (prog[t.id] ? prog[t.id].wrong : 0), 0),
+        clean = TASK_LIST.filter(t => prog[t.id] && prog[t.id].done && !prog[t.id].tips && !prog[t.id].wrong && !prog[t.id].sol).length;
+  $('winStats').innerHTML = '<div class="stat"><span>⭐ Punkte</span><b>' + pointsNow() + ' von ' + tot + '</b></div>'
+    + '<div class="stat"><span>Beim ersten Versuch ohne Tipp gelöst</span><b>' + clean + '</b></div>'
+    + '<div class="stat"><span>Genutzte Tipps</span><b>' + tips + '</b></div>'
+    + '<div class="stat"><span>Falsche Antworten</span><b>' + wrong + '</b></div>';
+  setMode('win'); $('ovWin').hidden = false;
+}
+$('btnMap').addEventListener('click', () => { if(mode === 'play') openMap(); });
+$('btnHint').addEventListener('click', () => { if(mode === 'play') showHint(); });
+$('btnMenu').addEventListener('click', () => { if(mode === 'play') openMenu(); });
+$('mapClose').addEventListener('click', closeMap);
+$('ovMap').addEventListener('click', e => { if(e.target === $('ovMap')) closeMap(); });
+$('menuResume').addEventListener('click', closeMenu);
+$('menuHelp').addEventListener('click', () => { $('ovMenu').hidden = true; setMode('help'); $('ovHelp').hidden = false; });
+$('helpBack').addEventListener('click', () => { $('ovHelp').hidden = true; setMode('play'); });
+$('menuRestart').addEventListener('click', () => { $('ovMenu').hidden = true; setMode('confirm'); $('ovConfirm').hidden = false; });
+$('confNo').addEventListener('click', () => { $('ovConfirm').hidden = true; setMode('play'); });
+$('confYes').addEventListener('click', () => { $('ovConfirm').hidden = true; resetGame(); setMode('play'); toast('Neues Spiel gestartet.'); });
+$('winStay').addEventListener('click', () => { $('ovWin').hidden = true; setMode('play'); });
+$('winAgain').addEventListener('click', () => { $('ovWin').hidden = true; resetGame(); setMode('play'); });
+
+/* =====================================================================
+   8) SPIELSCHLEIFE
+   ===================================================================== */
+function desiredCam(p,l){
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  p.set(player.x + Math.sin(cam.yaw)*cp*cam.dist, 1.9 + sp*cam.dist, player.z + Math.cos(cam.yaw)*cp*cam.dist);
+  p.y = Math.max(p.y, 1.0); l.set(player.x, 1.9, player.z);
+}
+function snapCamera(){ desiredCam(dPos,dLook); camPos.copy(dPos); camLook.copy(dLook); }
+
+let tAll = 0, ringToastAt = -10, frameEma = 16, slow = 0, mapTick = 0;
+function update(dt){
+  tAll += dt; stepTweens(dt);
+  let moving = 0;
+  if(mode === 'play'){
+    let ix = (keys.right?1:0) - (keys.left?1:0) + joy.x, iy = (keys.up?1:0) - (keys.down?1:0) - joy.y;
+    const m = Math.hypot(ix,iy);
+    if(m > .01){
+      if(m > 1){ ix /= m; iy /= m; }
+      const f = {x:-Math.sin(cam.yaw), z:-Math.cos(cam.yaw)}, r = {x:Math.cos(cam.yaw), z:-Math.sin(cam.yaw)};
+      const mx = f.x*iy + r.x*ix, mz = f.z*iy + r.z*ix, mag = Math.min(1, Math.hypot(mx,mz));
+      player.x += mx*player.speed*dt; player.z += mz*player.speed*dt;
+      player.ang += angDiff(player.ang, Math.atan2(mx,mz)) * Math.min(1, dt*14);
+      moving = mag; player.phase += dt*10*mag;
+    }
+    ringHit = null; collide();
+    if(ringHit && tAll - ringToastAt > 3){
+      ringToastAt = tAll; const i = AREAS.indexOf(ringHit); toast('🔒 ' + ringHit.name + ' ist noch gesperrt. Schließe zuerst „' + AREAS[i-1].name + '“ ab.');
+    }
+  }
+  playerRoot.position.set(player.x,0,player.z); playerModel.rotation.y = player.ang;
+  animPerson(playerModel, player.phase, moving);
+
+  OBJS.forEach((o,k) => {
+    if(!o.marker.visible) return;
+    if(objDone(o)){ o.marker.position.y = o.markerBase; }
+    else{ o.marker.position.y = o.markerBase + Math.sin(tAll*2.2 + k)*.18; o.marker.rotation.y += dt*1.4; }
+  });
+
+  let w = 0;
+  if(mode === 'start'){
+    const a = tAll*.12; camera.position.set(Math.cos(a)*64, 36, Math.sin(a)*64); camera.lookAt(0,0,12);
+    return;
+  }
+  desiredCam(dPos,dLook);
+  const k = 1 - Math.exp(-dt*12); camPos.lerp(dPos,k); camLook.lerp(dLook,k);
+  if(cine) w = stepCine(dt);
+  camera.position.copy(camPos); const lk = camLook.clone();
+  if(w > 0){ camera.position.lerp(vPos,w); lk.lerp(vLook,w); }
+  camera.lookAt(lk);
+
+  updateAct(); updateHint();
+  if(mapOn){ mapTick += dt; if(mapTick > .15){ mapTick = 0; drawMap(); } }
+}
+
+let last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const raw = now - last; last = now;
+  const dt = Math.min(.05, raw/1000);
+  update(dt);
+  renderer.render(scene, camera);
+  // einfache Leistungsanpassung für ältere Geräte
+  frameEma = frameEma*.95 + Math.min(raw,100)*.05;
+  if(frameEma > 30 && pixelRatio > 1){ slow++; if(slow > 90){ pixelRatio = Math.max(1, pixelRatio-.25); renderer.setPixelRatio(pixelRatio); resize(); slow = 0; frameEma = 16; } } else slow = 0;
+}
+
+/* Start */
+loadProg(); resize(); applyAll(true); buildStart(); updateHUD(); snapCamera();
+requestAnimationFrame(frame);
+
+/* Kleines Debug-/Testobjekt (für Lehrkräfte und Tests, beeinflusst das Spiel nicht) */
+window.Prozentinsel = {
+  areas:AREAS, tasks:TASKS, objs:OBJS, player, cam, camera,
+  get mode(){ return mode; }, parseAnswer, openObject, objDone, areaDone, areaUnlocked, pointsNow, tapAt, update, nearest, canInteract
+};
+})();
+</script>
+</body>
+</html>
