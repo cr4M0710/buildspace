@@ -502,4 +502,16 @@ const posts = [
     titleEn: "Fraction Domino & Fraction Memory",
     excerptEn: "Match fractions, decimals, percentages and pictures as domino or memory, solo or with up to 4 players, in three levels."
    },
+   {
+    title: "Gleichungs-Waage",
+    excerpt: "Gleichungen als Waage lösen: Auf beiden Seiten dieselbe Umformung anwenden, bis x allein steht. Allein, zu zweit an einem Gerät oder online im Raum.",
+    date: "2026-10-02",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "gleichungs-waage.html",
+    emoji: "⚖️",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit"],
+    titleEn: "Equation Balance",
+    excerptEn: "Solve equations like a balance scale: apply the same step to both sides until x stands alone. Solo, two players on one device or online in a room."
+   },
 ];
