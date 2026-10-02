@@ -514,4 +514,16 @@ const posts = [
     titleEn: "Equation Balance",
     excerptEn: "Solve equations like a balance scale: apply the same step to both sides until x stands alone. Solo, two players on one device or online in a room."
    },
+   {
+    title: "Koordinaten-Schiffe",
+    excerpt: "Schiffe versenken mit Koordinaten: Punkte im Koordinatensystem richtig ablesen, allein gegen den Computer oder online gegen eine Mitschülerin bzw. einen Mitschüler.",
+    date: "2026-10-02",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "koordinaten-schiffe.html",
+    emoji: "🚢",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit"],
+    titleEn: "Coordinate Battleships",
+    excerptEn: "Battleships with coordinates: read points in the coordinate system correctly, solo against the computer or online against a classmate."
+   },
 ];

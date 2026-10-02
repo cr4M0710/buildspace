@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2b3d">
+<title>Koordinaten-Schiffe</title>
+<style>
+:root{
+  --deep:#0f2b3d; --deep2:#173a50; --line:rgba(255,255,255,.14);
+  --chart:#dfeaed; --paper:#f2f8f9; --paper-edge:#b4ccd3; --grid:#c3d6dc;
+  --ink:#14394f; --ink-soft:#4a6b7c;
+  --red:#d63a2c; --buoy:#f2b826; --buoy-ink:#3a2a00; --route:#d9780f;
+  --ship:#61747f; --ship-dark:#2c3d48; --sand:#e0d0a3; --sand-dark:#bba873;
+  --ok:#2f9d6e; --bad:#d63a2c;
+  --body:"Avenir Next","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --display:"Futura","Avenir Next Condensed","Trebuchet MS","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--deep);color:#eaf3f6;font:17px/1.45 var(--body);touch-action:manipulation;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+h1,h2,h3{margin:0;font-family:var(--display);line-height:1.2}
+h2{font-size:22px} h3{font-size:16px;font-weight:700;margin:14px 0 8px}
+p{margin:.4em 0}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:.6em 1.1em;min-height:46px;color:inherit;background:transparent}
+button[disabled]{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #fff;outline-offset:2px}
+input{font:inherit;font-size:17px;min-height:46px;padding:.4em .7em;border-radius:8px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.25);color:#fff;width:100%}
+input::placeholder{color:rgba(255,255,255,.5)}
+.btn{background:var(--buoy);color:var(--buoy-ink);font-weight:700}
+.btn:hover:not([disabled]){filter:brightness(1.07)}
+.btn.alt{background:transparent;border:2px solid rgba(255,255,255,.35);color:#eaf3f6;font-weight:600}
+.btn.big{width:100%;min-height:54px;font-size:19px}
+.chip{border:2px solid rgba(255,255,255,.28);border-radius:999px;padding:.4em .95em;min-height:42px}
+.chip.sm{min-height:38px;padding:.25em .8em;font-size:15px}
+.chip[aria-pressed=true]{background:var(--buoy);color:var(--buoy-ink);border-color:var(--buoy);font-weight:700}
+.chip.static{cursor:default;background:rgba(255,255,255,.1)}
+.opt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:2px solid rgba(255,255,255,.25);border-radius:8px;padding:.5em .8em;min-height:56px;width:100%;margin-bottom:6px}
+.opt span{font-size:14px;opacity:.8;font-variant-numeric:tabular-nums}
+.opt[aria-pressed=true]{background:rgba(242,184,38,.18);border-color:var(--buoy)}
+.opt[aria-pressed=true] strong::before{content:"✓ ";color:var(--buoy)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;letter-spacing:.01em}
+.top-actions{display:flex;gap:8px}
+.top-actions button{min-height:40px;padding:.3em .9em;border:2px solid rgba(255,255,255,.3);font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.panel{background:var(--deep2);border:1px solid var(--line);border-radius:10px;padding:16px}
+.chartcard{background:var(--chart);color:var(--ink);border-radius:12px;padding:8px}
+.board{margin:0 auto;max-width:max(320px,calc(100vh - 230px))}
+.chartcard.small .board{max-width:440px}
+.hint{font-size:14px;opacity:.8}
+.lbl{font-size:14px;opacity:.8;margin-right:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.menu{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.hero h2{font-size:30px;margin-bottom:8px}
+.hero .chartcard{margin-top:16px;max-width:520px}
+.field{margin-bottom:14px}
+.field label{display:block;margin-bottom:4px;font-weight:600}
+.joinrow{display:flex;gap:8px}
+.joinrow input{text-transform:uppercase;letter-spacing:.2em;text-align:center;font-weight:700}
+.joinrow .btn{white-space:nowrap}
+.msg{min-height:1.4em;color:var(--buoy);font-weight:600}
+.lobby-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px;align-items:start}
+.codebox{background:var(--chart);color:var(--ink);border-radius:10px;padding:10px 16px;text-align:center;margin:8px 0}
+.codebox b{display:block;font:700 46px/1.1 var(--display);letter-spacing:.18em}
+.levelbar{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.lvtitle{display:block;font-size:14px;opacity:.8;margin-bottom:3px}
+.lvopts{display:flex;flex-wrap:wrap;gap:6px}
+.presets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.setrow{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.qgrid{display:grid;grid-template-columns:repeat(2,84px);gap:5px}
+.qtile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px;border-radius:6px;border:2px solid rgba(255,255,255,.25);padding:4px}
+.qtile .qnum{font:700 24px var(--display)}
+.qtile .qsign{font-size:13px;opacity:.85}
+.qtile[aria-pressed=true]{background:var(--chart);color:var(--ink);border-color:var(--chart)}
+.qtile[aria-pressed=false]{background:repeating-linear-gradient(45deg,rgba(224,208,163,.22) 0 6px,rgba(187,168,115,.22) 6px 12px)}
+.optrow{display:flex;flex-wrap:wrap;gap:6px}
+.place-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:18px;align-items:start}
+.trayship{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:2px solid rgba(255,255,255,.25);border-radius:8px;margin-bottom:6px;padding:.3em .7em}
+.trayship[aria-pressed=true]{border-color:var(--buoy);background:rgba(242,184,38,.15)}
+.trayship.placed{opacity:.6}
+.shipicon{display:inline-flex;gap:2px}
+.shipicon i{display:block;width:16px;height:16px;border-radius:3px;background:var(--ship);border:2px solid var(--ship-dark)}
+.shipicon i.hit{background:var(--red);border-color:#7d1c13}
+.shipicon.sunk{opacity:.5;text-decoration:line-through}
+.shipicon.sunk i{background:var(--red);border-color:#7d1c13}
+.status{border-radius:10px;padding:12px 16px;margin-bottom:14px;font:700 20px var(--display);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:var(--deep2);border:1px solid var(--line)}
+.status.mine{background:var(--buoy);color:var(--buoy-ink)}
+.status.won{background:var(--ok);color:#fff}
+.status.lost{background:#6b2a28}
+.status .btns{display:flex;gap:8px}
+.status .btns .btn.alt{color:inherit;border-color:currentColor}
+.battle{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:18px;align-items:start}
+.boardhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px;margin:0 0 8px}
+.fleetrow{display:flex;flex-wrap:wrap;gap:10px}
+.col-side>*+*{margin-top:14px}
+.keys{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.keys button{min-height:42px;min-width:46px;padding:.2em .6em;border:2px solid rgba(255,255,255,.3);font-weight:700}
+.xy{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.xy label{font-weight:700}
+.err{color:#ffb4aa;min-height:1.4em;font-weight:600;font-size:15px}
+.aimout{font:700 26px var(--display);margin:6px 0;font-variant-numeric:tabular-nums}
+.log{list-style:none;margin:0;padding:0;font-size:15px;max-height:220px;overflow:auto}
+.log li{padding:5px 0;border-bottom:1px solid var(--line)}
+.log .h{color:#ff9d92;font-weight:700}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:var(--ink);padding:.7em 1.2em;border-radius:8px;font-weight:600;max-width:90vw;z-index:50;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.overlay{position:fixed;inset:0;background:rgba(5,18,28,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
+.sheet{background:var(--deep2);border:1px solid var(--line);border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:20px}
+.sheet .chartcard{margin:12px 0}
+.sheet .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3)}
+.dots i.on{background:var(--buoy)}
+/* SVG-Spielfeld */
+.bsvg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.bsvg .paper{fill:var(--paper);stroke:var(--paper-edge);stroke-width:1.5}
+.bsvg .grid{stroke:var(--grid);stroke-width:1}
+.bsvg .axis{stroke:var(--ink);stroke-width:2.6;stroke-linecap:round}
+.bsvg .arrow{fill:var(--ink)}
+.bsvg .axlab{font:italic 700 17px var(--display);fill:var(--ink)}
+.bsvg .tick{font:600 14px var(--body);fill:var(--ink-soft)}
+.bsvg .tick.hl{fill:var(--buoy-ink);font-weight:800}
+.bsvg .chiphl{fill:var(--buoy)}
+.bsvg .pt{fill:var(--ink);opacity:.45}
+.bsvg .qnum{font:700 34px var(--display);fill:var(--ink);opacity:.1}
+.bsvg .sandbg,.illu .sandbg{fill:var(--sand)}
+.bsvg .sandline{stroke:var(--sand-dark);stroke-width:2}
+.bsvg .landr{stroke:var(--sand-dark);stroke-width:1.5}
+.bsvg .landlbl{font:italic 600 15px var(--display);fill:#7a6a3c}
+.ship{fill:var(--ship);stroke:var(--ship-dark);stroke-width:2}
+.ship.sunk{fill:var(--ship-dark);stroke:var(--red)}
+.ship.revealed{opacity:.5;stroke-dasharray:5 4}
+.deck{stroke:rgba(255,255,255,.4);stroke-width:3;stroke-linecap:round}
+.pv.ok{fill:var(--ok);opacity:.55}
+.pv.bad{fill:var(--bad);opacity:.45}
+.hitc{fill:var(--red);stroke:#fff;stroke-width:2}
+.hitx{stroke:#fff;stroke-width:3;stroke-linecap:round;fill:none}
+.missc{fill:rgba(255,255,255,.9);stroke:var(--ink);stroke-width:2}
+.missd{fill:var(--ink)}
+.aimc{fill:rgba(242,184,38,.28);stroke:var(--route);stroke-width:3}
+.aimx{stroke:var(--route);stroke-width:2.5}
+.guide{stroke:var(--route);stroke-width:2;stroke-dasharray:5 5}
+.pop{animation:pop .45s ease-out;transform-box:fill-box;transform-origin:center}
+@keyframes pop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+/* Illustrationen Anleitung */
+.illu{display:block;width:100%;height:auto}
+.illu .paper{fill:var(--paper)}
+.illu .axis{stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}
+.illu .pt{fill:var(--ink);opacity:.45}
+.illu .il{font:600 14px var(--body);fill:var(--ink)}
+.illu .ilb{font:700 17px var(--display);fill:var(--ink)}
+.illu .qn{font:700 40px var(--display);fill:var(--ink);opacity:.18}
+.illu .route{fill:none;stroke:var(--route);stroke-width:4;stroke-dasharray:2 7;stroke-linecap:round}
+@media (max-width:900px){
+  .menu,.lobby-grid,.place-grid,.battle{grid-template-columns:minmax(0,1fr)}
+  .board{max-width:none}
+  .hero h2{font-size:24px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="6" fill="#dfeaed"/><path d="M15 4V26M4 15H26" stroke="#14394f" stroke-width="2.4" stroke-linecap="round"/><circle cx="21" cy="9" r="4" fill="#d63a2c"/></svg>
+    Koordinaten-Schiffe
+  </h1>
+  <div class="top-actions">
+    <button id="btnHelp" type="button">Anleitung</button>
+    <button id="btnLeave" type="button" hidden>Beenden</button>
+  </div>
+</header>
+<main>
+  <section id="s-menu" class="menu">
+    <div class="hero">
+      <h2>Lies die Koordinaten richtig – dann sinkt das Schiff.</h2>
+      <p>Ein Spiel für zwei: Jeder versteckt eine Flotte im Koordinatensystem und schießt auf die Punkte des anderen.</p>
+      <div class="chartcard"><div id="heroBoard" class="board"></div></div>
+    </div>
+    <div class="panel">
+      <div class="field"><label for="inName">Dein Name</label><input id="inName" maxlength="14" autocomplete="nickname" placeholder="z. B. Mia"></div>
+      <button id="btnHost" class="btn big" type="button">Neues Spiel erstellen</button>
+      <div class="field" style="margin-top:16px"><label for="inCode">Spiel beitreten</label>
+        <div class="joinrow"><input id="inCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="btnJoin" class="btn" type="button">Beitreten</button></div></div>
+      <button id="btnBot" class="btn alt big" type="button">Allein üben (gegen den Computer)</button>
+      <p id="menuMsg" class="msg" role="status"></p>
+      <p id="noPeer" class="hint" hidden>Die Mehrspieler-Bibliothek konnte nicht geladen werden. „Allein üben“ funktioniert trotzdem.</p>
+    </div>
+  </section>
+
+  <section id="s-lobby" hidden>
+    <div class="lobby-grid">
+      <div class="panel">
+        <div id="codeBox" class="codebox" hidden><span>Dein Spiel-Code</span><b id="code"></b></div>
+        <p id="lobbyStatus" role="status"></p>
+        <div class="levelbar" data-levelbar></div>
+        <div class="row"><button id="btnStart" class="btn big" type="button">Spiel starten</button></div>
+      </div>
+      <div class="panel" id="settings"></div>
+    </div>
+  </section>
+
+  <section id="s-place" hidden>
+    <div class="place-grid">
+      <div class="chartcard"><div id="placeBoard" class="board"></div></div>
+      <div class="panel">
+        <h2>Flotte aufstellen</h2>
+        <p id="placeHint" class="hint"></p>
+        <div id="tray"></div>
+        <div class="row">
+          <button id="btnRotate" class="btn alt" type="button"></button>
+          <button id="btnRandom" class="btn alt" type="button">Zufällig</button>
+          <button id="btnClear" class="btn alt" type="button">Zurücksetzen</button>
+        </div>
+        <div class="levelbar" data-levelbar></div>
+        <button id="btnReady" class="btn big" type="button">Fertig</button>
+        <p id="placeWait" class="msg" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s-battle" hidden>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div class="battle">
+      <div>
+        <div class="boardhead"><h2 id="enemyTitle"></h2><div id="enemyFleet" class="fleetrow"></div></div>
+        <div class="chartcard"><div id="enemyBoard" class="board"></div></div>
+      </div>
+      <div class="col-side">
+        <div class="panel" id="shotPanel"></div>
+        <div>
+          <div class="boardhead"><h2>Meine Flotte</h2><div id="ownFleet" class="fleetrow"></div></div>
+          <div class="chartcard small"><div id="ownBoard" class="board"></div></div>
+        </div>
+        <div class="panel"><h3 style="margin-top:0">Verlauf</h3><ol id="log" class="log"></ol></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="help" class="overlay" hidden role="dialog" aria-modal="true" aria-label="Spielanleitung"><div class="sheet" id="helpBody"></div></div>
+<div id="notice" class="overlay" hidden role="alertdialog" aria-modal="true"><div class="sheet"><p id="noticeText" style="font-size:19px"></p><div class="row"><button id="noticeBtn" class="btn" type="button">Zum Start</button></div></div></div>
+<div id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>window.Peer||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"><\/script>')</script>
+<script>
+'use strict';
+/* ================= Konstanten ================= */
+const PREFIX='koordschiffe-';
+const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const N_OPTIONS=[4,5,6,8];
+const QUADS={1:{sx:1,sy:1,name:'I'},2:{sx:-1,sy:1,name:'II'},3:{sx:-1,sy:-1,name:'III'},4:{sx:1,sy:-1,name:'IV'}};
+const SCALES={
+  ganz:{label:'Ganze Zahlen',den:1,style:'dec',step:'1',sample:'0 · 1 · 2'},
+  dez5:{label:'Kommazahlen: Halbe',den:2,style:'dec',step:'0,5',sample:'0 · 0,5 · 1'},
+  dez1:{label:'Kommazahlen: Zehntel',den:10,style:'dec',step:'0,1',sample:'0 · 0,1 · 0,2'},
+  bru2:{label:'Brüche: Halbe',den:2,style:'frac',step:'½',sample:'0 · ½ · 1'},
+  bru4:{label:'Brüche: Viertel',den:4,style:'frac',step:'¼',sample:'0 · ¼ · ½'}
+};
+const SCALE_ORDER=['ganz','dez5','dez1','bru2','bru4'];
+const MODES={tap:{label:'Antippen',desc:'Punkt im Spielfeld antippen'},type:{label:'Eintippen',desc:'Koordinaten (x|y) eingeben'}};
+const MODE_ORDER=['tap','type'];
+const FLEETS={klein:{label:'Klein',lens:[3,2,2]},mittel:{label:'Mittel',lens:[4,3,2,2]},gross:{label:'Groß',lens:[5,4,3,3,2]}};
+const PRESETS={
+  5:{label:'Jg. 5',cfg:{quads:[1],n:6,scales:['ganz'],modes:['tap'],fleet:'mittel',again:false}},
+  6:{label:'Jg. 6',cfg:{quads:[1,2,3,4],n:5,scales:['ganz','dez5'],modes:['tap','type'],fleet:'mittel',again:false}},
+  7:{label:'Jg. 7',cfg:{quads:[1,2,3,4],n:5,scales:['ganz','dez5','bru2','bru4'],modes:['tap','type'],fleet:'gross',again:false}}
+};
+const $=s=>document.querySelector(s), $$=s=>Array.prototype.slice.call(document.querySelectorAll(s));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+/* ================= Geometrie / Konfiguration ================= */
+function extent(c){
+  const has=f=>c.quads.some(k=>f(QUADS[k]));
+  return {xmin:has(q=>q.sx<0)?-c.n:0,xmax:has(q=>q.sx>0)?c.n:0,ymin:has(q=>q.sy<0)?-c.n:0,ymax:has(q=>q.sy>0)?c.n:0};
+}
+function allowed(c,x,y){
+  if(Math.abs(x)>c.n||Math.abs(y)>c.n)return false;
+  return c.quads.some(k=>{const q=QUADS[k];return q.sx*x>=0&&q.sy*y>=0;});
+}
+function countPoints(c){let n=0;for(let x=-c.n;x<=c.n;x++)for(let y=-c.n;y<=c.n;y++)if(allowed(c,x,y))n++;return n;}
+const fleetLens=c=>FLEETS[c.fleet].lens;
+const fleetFits=(c,key)=>FLEETS[key].lens.reduce((a,b)=>a+b,0)<=0.4*countPoints(c);
+function normCfg(c){
+  c=c&&typeof c==='object'?c:{};
+  const arr=v=>Array.isArray(v)?v:[];
+  const o={};
+  o.quads=[1,2,3,4].filter(k=>arr(c.quads).indexOf(k)>=0); if(!o.quads.length)o.quads=[1];
+  o.n=N_OPTIONS.indexOf(c.n)>=0?c.n:5;
+  o.scales=SCALE_ORDER.filter(k=>arr(c.scales).indexOf(k)>=0); if(!o.scales.length)o.scales=['ganz'];
+  o.modes=MODE_ORDER.filter(k=>arr(c.modes).indexOf(k)>=0); if(!o.modes.length)o.modes=['tap'];
+  o.fleet=FLEETS[c.fleet]?c.fleet:'mittel';
+  const order=['gross','mittel','klein']; let i=order.indexOf(o.fleet);
+  while(i<order.length-1&&!fleetFits(o,order[i]))i++;
+  o.fleet=order[i];
+  o.again=!!c.again;
+  return o;
+}
+
+/* ================= Zahlen formatieren / lesen ================= */
+function fmtVal(k,key){
+  const sc=SCALES[key],den=sc.den,a=Math.abs(k),whole=Math.floor(a/den),rem=a%den;
+  let s;
+  if(rem===0)s=String(whole);
+  else if(sc.style==='frac'&&den<=4){
+    const g=den===2?'½':({1:'¼',2:'½',3:'¾'})[rem];
+    s=(whole?whole+'\u202F':'')+g;
+  }else{
+    const dg=den===2?'5':den===4?({1:'25',2:'5',3:'75'})[rem]:String(rem);
+    s=whole+','+dg;
+  }
+  return (k<0?'−':'')+s;
+}
+const fmtPair=(x,y,key)=>'('+fmtVal(x,key)+'|'+fmtVal(y,key)+')';
+function parseNum(str){
+  let s=String(str).trim().replace(/[−–—]/g,'-');
+  if(!s||s.length>14)return null;
+  let sign=1;
+  if(s[0]==='-'){sign=-1;s=s.slice(1).trim();}else if(s[0]==='+')s=s.slice(1).trim();
+  const GL={'½':[1,2],'¼':[1,4],'¾':[3,4]};
+  let m,n,d;
+  if((m=s.match(/^(\d+)?\s*([½¼¾])$/))){const g=GL[m[2]];n=(m[1]?+m[1]:0)*g[1]+g[0];d=g[1];}
+  else if((m=s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/))){d=+m[3];n=+m[1]*d+ +m[2];}
+  else if((m=s.match(/^(\d+)\s*\/\s*(\d+)$/))){n=+m[1];d=+m[2];}
+  else if((m=s.match(/^(\d+)(?:[.,](\d+))?$/))){const f=m[2]||'';d=Math.pow(10,f.length);n=+(m[1]+f);}
+  else if((m=s.match(/^[.,](\d+)$/))){d=Math.pow(10,m[1].length);n=+m[1];}
+  else return null;
+  if(!d)return null;
+  return {n:sign*n,d:d};
+}
+function toIdx(num,key){const t=num.n*SCALES[key].den;if(t%num.d!==0)return null;return t/num.d||0;}
+
+/* ================= Flotte ================= */
+const cellsFrom=(len,x,y,h)=>{const a=[];for(let i=0;i<len;i++)a.push(h?[x+i,y]:[x,y+i]);return a;};
+class Fleet{
+  constructor(cfg){this.cfg=cfg;this.ships=[];this.shots=new Map();this.occ=new Map();}
+  static key(x,y){return x+','+y;}
+  canPlace(cells){return cells.every(c=>allowed(this.cfg,c[0],c[1])&&!this.occ.has(Fleet.key(c[0],c[1])));}
+  place(id,cells){const s={id:id,len:cells.length,cells:cells,hits:0};this.ships.push(s);cells.forEach(c=>this.occ.set(Fleet.key(c[0],c[1]),s));return s;}
+  remove(id){const i=this.ships.findIndex(s=>s.id===id);if(i<0)return;this.ships[i].cells.forEach(c=>this.occ.delete(Fleet.key(c[0],c[1])));this.ships.splice(i,1);}
+  shipAt(x,y){return this.occ.get(Fleet.key(x,y))||null;}
+  receive(x,y){
+    const k=Fleet.key(x,y);
+    if(this.shots.has(k))return {dup:true};
+    const s=this.occ.get(k);
+    if(!s){this.shots.set(k,'miss');return {hit:false,sunk:null};}
+    this.shots.set(k,'hit');s.hits++;
+    return {hit:true,sunk:s.hits===s.len?s.cells:null};
+  }
+  allSunk(){return this.ships.length>0&&this.ships.every(s=>s.hits===s.len);}
+  clear(){this.ships=[];this.occ.clear();}
+  randomize(lens){
+    const e=extent(this.cfg);
+    for(let a=0;a<80;a++){
+      this.clear();let ok=true;
+      const order=lens.map((len,id)=>({len:len,id:id})).sort((p,q)=>q.len-p.len);
+      for(const o of order){
+        let done=false;
+        for(let t=0;t<400&&!done;t++){
+          const cells=cellsFrom(o.len,rnd(e.xmin,e.xmax),rnd(e.ymin,e.ymax),Math.random()<.5);
+          if(this.canPlace(cells)){this.place(o.id,cells);done=true;}
+        }
+        if(!done){ok=false;break;}
+      }
+      if(ok)return true;
+    }
+    return false;
+  }
+}
+function findPlacement(fleet,len,x,y,h){
+  for(let s=0;s<len;s++){
+    const cells=h?cellsFrom(len,x-s,y,true):cellsFrom(len,x,y-s,false);
+    if(fleet.canPlace(cells))return cells;
+  }
+  return null;
+}
+function sanitizeCells(list){
+  if(!Array.isArray(list))return [];
+  return list.map(s=>Array.isArray(s)?s.filter(c=>Array.isArray(c)&&Number.isInteger(c[0])&&Number.isInteger(c[1])).map(c=>[c[0],c[1]]):[]).filter(s=>s.length);
+}
+
+/* ================= Spielfeld zeichnen (SVG) ================= */
+let svgSeq=0;
+function renderBoard(host,o){
+  const cfg=o.cfg,e=extent(cfg),C=40,L=56,T=36,R=40,B=46,P=18;
+  const w=(e.xmax-e.xmin)*C,h=(e.ymax-e.ymin)*C,W=L+w+R,H=T+h+B;
+  const X=ix=>L+(ix-e.xmin)*C,Y=iy=>T+(e.ymax-iy)*C;
+  const id='b'+(++svgSeq),sc=o.scale||'ganz';
+  let s='<svg class="bsvg" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+esc(o.aria||'Spielfeld')+'">';
+  s+='<defs><clipPath id="c'+id+'"><rect x="'+(L-P)+'" y="'+(T-P)+'" width="'+(w+2*P)+'" height="'+(h+2*P)+'" rx="12"/></clipPath>'+
+     '<pattern id="h'+id+'" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" class="sandbg"/><line x1="0" y1="0" x2="0" y2="9" class="sandline"/></pattern></defs>';
+  s+='<rect class="paper" x="'+(L-P)+'" y="'+(T-P)+'" width="'+(w+2*P)+'" height="'+(h+2*P)+'" rx="12"/>';
+  s+='<g clip-path="url(#c'+id+')">';
+  for(let ix=e.xmin;ix<=e.xmax;ix++)s+='<line class="grid" x1="'+X(ix)+'" y1="'+(T-P)+'" x2="'+X(ix)+'" y2="'+(T+h+P)+'"/>';
+  for(let iy=e.ymin;iy<=e.ymax;iy++)s+='<line class="grid" x1="'+(L-P)+'" y1="'+Y(iy)+'" x2="'+(L+w+P)+'" y2="'+Y(iy)+'"/>';
+  [1,2,3,4].forEach(k=>{
+    if(cfg.quads.indexOf(k)>=0)return;
+    const q=QUADS[k],x0=Math.max(q.sx>0?0:-cfg.n,e.xmin),x1=Math.min(q.sx>0?cfg.n:0,e.xmax),y0=Math.max(q.sy>0?0:-cfg.n,e.ymin),y1=Math.min(q.sy>0?cfg.n:0,e.ymax);
+    if(x1>x0&&y1>y0){
+      const px0=X(x0)-(x0===e.xmin?P:0),px1=X(x1)+(x1===e.xmax?P:0),py0=Y(y1)-(y1===e.ymax?P:0),py1=Y(y0)+(y0===e.ymin?P:0);
+      s+='<rect class="landr" x="'+px0+'" y="'+py0+'" width="'+(px1-px0)+'" height="'+(py1-py0)+'" fill="url(#h'+id+')"/>';
+      s+='<text class="landlbl" x="'+((px0+px1)/2)+'" y="'+((py0+py1)/2+5)+'" text-anchor="middle">Land</text>';
+    }
+  });
+  s+='</g>';
+  cfg.quads.forEach(k=>{
+    const q=QUADS[k];
+    s+='<text class="qnum" x="'+(q.sx>0?X(e.xmax)+4:X(e.xmin)-4)+'" y="'+(q.sy>0?Y(e.ymax)+30:Y(e.ymin)-10)+'" text-anchor="'+(q.sx>0?'end':'start')+'">'+q.name+'</text>';
+  });
+  // Achsen
+  const ax=X(0),ay=Y(0);
+  s+='<line class="axis" x1="'+(X(e.xmin)-P)+'" y1="'+ay+'" x2="'+(X(e.xmax)+P+4)+'" y2="'+ay+'"/>';
+  s+='<polygon class="arrow" points="'+(X(e.xmax)+P+16)+','+ay+' '+(X(e.xmax)+P+3)+','+(ay-6)+' '+(X(e.xmax)+P+3)+','+(ay+6)+'"/>';
+  s+='<text class="axlab" x="'+(X(e.xmax)+P+8)+'" y="'+(ay-10)+'">x</text>';
+  s+='<line class="axis" x1="'+ax+'" y1="'+(Y(e.ymin)+P)+'" x2="'+ax+'" y2="'+(Y(e.ymax)-P-4)+'"/>';
+  s+='<polygon class="arrow" points="'+ax+','+(Y(e.ymax)-P-16)+' '+(ax-6)+','+(Y(e.ymax)-P-3)+' '+(ax+6)+','+(Y(e.ymax)-P-3)+'"/>';
+  s+='<text class="axlab" x="'+(ax+10)+'" y="'+(Y(e.ymax)-P-8)+'">y</text>';
+  // Punkte
+  for(let ix=e.xmin;ix<=e.xmax;ix++)for(let iy=e.ymin;iy<=e.ymax;iy++)
+    if(allowed(cfg,ix,iy))s+='<circle class="pt" cx="'+X(ix)+'" cy="'+Y(iy)+'" r="'+(ix===0&&iy===0?4:2.4)+'"/>';
+  // Beschriftung am Rand
+  const a=o.aim;
+  const chip=(cx,cy,txt)=>{const wd=Math.max(30,txt.length*8.4+10);return '<rect class="chiphl" x="'+(cx-wd/2)+'" y="'+(cy-16)+'" width="'+wd+'" height="23" rx="6"/>';};
+  for(let ix=e.xmin;ix<=e.xmax;ix++){
+    const t=fmtVal(ix,sc),hl=a&&a.ix===ix,cy=Y(e.ymin)+P+19;
+    if(hl)s+=chip(X(ix),cy,t);
+    s+='<text class="tick'+(hl?' hl':'')+'" x="'+X(ix)+'" y="'+cy+'" text-anchor="middle">'+t+'</text>';
+  }
+  for(let iy=e.ymin;iy<=e.ymax;iy++){
+    const t=fmtVal(iy,sc),hl=a&&a.iy===iy,cx=X(e.xmin)-P-6;
+    if(hl){const wd=Math.max(30,t.length*8.4+10);s+='<rect class="chiphl" x="'+(cx-wd+4)+'" y="'+(Y(iy)-12)+'" width="'+wd+'" height="23" rx="6"/>';}
+    s+='<text class="tick'+(hl?' hl':'')+'" x="'+cx+'" y="'+(Y(iy)+5)+'" text-anchor="end">'+t+'</text>';
+  }
+  if(a){
+    s+='<line class="guide" x1="'+X(a.ix)+'" y1="'+Y(a.iy)+'" x2="'+X(a.ix)+'" y2="'+(Y(e.ymin)+P)+'"/>';
+    s+='<line class="guide" x1="'+X(a.ix)+'" y1="'+Y(a.iy)+'" x2="'+(X(e.xmin)-P)+'" y2="'+Y(a.iy)+'"/>';
+  }
+  // Schiffe
+  const cap=(cells,cls)=>{
+    const xs=cells.map(c=>c[0]),ys=cells.map(c=>c[1]),x0=Math.min.apply(0,xs),x1=Math.max.apply(0,xs),y0=Math.min.apply(0,ys),y1=Math.max.apply(0,ys),r=14;
+    return '<rect class="'+cls+'" x="'+(X(x0)-r)+'" y="'+(Y(y1)-r)+'" width="'+((x1-x0)*C+2*r)+'" height="'+((y1-y0)*C+2*r)+'" rx="'+r+'"/>'+
+      (cells.length>1?'<line class="deck" x1="'+X(x0)+'" y1="'+Y(y1)+'" x2="'+X(x1)+'" y2="'+Y(y0)+'"/>':'');
+  };
+  (o.ships||[]).forEach(sh=>{s+=cap(sh.cells,'ship '+(sh.cls||''));});
+  if(o.preview)s+=cap(o.preview.cells,'pv '+(o.preview.ok?'ok':'bad'));
+  // Markierungen
+  if(o.marks)o.marks.forEach((st,k)=>{
+    const p=k.split(','),cx=X(+p[0]),cy=Y(+p[1]),pop=o.fresh===k?' pop':'';
+    s+='<g transform="translate('+cx+' '+cy+')"><g class="'+pop.trim()+'">'+(st==='hit'?
+      '<circle class="hitc" r="12"/><path class="hitx" d="M-5-5L5 5M5-5L-5 5"/>':
+      '<circle class="missc" r="9"/><circle class="missd" r="2.5"/>')+'</g></g>';
+  });
+  if(a)s+='<g transform="translate('+X(a.ix)+' '+Y(a.iy)+')"><circle class="aimc" r="15"/><path class="aimx" d="M-21 0H-8M8 0H21M0-21V-8M0 8V21"/></g>';
+  s+='</svg>';
+  host.innerHTML=s;
+  host._geo={L:L,T:T,C:C,e:e};host._o=o;
+  host.style.cursor=o.onPoint?'pointer':'default';
+  wireBoard(host);
+}
+function wireBoard(host){
+  if(host._wired)return;host._wired=true;
+  const pick=ev=>{
+    const svg=host.querySelector('svg'),g=host._geo;if(!svg||!g)return null;
+    let p;try{const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;p=pt.matrixTransform(svg.getScreenCTM().inverse());}catch(_){return null;}
+    const ix=Math.round((p.x-g.L)/g.C)+g.e.xmin,iy=g.e.ymax-Math.round((p.y-g.T)/g.C);
+    if(ix<g.e.xmin||ix>g.e.xmax||iy<g.e.ymin||iy>g.e.ymax)return null;
+    return [ix,iy];
+  };
+  host.addEventListener('click',ev=>{const o=host._o;if(!o||!o.onPoint)return;const p=pick(ev);if(p)o.onPoint(p[0],p[1]);});
+  host.addEventListener('pointermove',ev=>{const o=host._o;if(!o||!o.onHover||ev.pointerType==='touch')return;const p=pick(ev);o.onHover(p?p[0]:null,p?p[1]:null);});
+  host.addEventListener('pointerleave',()=>{const o=host._o;if(o&&o.onHover)o.onHover(null,null);});
+}
+
+/* ================= Zustand ================= */
+const S={
+  phase:'menu',mode:null,name:'',oppName:'',code:'',connected:false,peer:null,conn:null,joinTimer:null,
+  cfg:normCfg(PRESETS[5].cfg),my:{scale:'ganz',mode:'tap'},
+  fleet:null,toPlace:[],sel:0,orient:'h',hover:null,ready:false,oppReady:false,
+  enemy:null,myTurn:false,awaiting:false,pending:null,over:false,won:false,aim:null,log:[],stats:{shots:0,hits:0},
+  typed:{x:'',y:''},typeMsg:'',lastInput:'x',again:false,oppAgain:false,freshEnemy:null,freshOwn:null,panelSig:''
+};
+const isHost=()=>S.mode!=='guest';
+const cleanName=n=>String(n==null?'Gegner':n).replace(/[<>]/g,'').trim().slice(0,14)||'Gegner';
+function fixMy(){
+  if(S.cfg.scales.indexOf(S.my.scale)<0)S.my.scale=S.cfg.scales[0];
+  if(S.cfg.modes.indexOf(S.my.mode)<0)S.my.mode=S.cfg.modes[0];
+}
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{el.hidden=true;},3200);}
+function setScreen(name){
+  S.phase=name;
+  ['menu','lobby','place','battle'].forEach(n=>{$('#s-'+n).hidden=n!==name;});
+  $('#btnLeave').hidden=name==='menu';
+}
+
+/* ================= Anzeige ================= */
+function levelHTML(){
+  const grp=(title,items,cur,attr)=>'<div role="group" aria-label="'+title+'"><span class="lvtitle">'+title+'</span><div class="lvopts">'+
+    items.map(i=>items.length>1?'<button type="button" class="chip sm" '+attr+'="'+i.id+'" aria-pressed="'+(i.id===cur)+'">'+i.label+'</button>':'<span class="chip sm static">'+i.label+'</span>').join('')+'</div></div>';
+  return grp('Meine Zahlenart',S.cfg.scales.map(k=>({id:k,label:SCALES[k].label})),S.my.scale,'data-pick-scale')+
+         grp('Meine Schussart',S.cfg.modes.map(k=>({id:k,label:MODES[k].label})),S.my.mode,'data-pick-mode');
+}
+function renderLevelBars(){const h=levelHTML();$$('[data-levelbar]').forEach(el=>{el.innerHTML=h;});}
+
+function settingsHTML(edit){
+  const c=S.cfg,d=edit?'':' disabled';
+  let h='<h2>Spielfeld</h2>';
+  if(edit)h+='<div class="presets"><span class="lbl">Vorlage</span>'+Object.keys(PRESETS).map(k=>'<button type="button" class="chip sm" data-preset="'+k+'">'+PRESETS[k].label+'</button>').join('')+'</div>';
+  else h+='<p class="hint">Diese Einstellungen legt '+esc(S.oppName)+' fest.</p>';
+  h+='<div class="setrow"><div><h3>Quadranten</h3><div class="qgrid" role="group" aria-label="Quadranten">'+
+    [2,1,3,4].map(k=>'<button type="button" class="qtile"'+d+' data-q="'+k+'" aria-pressed="'+(c.quads.indexOf(k)>=0)+'"><span class="qnum">'+QUADS[k].name+'</span><span class="qsign">('+(QUADS[k].sx>0?'+':'−')+'|'+(QUADS[k].sy>0?'+':'−')+')</span></button>').join('')+
+    '</div></div><div><h3>Achsenlänge pro Quadrant</h3><div class="optrow">'+
+    N_OPTIONS.map(n=>'<button type="button" class="chip sm"'+d+' data-n="'+n+'" aria-pressed="'+(c.n===n)+'">'+n+'</button>').join('')+
+    '</div><p class="hint">Quadrant I: nur positive Zahlen. Mit II, III, IV kommen negative Zahlen dazu. Nicht gewählte Quadranten sind Land.</p></div></div>';
+  h+='<h3>Zahlenarten (Schwierigkeitsstufen)</h3>'+SCALE_ORDER.map(k=>'<button type="button" class="opt"'+d+' data-scale="'+k+'" aria-pressed="'+(c.scales.indexOf(k)>=0)+'"><strong>'+SCALES[k].label+'</strong><span>'+SCALES[k].sample+'</span></button>').join('');
+  h+='<p class="hint">Alle Spieler wählen ihre Zahlenart aus den aktiven Stufen selbst.</p>';
+  h+='<h3>Schussarten</h3>'+MODE_ORDER.map(k=>'<button type="button" class="opt"'+d+' data-mode="'+k+'" aria-pressed="'+(c.modes.indexOf(k)>=0)+'"><strong>'+MODES[k].label+'</strong><span>'+MODES[k].desc+'</span></button>').join('');
+  h+='<h3>Flotte</h3><div class="optrow">'+Object.keys(FLEETS).map(k=>'<button type="button" class="chip sm"'+((!edit||!fleetFits(c,k))?' disabled':'')+' data-fleet="'+k+'" aria-pressed="'+(c.fleet===k)+'">'+FLEETS[k].label+' ('+FLEETS[k].lens.length+' Schiffe)</button>').join('')+'</div>';
+  h+='<h3>Regel</h3><button type="button" class="opt"'+d+' data-again aria-pressed="'+c.again+'"><strong>Bei Treffer noch einmal schießen</strong></button>';
+  h+='<h3>Vorschau</h3><div class="chartcard small"><div id="prevBoard" class="board"></div></div>';
+  return h;
+}
+function renderLobby(){
+  $('#codeBox').hidden=S.mode!=='host';
+  $('#code').textContent=S.code||'';
+  let st;
+  if(S.mode==='bot')st='Du spielst gegen den Computer. Stelle das Spielfeld ein und starte.';
+  else if(S.mode==='host')st=S.connected?esc(S.oppName)+' ist verbunden. Du kannst starten.':'Warte auf deinen Mitspieler. Er gibt den Code ein …';
+  else st='Verbunden mit '+esc(S.oppName)+'. Warte, bis das Spiel gestartet wird.';
+  $('#lobbyStatus').innerHTML=st;
+  $('#btnStart').hidden=!isHost();
+  $('#btnStart').disabled=!S.connected;
+  $('#settings').innerHTML=settingsHTML(isHost());
+}
+function renderBoards(){
+  const sc=S.my.scale;
+  if(S.phase==='lobby'){const h=$('#prevBoard');if(h)renderBoard(h,{cfg:S.cfg,scale:sc,aria:'Vorschau des Spielfelds'});}
+  else if(S.phase==='place'&&S.fleet){
+    let pv=null;
+    const t=S.toPlace.find(x=>x.id===S.sel);
+    if(S.hover&&!S.ready&&t&&!t.placed){
+      const c=findPlacement(S.fleet,t.len,S.hover[0],S.hover[1],S.orient==='h');
+      pv=c?{cells:c,ok:true}:{cells:cellsFrom(t.len,S.hover[0],S.hover[1],S.orient==='h'),ok:false};
+    }
+    renderBoard($('#placeBoard'),{cfg:S.cfg,scale:sc,aria:'Dein Spielfeld zum Aufstellen',ships:S.fleet.ships.map(s=>({cells:s.cells})),preview:pv,
+      onPoint:placeClick,onHover:(x,y)=>{const n=x==null?null:[x,y];if(JSON.stringify(n)!==JSON.stringify(S.hover)){S.hover=n;renderBoards();}}});
+  }else if(S.phase==='battle'&&S.fleet&&S.enemy){
+    const ships=[];
+    (S.enemy.revealed||[]).forEach(c=>ships.push({cells:c,cls:'revealed'}));
+    S.enemy.sunk.forEach(c=>ships.push({cells:c,cls:'sunk'}));
+    const canAim=S.my.mode==='tap'&&S.myTurn&&!S.awaiting&&!S.over;
+    renderBoard($('#enemyBoard'),{cfg:S.cfg,scale:sc,aria:'Gewässer von '+S.oppName,ships:ships,marks:S.enemy.marks,fresh:S.freshEnemy,aim:S.aim?{ix:S.aim[0],iy:S.aim[1]}:null,onPoint:canAim?aimAt:null});
+    renderBoard($('#ownBoard'),{cfg:S.cfg,scale:sc,aria:'Deine Flotte',ships:S.fleet.ships.map(s=>({cells:s.cells})),marks:S.fleet.shots,fresh:S.freshOwn});
+  }
+}
+function fleetIcons(sunkLens){
+  const rest=sunkLens.slice();
+  return fleetLens(S.cfg).map(len=>{
+    const i=rest.indexOf(len),sunk=i>=0;if(sunk)rest.splice(i,1);
+    return '<span class="shipicon'+(sunk?' sunk':'')+'" title="Länge '+len+'">'+'<i></i>'.repeat(len)+'</span>';
+  }).join('');
+}
+function renderPlace(){
+  const all=S.toPlace.every(t=>t.placed);
+  $('#tray').innerHTML=S.toPlace.map(t=>'<button type="button" class="trayship'+(t.placed?' placed':'')+'" data-ship="'+t.id+'" aria-pressed="'+(t.id===S.sel)+'"'+(S.ready?' disabled':'')+'><span class="shipicon">'+'<i></i>'.repeat(t.len)+'</span><span>'+(t.placed?'liegt – antippen zum Aufnehmen':'Länge '+t.len)+'</span></button>').join('');
+  $('#btnRotate').textContent='Drehen: '+(S.orient==='h'?'waagerecht':'senkrecht');
+  ['btnRotate','btnRandom','btnClear'].forEach(i=>{$('#'+i).disabled=S.ready;});
+  $('#btnReady').disabled=!all||S.ready;
+  $('#placeWait').textContent=S.ready?(S.oppReady?'Es geht los …':'Warte auf '+S.oppName+' …'):(S.oppReady?S.oppName+' ist schon fertig.':'');
+  $('#placeHint').textContent='Wähle ein Schiff und tippe auf einen Punkt. Das Schiff liegt von dort nach rechts (waagerecht) oder nach oben (senkrecht). Tippe auf ein Schiff, um es wieder aufzunehmen.'+(S.hover?' Startpunkt: '+fmtPair(S.hover[0],S.hover[1],S.my.scale):'');
+  renderBoards();
+}
+function renderBattle(){
+  const st=$('#status');let cls='status',html='';
+  if(S.over){
+    cls+=S.won?' won':' lost';
+    html='<span>'+(S.won?'Du hast gewonnen! 🎉':esc(S.oppName)+' hat gewonnen.')+' <small style="font-weight:400">('+S.stats.shots+' Schüsse, '+S.stats.hits+' Treffer)</small></span><span class="btns"><button type="button" class="btn alt" id="btnAgain"'+(S.again?' disabled':'')+'>'+(S.again?'Warte auf '+esc(S.oppName):'Revanche')+'</button></span>';
+  }else if(S.myTurn&&!S.awaiting){cls+=' mine';html='Du bist dran – ziele und drücke Feuer!';}
+  else if(S.awaiting)html='Schuss unterwegs …';
+  else html=esc(S.oppName)+' schießt …';
+  st.className=cls;st.innerHTML=html;
+  $('#enemyTitle').textContent='Gewässer von '+S.oppName;
+  $('#enemyFleet').innerHTML=fleetIcons(S.enemy.sunk.map(c=>c.length));
+  $('#ownFleet').innerHTML=S.fleet.ships.slice().sort((a,b)=>a.id-b.id).map(s=>'<span class="shipicon" title="Länge '+s.len+'">'+s.cells.map((c,i)=>'<i'+(i<s.hits?' class="hit"':'')+'></i>').join('')+'</span>').join('');
+  $('#log').innerHTML=S.log.slice(0,12).map(l=>{
+    const who=l.who==='me'?'Du':esc(S.oppName),p=fmtPair(l.x,l.y,S.my.scale);
+    const res=l.sunk?'Treffer – Schiff versenkt (Länge '+l.sunk+')!':l.hit?'Treffer!':'Wasser.';
+    return '<li>'+who+' → '+p+': <span class="'+(l.hit?'h':'')+'">'+res+'</span></li>';
+  }).join('');
+  const sig=[S.my.scale,S.my.mode,S.myTurn,S.awaiting,S.over,S.aim&&S.aim.join(),S.cfg.scales.join(),S.cfg.modes.join(),S.typeMsg].join('|');
+  if(sig!==S.panelSig){S.panelSig=sig;renderShotPanel();}
+  renderBoards();
+}
+function renderShotPanel(){
+  const can=S.myTurn&&!S.awaiting&&!S.over;
+  let h='<div class="levelbar" data-levelbar></div>';
+  if(S.my.mode==='tap'){
+    h+='<div class="aimout" id="aimOut">'+(S.aim?'Ziel: '+fmtPair(S.aim[0],S.aim[1],S.my.scale):'Tippe auf einen Punkt.')+'</div>';
+  }else{
+    const sc=SCALES[S.my.scale];
+    h+='<div class="xy"><div><label for="inX">x =</label><input id="inX" data-axis="x" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="'+esc(S.typed.x)+'"></div><div><label for="inY">y =</label><input id="inY" data-axis="y" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="'+esc(S.typed.y)+'"></div></div>';
+    h+='<div class="keys"><button type="button" data-key="−">−</button>'+(sc.style==='dec'?'<button type="button" data-key=",">,</button>':'<button type="button" data-key="/">/</button><button type="button" data-key="½">½</button><button type="button" data-key="¼">¼</button><button type="button" data-key="¾">¾</button>')+'</div>';
+    h+='<div class="err" id="typeErr" role="alert">'+esc(S.typeMsg)+'</div>';
+  }
+  h+='<button type="button" id="btnFire" class="btn big"'+(can&&(S.my.mode==='type'||S.aim)?'':' disabled')+'>Feuer!</button>';
+  $('#shotPanel').innerHTML=h;renderLevelBars();
+}
+function refresh(){
+  if(S.phase==='lobby')renderLobby();
+  else if(S.phase==='place')renderPlace();
+  else if(S.phase==='battle')renderBattle();
+  renderLevelBars();
+  if(S.phase==='lobby')renderBoards();
+}
+const clearFresh=()=>setTimeout(()=>{S.freshOwn=S.freshEnemy=null;},900);
+
+/* ================= Aufstellen ================= */
+function startPlacement(){
+  S.fleet=new Fleet(S.cfg);S.ready=false;S.oppReady=false;S.over=false;S.won=false;S.enemy=null;S.log=[];S.myTurn=false;S.awaiting=false;S.pending=null;S.aim=null;
+  S.again=false;S.oppAgain=false;S.stats={shots:0,hits:0};S.typed={x:'',y:''};S.typeMsg='';S.hover=null;S.panelSig='';
+  S.toPlace=fleetLens(S.cfg).map((len,i)=>({id:i,len:len,placed:false}));S.sel=0;S.orient='h';
+  setScreen('place');refresh();
+}
+function placeClick(ix,iy){
+  if(S.ready)return;
+  const ship=S.fleet.shipAt(ix,iy);
+  if(ship){S.fleet.remove(ship.id);const t=S.toPlace.find(x=>x.id===ship.id);t.placed=false;S.sel=t.id;renderPlace();return;}
+  const t=S.toPlace.find(x=>x.id===S.sel);
+  if(!t||t.placed){toast('Wähle zuerst ein Schiff aus der Liste.');return;}
+  const cells=findPlacement(S.fleet,t.len,ix,iy,S.orient==='h');
+  if(!cells){toast('Dort ist kein Platz: Land, Rand oder ein anderes Schiff ist im Weg.');return;}
+  S.fleet.place(t.id,cells);t.placed=true;
+  const nx=S.toPlace.find(x=>!x.placed);S.sel=nx?nx.id:-1;renderPlace();
+}
+function maybeStart(){
+  if(isHost()&&S.phase==='place'&&S.ready&&S.oppReady){
+    const first=Math.random()<.5?'host':'guest';
+    send({t:'go',first:first});S.myTurn=first==='host';startBattle();
+  }
+}
+function startBattle(){
+  S.enemy={marks:new Map(),sunk:[],revealed:null};S.log=[];S.awaiting=false;S.panelSig='';S.aim=null;
+  setScreen('battle');refresh();
+}
+
+/* ================= Schießen ================= */
+function aimAt(ix,iy){
+  if(!S.myTurn||S.awaiting||S.over||S.my.mode!=='tap')return;
+  if(S.enemy.marks.has(Fleet.key(ix,iy))){toast('Hier hast du schon geschossen.');return;}
+  S.aim=[ix,iy];refresh();
+}
+function readTyped(){
+  const key=S.my.scale,e=extent(S.cfg),out={};
+  for(const ax of ['x','y']){
+    const raw=S.typed[ax],num=parseNum(raw);
+    if(!raw.trim())return {err:ax+' fehlt noch.'};
+    if(!num)return {err:ax+' = '+raw+' ist keine Zahl. Beispiele: 2 · −1 · 0,5 · ½'};
+    const k=toIdx(num,key);
+    if(k==null)return {err:ax+' = '+raw+' liegt zwischen zwei Achsenstrichen. Die Achse geht in '+SCALES[key].step+'-Schritten.'};
+    const lo=ax==='x'?e.xmin:e.ymin,hi=ax==='x'?e.xmax:e.ymax;
+    if(k<lo||k>hi)return {err:ax+' = '+raw+' liegt außerhalb des Spielfelds (von '+fmtVal(lo,key)+' bis '+fmtVal(hi,key)+').'};
+    out[ax]=k;
+  }
+  if(!allowed(S.cfg,out.x,out.y))return {err:'Der Punkt '+fmtPair(out.x,out.y,key)+' liegt auf Land – dort ist kein Wasser.'};
+  if(S.enemy.marks.has(Fleet.key(out.x,out.y)))return {err:'Auf '+fmtPair(out.x,out.y,key)+' hast du schon geschossen.'};
+  return {ix:out.x,iy:out.y};
+}
+function onFire(){
+  if(!S.myTurn||S.awaiting||S.over)return;
+  let t;
+  if(S.my.mode==='tap'){if(!S.aim)return;t={ix:S.aim[0],iy:S.aim[1]};}
+  else{t=readTyped();if(t.err){S.typeMsg=t.err;const el=$('#typeErr');if(el)el.textContent=t.err;S.panelSig='';return;}}
+  S.typeMsg='';S.typed={x:'',y:''};S.aim=null;
+  S.awaiting=true;S.pending={ix:t.ix,iy:t.iy};S.stats.shots++;
+  send({t:'shot',ix:t.ix,iy:t.iy});refresh();
+}
+function onShot(ix,iy){
+  if(S.phase!=='battle'||S.over||!Number.isInteger(ix)||!Number.isInteger(iy)||!allowed(S.cfg,ix,iy))return;
+  const r=S.fleet.receive(ix,iy);if(r.dup)return;
+  const over=S.fleet.allSunk();
+  send({t:'res',ix:ix,iy:iy,hit:r.hit,sunk:r.sunk,over:over,fleet:over?S.fleet.ships.map(s=>s.cells):null});
+  S.log.unshift({who:'opp',x:ix,y:iy,hit:r.hit,sunk:r.sunk?r.sunk.length:0});
+  S.freshOwn=Fleet.key(ix,iy);
+  if(over)endGame(false);else S.myTurn=!(r.hit&&S.cfg.again);
+  S.awaiting=false;refresh();clearFresh();
+}
+function onRes(m){
+  if(!S.awaiting||!S.pending)return;
+  const p=S.pending,k=Fleet.key(p.ix,p.iy);
+  S.awaiting=false;S.pending=null;
+  S.enemy.marks.set(k,m.hit?'hit':'miss');S.freshEnemy=k;
+  if(m.hit)S.stats.hits++;
+  const sk=m.sunk?sanitizeCells([m.sunk])[0]:null;
+  if(sk)S.enemy.sunk.push(sk);
+  S.log.unshift({who:'me',x:p.ix,y:p.iy,hit:!!m.hit,sunk:sk?sk.length:0});
+  if(m.over){
+    S.enemy.revealed=sanitizeCells(m.fleet);endGame(true);
+    send({t:'fleet',ships:S.fleet.ships.map(s=>s.cells)});
+  }else S.myTurn=!!(m.hit&&S.cfg.again);
+  refresh();clearFresh();
+}
+function endGame(won){S.over=true;S.won=won;S.myTurn=false;S.awaiting=false;S.again=false;S.oppAgain=false;S.panelSig='';}
+function beginAgain(){send({t:'begin',cfg:S.cfg});startPlacement();}
+
+/* ================= Netzwerk ================= */
+function send(m){
+  if(S.mode==='bot'){const tok=bot.token;setTimeout(()=>{if(bot.token===tok)bot.recv(m);},60);}
+  else if(S.conn&&S.conn.open){try{S.conn.send(m);}catch(_){}}
+}
+function onMsg(m){
+  if(!m||typeof m!=='object')return;
+  switch(m.t){
+    case 'hello':
+      S.oppName=cleanName(m.name);
+      if(S.mode==='guest'){S.cfg=normCfg(m.cfg);fixMy();S.connected=true;send({t:'hello',name:S.name});if(S.phase!=='lobby')setScreen('lobby');}
+      refresh();break;
+    case 'cfg':if(S.mode==='guest'){S.cfg=normCfg(m.cfg);fixMy();refresh();}break;
+    case 'begin':if(S.mode==='guest'){S.cfg=normCfg(m.cfg||S.cfg);fixMy();startPlacement();}break;
+    case 'ready':S.oppReady=true;if(isHost())maybeStart();else if(S.phase==='place')renderPlace();break;
+    case 'go':if(S.mode==='guest'&&S.phase==='place'){S.myTurn=m.first==='guest';startBattle();}break;
+    case 'shot':onShot(m.ix,m.iy);break;
+    case 'res':onRes(m);break;
+    case 'fleet':if(S.enemy){S.enemy.revealed=sanitizeCells(m.ships);refresh();}break;
+    case 'again':S.oppAgain=true;if(isHost()&&S.again)beginAgain();else refresh();break;
+    case 'bye':connLost(true);break;
+    case 'full':netError({type:'full'});break;
+  }
+}
+function resetNet(){
+  clearTimeout(S.joinTimer);bot.token++;
+  const c=S.conn,p=S.peer;S.conn=null;S.peer=null;
+  try{if(c)c.close();}catch(_){}
+  try{if(p)p.destroy();}catch(_){}
+  S.connected=false;S.oppName='';S.code='';
+}
+function wireConn(c){
+  c.on('open',()=>{if(S.conn!==c)return;clearTimeout(S.joinTimer);if(S.mode==='host'){S.connected=true;send({t:'hello',name:S.name,cfg:S.cfg});refresh();}});
+  c.on('data',d=>{if(S.conn===c)onMsg(d);});
+  c.on('close',()=>{if(S.conn===c)connLost(false);});
+  c.on('error',()=>{if(S.conn===c)connLost(false);});
+}
+function showNotice(text){$('#noticeText').textContent=text;$('#notice').hidden=false;}
+function connLost(bye){
+  if(S.phase==='menu')return;
+  if(!$('#notice').hidden)return;
+  const who=S.oppName||'Der Mitspieler';
+  if(S.mode==='host'&&S.phase==='lobby'){S.connected=false;S.oppName='';S.conn=null;toast(who+' hat das Spiel verlassen.');refresh();return;}
+  if(S.over&&bye)return;
+  showNotice(bye?who+' hat das Spiel verlassen.':'Die Verbindung zu '+who+' ist abgebrochen.');
+}
+function netError(err){
+  const t=err&&err.type;
+  const msgs={'peer-unavailable':'Kein Spiel mit diesem Code gefunden.','timeout':'Keine Verbindung möglich. Prüfe den Code und das Netzwerk.','full':'Dieses Spiel hat schon zwei Spieler.','network':'Kein Zugang zum Vermittlungsserver. Prüfe das Netzwerk.','server-error':'Der Vermittlungsserver antwortet nicht.','socket-error':'Kein Zugang zum Vermittlungsserver. Prüfe das Netzwerk.'};
+  const text=msgs[t]||'Verbindungsfehler ('+(t||'unbekannt')+').';
+  if(S.phase==='menu'||S.phase==='lobby'&&!S.connected){resetNet();setScreen('menu');$('#menuMsg').textContent=text;}
+  else showNotice(text);
+}
+function makeCode(){let s='';for(let i=0;i<4;i++)s+=CODE_CHARS[rnd(0,CODE_CHARS.length-1)];return s;}
+function getName(){
+  const v=$('#inName').value.trim().slice(0,14);
+  if(!v){toast('Bitte gib zuerst deinen Namen ein.');$('#inName').focus();return null;}
+  try{localStorage.setItem('ks-name',v);}catch(_){}
+  return v;
+}
+function hostGame(){
+  const name=getName();if(!name)return;
+  resetNet();S.name=name;S.mode='host';fixMy();$('#menuMsg').textContent='Erstelle Spiel …';
+  const open=tries=>{
+    const code=makeCode(),p=new Peer(PREFIX+code);S.peer=p;
+    p.on('open',()=>{if(S.peer!==p)return;S.code=code;$('#menuMsg').textContent='';setScreen('lobby');refresh();});
+    p.on('connection',c=>{
+      if(S.peer!==p)return;
+      if(S.conn&&S.conn.open){c.on('open',()=>{try{c.send({t:'full'});}catch(_){}setTimeout(()=>c.close(),400);});return;}
+      S.conn=c;wireConn(c);
+    });
+    p.on('disconnected',()=>{if(S.peer===p){try{p.reconnect();}catch(_){}}});
+    p.on('error',err=>{if(S.peer!==p)return;if(err.type==='unavailable-id'&&tries<5){S.peer=null;p.destroy();open(tries+1);}else netError(err);});
+  };
+  open(0);
+}
+function joinGame(){
+  const name=getName();if(!name)return;
+  const code=$('#inCode').value.trim().toUpperCase();
+  if(code.length<4){toast('Bitte gib den 4-stelligen Code ein.');$('#inCode').focus();return;}
+  resetNet();S.name=name;S.mode='guest';$('#menuMsg').textContent='Verbinde …';
+  const p=new Peer();S.peer=p;
+  p.on('open',()=>{
+    if(S.peer!==p)return;
+    const c=p.connect(PREFIX+code,{reliable:true});S.conn=c;wireConn(c);
+    S.joinTimer=setTimeout(()=>{if(S.conn===c&&!c.open)netError({type:'timeout'});},12000);
+  });
+  p.on('error',err=>{if(S.peer===p)netError(err);});
+}
+function botGame(){
+  const name=getName();if(!name)return;
+  resetNet();S.name=name;S.mode='bot';S.oppName='Computer';S.connected=true;fixMy();$('#menuMsg').textContent='';
+  setScreen('lobby');refresh();
+}
+function leave(){
+  if(S.conn&&S.conn.open)try{S.conn.send({t:'bye'});}catch(_){}
+  const c=S.conn,p=S.peer;
+  setTimeout(()=>{try{if(c)c.close();}catch(_){}try{if(p)p.destroy();}catch(_){}},150);
+  S.conn=null;S.peer=null;bot.token++;clearTimeout(S.joinTimer);
+  S.mode=null;S.connected=false;S.oppName='';S.code='';S.fleet=null;S.enemy=null;S.over=false;
+  $('#notice').hidden=true;$('#menuMsg').textContent='';
+  setScreen('menu');
+}
+
+/* ================= Computer-Gegner ================= */
+const bot={
+  token:0,fleet:null,tried:new Set(),hits:[],
+  out(m,d){const tok=this.token;setTimeout(()=>{if(bot.token===tok&&S.mode==='bot')onMsg(m);},d);},
+  recv(m){
+    switch(m.t){
+      case 'begin':
+        this.fleet=new Fleet(S.cfg);this.fleet.randomize(fleetLens(S.cfg));this.tried=new Set();this.hits=[];
+        this.out({t:'ready'},700);break;
+      case 'go':if(m.first==='guest')this.shoot();break;
+      case 'shot':{
+        const r=this.fleet.receive(m.ix,m.iy);if(r.dup)break;
+        const over=this.fleet.allSunk();
+        this.out({t:'res',ix:m.ix,iy:m.iy,hit:r.hit,sunk:r.sunk,over:over,fleet:over?this.fleet.ships.map(s=>s.cells):null},500);
+        if(!over&&!(r.hit&&S.cfg.again))this.shoot();
+        break;}
+      case 'res':{
+        this.tried.add(Fleet.key(m.ix,m.iy));
+        if(m.hit)this.hits.push([m.ix,m.iy]);
+        if(m.sunk){const ks=new Set(m.sunk.map(c=>Fleet.key(c[0],c[1])));this.hits=this.hits.filter(h=>!ks.has(Fleet.key(h[0],h[1])));}
+        if(!m.over&&m.hit&&S.cfg.again)this.shoot();
+        break;}
+      case 'again':this.out({t:'again'},400);break;
+    }
+  },
+  shoot(){const t=this.pick();this.out({t:'shot',ix:t[0],iy:t[1]},1000+Math.random()*700);},
+  pick(){
+    const e=extent(S.cfg),free=[];
+    for(let x=e.xmin;x<=e.xmax;x++)for(let y=e.ymin;y<=e.ymax;y++)if(allowed(S.cfg,x,y)&&!this.tried.has(Fleet.key(x,y)))free.push([x,y]);
+    const isFree=c=>free.some(f=>f[0]===c[0]&&f[1]===c[1]);
+    const choose=a=>a[rnd(0,a.length-1)];
+    if(this.hits.length){
+      const hs=this.hits;let cand=[];
+      if(hs.length>=2){
+        const horiz=hs.every(h=>h[1]===hs[0][1]),vert=hs.every(h=>h[0]===hs[0][0]);
+        if(horiz||vert){
+          const i=horiz?0:1,vals=hs.map(h=>h[i]),lo=Math.min.apply(0,vals),hi=Math.max.apply(0,vals);
+          cand=horiz?[[lo-1,hs[0][1]],[hi+1,hs[0][1]]]:[[hs[0][0],lo-1],[hs[0][0],hi+1]];
+          cand=cand.filter(isFree);
+        }
+      }
+      if(!cand.length){
+        hs.forEach(h=>[[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>cand.push([h[0]+d[0],h[1]+d[1]])));
+        cand=cand.filter(isFree);
+      }
+      if(cand.length)return choose(cand);
+    }
+    const par=free.filter(f=>(((f[0]+f[1])%2)+2)%2===0);
+    return choose(par.length?par:free);
+  }
+};
+
+/* ================= Anleitung ================= */
+function illuShips(){
+  const sp=38,ox=34,oy=30;let s='<svg class="illu" viewBox="0 0 300 190" role="img" aria-label="Schiffe auf Gitterpunkten"><rect class="paper" x="6" y="4" width="288" height="182" rx="12"/>';
+  for(let r=0;r<4;r++)for(let c=0;c<7;c++)s+='<circle class="pt" cx="'+(ox+c*sp)+'" cy="'+(oy+r*sp)+'" r="2.6"/>';
+  const cap=(c0,r0,c1,r1)=>'<rect class="ship" x="'+(ox+c0*sp-13)+'" y="'+(oy+r0*sp-13)+'" width="'+((c1-c0)*sp+26)+'" height="'+((r1-r0)*sp+26)+'" rx="13"/>';
+  s+=cap(0,0,2,0)+cap(4,0,4,2)+cap(0,2,1,2)+cap(3,3,6,3);
+  return s+'<text class="il" x="150" y="178" text-anchor="middle">Schiffe liegen waagerecht oder senkrecht.</text></svg>';
+}
+function illuAxes(){
+  let s='<svg class="illu" viewBox="0 0 300 190" role="img" aria-label="Der Punkt (3|2): 3 nach rechts, 2 nach oben"><rect class="paper" x="6" y="4" width="288" height="182" rx="12"/>';
+  s+='<line class="axis" x1="30" y1="150" x2="285" y2="150"/><line class="axis" x1="44" y1="162" x2="44" y2="14"/>';
+  for(let i=1;i<=4;i++)s+='<circle class="pt" cx="'+(44+i*48)+'" cy="150" r="3"/><text class="il" x="'+(44+i*48)+'" y="167" text-anchor="middle">'+i+'</text>';
+  for(let j=1;j<=3;j++)s+='<circle class="pt" cx="44" cy="'+(150-j*48)+'" r="3"/><text class="il" x="32" y="'+(155-j*48)+'" text-anchor="end">'+j+'</text>';
+  s+='<path class="route" d="M44 150H188V54"/><circle cx="188" cy="54" r="9" fill="#d63a2c" stroke="#fff" stroke-width="2"/>';
+  s+='<text class="ilb" x="202" y="52">(3|2)</text><text class="il" x="116" y="138" text-anchor="middle">erst 3 nach rechts</text><text class="il" x="196" y="112">dann 2 hoch</text></svg>';
+  return s;
+}
+function illuQuads(){
+  let s='<svg class="illu" viewBox="0 0 300 190" role="img" aria-label="Vier Quadranten mit Vorzeichen"><rect class="paper" x="6" y="4" width="288" height="182" rx="12"/>';
+  s+='<line class="axis" x1="24" y1="95" x2="276" y2="95"/><line class="axis" x1="150" y1="178" x2="150" y2="14"/>';
+  [['I',210,62,'(+|+)'],['II',90,62,'(−|+)'],['III',90,142,'(−|−)'],['IV',210,142,'(+|−)']].forEach(q=>{s+='<text class="qn" x="'+q[1]+'" y="'+q[2]+'" text-anchor="middle">'+q[0]+'</text><text class="ilb" x="'+q[1]+'" y="'+(q[2]+22)+'" text-anchor="middle">'+q[3]+'</text>';});
+  return s+'<text class="il" x="270" y="86" text-anchor="end">x</text><text class="il" x="158" y="26">y</text></svg>';
+}
+function illuFire(){
+  let s='<svg class="illu" viewBox="0 0 300 190" role="img" aria-label="Wasser, Treffer, versenkt"><rect class="paper" x="6" y="4" width="288" height="182" rx="12"/>';
+  s+='<circle cx="50" cy="45" r="9" fill="#fff" stroke="#14394f" stroke-width="2"/><circle cx="50" cy="45" r="2.5" fill="#14394f"/><text class="ilb" x="86" y="51">Wasser – daneben</text>';
+  s+='<circle cx="50" cy="95" r="12" fill="#d63a2c" stroke="#fff" stroke-width="2"/><path d="M45 90L55 100M55 90L45 100" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text class="ilb" x="86" y="101">Treffer</text>';
+  s+='<rect x="26" y="130" width="76" height="28" rx="14" fill="#2c3d48" stroke="#d63a2c" stroke-width="2"/>';
+  [40,64,88].forEach(x=>{s+='<circle cx="'+x+'" cy="144" r="8" fill="#d63a2c" stroke="#fff" stroke-width="1.5"/>';});
+  return s+'<text class="ilb" x="116" y="150">Versenkt</text></svg>';
+}
+const SLIDES=[
+  {t:'Flotte aufstellen',i:illuShips,p:'Jeder versteckt seine Schiffe auf den Gitterpunkten. Wähle ein Schiff, tippe auf einen Punkt und drehe es bei Bedarf. Schiffe dürfen sich nicht überlappen.'},
+  {t:'Punkte benennen: (x|y)',i:illuAxes,p:'Immer erst x, dann y: erst zur Tür, dann die Treppe hoch. Der Punkt (3|2) liegt 3 Schritte nach rechts und 2 Schritte nach oben.'},
+  {t:'Quadranten und negative Zahlen',i:illuQuads,p:'Links von 0 ist x negativ, unter 0 ist y negativ. So entstehen Punkte wie (−2|3) oder (−1|−4). Zwischen ganzen Zahlen liegen Kommazahlen und Brüche: 0,5 = ½.'},
+  {t:'Feuer!',i:illuFire,p:'Tippe auf einen Punkt (oder gib x und y ein) und drücke „Feuer!“. Ein Schiff ist versenkt, wenn alle seine Punkte getroffen sind. Wer zuerst alle Schiffe des Gegners versenkt, gewinnt.'}
+];
+let slide=0;
+function renderHelp(){
+  const d=SLIDES[slide];
+  $('#helpBody').innerHTML='<h2>'+d.t+'</h2><div class="chartcard">'+d.i()+'</div><p>'+d.p+'</p><div class="foot"><button type="button" class="btn alt" id="hPrev"'+(slide===0?' disabled':'')+'>Zurück</button><div class="dots" aria-hidden="true">'+SLIDES.map((_,i)=>'<i'+(i===slide?' class="on"':'')+'></i>').join('')+'</div><button type="button" class="btn" id="hNext">'+(slide===SLIDES.length-1?'Verstanden':'Weiter')+'</button></div>';
+}
+function openHelp(){slide=0;renderHelp();$('#help').hidden=false;$('#hNext').focus();}
+function closeHelp(){$('#help').hidden=true;}
+
+/* ================= Ereignisse ================= */
+function changeCfg(fn){
+  const c=JSON.parse(JSON.stringify(S.cfg));fn(c);
+  S.cfg=normCfg(c);fixMy();
+  send({t:'cfg',cfg:S.cfg});refresh();
+}
+function toggleIn(arr,v,msg){
+  const i=arr.indexOf(v);
+  if(i>=0){if(arr.length===1){toast(msg);return;}arr.splice(i,1);}else arr.push(v);
+}
+document.addEventListener('click',ev=>{
+  const t=ev.target.closest('button');if(!t)return;
+  const ds=t.dataset;
+  if(t.id==='btnHelp')return openHelp();
+  if(t.id==='hPrev'){slide--;return renderHelp();}
+  if(t.id==='hNext'){if(slide>=SLIDES.length-1)return closeHelp();slide++;return renderHelp();}
+  if(t.id==='btnHost')return hostGame();
+  if(t.id==='btnJoin')return joinGame();
+  if(t.id==='btnBot')return botGame();
+  if(t.id==='btnLeave'){if((S.phase==='place'||S.phase==='battle')&&!S.over&&!confirm('Spiel wirklich beenden?'))return;return leave();}
+  if(t.id==='noticeBtn')return leave();
+  if(t.id==='btnStart'){if(!S.connected)return;send({t:'begin',cfg:S.cfg});return startPlacement();}
+  if(t.id==='btnRotate'){S.orient=S.orient==='h'?'v':'h';return renderPlace();}
+  if(t.id==='btnRandom'){
+    if(S.ready)return;
+    S.fleet.randomize(fleetLens(S.cfg));S.toPlace.forEach(x=>{x.placed=true;});S.sel=-1;return renderPlace();
+  }
+  if(t.id==='btnClear'){S.fleet.clear();S.toPlace.forEach(x=>{x.placed=false;});S.sel=0;return renderPlace();}
+  if(t.id==='btnReady'){S.ready=true;send({t:'ready'});renderPlace();return maybeStart();}
+  if(t.id==='btnFire')return onFire();
+  if(t.id==='btnAgain'){S.again=true;send({t:'again'});if(isHost()&&S.oppAgain)return beginAgain();return refresh();}
+  if(ds.ship!==undefined&&S.phase==='place'&&!S.ready){
+    const id=+ds.ship,tp=S.toPlace.find(x=>x.id===id);
+    if(tp.placed){S.fleet.remove(id);tp.placed=false;}
+    S.sel=id;return renderPlace();
+  }
+  if(ds.pickScale){S.my.scale=ds.pickScale;S.panelSig='';return refresh();}
+  if(ds.pickMode){S.my.mode=ds.pickMode;S.aim=null;S.typeMsg='';S.panelSig='';return refresh();}
+  if(ds.key&&S.phase==='battle'){
+    const el=$(S.lastInput==='y'?'#inY':'#inX');if(!el)return;
+    const a=el.selectionStart==null?el.value.length:el.selectionStart,b=el.selectionEnd==null?a:el.selectionEnd;
+    el.value=el.value.slice(0,a)+ds.key+el.value.slice(b);
+    S.typed[el.dataset.axis]=el.value;el.focus();const pos=a+ds.key.length;try{el.setSelectionRange(pos,pos);}catch(_){}
+    return;
+  }
+  if(S.phase==='lobby'&&isHost()&&t.closest('#settings')){
+    if(ds.preset)return changeCfg(c=>{Object.assign(c,JSON.parse(JSON.stringify(PRESETS[ds.preset].cfg)));});
+    if(ds.q)return changeCfg(c=>toggleIn(c.quads,+ds.q,'Mindestens ein Quadrant muss aktiv sein.'));
+    if(ds.n)return changeCfg(c=>{c.n=+ds.n;});
+    if(ds.scale)return changeCfg(c=>toggleIn(c.scales,ds.scale,'Mindestens eine Zahlenart muss aktiv sein.'));
+    if(ds.mode)return changeCfg(c=>toggleIn(c.modes,ds.mode,'Mindestens eine Schussart muss aktiv sein.'));
+    if(ds.fleet)return changeCfg(c=>{c.fleet=ds.fleet;});
+    if(ds.again!==undefined)return changeCfg(c=>{c.again=!c.again;});
+  }
+});
+document.addEventListener('input',ev=>{
+  const el=ev.target;if(el.dataset&&el.dataset.axis){S.typed[el.dataset.axis]=el.value;S.lastInput=el.dataset.axis;if(S.typeMsg){S.typeMsg='';const e=$('#typeErr');if(e)e.textContent='';S.panelSig=S.panelSig.replace(/\|[^|]*$/,'|');}}
+});
+document.addEventListener('focusin',ev=>{const el=ev.target;if(el.dataset&&el.dataset.axis)S.lastInput=el.dataset.axis;});
+document.addEventListener('keydown',ev=>{
+  if(ev.key==='Escape'){closeHelp();}
+  if(ev.key==='Enter'&&ev.target.dataset&&ev.target.dataset.axis){ev.preventDefault();onFire();}
+  else if(ev.key==='Enter'&&ev.target.id==='inCode'){joinGame();}
+  else if((ev.key==='r'||ev.key==='R')&&S.phase==='place'&&!ev.target.matches('input')){S.orient=S.orient==='h'?'v':'h';renderPlace();}
+});
+$('#help').addEventListener('click',e=>{if(e.target.id==='help')closeHelp();});
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.phase!=='menu')renderBoards();},150);});
+
+/* ================= Start ================= */
+(function init(){
+  try{const n=localStorage.getItem('ks-name');if(n)$('#inName').value=n;}catch(_){}
+  if(typeof Peer==='undefined'){$('#btnHost').disabled=true;$('#btnJoin').disabled=true;$('#noPeer').hidden=false;}
+  const hc={quads:[1,2,3,4],n:4,scales:['ganz'],modes:['tap'],fleet:'mittel',again:false};
+  const m=new Map();m.set('0,-3','miss');m.set('-4,1','miss');m.set('2,3','miss');m.set('-2,2','hit');m.set('-1,2','hit');m.set('-3,2','hit');m.set('3,-2','hit');
+  renderBoard($('#heroBoard'),{cfg:hc,scale:'ganz',aria:'Beispiel-Spielfeld mit Treffern',ships:[{cells:[[-3,2],[-2,2],[-1,2]],cls:'sunk'}],marks:m,aim:{ix:3,iy:2}});
+})();
+</script>
+</body>
+</html>
