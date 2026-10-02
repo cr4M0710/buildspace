@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<title>Du und die Schokoladenfabrik – Betriebserkundung (Klasse 8)</title>
+<style>
+:root{
+  --bg:#fff9f4; --panel:#ffffff; --ink:#2a1a13; --muted:#5b4a41; --line:#e3d3c8;
+  --brand:#b3124f; --brand-ink:#ffffff; --good:#0d6b36; --good-bg:#def5e6;
+  --warn:#7a4300; --warn-bg:#fff0cf; --tip:#0f3a73; --tip-bg:#e2eefc;
+  --cocoa:#4a2a1c; --shade:rgba(40,20,12,.58); --hud:rgba(255,255,255,.93);
+  --focus:#0b57d0;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1311; --panel:#2b1d18; --ink:#fff2e8; --muted:#dcc8bb; --line:#53392f;
+    --brand:#ff9fc3; --brand-ink:#2c0b19; --good:#8be0ab; --good-bg:#17382a;
+    --warn:#ffd48a; --warn-bg:#3d2d10; --tip:#bcd8ff; --tip-bg:#16304f;
+    --cocoa:#f3d9c8; --shade:rgba(0,0,0,.66); --hud:rgba(43,29,24,.93);
+    --focus:#8ab4ff;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:#bfe6ff;
+  font-family:'Avenir Next','Trebuchet MS','Segoe UI',system-ui,-apple-system,sans-serif;font-size:16px;color:var(--ink);
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+canvas#c{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+button,input,select,textarea{font:inherit;color:inherit}
+input,textarea,select{-webkit-user-select:text;user-select:text;touch-action:manipulation}
+button{touch-action:manipulation;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* HUD */
+#hud{position:fixed;z-index:5;left:calc(env(safe-area-inset-left) + 8px);right:calc(env(safe-area-inset-right) + 8px);
+  top:calc(env(safe-area-inset-top) + 8px);display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#hud .row{display:flex;gap:8px;align-items:flex-start}
+#hud .stat{pointer-events:auto;background:var(--hud);border:2px solid var(--line);border-radius:14px;padding:6px 12px;min-width:210px;line-height:1.3}
+#hud .stat b{font-size:18px}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#e0457b,#ffb347);transition:width .4s}
+#hud .btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;pointer-events:auto}
+.hbtn{min-height:46px;min-width:70px;padding:8px 14px;border-radius:12px;border:2px solid var(--brand);background:var(--hud);color:var(--brand);font-weight:700;font-size:17px}
+.hbtn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.pill{pointer-events:auto;align-self:flex-start;background:var(--hud);border:2px solid var(--line);border-radius:14px;padding:7px 12px;max-width:min(560px,100%);line-height:1.3}
+#hintbox{display:flex;align-items:center;gap:10px;border-color:var(--brand)}
+#arrow{display:inline-block;font-size:30px;line-height:1;color:var(--brand);transition:transform .1s;width:34px;text-align:center}
+#toast{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 170px);
+  background:var(--cocoa);color:var(--bg);padding:10px 16px;border-radius:12px;max-width:min(520px,90vw);text-align:center;font-weight:600;pointer-events:none;opacity:0;transition:opacity .25s}
+#toast.on{opacity:1}
+#joy{position:fixed;z-index:5;left:calc(env(safe-area-inset-left) + 18px);bottom:calc(env(safe-area-inset-bottom) + 18px);width:136px;height:136px;border-radius:50%;
+  background:rgba(60,30,20,.22);border:3px solid rgba(60,30,20,.7);box-shadow:0 0 0 3px rgba(255,255,255,.8);touch-action:none;display:none}
+body.touch #joy{display:block}
+#knob{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;background:rgba(179,18,79,.88);border:3px solid #fff;pointer-events:none}
+#openBtn{position:fixed;z-index:5;right:calc(env(safe-area-inset-right) + 18px);bottom:calc(env(safe-area-inset-bottom) + 24px);min-width:150px;min-height:66px;padding:10px 20px;
+  background:#0d6b36;color:#fff;border:3px solid #fff;border-radius:18px;font-size:20px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#keyhint{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 10px);background:var(--hud);border-radius:10px;padding:4px 12px;font-size:16px;color:var(--muted);pointer-events:none}
+body.touch #keyhint{display:none}
+
+/* Screens */
+.screen{position:fixed;z-index:10;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--shade);
+  padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 10px) calc(env(safe-area-inset-bottom) + 10px) calc(env(safe-area-inset-left) + 10px);touch-action:none}
+.screen.on{display:flex}
+.card{background:var(--panel);color:var(--ink);border-radius:20px;border:2px solid var(--line);width:100%;max-width:760px;max-height:100%;overflow:auto;padding:20px 22px;
+  touch-action:pan-y;-webkit-overflow-scrolling:touch;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.card h1{margin:0 0 4px;font-size:clamp(26px,5vw,40px);line-height:1.1;color:var(--brand);letter-spacing:-.5px}
+.card h2{margin:0 0 8px;font-size:22px;line-height:1.2}
+.card h3{margin:14px 0 6px;font-size:18px}
+.card p{margin:8px 0;line-height:1.5}
+.sub{color:var(--muted);margin:0 0 10px}
+.bar-choc{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:260px;margin:0 0 12px}
+.bar-choc i{display:block;height:20px;border-radius:5px;background:linear-gradient(145deg,#7b4a33,#4a2a1c);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}
+.bar-choc i:nth-child(3n){background:linear-gradient(145deg,#e0457b,#b3124f)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.box{border:2px solid var(--line);border-radius:14px;padding:10px 14px}
+.box ul{margin:6px 0 0;padding-left:20px;line-height:1.45}
+.btn{min-height:48px;min-width:48px;padding:10px 18px;border-radius:12px;border:2px solid var(--brand);background:var(--panel);color:var(--brand);font-weight:700;font-size:17px}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.good{background:#0d6b36;color:#fff;border-color:#0d6b36}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btns2{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.seg{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.seg label{flex:1 1 150px;display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;cursor:pointer;font-weight:600}
+.seg input{width:22px;height:22px;accent-color:var(--brand)}
+.seg label:has(input:checked){border-color:var(--brand);background:var(--tip-bg)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.stats div{border:2px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.stats b{display:block;font-size:28px;color:var(--brand)}
+
+/* Dialog */
+.who{display:inline-block;background:var(--tip-bg);color:var(--tip);border-radius:20px;padding:3px 12px;font-weight:700;margin-bottom:8px}
+.story{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 14px;line-height:1.5}
+.q{font-weight:700;font-size:18px;margin:12px 0 8px;line-height:1.4}
+.field{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.field input[type=text]{min-height:52px;font-size:20px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;width:200px;background:var(--bg)}
+.field .unit{font-size:18px;font-weight:700}
+.opt{display:flex;align-items:flex-start;gap:12px;min-height:48px;padding:10px 12px;margin:6px 0;border:2px solid var(--line);border-radius:12px;cursor:pointer;line-height:1.4}
+.opt input{width:24px;height:24px;margin:1px 0 0;flex:none;accent-color:var(--brand)}
+.opt:has(input:checked){border-color:var(--brand);background:var(--tip-bg)}
+.ord{display:flex;align-items:center;gap:8px;margin:6px 0;border:2px solid var(--line);border-radius:12px;padding:6px 8px}
+.ord .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800;display:flex;align-items:center;justify-content:center}
+.ord .t{flex:1;line-height:1.35}
+.ord button{min-height:46px;min-width:76px;border:2px solid var(--brand);background:var(--panel);color:var(--brand);border-radius:10px;font-weight:700;font-size:16px;padding:4px 8px}
+.ord button[disabled]{opacity:.35}
+.mrow{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.mrow .t{flex:1 1 200px;font-weight:700}
+.mrow select{flex:1 1 280px;min-height:48px;font-size:16px;padding:6px 8px;border:2px solid var(--line);border-radius:10px;background:var(--bg);max-width:100%}
+.reflect label{display:block;font-weight:700;margin:12px 0 4px;line-height:1.35}
+.reflect textarea{width:100%;min-height:84px;font-size:17px;padding:8px 10px;border:2px solid var(--line);border-radius:12px;background:var(--bg);resize:vertical}
+.part{border:2px solid var(--line);border-radius:14px;padding:10px 14px;margin:12px 0}
+.part.ok{border-color:var(--good)}
+.part.bad{border-color:var(--brand)}
+.fb{margin-top:12px;padding:10px 14px;border-radius:12px;line-height:1.5;font-weight:600}
+.fb.ok{background:var(--good-bg);color:var(--good)}
+.fb.bad{background:var(--warn-bg);color:var(--warn)}
+.fb.info{background:var(--tip-bg);color:var(--tip)}
+.tipbox{margin-top:10px;padding:10px 14px;border-radius:12px;background:var(--tip-bg);color:var(--tip);line-height:1.5}
+.sol{margin-top:12px;padding:10px 14px;border:2px dashed var(--good);border-radius:12px;line-height:1.5}
+.sol ol{margin:6px 0 0;padding-left:22px}
+#mapC{width:100%;max-width:640px;height:auto;aspect-ratio:1/1;border-radius:14px;border:2px solid var(--line);background:#dff3e0;display:block;margin:0 auto;touch-action:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0;font-size:16px}
+.legend span::before{content:'';display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;vertical-align:-2px;background:var(--c)}
+.banner{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top) + 90px);transform:translateX(-50%);width:min(560px,92vw);background:var(--panel);border:3px solid var(--brand);border-radius:18px;padding:14px 18px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none;text-align:center}
+.banner.on{display:block}
+.banner h2{margin:0 0 4px;color:var(--brand)}
+#fallback{position:fixed;z-index:30;inset:0;display:none;align-items:center;justify-content:center;background:#fff3e0;color:#3b2418;padding:24px;text-align:center}
+#fallback.on{display:flex}
+#fallback div{max-width:560px;font-size:20px;line-height:1.5}
+#mappeTabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#mappeTabs button{min-height:46px;padding:6px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-weight:700;font-size:16px}
+#mappeTabs button[aria-selected="true"]{border-color:var(--brand);background:var(--brand);color:var(--brand-ink)}
+#mappeTabs button.read::after{content:' ✓'}
+details.mc{border:2px solid var(--line);border-radius:14px;margin:8px 0;padding:0 14px}
+details.mc>summary{min-height:48px;display:flex;align-items:center;font-weight:700;font-size:18px;cursor:pointer;list-style:none}
+details.mc>summary::before{content:'▸';margin-right:10px;color:var(--brand)}
+details.mc[open]>summary::before{content:'▾'}
+details.mc ul{margin:0 0 12px;padding-left:20px;line-height:1.55}
+details.mc li{margin:4px 0}
+.chaplab{font-size:15px;color:var(--muted);font-weight:700}
+mark{background:#ffe08a;color:#2a1a13;border-radius:3px}
+#mq{width:100%;min-height:48px;font-size:17px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;background:var(--bg)}
+fieldset.nofs{border:0;padding:0;margin:0;min-width:0}
+@media (prefers-reduced-motion:reduce){.bar i,#arrow{transition:none}}
+@media (max-height:520px){.card{padding:12px 16px}.card h1{font-size:26px}.bar-choc{display:none}}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="-1"></canvas>
+
+<div id="hud" hidden>
+  <div class="row">
+    <div class="stat" aria-live="off">
+      <div><b id="pts">0</b> von <span id="ptsMax">0</span> Punkten</div>
+      <div>Bereiche geschafft: <b id="areasDone">0</b> von 5</div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" id="barWrap"><i id="barFill"></i></div>
+    </div>
+    <div class="btns">
+      <button class="hbtn" id="btnMap" type="button">Karte</button>
+      <button class="hbtn" id="btnHint" type="button" aria-pressed="false">Hinweis</button>
+      <button class="hbtn" id="btnMenu" type="button">Menü</button>
+    </div>
+  </div>
+  <div class="pill" id="goal"></div>
+  <div class="pill" id="hintbox" hidden><span id="arrow" aria-hidden="true">▲</span><span id="hintText"></span></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="joy" aria-label="Steuerknüppel zum Laufen"><div id="knob"></div></div>
+<button id="openBtn" type="button" hidden>Öffnen</button>
+<div id="keyhint" hidden>Laufen: W A S D oder Pfeiltasten · Umschauen: Maus ziehen · Öffnen: E</div>
+
+<div class="screen on" id="sStart" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+  <div class="card">
+    <div class="bar-choc" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 id="startTitle">Du und die Schokoladenfabrik</h1>
+    <p class="sub">Betriebserkundung für Klasse 8 · Arbeitslehre / Berufsorientierung · ca. 45–60 Minuten</p>
+    <p>Du besuchst die Kakaotal Süßwaren GmbH (ein ausgedachter Betrieb). Laufe durch die Fabrik, sprich mit den Beschäftigten und löse an den gelben Rauten Aufgaben. Wer einen Bereich schafft, darf den nächsten betreten. Es gibt kein Zeitlimit und kein „Game Over“. Das Spiel überträgt keine Daten. Ein eingetragener Name bleibt nur auf diesem Gerät.</p>
+    <div class="box" style="margin-top:10px"><b>Tipp:</b> Lies zuerst die Infomappe. Dort stehen alle Informationen, die du für die Aufgaben brauchst.<div class="btns2" style="margin-top:8px"><button class="btn primary" id="btnMappeStart" type="button">Infomappe lesen</button></div></div>
+    <div class="two">
+      <div class="box"><b>Am PC</b><ul><li>Laufen: W A S D oder Pfeiltasten</li><li>Umschauen: Maus gedrückt halten und ziehen</li><li>Aufgabe öffnen: Klick auf die Raute oder Taste E</li></ul></div>
+      <div class="box"><b>Auf dem iPad</b><ul><li>Laufen: Steuerknüppel links unten</li><li>Umschauen: mit dem Finger wischen</li><li>Aufgabe öffnen: auf die Raute tippen oder grüner Knopf „Öffnen“</li></ul></div>
+    </div>
+    <h3><label for="pname">Dein Name für den Spielbericht (freiwillig)</label></h3>
+    <input type="text" id="pname" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Vorname (und Nachname)" style="width:100%;max-width:420px;min-height:50px;font-size:18px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;background:var(--bg)">
+    <h3 id="lvlTitle">Wähle dein Niveau</h3>
+    <div class="seg" role="radiogroup" aria-labelledby="lvlTitle" id="lvlSeg"></div>
+    <p class="sub" id="lvlDesc"></p>
+    <div class="btns2">
+      <button class="btn primary" id="btnStart" type="button">Spiel starten</button>
+      <button class="btn primary" id="btnContinue" type="button" hidden>Weiterspielen</button>
+      <button class="btn" id="btnNew" type="button" hidden>Neu beginnen</button>
+      <button class="btn" id="btnHelpStart" type="button">Hilfe</button>
+    </div>
+    <p class="sub" id="contInfo" hidden></p>
+  </div>
+</div>
+
+<div class="screen" id="sDialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle"><div class="card" id="dlg"></div></div>
+
+<div class="screen" id="sMap" role="dialog" aria-modal="true" aria-label="Karte">
+  <div class="card"><h2>Karte der Fabrik</h2>
+    <canvas id="mapC" width="640" height="640" aria-label="Karte mit Bereichen und deiner Position"></canvas>
+    <div class="legend"><span style="--c:#d9a000">offen</span><span style="--c:#7a7a7a">gesperrt</span><span style="--c:#0d9a4c">geschafft</span><span style="--c:#b3124f">du</span></div>
+    <div class="btns2"><button class="btn primary" id="btnMapClose" type="button">Karte schließen</button></div>
+  </div>
+</div>
+
+<div class="screen" id="sMenu" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+  <div class="card" style="max-width:480px"><h2 id="menuTitle">Menü</h2>
+    <div class="btns2" style="flex-direction:column">
+      <button class="btn primary" id="mResume" type="button">Weiterspielen</button>
+      <button class="btn" id="mMappe" type="button">Infomappe</button>
+      <button class="btn" id="mHelp" type="button">Hilfe</button>
+      <button class="btn" id="mReport" type="button">Zwischenbericht (PDF)</button>
+      <button class="btn" id="mRestart" type="button">Neustart</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="sMappe" role="dialog" aria-modal="true" aria-labelledby="mappeTitle"><div class="card" id="mappeCard" style="max-width:900px"></div></div>
+
+<div class="screen" id="sConfirm" role="alertdialog" aria-modal="true" aria-labelledby="confTitle">
+  <div class="card" style="max-width:480px"><h2 id="confTitle">Wirklich neu beginnen?</h2>
+    <p>Dein gesamter Fortschritt (Punkte, gelöste Aufgaben, Spielbericht) wird gelöscht.</p>
+    <div class="btns2"><button class="btn" id="cNo" type="button">Nein, zurück</button><button class="btn primary" id="cYes" type="button">Ja, neu beginnen</button></div>
+  </div>
+</div>
+
+<div class="screen" id="sHelp" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><div class="card" id="helpCard"></div></div>
+
+<div class="screen" id="sEnd" role="dialog" aria-modal="true" aria-labelledby="endTitle"><div class="card" id="endCard"></div></div>
+
+<div class="banner" id="banner" role="status"><h2 id="banTitle"></h2><p id="banText"></p><button class="btn" id="banSkip" type="button">Weiter</button></div>
+
+<div id="fallback" role="alert"><div id="fbText"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* ====================================================================
+   1) DATENBLOCK – NUR HIER Inhalte ändern oder erweitern
+   --------------------------------------------------------------------
+   AREAS     : die 5 Bereiche (Reihenfolge = Freischaltung, Lage, Farben)
+   TASK_LIST : alle Aufgaben. Jede Aufgabe hat eine make(R, L, ctx)-Funktion,
+               die für Zufallsgenerator R und Niveau L (0=A, 1=B, 2=C) eine
+               konkrete Aufgabe mit Zahlen, Tipps, Lösungsweg und Traps erzeugt.
+   GENERIC   : allgemeine Hinweise je Aufgabentyp
+   Aufgabentypen: num, choice, multi, order, match, reflect, final
+   ==================================================================== */
+const SAVE_KEY = 'schokofabrik-v1';
+const GAME_NAME = 'Schokofabrik';       // Name des Debug-Objekts window.Schokofabrik
+const POINTS_PER_TASK = 10;
+
+const LEVELS = [
+  { id:'A', name:'A – leicht',        desc:'Kleine Zahlen, weniger Antwortmöglichkeiten, ausführliche Tipps.' },
+  { id:'B', name:'B – mittel',        desc:'Etwas mehr Rechenschritte und Antwortmöglichkeiten.' },
+  { id:'C', name:'C – anspruchsvoll', desc:'Mehrschrittige Aufgaben, mehr Auswahl, knappere Tipps.' }
+];
+
+// ang = Winkel (Grad) auf dem Ring um den Startplatz; slots = Stationen im Bereich (lokale Koordinaten, +z zeigt zum Eingang)
+const SLOTS5 = [[-11,-2],[-5.5,4],[0,-2],[5.5,4],[11,-2]];
+const SLOTS4 = [[-9,0],[-3,5],[3,0],[9,5]];
+const AREAS = [
+  { id:1, name:'Von der Rohware zum Produkt', short:'Rohware → Produkt', ang:200, fenceR:17, ground:0xbfe8c8, hall:0xf27ea6, roof:0xb3124f, slots:SLOTS5,
+    focus:'Abteilungen und Abläufe: Wareneingang, Produktion, Verpackung, Versand, Automatisierung.' },
+  { id:2, name:'Qualität und Sicherheit', short:'Qualität & Sicherheit', ang:272, fenceR:17, ground:0xbfdcf5, hall:0x4cc3c9, roof:0x0e7c86, slots:SLOTS4,
+    focus:'Arbeitsschutz, Hygiene, Qualitätssicherung, Rückverfolgbarkeit und Allergene.' },
+  { id:3, name:'Entwicklung und Planung', short:'Entwicklung & Planung', ang:344, fenceR:17, ground:0xdcd0f5, hall:0x9c7be0, roof:0x5b3fb0, slots:SLOTS4,
+    focus:'Von der Idee zum Produkt: Kundenwünsche, Planung, Einkauf und Verpackungsdesign.' },
+  { id:4, name:'Kaufmännische Bereiche', short:'Kaufmännisch', ang:56, fenceR:17, ground:0xfbd8c0, hall:0xff9a4d, roof:0xc2410c, slots:SLOTS5,
+    focus:'Wie der Betrieb Geld verdient, Marketing, Verwaltung und Quellenkritik.' },
+  { id:5, name:'Technik, Nachhaltigkeit und Ausbildung', short:'Technik & Ausbildung', ang:128, fenceR:17, ground:0xf6ecb0, hall:0xf2c14e, roof:0x9a6b00, slots:SLOTS5,
+    focus:'Instandhaltung, Energie, Berufe und Ausbildung, deine Reflexion und das Abschlussrätsel.' }
+];
+
+/* ---------- Hilfsfunktionen für Aufgaben ---------- */
+const R2 = x => Math.round(x*100)/100;
+function de(n, d){ d = d||0; const f = Math.pow(10,d); const s = (Math.round(n*f)/f).toFixed(d);
+  let p = s.split('.'); p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.'); return p[1] ? p[0]+','+p[1] : p[0]; }
+const eur = n => de(n,2)+' €';
+
+function mkChoice(R, L, right, wrongs){
+  const w = wrongs.slice(0, L+2);
+  const options = R.shuffle([{t:right, ok:true}].concat(w.map(x => ({t:x.t, hint:x.hint, ok:false}))));
+  return { options, ok: options.findIndex(o => o.ok) };
+}
+function mkMulti(R, L, rights, wrongs, nRight){
+  const r = R.shuffle(rights).slice(0, nRight[L]);
+  const w = R.shuffle(wrongs).slice(0, L+2);
+  return { options: R.shuffle(r.map(t => ({t, ok:true})).concat(w.map(x => ({t:x.t, hint:x.hint, ok:false})))) };
+}
+function mkOrder(R, items, pairs){
+  const idx = {}; items.forEach((it,i) => idx[it.k] = i);
+  const P = pairs.filter(p => idx[p[0]] !== undefined && idx[p[1]] !== undefined).map(p => [idx[p[0]], idx[p[1]], p[2]]);
+  let start; do { start = R.shuffle(items.map((_,i) => i)); } while (start.every((v,i) => v === i));
+  return { items: items.map(i => i.t), pairs: P, start };
+}
+function mkMatch(R, rows){
+  const options = R.shuffle(rows.map(r => r.def));
+  return { rows: rows.map(r => ({term:r.term, hint:r.hint, ok: options.indexOf(r.def)})), options };
+}
+
+const GENERIC = {
+  num:    ['Das stimmt noch nicht. Lies die Aufgabe noch einmal und markiere die wichtigen Zahlen.',
+           'Noch nicht richtig. Rechne jeden Schritt einzeln nach und achte auf die Einheit.',
+           'Prüfe, ob du wirklich alle Angaben aus der Aufgabe benutzt hast. Ein Tipp kann helfen.'],
+  choice: ['Das passt noch nicht. Lies alle Antworten genau und überlege, was im echten Betrieb sinnvoll ist.',
+           'Noch nicht richtig. Welche Antwort passt am besten zur Geschichte? Schließe Antworten aus, die nicht passen.'],
+  multi:  ['Noch nicht ganz. Prüfe jede Aussage einzeln: Passt sie wirklich zur Aufgabe?',
+           'Es fehlt noch etwas oder etwas ist zu viel. Lies jede Aussage noch einmal in Ruhe.'],
+  order:  ['Die Reihenfolge stimmt noch nicht. Überlege: Was muss zuerst passieren, damit der nächste Schritt möglich ist?'],
+  match:  ['Nicht alle Paare passen. Suche in den Beschreibungen nach Schlüsselwörtern.'],
+  reflect:['Schreibe bitte zu jedem Punkt ein bis zwei vollständige Sätze.'],
+  final:  ['Mindestens ein Teilrätsel stimmt noch nicht. Die markierten Teile musst du noch einmal prüfen.']
+};
+
+/* ---------- Betriebssteckbrief (Infotafel am Startplatz, Zahlen je Spiel zufällig) ---------- */
+function makeSteck(R){
+  const b = [
+    { n:'Produktion und Logistik',    v: 10*R.int(9,13) },
+    { n:'Qualität und Labor',         v: 5*R.int(3,5) },
+    { n:'Entwicklung und Planung',    v: 5*R.int(2,4) },
+    { n:'Kaufmännische Bereiche',     v: 5*R.int(6,10) },
+    { n:'Technik und Instandhaltung', v: 5*R.int(4,6) }
+  ];
+  const sum = b.reduce((a,x) => a + x.v, 0);
+  return { firma:'Kakaotal Süßwaren GmbH', bereiche:b, sum, azubi: R.int(8,14), total: 0 };
+}
+function steckLines(st){
+  return [
+    'Name: ' + st.firma + ' (ausgedachter Beispielbetrieb)',
+    'Branche: Lebensmittelindustrie, genauer: Süßwaren.',
+    'Produkte: Tafelschokolade, Pralinen und Schokoriegel für Handel, Onlineshop und Werksverkauf.',
+    'Größe: Beschäftigte in den fünf Bereichen: ' + st.bereiche.map(x => x.n + ' ' + x.v).join(', ') + '. Dazu kommen ' + st.azubi + ' Auszubildende.',
+    'Organisation: Die Geschäftsführung leitet fünf Bereiche. Du erkundest sie in dieser Reihenfolge: Rohware → Produkt, Qualität und Sicherheit, Entwicklung und Planung, Kaufmännisches, Technik und Ausbildung.',
+    'So verdient der Betrieb Geld: Er verkauft Schokolade an Handelspartner und im Werksverkauf. Von den Einnahmen bezahlt er Lieferanten (Rohstoffe), Beschäftigte (Löhne), Energie und Steuern. Was übrig bleibt, ist der Gewinn.',
+    'Tipp: Merke dir die Zahlen. Am Ende des Rundgangs brauchst du sie noch einmal!'
+  ];
+}
+
+/* ====================================================================
+   TASK_LIST
+   ==================================================================== */
+const TASK_LIST = [
+
+/* ---------------- Bereich 1: Von der Rohware zum Produkt ---------------- */
+{ id:'t01', area:1, kind:'dock', label:'Wareneingang', who:'Frau Brandt, Fachkraft für Lagerlogistik', title:'Lieferung Kakaobohnen', type:'num',
+  make(R,L){
+    const D = R.pick([4,5,6,8]), d = R.pick([300,360,420,480]); const n = D*d/60, tot = n*60;
+    const intro = `Am Wareneingang hält ein LKW mit ${n} Säcken Kakaobohnen. Jeder Sack wiegt 60 kg. Frau Brandt prüft den Lieferschein.`;
+    if (L===0) return { story: intro+` Die Produktion braucht ${d} kg Kakaobohnen pro Arbeitstag.`,
+      q:'Für wie viele Arbeitstage reicht die Lieferung?', answer:D, unit:'Arbeitstage',
+      traps:[{v:tot, hint:'Das ist das Gesamtgewicht in kg. Das ist erst der erste Schritt. Wie oft passt der Tagesverbrauch hinein?'}],
+      tips:['Berechne zuerst, wie viel alle Säcke zusammen wiegen.','Teile das Gesamtgewicht in kg durch den Verbrauch pro Tag.'],
+      solution:[`Gesamtgewicht: ${n} · 60 kg = ${de(tot)} kg`, `Arbeitstage: ${de(tot)} kg ÷ ${d} kg pro Tag = ${D}`, `Die Lieferung reicht für ${D} Arbeitstage.`] };
+    const w = d*5;
+    if (L===1) return { story: intro+` Die Produktion verbraucht ${de(w)} kg pro Woche (5 Arbeitstage).`,
+      q:'Für wie viele Arbeitstage reicht die Lieferung?', answer:D, unit:'Arbeitstage',
+      traps:[{v:D/5, hint:'Das wären Wochen. Gefragt sind Arbeitstage.'},{v:tot, hint:'Das ist das Gesamtgewicht in kg. Wie lange reicht das beim Verbrauch?'}],
+      tips:['Wie viel verbraucht die Produktion an einem einzelnen Tag? Eine Woche hat 5 Arbeitstage.','Gesamtgewicht (Säcke · 60 kg) geteilt durch den Verbrauch pro Arbeitstag.'],
+      solution:[`Verbrauch pro Tag: ${de(w)} kg ÷ 5 = ${d} kg`, `Gesamtgewicht: ${n} · 60 kg = ${de(tot)} kg`, `Arbeitstage: ${de(tot)} ÷ ${d} = ${D}`] };
+    return { story: intro+` Die Produktion verbraucht ${de(w)} kg pro Woche (5 Arbeitstage). Der Lagerleiter will immer 2 Arbeitstage Vorrat als Reserve behalten.`,
+      q:'Nach wie vielen Arbeitstagen muss spätestens nachbestellt werden, damit die Reserve nicht angebrochen wird?', answer:D-2, unit:'Arbeitstage',
+      traps:[{v:D, hint:'So lange reicht die ganze Lieferung. Die Reserve von 2 Tagen darf aber nicht angebrochen werden.'},{v:D/5, hint:'Das wären Wochen, und die Reserve fehlt noch.'}],
+      tips:['Zwei Schritte: Wie viele Tage reicht alles? Was bleibt, wenn 2 Tage Reserve nicht verbraucht werden dürfen?','Tagesverbrauch = Wochenverbrauch ÷ 5. Dann Gesamtgewicht ÷ Tagesverbrauch, am Ende die Reserve abziehen.'],
+      solution:[`Verbrauch pro Tag: ${de(w)} kg ÷ 5 = ${d} kg`, `Gesamtgewicht: ${n} · 60 kg = ${de(tot)} kg → reicht ${D} Tage`, `Reserve abziehen: ${D} − 2 = ${D-2} Arbeitstage`] };
+  } },
+
+{ id:'t02', area:1, kind:'storage', label:'Rohstofflager', who:'Herr Okafor, Lagerleiter', title:'Richtig lagern', type:'choice',
+  make(R,L){
+    const c = mkChoice(R,L,'Kühl (etwa 15–20 °C), trocken, sauber und getrennt von stark riechenden Stoffen.',[
+      {t:'Im Kühlhaus bei 0 °C, damit nichts schimmelt.', hint:'Zu kalt: Beim Herausholen bildet sich Kondenswasser. Feuchtigkeit lässt Zucker und Kakao verderben.'},
+      {t:'Warm (30 °C) und feucht, damit die Bohnen weiterreifen.', hint:'Wärme und Feuchtigkeit fördern Schimmel und Schädlinge.'},
+      {t:'Draußen auf dem Hof unter einer Plane.', hint:'Draußen gibt es Regen, Staub und Schädlinge. Lebensmittel brauchen ein geschütztes, sauberes Lager.'},
+      {t:'Neben den Putzmitteln, da ist noch Platz.', hint:'Kakao und Schokolade nehmen Gerüche an. Chemikalien und Putzmittel gehören getrennt gelagert.'},
+      {t:'Direkt auf dem Boden, Paletten sind zu teuer.', hint:'Lebensmittel stehen auf Paletten: So kann man den Boden reinigen und Schädlinge haben keine Verstecke.'}]);
+    return { story:'Die Kakaobohnen und der Zucker kommen ins Rohstofflager. Herr Okafor kontrolliert Temperatur und Sauberkeit mit einer Checkliste.',
+      q:'Welche Lagerbedingungen sind für Kakao, Zucker und Milchpulver richtig?', options:c.options, ok:c.ok,
+      tips:[['Denke an Wärme, Feuchtigkeit und Gerüche: Was schadet den Zutaten?','Überlege: Was passiert mit Zucker und Kakao bei Nässe?','Welche Bedingungen verhindern Schimmel, Schädlinge und fremde Gerüche?'][L],
+            'Gesucht: kühl, trocken, sauber, und nicht neben Stoffen, die stark riechen.'],
+      solution:['Kakao, Zucker und Milchpulver lagert man kühl (etwa 15–20 °C) und trocken.','Das Lager muss sauber sein, die Ware steht auf Paletten.','Lebensmittel stehen getrennt von Putzmitteln und stark riechenden Stoffen. Die Temperatur wird regelmäßig kontrolliert und aufgeschrieben (Hygiene-Protokoll).'] };
+  } },
+
+{ id:'t03', area:1, kind:'conche', label:'Produktion', who:'Frau Yilmaz, Maschinen- und Anlagenführerin', title:'Von der Bohne zur Tafel', type:'order',
+  make(R,L){
+    const all = { rein:'Bohnen reinigen – Steine und Staub werden entfernt', roest:'Rösten – Hitze bringt das Aroma hervor', mahl:'Mahlen – aus den Bohnen wird flüssige Kakaomasse',
+      misch:'Mischen – Zucker und Milchpulver kommen dazu', conch:'Conchieren – die Masse wird lange gerührt, bis sie cremig ist',
+      temp:'Temperieren – gezielt abkühlen und erwärmen, damit sie glänzt und knackt', giess:'Gießen – die flüssige Schokolade kommt in die Tafelformen', kuehl:'Abkühlen – im Kühltunnel wird die Tafel fest' };
+    const keys = L===0 ? ['roest','mahl','conch','temp','giess'] : L===1 ? ['roest','mahl','misch','conch','temp','giess'] : ['rein','roest','mahl','misch','conch','temp','giess','kuehl'];
+    const o = mkOrder(R, keys.map(k => ({k, t:all[k]})), [
+      ['rein','roest','Zuerst müssen Steine und Staub weg, bevor die Bohnen geröstet werden.'],
+      ['roest','mahl','Gemahlen wird erst nach dem Rösten, sonst fehlt das Aroma.'],
+      ['mahl','misch','Zucker und Milchpulver werden in die Kakaomasse gemischt, also erst nach dem Mahlen.'],
+      ['mahl','conch','Conchiert wird die fertig gemahlene Masse.'],
+      ['misch','conch','Erst mischen, dann conchieren. So wird die Masse gleichmäßig cremig.'],
+      ['conch','temp','Erst cremig rühren (Conchieren), dann temperieren.'],
+      ['temp','giess','Temperieren kommt vor dem Gießen, sonst wird die Schokolade fleckig und grau.'],
+      ['giess','kuehl','Abkühlen kommt erst, wenn die Schokolade in der Form ist.']]);
+    return { story:'Frau Yilmaz führt dich an der Produktionslinie entlang. Die Anlage ist stark automatisiert: Sie überwacht Temperatur, Zeit und Menge.',
+      q:'Bringe die Produktionsschritte in die richtige Reihenfolge (oben = zuerst).', items:o.items, pairs:o.pairs, start:o.start,
+      tips:[['Beginne mit dem, was zuerst mit den rohen Bohnen passiert. Was kommt ganz zuletzt in die Form?','Überlege: Was muss fertig sein, damit der nächste Schritt überhaupt möglich ist?','Denke an Aroma, Zerkleinern, Mischen, Cremigkeit, Glanz und Form.'][L],
+            'Merkhilfe: erst Aroma (Rösten), dann zerkleinern (Mahlen), cremig rühren (Conchieren), glänzend machen (Temperieren), in Form bringen (Gießen).'],
+      solution:['Richtige Reihenfolge:'].concat(keys.map((k,i) => (i+1)+'. '+all[k]),['Die Anlagen werden von Fachkräften bedient und überwacht. Sie stellen Rezepte und Temperaturen ein.']) };
+  } },
+
+{ id:'t04', area:1, kind:'robot', label:'Roboterzelle', who:'Herr Lang, Mechatroniker', title:'Roboter und Arbeitsplätze', type:'choice',
+  make(R,L){
+    const c = mkChoice(R,L,'Maschinen übernehmen oft schwere und eintönige Arbeit. Dafür werden Fachkräfte gebraucht, die Anlagen einrichten, überwachen und warten.',[
+      {t:'Maschinen machen Menschen im Betrieb völlig überflüssig.', hint:'Zu einfach: Anlagen müssen geplant, eingerichtet, programmiert und gewartet werden, und dafür braucht man Fachleute.'},
+      {t:'Automatisierung gibt es nur in Büros, nicht in der Produktion.', hint:'In der Produktion gibt es besonders viele Maschinen und Roboter.'},
+      {t:'Berufe bleiben immer genau so, wie sie vor 50 Jahren waren.', hint:'Berufe verändern sich: Ausbildungspläne werden angepasst, zum Beispiel an Digitalisierung.'},
+      {t:'Roboter brauchen weder Strom noch Wartung.', hint:'Auch Roboter müssen gewartet, kontrolliert und bei Störungen repariert werden.'},
+      {t:'Wer an der Maschine arbeitet, muss nichts mehr lernen.', hint:'Neue Technik bedeutet: weiterlernen, zum Beispiel durch Schulungen und Fortbildungen.'}]);
+    return { story:'An der Verpackungsstraße packt seit einem Jahr ein Roboterarm die Kartons. Herr Lang hat ihn eingerichtet und wartet ihn.',
+      q:'Welche Aussage über Digitalisierung und Automatisierung stimmt?', options:c.options, ok:c.ok,
+      tips:['Frage dich: Wer plant, programmiert und repariert den Roboter?','Es verschwinden einige Tätigkeiten, aber es entstehen neue. Welche Aussage drückt das aus?'],
+      solution:['Roboter nehmen oft schwere, eintönige Arbeit ab, zum Beispiel Kartons stapeln.','Dafür entstehen neue Aufgaben: Anlagen einrichten, programmieren, überwachen und warten.','Berufsbilder verändern sich. Man muss auch nach der Ausbildung weiterlernen.'] };
+  } },
+
+{ id:'t05', area:1, kind:'packing', label:'Verpackung & Versand', who:'Frau Novak, Fachkraft für Lagerlogistik', title:'Kartons und Paletten', type:'num',
+  make(R,L){
+    const intro = 'Jede Tafel bekommt ein Mindesthaltbarkeitsdatum und eine Chargennummer, damit man sie später zurückverfolgen kann. Danach wandern die Tafeln in Kartons (24 Tafeln pro Karton) und auf Paletten (40 Kartons pro Palette). Am Versand stellt Frau Novak die Bestellungen der Händler zusammen (Kommissionierung).';
+    if (L===0){ const X = R.pick([80,120,160,240]); const k = X*60/24;
+      return { story:intro+` Die Verpackungsanlage schafft ${X} Tafeln pro Minute.`, q:'Wie viele Kartons werden in einer Stunde (60 Minuten) gefüllt?', answer:k, unit:'Kartons',
+        traps:[{v:X*60, hint:'Das sind Tafeln, keine Kartons. Wie viele Tafeln passen in einen Karton?'}],
+        tips:['Wie viele Tafeln entstehen in 60 Minuten?','Tafeln pro Stunde geteilt durch 24 (Tafeln pro Karton).'],
+        solution:[`Tafeln pro Stunde: ${X} · 60 = ${de(X*60)}`, `Kartons: ${de(X*60)} ÷ 24 = ${k}`] }; }
+    if (L===1){ const X = R.pick([100,120,140,160,180]); const p = X/2;
+      return { story:intro+` Die Anlage schafft ${X} Tafeln pro Minute und läuft eine Schicht lang (8 Stunden).`, q:'Wie viele volle Paletten sind am Ende der Schicht fertig?', answer:p, unit:'Paletten',
+        traps:[{v:X*480/24, hint:'Das sind Kartons. Gefragt sind Paletten: Wie viele Kartons passen auf eine Palette?'},{v:X*480, hint:'Das sind Tafeln. Rechne weiter bis zu den Paletten.'}],
+        tips:['Rechne in Schritten: Tafeln pro Schicht → Kartons → Paletten. Eine Schicht hat 8 · 60 Minuten.','Tafeln ÷ 24 = Kartons, Kartons ÷ 40 = Paletten.'],
+        solution:[`Minuten: 8 · 60 = 480`, `Tafeln: ${X} · 480 = ${de(X*480)}`, `Kartons: ${de(X*480)} ÷ 24 = ${de(X*20)}`, `Paletten: ${de(X*20)} ÷ 40 = ${p}`] }; }
+    const X = R.pick([96,128,160,192]); const p = X*15/32;
+    return { story:intro+` Die Anlage schafft ${X} Tafeln pro Minute. Die Schicht dauert 8 Stunden, davon steht die Anlage 30 Minuten wegen der Pause.`, q:'Wie viele volle Paletten sind am Ende der Schicht fertig?', answer:p, unit:'Paletten',
+      traps:[{v:X*480/960, hint:'Die Anlage steht 30 Minuten still. In dieser Zeit entstehen keine Tafeln.'},{v:X*450/24, hint:'Das sind Kartons. Gefragt sind Paletten.'}],
+      tips:['Wie lange läuft die Anlage wirklich? Ziehe die Pause ab.','Laufzeit · Tafeln pro Minute = Tafeln; dann ÷ 24 und ÷ 40.'],
+      solution:[`Laufzeit: 8 · 60 − 30 = 450 Minuten`, `Tafeln: ${X} · 450 = ${de(X*450)}`, `Kartons: ${de(X*450)} ÷ 24 = ${de(X*450/24)}`, `Paletten: ${de(X*450/24)} ÷ 40 = ${p}`] };
+  } },
+
+/* ---------------- Bereich 2: Qualität und Sicherheit ---------------- */
+{ id:'t06', area:2, kind:'hygiene', label:'Hygieneschleuse', who:'Herr Demir, Hygienebeauftragter', title:'Durch die Hygieneschleuse', type:'multi',
+  make(R,L){
+    const m = mkMulti(R,L,['Schmuck und Uhr ablegen.','Haarnetz (und bei Bart einen Bartschutz) aufsetzen.','Saubere Schutzkleidung und Arbeitsschuhe anziehen.','Hände gründlich waschen und desinfizieren.'],[
+      {t:'Das Handy mit in die Produktion nehmen, um Fotos zu machen.', hint:'Handys sind schmutzig und können herunterfallen. In der Produktion sind sie meist nicht erlaubt.'},
+      {t:'Kaugummi kauen, damit man frisch riecht.', hint:'Kaugummi kann herausfallen und im Produkt landen. Essen und Kauen sind im Produktionsbereich tabu.'},
+      {t:'Straßenkleidung anlassen, wenn man nur kurz hineingeht.', hint:'Auch bei kurzen Besuchen bringt Straßenkleidung Staub, Haare und Keime mit.'},
+      {t:'Nagellack und künstliche Fingernägel sind kein Problem.', hint:'Nagellack kann abplatzen und ins Produkt fallen. Deshalb ist er in der Lebensmittelproduktion verboten.'}],[3,4,4]);
+    return { story:'Bevor du in die Produktion darfst, musst du durch die Hygieneschleuse. Herr Demir erklärt dir, was dort passiert. Hygiene schützt die Lebensmittel und die Gesundheit der Kundinnen und Kunden.',
+      q:'Was gehört zur Hygieneschleuse? Wähle alle richtigen Aussagen.', options:m.options,
+      tips:['Überlege: Was könnte von dir ins Produkt fallen oder dorthin gelangen?','Haare, Schmuck, Kleidung und Hände sind wichtige Stichwörter.'],
+      solution:['Richtig sind: Schmuck ablegen, Haarnetz aufsetzen, Schutzkleidung anziehen, Hände waschen und desinfizieren.','Alles, was ins Produkt fallen oder Keime mitbringen könnte, bleibt draußen: Schmuck, Handy, Kaugummi, Nagellack.','Hygieneregeln sind Arbeitsschutz und Verbraucherschutz zugleich.'] };
+  } },
+
+{ id:'t07', area:2, kind:'lab', label:'Labor', who:'Frau Dr. Weiß, Laborleiterin', title:'Stichproben im Labor', type:'num',
+  make(R,L){
+    const [N,p] = R.pick([[2000,1],[4000,1],[3000,2],[2400,5],[2000,5]]); const S = N*p/100; const k = S*R.pick([0.05,0.1]);
+    const intro = `Aus jeder Charge zieht das Labor Stichproben und prüft Geschmack, Aussehen, Gewicht und Allergene. Heute besteht die Charge aus ${de(N)} Tafeln. Es werden ${p} % davon geprüft.`;
+    if (L===0) return { story:intro, q:'Wie viele Tafeln werden im Labor geprüft?', answer:S, unit:'Tafeln',
+      traps:[{v:p, hint:'Das ist der Prozentsatz. Gefragt ist die Anzahl der Tafeln.'}],
+      tips:['Gesucht ist ein Teil von der ganzen Charge: Berechne ' + p + ' % von ' + de(N) + '.', `1 % von ${de(N)} sind ${de(N/100)} Tafeln. Wie oft brauchst du das?`],
+      solution:[`1 % von ${de(N)} = ${de(N/100)}`, `${p} % = ${p} · ${de(N/100)} = ${de(S)} Tafeln`] };
+    if (L===1) return { story:intro+` In der Stichprobe sind ${de(k)} Tafeln fehlerhaft.`, q:'Wie viele Tafeln der Stichprobe sind fehlerfrei?', answer:S-k, unit:'Tafeln',
+      traps:[{v:k, hint:'Das sind die fehlerhaften Tafeln. Gefragt sind die fehlerfreien.'},{v:S, hint:'Das ist die ganze Stichprobe. Ein paar Tafeln sind fehlerhaft.'}],
+      tips:['Berechne zuerst die Größe der Stichprobe (' + p + ' % der Charge).','Stichprobe minus fehlerhafte Tafeln.'],
+      solution:[`Stichprobe: ${p} % von ${de(N)} = ${de(S)} Tafeln`, `Fehlerfrei: ${de(S)} − ${de(k)} = ${de(S-k)} Tafeln`] };
+    const q = 100 - k/S*100;
+    return { story:intro+` In der Stichprobe sind ${de(k)} Tafeln fehlerhaft.`, q:'Wie viel Prozent der Stichprobe sind fehlerfrei?', answer:q, unit:'%',
+      traps:[{v:k/S*100, hint:'Das ist der Anteil der fehlerhaften Tafeln. Gefragt ist der Anteil der fehlerfreien.'},{v:S-k, hint:'Das ist eine Anzahl von Tafeln. Gefragt ist ein Prozentwert.'}],
+      tips:['Wie groß ist die Stichprobe? Wie viel Prozent davon sind fehlerhaft?','Fehlerfrei = 100 % minus Anteil der fehlerhaften Tafeln.'],
+      solution:[`Stichprobe: ${p} % von ${de(N)} = ${de(S)} Tafeln`, `Fehlerhaft: ${de(k)} von ${de(S)} = ${de(k/S*100)} %`, `Fehlerfrei: 100 % − ${de(k/S*100)} % = ${de(q)} %`] };
+  } },
+
+{ id:'t08', area:2, kind:'trace', label:'Rückverfolgung', who:'Frau Dr. Weiß, Laborleiterin', title:'Fachbegriffe der Qualitätssicherung', type:'match',
+  make(R,L){
+    const rows = [
+      {term:'Charge', def:'Alle Produkte, die zusammen mit denselben Zutaten in einem Durchgang hergestellt wurden.', hint:'Eine Charge ist eine Produktionsmenge: gleiche Zutaten, gleicher Durchgang.'},
+      {term:'Mindesthaltbarkeitsdatum (MHD)', def:'Bis zu diesem Tag behält das ungeöffnete Lebensmittel bei richtiger Lagerung seine typischen Eigenschaften.', hint:'Das MHD steht auf der Verpackung und hat mit der Zeit zu tun.'},
+      {term:'Stichprobe', def:'Nur ein kleiner Teil der Produkte wird genau geprüft.', hint:'Man prüft nicht alles, sondern nur einen Ausschnitt.'},
+      {term:'Rückverfolgbarkeit', def:'Man kann nachvollziehen, woher die Zutaten kamen und wohin die Produkte geliefert wurden.', hint:'Es geht um den Weg der Ware: von woher, nach wohin.'},
+      {term:'Lebensmittelrecht', def:'Gesetze, die vorschreiben, wie sicher und wie gekennzeichnet Lebensmittel sein müssen.', hint:'Das sind Regeln, an die sich alle Hersteller halten müssen.'}].slice(0, L+3);
+    const m = mkMatch(R, rows);
+    return { story:`Auf einer Tafel steht der Aufdruck „L${R.int(100,999)}“ und ein MHD. Frau Dr. Weiß erklärt: „Mit diesen Angaben können wir bei einem Problem genau sagen, welche Tafeln betroffen sind.“`,
+      q:'Ordne jedem Begriff die passende Erklärung zu.', rows:m.rows, options:m.options,
+      tips:['Lies zuerst die Erklärungen und markiere Schlüsselwörter, zum Beispiel „Durchgang“, „Gesetze“, „nur ein kleiner Teil“.','Beginne mit dem Begriff, den du am sichersten kennst, und streiche die Erklärung gedanklich durch.'],
+      solution:m.rows.map(r => r.term + ' → ' + m.options[r.ok]) };
+  } },
+
+{ id:'t09', area:2, kind:'allergen', label:'Allergenmanagement', who:'Herr Berger, Fachkraft für Lebensmitteltechnik', title:'Nüsse und Milch trennen', type:'multi',
+  make(R,L){
+    const m = mkMulti(R,L,['Die Sorten ohne Nüsse zuerst herstellen, die Nuss-Sorten zuletzt.','Zwischen den Sorten gründlich nach Reinigungsplan säubern.','Allergene deutlich auf der Verpackung kennzeichnen.','Nuss-Zutaten getrennt lagern, zum Beispiel in farbigen Behältern.','Alle Beschäftigten regelmäßig zu Allergenen schulen.'],[
+      {t:'Nur kurz mit dem Besen abfegen, das reicht.', hint:'Staub und Reste können Allergene weitertragen. Es braucht eine gründliche Reinigung nach Plan.'},
+      {t:'Allergene nur nennen, wenn jemand danach fragt.', hint:'Allergene müssen immer auf der Verpackung stehen. Das schreibt das Lebensmittelrecht vor.'},
+      {t:'Alle Zutaten ungeordnet in ein gemeinsames Regal stellen.', hint:'Ohne Trennung können Nüsse oder Milchpulver in andere Produkte gelangen.'},
+      {t:'Die Nuss-Sorte zuerst, danach alle anderen Sorten.', hint:'Überlege: Wo bleiben nach der Nuss-Sorte Reste in der Anlage?'}],[3,4,5]);
+    return { story:'Die Fabrik stellt Vollmilchschokolade mit Haselnüssen und Sorten ohne Nüsse auf denselben Anlagen her. Für Menschen mit Nussallergie können schon Spuren gefährlich sein. Herr Berger sorgt dafür, dass nichts vermischt wird.',
+      q:'Mit welchen Maßnahmen verhindert der Betrieb, dass Allergene in die falsche Schokolade gelangen? Wähle alle richtigen.', options:m.options,
+      tips:['Es geht um Planung, Reinigung, Trennung, Kennzeichnung und Schulung.','Stelle dir vor, wo Nussreste in der Anlage bleiben könnten und wie man das verhindert.'],
+      solution:['Richtig sind Maßnahmen, die Vermischung verhindern oder sichtbar machen: gute Planung der Reihenfolge, gründliche Reinigung nach Plan, getrennte Lagerung, Kennzeichnung und Schulung.','Falsch sind Maßnahmen, die Risiken nur verstecken oder zufällig lassen.','Allergene müssen immer deutlich auf der Verpackung stehen.'] };
+  } },
+
+/* ---------------- Bereich 3: Entwicklung und Planung ---------------- */
+{ id:'t10', area:3, kind:'kitchen', label:'Produktentwicklung', who:'Frau Kaya, Süßwarentechnologin', title:'Was wünschen sich die Kunden?', type:'num',
+  make(R,L){
+    if (L===0){ const N = R.pick([200,400,500]), p = R.pick([15,25,35,45,60]); const a = N*p/100;
+      return { story:`Für die neue Sorte „Haselnuss-Crunch“ hat das Team ${N} Jugendliche befragt. Frau Kaya wertet die Umfrage aus: ${p} % würden die Sorte probieren.`,
+        q:'Wie viele der Befragten würden die Sorte probieren?', answer:a, unit:'Personen',
+        traps:[{v:p, hint:'Das ist der Prozentsatz. Gefragt ist die Anzahl der Personen.'}],
+        tips:[`Berechne ${p} % von ${N}.`, `1 % von ${N} sind ${N/100} Personen.`],
+        solution:[`1 % von ${N} = ${N/100}`, `${p} % = ${p} · ${N/100} = ${a} Personen`] }; }
+    if (L===1){ const N = R.pick([200,300,400,500]), p1 = R.pick([40,45,50]), p2 = R.pick([25,30,35]); const rest = 100-p1-p2, a = N*rest/100;
+      return { story:`Das Team befragt ${N} Jugendliche nach ihrer Lieblingssorte. ${p1} % wählen Vollmilch, ${p2} % Zartbitter. Alle anderen wählen Weiße Schokolade.`,
+        q:'Wie viele Jugendliche wählen Weiße Schokolade?', answer:a, unit:'Personen',
+        traps:[{v:rest, hint:'Das ist der Prozentsatz der Weißen Schokolade. Gefragt ist die Anzahl der Personen.'},{v:N*(p1+p2)/100, hint:'Das sind die Personen für Vollmilch und Zartbitter zusammen.'}],
+        tips:['Wie viel Prozent bleiben für Weiße Schokolade übrig? Alle Anteile zusammen sind 100 %.',`Berechne den Restanteil in Prozent von ${N}.`],
+        solution:[`Rest: 100 % − ${p1} % − ${p2} % = ${rest} %`, `${rest} % von ${N} = ${a} Personen`] }; }
+    const N = R.pick([200,400,500]), p = R.pick([15,25,35,45]), M = R.pick([20000,30000,40000]); const a = M*p/100;
+    return { story:`Von ${N} befragten Jugendlichen würden ${p} % die neue Sorte kaufen. In der Region leben ${de(M)} Jugendliche in dieser Zielgruppe. Frau Kaya rechnet hoch, wie viele Käufer es dort geben könnte.`,
+      q:'Wie viele Jugendliche der Region würden die Sorte nach dieser Hochrechnung kaufen?', answer:a, unit:'Personen',
+      traps:[{v:N*p/100, hint:'Das gilt nur für die Befragten. Rechne den Prozentsatz auf alle Jugendlichen der Region.'},{v:p, hint:'Das ist nur der Prozentsatz.'}],
+      tips:['Der Prozentanteil aus der Umfrage soll auf die ganze Region übertragen werden.',`Berechne ${p} % von ${de(M)}.`],
+      solution:[`Anteil aus der Umfrage: ${p} %`, `Hochrechnung: ${p} % von ${de(M)} = ${de(a)} Personen`, 'Wichtig: Eine Hochrechnung ist nur eine Schätzung.'] };
+  } },
+
+{ id:'t11', area:3, kind:'desk', label:'Einkauf & Planung', who:'Herr Schulte, Industriekaufmann', title:'Wie viel Kakaomasse brauchen wir?', type:'num',
+  make(R,L){
+    const N = R.pick([10000,20000,50000]), c = R.pick([30,40,50]); const kg = N*0.1, km = kg*c/100;
+    const intro = `Ein Händler bestellt ${de(N)} Tafeln zu je 100 g. Herr Schulte plant Produktion und Einkauf: Er muss genug Zutaten bestellen.`;
+    if (L===0) return { story:intro, q:'Wie viele Kilogramm wiegen alle Tafeln zusammen?', answer:kg, unit:'kg',
+      traps:[{v:N*100, hint:'Das sind Gramm. Rechne in Kilogramm um (kilo heißt tausend).'}],
+      tips:['Eine Tafel wiegt 100 g. Wie viel Gramm sind das bei allen Tafeln?','Gramm durch 1.000 teilen ergibt Kilogramm.'],
+      solution:[`Gramm: ${de(N)} · 100 g = ${de(N*100)} g`, `Kilogramm: ${de(N*100)} g ÷ 1.000 = ${de(kg)} kg`] };
+    if (L===1) return { story:intro+` Eine Tafel enthält ${c} % Kakaomasse.`, q:'Wie viele Kilogramm Kakaomasse müssen eingekauft werden?', answer:km, unit:'kg',
+      traps:[{v:kg, hint:'Das ist das Gewicht aller Tafeln. Nur ein Teil davon ist Kakaomasse.'},{v:N*100*c/100, hint:'Das sind Gramm. Rechne in Kilogramm um.'}],
+      tips:['Berechne erst das Gesamtgewicht in kg, dann den Anteil Kakaomasse in Prozent.',`${c} % von ${de(kg)} kg.`],
+      solution:[`Gesamtgewicht: ${de(N)} · 100 g = ${de(kg)} kg`, `Kakaomasse: ${c} % von ${de(kg)} kg = ${de(km)} kg`] };
+    const z = km*1.05;
+    return { story:intro+` Eine Tafel enthält ${c} % Kakaomasse. Beim Herstellen gehen 5 % der Kakaomasse als Verlust verloren (Reste in den Anlagen). Der Einkauf plant dafür 5 % mehr ein.`,
+      q:'Wie viele Kilogramm Kakaomasse müssen insgesamt eingekauft werden?', answer:z, unit:'kg',
+      traps:[{v:km, hint:'Der Verlust von 5 % ist noch nicht eingeplant.'},{v:km*0.95, hint:'Bei Verlust muss man mehr einkaufen, nicht weniger.'},{v:kg, hint:'Das ist das Gewicht aller Tafeln, nicht der Kakaomasse.'}],
+      tips:['Drei Schritte: Gesamtgewicht, Anteil Kakaomasse, Verlust-Zuschlag.','Zuschlag von 5 % bedeutet: mal 1,05.'],
+      solution:[`Gesamtgewicht: ${de(kg)} kg`, `Kakaomasse: ${c} % von ${de(kg)} kg = ${de(km)} kg`, `Mit 5 % Verlust: ${de(km)} · 1,05 = ${de(z,2)} kg`] };
+  } },
+
+{ id:'t12', area:3, kind:'design', label:'Verpackungsdesign', who:'Frau Lorenz, Mediengestalterin', title:'Pflichtangaben auf der Packung', type:'multi',
+  make(R,L){
+    const m = mkMulti(R,L,['Name des Lebensmittels, zum Beispiel „Vollmilchschokolade“.','Zutatenliste mit hervorgehobenen Allergenen.','Nettofüllmenge, zum Beispiel 100 g.','Mindesthaltbarkeitsdatum.','Name und Anschrift des Herstellers.'],[
+      {t:'Das Lieblingslied der Zielgruppe.', hint:'Das ist ein nettes Extra für die Werbung, aber keine Pflicht.'},
+      {t:'Ein QR-Code zum Onlineshop.', hint:'Ein QR-Code ist freiwillig und gehört zum Marketing.'},
+      {t:'Ein Foto der Geschäftsführung.', hint:'Das ist nicht vorgeschrieben. Das Lebensmittelrecht verlangt Sachangaben.'},
+      {t:'Der Einkaufspreis der Rohstoffe.', hint:'Interne Preise sind Betriebsgeheimnisse und stehen nicht auf der Packung.'}],[3,4,5]);
+    return { story:'Die neue Tafel „Haselnuss-Crunch“ bekommt eine Verpackung für Jugendliche. Frau Lorenz entwirft ein buntes Design. Doch bestimmte Angaben schreibt das Lebensmittelrecht vor.',
+      q:'Welche Angaben müssen immer auf die Verpackung? Wähle alle richtigen.', options:m.options,
+      tips:['Was muss ein Kunde wissen, um das Produkt sicher zu kaufen und zu essen?','Denke an: Was ist drin? Wie viel ist drin? Wie lange hält es? Wer hat es gemacht?'],
+      solution:['Pflicht sind Sachangaben: Name des Lebensmittels, Zutaten mit Allergenen, Füllmenge, Mindesthaltbarkeitsdatum, Hersteller (und weitere, zum Beispiel Nährwerte).','Freiwillig sind Werbung, Lieder, QR-Codes und Bilder.','Interne Informationen wie Einkaufspreise stehen nie auf der Packung.'] };
+  } },
+
+{ id:'t13', area:3, kind:'planboard', label:'Von der Idee zum Produkt', who:'Frau Bauer, Produktmanagerin', title:'Der Weg einer neuen Sorte', type:'order',
+  make(R,L){
+    const all = { idee:'Idee: Kundenwünsche und Trends sammeln', rez:'Rezeptur entwickeln und testen', kost:'Verkostung mit Testpersonen', des:'Verpackung gestalten',
+      einkauf:'Einkauf und Produktionsplanung', herst:'Herstellung und Verpacken', qs:'Qualitätsprüfung und Versand' };
+    const keys = L===0 ? ['idee','rez','einkauf','herst','qs'] : L===1 ? ['idee','rez','des','einkauf','herst','qs'] : ['idee','rez','kost','des','einkauf','herst','qs'];
+    const o = mkOrder(R, keys.map(k => ({k,t:all[k]})), [
+      ['idee','rez','Erst muss man wissen, was Kundinnen und Kunden wollen. Dann kann man eine Rezeptur entwickeln.'],
+      ['rez','kost','Verkostet wird, wenn es eine Rezeptur gibt.'],
+      ['rez','des','Die Verpackung wird passend zum fertigen Produkt gestaltet.'],
+      ['einkauf','herst','Rohstoffe müssen eingekauft und geplant sein, bevor produziert wird.'],
+      ['herst','qs','Geprüft wird das fertige Produkt, bevor es verschickt wird.'],
+      ['rez','einkauf','Erst wenn die Rezeptur feststeht, weiß man, was eingekauft werden muss.']]);
+    return { story:'Frau Bauer zeigt dir an der Planungswand, wie aus einer Idee ein Produkt im Supermarkt wird. Viele Abteilungen arbeiten dabei zusammen.',
+      q:'Bringe die Schritte von der Idee bis zum fertigen Produkt in die richtige Reihenfolge.', items:o.items, pairs:o.pairs, start:o.start,
+      tips:['Was braucht man zuerst, um überhaupt etwas Neues zu entwickeln?','Plane rückwärts: Was muss vor der Herstellung erledigt sein? Was kommt nach der Herstellung?'],
+      solution:['Richtige Reihenfolge:'].concat(keys.map((k,i) => (i+1)+'. '+all[k]),['Mehrere Abteilungen arbeiten zusammen: Entwicklung, Design, Einkauf, Produktion, Qualität und Versand.']) };
+  } },
+
+/* ---------------- Bereich 4: Kaufmännische Bereiche ---------------- */
+{ id:'t14', area:4, kind:'billboard', label:'Marketing', who:'Frau Aydin, Kauffrau für Marketingkommunikation', title:'Werbung oder Information?', type:'choice',
+  make(R,L){
+    const n = 5*R.int(40,60);
+    const c = mkChoice(R,L,`„Die Kakaotal Süßwaren GmbH stellt Schokoladenprodukte her und beschäftigt etwa ${n} Menschen. Die Zahlen stammen aus dem Jahresbericht der Industrie- und Handelskammer.“`,[
+      {t:'„Kakaotal: die allerbeste Schokolade der Welt! Unvergleichlich zart, von Millionen geliebt!“', hint:'Das ist Werbung: Übertreibungen („allerbeste“, „unvergleichlich“) und das Ziel zu verkaufen.'},
+      {t:'„Mega-Gewinnspiel! Link in der Bio, nur heute zwei Tafeln zum Preis von einer! #werbung“', hint:'Das ist ein Werbepost. Das Schlagwort #werbung verrät es.'},
+      {t:'„Auf unserer Webseite: Unsere Mission ist es, die Welt ein Stück süßer zu machen.“', hint:'Das ist die Selbstdarstellung des Unternehmens, keine neutrale Quelle.'},
+      {t:'„Ich fand die Tafel total eklig, die Firma ist der Letzte!“', hint:'Das ist eine einzelne, sehr persönliche Meinung und keine neutrale Information.'},
+      {t:'„Alle Mitarbeitenden von Kakaotal sind superglücklich und verdienen Millionen.“', hint:'Das ist eine Behauptung ohne Quelle und deshalb nicht überprüfbar.'}]);
+    return { story:'Du recherchierst über den Betrieb und findest mehrere Texte. Frau Aydin sagt: „Frage dich immer: Wer hat das geschrieben, und was will er damit erreichen?“',
+      q:'Welcher Text ist eine neutrale Information und keine Werbung oder Meinung?', options:c.options, ok:c.ok,
+      tips:['Werbung will verkaufen. Meinungen sind persönlich. Neutral heißt: sachlich und mit einer Quelle, die man prüfen kann.','Suche den Text, der keine Übertreibungen nutzt und eine unabhängige Quelle nennt.'],
+      solution:['Neutrale Information ist sachlich, überprüfbar und stammt von einer unabhängigen Stelle (zum Beispiel Kammer, Statistikamt, Zeitung).','Werbung und Selbstdarstellung wollen überzeugen oder verkaufen.','Einzelne Meinungen und Behauptungen ohne Quelle sind nicht neutral.'] };
+  } },
+
+{ id:'t15', area:4, kind:'shop', label:'Werksverkauf', who:'Herr Petersen, Verkäufer im Werksverkauf', title:'Preise im Werksverkauf', type:'num',
+  make(R,L){
+    const P = R.pick([1.2,1.4,1.6,1.8,2.0]); const tot = R2(10*P);
+    if (L===0) return { story:`Im Werksverkauf ist der direkte Kontakt zu den Kundinnen und Kunden wichtig. Eine Tafel kostet ${eur(P)}. Du kaufst 10 Tafeln für deine Klasse.`,
+      q:'Wie viel musst du bezahlen?', answer:tot, unit:'€', tol:0.005,
+      traps:[{v:P, hint:'Das ist der Preis für eine Tafel. Du kaufst 10 Tafeln.'}],
+      tips:['Preis einer Tafel mal Anzahl der Tafeln.','Multipliziere mit 10: das Komma wandert eine Stelle.'],
+      solution:[`10 · ${eur(P)} = ${eur(tot)}`] };
+    const r = R.pick([10,20,25]); const after = R2(tot*(100-r)/100);
+    if (L===1) return { story:`Eine Tafel kostet ${eur(P)}. Ab 10 Tafeln gibt es ${r} % Mengenrabatt auf den gesamten Preis. Du kaufst 10 Tafeln.`,
+      q:'Wie viel musst du bezahlen?', answer:after, unit:'€', tol:0.005,
+      traps:[{v:tot, hint:'Das ist der Preis ohne Rabatt.'},{v:R2(tot*r/100), hint:'Das ist die Ersparnis, nicht der Preis, den du zahlst.'}],
+      tips:['Berechne zuerst den Preis für 10 Tafeln, danach den Rabatt in Euro.','Du zahlst: Preis minus Rabatt, oder gleich ' + (100-r) + ' % vom Preis.'],
+      solution:[`Preis ohne Rabatt: 10 · ${eur(P)} = ${eur(tot)}`, `Rabatt: ${r} % von ${eur(tot)} = ${eur(tot*r/100)}`, `Du zahlst: ${eur(tot)} − ${eur(tot*r/100)} = ${eur(after)}`] };
+    const g = 2; const fin = R2(after-g);
+    return { story:`Eine Tafel kostet ${eur(P)}. Ab 10 Tafeln gibt es ${r} % Mengenrabatt auf den gesamten Preis. Zusätzlich hast du einen Gutschein über ${eur(g)}, der am Ende abgezogen wird. Du kaufst 10 Tafeln.`,
+      q:'Wie viel musst du bezahlen?', answer:fin, unit:'€', tol:0.005,
+      traps:[{v:after, hint:'Der Gutschein ist noch nicht abgezogen.'},{v:R2(tot-g), hint:'Der Mengenrabatt fehlt noch. Er wird vor dem Gutschein abgezogen.'},{v:tot, hint:'Das ist der Preis ohne Rabatt und ohne Gutschein.'}],
+      tips:['Reihenfolge: erst Preis, dann Mengenrabatt in Prozent, zuletzt den Gutschein abziehen.',`Rabatt: ${r} % von ${eur(tot)}.`],
+      solution:[`Preis: 10 · ${eur(P)} = ${eur(tot)}`, `Nach Rabatt: ${eur(tot)} − ${r} % = ${eur(after)}`, `Nach Gutschein: ${eur(after)} − ${eur(g)} = ${eur(fin)}`] };
+  } },
+
+{ id:'t16', area:4, kind:'office', label:'Verwaltung', who:'Frau Richter, Verwaltung', title:'Wer macht was im Büro?', type:'match',
+  make(R,L){
+    const rows = [
+      {term:'Buchhaltung', def:'Erfasst alle Einnahmen und Ausgaben und schreibt Rechnungen.', hint:'Hier geht es um Zahlen, Rechnungen und Belege.'},
+      {term:'Personalabteilung', def:'Stellt Beschäftigte ein und kümmert sich um Verträge, Gehalt und Urlaub.', hint:'Hier geht es um die Menschen, die im Betrieb arbeiten.'},
+      {term:'Kundenservice', def:'Beantwortet Fragen und Beschwerden von Händlern und Kundinnen.', hint:'Hier ist der Kontakt nach außen, zu Kundinnen und Kunden.'},
+      {term:'Einkauf', def:'Bestellt Rohstoffe und Material bei Lieferanten.', hint:'Hier wird Material von Lieferanten beschafft.'},
+      {term:'Vertrieb', def:'Verkauft die Produkte an Handelspartner.', hint:'Hier geht es um den Verkauf der fertigen Produkte.'}].slice(0, L+3);
+    const m = mkMatch(R, rows);
+    return { story:'In der Verwaltung arbeiten Kaufleute an Computern. Frau Richter zeigt dir die Büros: Hier laufen viele Fäden des Betriebs zusammen.',
+      q:'Ordne jede Abteilung ihrer Aufgabe zu.', rows:m.rows, options:m.options,
+      tips:['Überlege bei jeder Abteilung: Mit wem hat sie zu tun? Mit Beschäftigten, Lieferanten, Kunden oder mit Zahlen?','Beginne mit der Abteilung, deren Aufgabe du sicher weißt.'],
+      solution:m.rows.map(r => r.term + ' → ' + m.options[r.ok]) };
+  } },
+
+{ id:'t17', area:4, kind:'safe', label:'Geld und Gewinn', who:'Herr Braun, Industriekaufmann im Controlling', title:'Wie verdient der Betrieb Geld?', type:'num',
+  make(R,L){
+    const U = R.pick([400000,500000,600000,800000]); const p1 = R.pick([35,40]), p2 = R.pick([25,30]), p3 = R.pick([10,12]), p4 = R.pick([8,10]);
+    const g = 100-p1-p2-p3-p4; const prof = U*g/100;
+    const a = [U*p1/100, U*p2/100, U*p3/100, U*p4/100];
+    if (L===0) return { story:`Der Betrieb nimmt im Monat ${eur(U).replace(',00','')} durch den Verkauf von Schokolade ein. Er zahlt: Rohstoffe an Lieferanten ${de(a[0])} €, Löhne an die Beschäftigten ${de(a[1])} €, Energie und Technik ${de(a[2])} €, Sonstiges ${de(a[3])} €.`,
+      q:'Wie hoch ist der Gewinn in diesem Monat?', answer:prof, unit:'€',
+      traps:[{v:a[0]+a[1]+a[2]+a[3], hint:'Das sind die Ausgaben. Gewinn = Einnahmen − Ausgaben.'}],
+      tips:['Zähle zuerst alle Ausgaben zusammen.','Gewinn = Einnahmen minus alle Ausgaben.'],
+      solution:[`Ausgaben: ${de(a[0])} + ${de(a[1])} + ${de(a[2])} + ${de(a[3])} = ${de(U-prof)} €`, `Gewinn: ${de(U)} € − ${de(U-prof)} € = ${de(prof)} €`] };
+    if (L===1) return { story:`Der Betrieb nimmt im Monat ${de(U)} € ein. Von den Einnahmen gehen ${p1} % an Lieferanten (Rohstoffe), ${p2} % an die Beschäftigten (Löhne), ${p3} % für Energie und Technik und ${p4} % für Sonstiges.`,
+      q:'Wie hoch ist der Gewinn in Euro?', answer:prof, unit:'€',
+      traps:[{v:g, hint:'Das ist der Gewinn in Prozent. Gefragt ist der Gewinn in Euro.'},{v:U-prof, hint:'Das sind die Ausgaben. Gewinn = Einnahmen − Ausgaben.'}],
+      tips:['Wie viel Prozent der Einnahmen bleiben nach allen Ausgaben übrig?',`Berechne den Prozentsatz vom Gewinn von ${de(U)} €.`],
+      solution:[`Ausgaben in Prozent: ${p1} + ${p2} + ${p3} + ${p4} = ${100-g} %`, `Gewinn in Prozent: 100 % − ${100-g} % = ${g} %`, `${g} % von ${de(U)} € = ${de(prof)} €`] };
+    const t = R.pick([25,30]); const net = prof*(100-t)/100;
+    return { story:`Der Betrieb nimmt im Monat ${de(U)} € ein. Ausgaben: ${p1} % Rohstoffe, ${p2} % Löhne, ${p3} % Energie und Technik, ${p4} % Sonstiges. Vom Gewinn zahlt der Betrieb ${t} % Steuern.`,
+      q:'Wie viel Gewinn bleibt nach den Steuern?', answer:net, unit:'€',
+      traps:[{v:prof, hint:'Das ist der Gewinn vor Steuern.'},{v:prof*t/100, hint:'Das sind die Steuern. Gefragt ist, was nach den Steuern bleibt.'},{v:U*(100-t)/100, hint:'Steuern werden nur vom Gewinn gezahlt, nicht von den Einnahmen.'}],
+      tips:['Zwei Schritte: erst den Gewinn vor Steuern berechnen, dann die Steuern abziehen.',`Gewinn in Prozent: 100 % minus alle Ausgaben. Danach ${100-t} % davon.`],
+      solution:[`Gewinn vor Steuern: ${g} % von ${de(U)} € = ${de(prof)} €`, `Steuern: ${t} % von ${de(prof)} € = ${de(prof*t/100)} €`, `Nach Steuern: ${de(prof)} € − ${de(prof*t/100)} € = ${de(net)} €`] };
+  } },
+
+{ id:'t18', area:4, kind:'meeting', label:'Interview vorbereiten', who:'Herr Albrecht, Ausbilder', title:'Gute Interviewfragen', type:'multi',
+  make(R,L){
+    const m = mkMulti(R,L,['Wie sieht ein typischer Arbeitstag in deiner Ausbildung aus?','Was gefällt dir an deinem Beruf besonders und was ist schwierig?','Welchen Schulabschluss braucht man und wie lange dauert die Ausbildung?','Wie läuft die Ausbildung zwischen Betrieb und Berufsschule ab?','Welche Aufgaben darfst du schon selbstständig übernehmen?'],[
+      {t:'Verdienst du viel?', hint:'Diese Frage ist unklar und nur mit Ja oder Nein zu beantworten. Besser sind offene Fragen mit W-Wörtern.'},
+      {t:'Ist dein Chef doof?', hint:'Das ist unhöflich und bringt keine nützliche Information.'},
+      {t:'Gefällt dir die Arbeit?', hint:'Das ist eine Ja-Nein-Frage. Offene Fragen bringen mehr Information.'},
+      {t:'Wie alt bist du und wo wohnst du?', hint:'Private Angaben gehören nicht in ein Berufsinterview.'}],[3,4,5]);
+    return { story:'Du darfst bald eine Auszubildende des Betriebs interviewen. Herr Albrecht gibt dir einen Tipp: „Gute Fragen sind offen, höflich und passen zum Thema Beruf.“',
+      q:'Welche Fragen eignen sich gut für das Interview? Wähle alle richtigen.', options:m.options,
+      tips:['Offene Fragen beginnen oft mit W-Wörtern (Wie? Was? Welche?) und lassen sich nicht mit Ja oder Nein beantworten.','Wähle Fragen, die etwas über Alltag, Voraussetzungen, Ablauf oder Chancen des Berufs verraten.'],
+      solution:['Gute Fragen sind offen, höflich und beruflich: Arbeitstag, Voraussetzungen, Ablauf der Ausbildung, Aufgaben.','Ja-Nein-Fragen, unhöfliche oder private Fragen sind ungeeignet.','Notiere die Antworten, zum Beispiel digital oder in einem Beobachtungsbogen, und werte sie danach aus.'] };
+  } },
+
+/* ---------------- Bereich 5: Technik, Nachhaltigkeit und Ausbildung ---------------- */
+{ id:'t19', area:5, kind:'workshop', label:'Instandhaltung', who:'Frau Kowalski, Mechatronikerin', title:'Sicher an der Maschine arbeiten', type:'choice',
+  make(R,L){
+    const c = mkChoice(R,L,'Maschine am Hauptschalter ausschalten, gegen Wiedereinschalten sichern (zum Beispiel mit Schloss und Schild) und erst dann arbeiten.',[
+      {t:'Die Maschine auf „langsam“ stellen und vorsichtig arbeiten.', hint:'Auch eine langsame Walze kann Hände einziehen. Eine laufende Maschine darf man nicht warten.'},
+      {t:'Die Schutzabdeckung abnehmen und die Maschine weiterlaufen lassen, damit man den Fehler sieht.', hint:'Schutzabdeckungen dürfen nicht entfernt werden, solange die Maschine läuft.'},
+      {t:'Handschuhe anziehen, das reicht als Schutz.', hint:'Handschuhe schützen nicht vor einer anlaufenden Maschine. Handschuhe an drehenden Teilen können sogar eingezogen werden.'},
+      {t:'Einen Kollegen bitten, die Maschine „kurz“ auszuschalten, und gleich anfangen.', hint:'Wer arbeitet, muss selbst sichern. Sonst kann jemand die Maschine versehentlich wieder einschalten.'},
+      {t:'Erst arbeiten und danach den Chef informieren.', hint:'Erst sichern, dann arbeiten, und zwar nach der Betriebsanweisung.'}]);
+    return { story:'Frau Kowalski soll eine Walze der Conchiermaschine warten. Sie arbeitet in der Instandhaltung und sorgt dafür, dass die Anlagen sicher laufen.',
+      q:'Was muss sie als Erstes tun, bevor sie an der Walze arbeitet?', options:c.options, ok:c.ok,
+      tips:['Was könnte passieren, wenn jemand die Maschine während der Wartung einschaltet?','Merke dir die Reihenfolge: ausschalten, sichern, prüfen, erst dann arbeiten.'],
+      solution:['Vor der Wartung wird die Maschine ausgeschaltet und gegen Wiedereinschalten gesichert (Schloss und Schild).','Erst danach darf man arbeiten. So kann niemand die Maschine versehentlich starten.','Das gehört zum Arbeitsschutz: Regeln, Schutzkleidung und Schulungen schützen die Gesundheit.'] };
+  } },
+
+{ id:'t20', area:5, kind:'solar', label:'Energie & Umwelt', who:'Herr Vogel, Energiebeauftragter', title:'Abwärme nutzen', type:'num',
+  make(R,L){
+    const W = R.pick([400,500,600,800]), p = R.pick([20,25,30,40]); const sp = W*p/100, rest = W-sp;
+    const intro = `Die Fabrik braucht im Jahr ${W} MWh Wärme. Seit einem Jahr wird die Abwärme der Kühlanlagen genutzt und deckt ${p} % dieses Bedarfs. Den Rest erzeugt eine Gasheizung.`;
+    if (L===0) return { story:intro, q:'Wie viele MWh Wärme spart die Abwärmenutzung im Jahr?', answer:sp, unit:'MWh',
+      traps:[{v:rest, hint:'Das ist der Rest, der noch mit Gas erzeugt wird. Gefragt ist die Menge, die gespart wird.'},{v:p, hint:'Das ist der Prozentsatz. Gefragt ist die Menge in MWh.'}],
+      tips:[`Berechne ${p} % von ${W} MWh.`, `1 % von ${W} MWh sind ${de(W/100)} MWh.`],
+      solution:[`1 % von ${W} MWh = ${de(W/100)} MWh`, `${p} % = ${p} · ${de(W/100)} = ${de(sp)} MWh`] };
+    if (L===1) return { story:intro, q:'Wie viele MWh Wärme müssen noch mit Gas erzeugt werden?', answer:rest, unit:'MWh',
+      traps:[{v:sp, hint:'Das ist die Menge, die durch Abwärme gespart wird. Gefragt ist der Rest.'},{v:100-p, hint:'Das ist der Prozentsatz. Gefragt ist die Menge in MWh.'}],
+      tips:['Wie viel Prozent müssen noch mit Gas gedeckt werden?',`Berechne ${100-p} % von ${W} MWh.`],
+      solution:[`Gas-Anteil: 100 % − ${p} % = ${100-p} %`, `${100-p} % von ${W} MWh = ${de(rest)} MWh`] };
+    const co2 = sp*0.2;
+    return { story:intro+' Pro MWh Gas entstehen etwa 0,2 Tonnen CO₂.', q:'Wie viele Tonnen CO₂ spart der Betrieb durch die Abwärmenutzung pro Jahr?', answer:co2, unit:'t CO₂', tol:0.005,
+      traps:[{v:sp, hint:'Das sind die gesparten MWh. Rechne sie in Tonnen CO₂ um.'},{v:rest*0.2, hint:'Das ist das CO₂ der Gasheizung. Gefragt ist die Einsparung durch die Abwärme.'}],
+      tips:['Zwei Schritte: Wie viele MWh werden gespart? Wie viel CO₂ gehört zu diesen MWh?',`Gesparte MWh · 0,2 t.`],
+      solution:[`Gesparte Wärme: ${p} % von ${W} MWh = ${de(sp)} MWh`, `CO₂: ${de(sp)} MWh · 0,2 t = ${de(co2,1)} t`, 'Weitere Maßnahmen: Abfall vermeiden, Fair-Trade- und Nachhaltigkeitssiegel beim Kakaoeinkauf.'] };
+  } },
+
+{ id:'t21', area:5, kind:'jobboard', label:'Berufe im Betrieb', who:'Frau Peters, Ausbildungsleiterin', title:'Berufe und ihre Tätigkeiten', type:'match',
+  make(R,L){
+    const rows = [
+      {term:'Süßwarentechnologe / Süßwarentechnologin', def:'Stellt Schokolade und Süßwaren her und überwacht die Herstellung.', hint:'Dieser Beruf macht die Süßigkeiten selbst.'},
+      {term:'Mechatroniker / Mechatronikerin', def:'Wartet und repariert Maschinen mit Mechanik, Elektrik und Steuerung.', hint:'Hier kommen Mechanik und Elektronik zusammen.'},
+      {term:'Fachkraft für Lagerlogistik', def:'Nimmt Waren an, lagert sie und stellt Lieferungen zusammen.', hint:'Dieser Beruf kennt sich mit Lager und Transport aus.'},
+      {term:'Industriekaufmann / Industriekauffrau', def:'Arbeitet in Einkauf, Verkauf, Buchhaltung und Planung am Computer.', hint:'Dieser Beruf arbeitet im Büro mit Zahlen und Verträgen.'},
+      {term:'Fachkraft für Lebensmitteltechnik', def:'Bedient und überwacht Produktionsanlagen und prüft die Qualität.', hint:'Hier geht es um Anlagen und Qualitätskontrolle in der Lebensmittelproduktion.'}];
+    const pick = L===0 ? [0,1,2] : L===1 ? [0,1,2,3] : [0,1,2,3,4];
+    const m = mkMatch(R, pick.map(i => rows[i]));
+    return { story:'Frau Peters leitet die Ausbildungsabteilung. Alle Berufe im Betrieb werden dual ausgebildet: im Betrieb und in der Berufsschule. Die Ausbildung dauert je nach Beruf 3 bis 3,5 Jahre und endet mit einer Abschlussprüfung (zum Beispiel vor der IHK). Meist ist ein Hauptschul- oder Realschulabschluss üblich, vorgeschrieben ist er nicht.',
+      q:'Ordne jedem Beruf die passende Tätigkeit zu.', rows:m.rows, options:m.options,
+      tips:['Lies die Tätigkeiten und suche Schlüsselwörter: Maschinen, Lager, Büro, Herstellung.','Beginne mit dem Beruf, dessen Name schon etwas verrät, zum Beispiel „Lager…“ oder „…kaufmann“.'],
+      solution:m.rows.map(r => r.term + ' → ' + m.options[r.ok]).concat(['Mindestens drei Berufe im Betrieb zu kennen, hilft dir beim Vergleich mit deinen eigenen Stärken.']) };
+  } },
+
+{ id:'t22', area:5, kind:'bench', label:'Gespräch mit Mia', who:'Mia, Auszubildende im 2. Lehrjahr', title:'Was passt zu mir?', type:'reflect',
+  make(R,L){
+    const P = [
+      { label:'Das hat mich bei der Erkundung überrascht:', ph:'Mich hat überrascht, dass …' },
+      { label:'Dieser Beruf aus dem Betrieb interessiert mich am meisten. Das passt zu mir (fachlich, persönlich oder körperlich):', ph:'Der Beruf … passt zu mir, weil …' },
+      { label:'Meine nächsten Schritte zur Berufsorientierung (zum Beispiel Praktikumsplatz, weitere Erkundung):', ph:'Als Nächstes möchte ich …' },
+      { label:'Rückmeldung zur Teamarbeit: Das hat gut geklappt, das wünsche ich mir beim nächsten Mal:', ph:'In unserem Team hat gut geklappt …' }];
+    const prompts = P.slice(0, L===0 ? 3 : 4); const min = [12,15,25][L];
+    return { story:'Mia macht eine Ausbildung im Betrieb. Sie erzählt dir von ihrem Alltag und fragt dich zum Schluss: „Und, was nimmst du aus dem Rundgang mit?“ Hier gibt es keine falschen Antworten, aber schreibe ehrlich und mit ganzen Sätzen.',
+      q:'Beantworte die Fragen für dich. Deine Antworten erscheinen später in deinem Spielbericht.', prompts, min,
+      tips:['Fange mit den vorgegebenen Satzanfängen an. Ein bis zwei Sätze reichen.','Denke an Berufe, die du kennengelernt hast: Was fandest du spannend, was eher nicht? Warum?'],
+      solution:['Beispiel: „Mich hat überrascht, wie viele Berufe es in einer Schokoladenfabrik gibt.“','Beispiel: „Mechatroniker passt zu mir, weil ich gern Dinge repariere und genau arbeite.“','Beispiel: „Als Nächstes suche ich ein Praktikum und frage beim Betrieb nach.“'] };
+  } },
+
+{ id:'t23', area:5, kind:'trophy', label:'Abschlussrätsel', who:'Frau Berger, Geschäftsführerin', title:'Das große Abschlussrätsel', type:'final',
+  make(R,L,ctx){
+    const st = ctx.steck; const b = st.bereiche;
+    // Teil A
+    let A;
+    if (L===0){ const a = b[0].v+b[1].v; A = { type:'num', q:'Wie viele Beschäftigte arbeiten zusammen in „'+b[0].n+'“ und in „'+b[1].n+'“? (Infotafel am Startplatz)', answer:a, unit:'Beschäftigte',
+      traps:[{v:b[0].v, hint:'Das ist nur ein Bereich. Beide Bereiche zusammenzählen.'}], sol:`${b[0].v} + ${b[1].v} = ${a}` }; }
+    else if (L===1){ A = { type:'num', q:'Wie viele Beschäftigte hat der Betrieb in den fünf Bereichen zusammen? (Infotafel am Startplatz)', answer:st.sum, unit:'Beschäftigte',
+      traps:[{v:st.sum+st.azubi, hint:'Die Auszubildenden stehen in dieser Aufgabe nicht dabei. Zähle nur die fünf Bereiche.'}], sol:b.map(x => x.v).join(' + ')+` = ${st.sum}` }; }
+    else { const a = st.sum+st.azubi; A = { type:'num', q:'Wie viele Menschen arbeiten im Betrieb insgesamt, wenn man die Auszubildenden mitzählt? (Infotafel am Startplatz)', answer:a, unit:'Personen',
+      traps:[{v:st.sum, hint:'Die Auszubildenden fehlen noch. Sie zählen zusätzlich.'}], sol:b.map(x => x.v).join(' + ')+` + ${st.azubi} Auszubildende = ${a}` }; }
+    // Teil B
+    const cb = mkChoice(R,L,'Lieferanten für Rohstoffe, Beschäftigte als Lohn, Energieversorger und der Staat (Steuern).',[
+      {t:'Nur die Kundinnen und Kunden, denn sie haben ja bezahlt.', hint:'Kundinnen und Kunden zahlen das Geld ein. Aber der Betrieb gibt es auch wieder aus.'},
+      {t:'Niemand, der Betrieb behält alles als Gewinn.', hint:'Aus den Einnahmen werden zuerst Rohstoffe, Löhne, Energie und Steuern bezahlt. Erst der Rest ist Gewinn.'},
+      {t:'Nur die Geschäftsführung.', hint:'Auch die Geschäftsführung bekommt Gehalt. Aber Rohstoffe, Energie und Löhne aller Beschäftigten werden ebenfalls bezahlt.'},
+      {t:'Nur die Berufsschule.', hint:'Die Berufsschule wird vom Staat bezahlt. Der Betrieb zahlt aber vor allem Lieferanten und Beschäftigte.'},
+      {t:'Nur die Konkurrenz.', hint:'Konkurrenten bekommen kein Geld vom Betrieb.'}]);
+    const B = { type:'choice', q:'Wer bekommt einen Teil des Geldes, das der Betrieb durch den Verkauf einnimmt?', options:cb.options, ok:cb.ok, sol:'Von den Einnahmen werden Lieferanten, Beschäftigte, Energie und Steuern bezahlt; der Rest ist Gewinn.' };
+    // Teil C
+    const cm = mkMulti(R,L,['Schutzkleidung und Haarnetz schützen Produkt und Beschäftigte.','Maschinen werden vor der Wartung ausgeschaltet und gesichert.','Pausen, Lärmschutz und Hautschutz gehören zum Gesundheitsschutz.'],[
+      {t:'Sicherheitsregeln gelten nur für neue Beschäftigte.', hint:'Sicherheitsregeln gelten für alle, immer.'},
+      {t:'Wenn es schnell gehen muss, darf man Schutzvorrichtungen entfernen.', hint:'Schutzvorrichtungen dürfen nie entfernt werden, auch nicht bei Zeitdruck.'},
+      {t:'Hygieneregeln sind nur eine Sache des Betriebs, nicht der Gesundheit.', hint:'Hygiene schützt Menschen und Produkte, sie gehört zur Gesundheit.'},
+      {t:'Arbeitsschutz ist freiwillig, wenn man sich fit fühlt.', hint:'Arbeitsschutz ist Pflicht, unabhängig vom Befinden.'}],[3,3,3]);
+    const C = { type:'multi', q:'Welche Aussagen zu Arbeitssicherheit und Gesundheitsschutz stimmen?', options:cm.options, sol:'Richtig sind: Schutzkleidung, Sichern der Maschinen, Pausen und Schutz vor Lärm und Hautschäden.' };
+    const parts = [A,B,C];
+    return { story:'Zum Schluss hat Frau Berger drei Rätsel für dich vorbereitet. Wer sie löst, hat den ganzen Betrieb verstanden. Teil A brauchst du die Zahlen von der Infotafel am Startplatz.',
+      q:'Löse die drei Teilrätsel.', parts, 
+      tips:['Zu Teil A: Gehe zurück zum Startplatz und lies die Infotafel noch einmal. Du kannst danach zurückkommen.','Teil B erinnert dich an die Aufgaben im Bereich „Kaufmännische Bereiche“, Teil C an Hygiene und Instandhaltung.'],
+      solution:['Teil A: '+A.sol, 'Teil B: '+B.sol, 'Teil C: '+C.sol] };
+  } }
+];
+
+/* ---------- Texte für Hilfe ---------- */
+const HELP_HTML = [
+  ['Ziel', 'Löse an den gelben Rauten Aufgaben. Wenn du alle Aufgaben eines Bereichs gelöst hast, wird der nächste Bereich geöffnet. Insgesamt gibt es 5 Bereiche.'],
+  ['Steuerung am PC', 'Laufen mit W A S D oder den Pfeiltasten. Maus gedrückt halten und ziehen zum Umschauen. Klick auf eine Raute oder Taste E zum Öffnen. Esc schließt Fenster, Enter prüft eine Antwort.'],
+  ['Steuerung auf dem iPad', 'Steuerknüppel links unten zum Laufen. Mit dem Finger über die Welt wischen zum Umschauen. Auf eine Raute tippen oder den grünen Knopf „Öffnen“ drücken, wenn du nah genug bist.'],
+  ['Hinweis, Karte, Menü', 'Der Knopf „Hinweis“ zeigt einen Pfeil und die Entfernung zur nächsten Aufgabe. Die Karte zeigt, welche Bereiche offen, gesperrt oder geschafft sind. Im Menü findest du die Hilfe, einen Zwischenbericht und den Neustart.'],
+  ['Hilfen bei Aufgaben', 'Bei einer falschen Antwort bekommst du einen Hinweis, aber nie die Lösung. Du kannst es so oft versuchen, wie du willst. Der Knopf „Tipp“ zeigt erst einen Denkanstoß, dann einen konkreten Ansatz. Erst nach beiden Tipps kannst du dir den Lösungsweg zeigen lassen.'],
+  ['Punkte', 'Pro Aufgabe gibt es bis zu 10 Punkte. Tipps und falsche Versuche kosten etwas Punkte, richtige Lösungen bringen aber immer mindestens 4 Punkte. Wer die Lösung ansieht, bekommt 1 Punkt.'],
+  ['Infomappe', 'In der Infomappe stehen alle Informationen, die du für die Aufgaben brauchst. Du findest sie im Hauptmenü und im Menü während des Spiels. Lies sie am besten vor dem Start. Mit der Suche findest du schnell einzelne Stichwörter.'],
+  ['Spielbericht', 'Am Ende bekommst du einen ausführlichen Spielbericht als PDF-Datei. Du kannst ihn ansehen und herunterladen. Dein Name steht darin, wenn du ihn auf dem Startbildschirm einträgst.'],
+  ['Datenschutz', 'Dieses Spiel läuft nur in deinem Browser. Es gibt kein Konto und keine Datenübertragung. Dein Spielstand und dein Name (freiwillig) liegen nur auf diesem Gerät. Der Name erscheint nur in deinem Spielbericht.']
+];
+
+/* ====================================================================
+   INFOMAPPE – hier stehen alle Informationen, die man für die Aufgaben braucht.
+   Aufbau: Kapitel { id, title, intro, cards:[{h, lines:[...]}], recall:[[Frage, Antwort], ...] }
+   ==================================================================== */
+const INFO_CHAPTERS = [
+{ id:'rechnen', title:'Rechnen und Umrechnen', intro:'Diese Werkzeuge brauchst du in fast allen Rechenaufgaben. Lies sie zuerst.',
+  cards:[
+   { h:'Prozent', lines:['1 % ist ein Hundertstel vom Ganzen: 1 % von 400 = 400 ÷ 100 = 4.','p % von einem Ganzen: erst durch 100, dann mal p. Beispiel: 25 % von 400 = 4 · 25 = 100.','Alle Anteile zusammen sind 100 %. Was übrig bleibt: 100 % minus die anderen Anteile.','Rabatt von r %: Du zahlst (100 − r) % vom Preis. Zuschlag von 5 %: mal 1,05.','Eine Hochrechnung überträgt einen Prozentsatz aus einer Umfrage auf eine größere Gruppe. Sie ist nur eine Schätzung.'] },
+   { h:'Einheiten umrechnen', lines:['1 kg = 1.000 g und 1 t = 1.000 kg.','1 Stunde = 60 Minuten. Eine Schicht von 8 Stunden hat 480 Minuten. Pausen, in denen die Anlage steht, zählen nicht zur Laufzeit. Beispiel: 8 Stunden minus 30 Minuten Pause = 450 Minuten Laufzeit.','1 MWh = 1.000 kWh (Energie). Pro MWh Erdgas entstehen etwa 0,2 Tonnen CO₂.','Rechne bei Mengen mit Verpackungsstufen immer Schritt für Schritt: Tafeln → Kartons → Paletten.'] },
+   { h:'Rechenwege und Eingabe', lines:['Lies die Aufgabe zweimal und markiere alle Zahlen und Einheiten.','Schreibe jeden Rechenschritt einzeln auf und prüfe am Ende die Einheit.','Gewinn = Einnahmen − Ausgaben.','Mittelwert = Summe aller Werte ÷ Anzahl der Werte.','Im Spiel darfst du Komma oder Punkt schreiben, die Einheit ist egal: 12,5 und 12.5 sind gleich.'] }
+  ],
+  recall:[['Wie berechnet man 15 % von 200?','200 ÷ 100 = 2, dann 2 · 15 = 30.'],['Was heißt „5 % Verlust einplanen“?','Man braucht 5 % mehr, also mal 1,05.'],['Wie viele Minuten hat eine Schicht von 8 Stunden mit 30 Minuten Pause Laufzeit?','8 · 60 − 30 = 450 Minuten.']] },
+
+{ id:'betrieb', title:'Der Betrieb im Überblick', intro:'Alles über die Kakaotal Süßwaren GmbH (ein ausgedachter Beispielbetrieb).',
+  cards:[
+   { h:'Steckbrief', lines:['Branche: Lebensmittelindustrie, genauer Süßwaren.','Produkte: Tafelschokolade, Pralinen und Schokoriegel. Verkauft werden sie an den Handel, im Onlineshop und im Werksverkauf.','Größe: Die Zahl der Beschäftigten ist in jedem Spiel anders. Sie steht auf der Infotafel am Startplatz (blaue Raute). Merke sie dir für das Abschlussrätsel.'] },
+   { h:'Organisation: fünf Bereiche', lines:['Von der Rohware zum Produkt: Wareneingang, Lager, Produktion, Verpackung, Versand.','Qualität und Sicherheit: Labor, Hygiene, Allergenmanagement.','Entwicklung und Planung: neue Sorten, Einkauf, Produktionsplanung, Verpackungsdesign.','Kaufmännische Bereiche: Marketing, Vertrieb, Verwaltung, Werksverkauf.','Technik, Nachhaltigkeit und Ausbildung: Instandhaltung, Energie und Umwelt, Ausbildungsabteilung.','Die Geschäftsführung leitet alle Bereiche. Die Abteilungen arbeiten im Gesamtprozess zusammen.'] },
+   { h:'Wie verdient der Betrieb Geld?', lines:['Einnahmen: Kundinnen und Kunden (Handel, Onlineshop, Werksverkauf) bezahlen für die Schokolade.','Ausgaben: Lieferanten für Rohstoffe, Beschäftigte für Löhne, Energie und Technik, Sonstiges (zum Beispiel Miete) und Steuern.','Gewinn = Einnahmen − Ausgaben. Steuern zahlt der Betrieb auf den Gewinn.','Wer bekommt Geld vom Betrieb? Lieferanten, Beschäftigte, Energieversorger und der Staat (Steuern). Der Rest ist Gewinn.'] }
+  ],
+  recall:[['Zu welcher Branche gehört der Betrieb?','Lebensmittelindustrie (Süßwaren).'],['Wie berechnet man den Gewinn?','Einnahmen minus alle Ausgaben.'],['Wo findest du die Zahl der Beschäftigten?','Auf der Infotafel am Startplatz.']] },
+
+{ id:'rohware', title:'Von der Rohware zum Produkt', intro:'Wareneingang, Lager, Produktion, Verpackung und Versand.',
+  cards:[
+   { h:'Wareneingang und Lager', lines:['Am Wareneingang wird die Lieferung mit dem Lieferschein verglichen und geprüft.','Kakao, Zucker und Milchpulver lagert man kühl (etwa 15–20 °C), trocken, sauber und geruchsneutral.','Zu kalt ist schlecht: Beim Herausholen entsteht Kondenswasser. Feuchtigkeit lässt Zucker und Kakao verderben, Wärme fördert Schimmel und Schädlinge.','Die Ware steht auf Paletten, nie auf dem Boden, und nicht neben Putzmitteln oder stark riechenden Stoffen.','Temperatur und Sauberkeit werden regelmäßig kontrolliert und aufgeschrieben (Protokoll).','Beispielrechnung: Gesamtgewicht = Anzahl Säcke · Gewicht pro Sack. Reichweite in Tagen = Gesamtgewicht ÷ Verbrauch pro Tag.'] },
+   { h:'Die Produktion: Reihenfolge', lines:['1. Bohnen reinigen: Steine und Staub werden entfernt.','2. Rösten: Hitze bringt das Aroma hervor.','3. Mahlen: aus den Bohnen wird flüssige Kakaomasse.','4. Mischen: Zucker und Milchpulver kommen dazu.','5. Conchieren: Die Masse wird lange gerührt, bis sie cremig ist.','6. Temperieren: gezielt abkühlen und erwärmen, damit die Schokolade glänzt und knackt. Sonst wird sie fleckig grau.','7. Gießen: Die flüssige Schokolade kommt in die Tafelformen.','8. Abkühlen: Im Kühltunnel wird die Tafel fest.','In leichten Aufgaben fehlen einige Schritte, die Reihenfolge bleibt aber gleich.'] },
+   { h:'Automatisierung und Digitalisierung', lines:['Maschinen und Roboter übernehmen oft schwere und eintönige Arbeit.','Dafür entstehen neue Aufgaben: Anlagen einrichten, programmieren, überwachen und warten.','Berufsbilder verändern sich, Beschäftigte bleiben im Beruf nie stehen: Weiterlernen in Fortbildungen gehört dazu.','Roboter brauchen Strom und Wartung. Sie ersetzen nicht alle Menschen.'] },
+   { h:'Verpackung, Versand und Logistik', lines:['Auf jeder Packung stehen Mindesthaltbarkeitsdatum (MHD) und eine Chargennummer.','In der Aufgabe: 24 Tafeln pro Karton und 40 Kartons pro Palette. Dann gilt Tafeln ÷ 24 = Kartons und Kartons ÷ 40 = Paletten.','Kommissionierung: Am Versand werden die Bestellungen der Händler zusammengestellt.','Fachkräfte für Lagerlogistik nehmen Waren an, lagern sie und stellen Lieferungen zusammen.'] }
+  ],
+  recall:[['Wie lagert man Kakao und Zucker richtig?','Kühl, trocken, sauber und geruchsneutral, auf Paletten.'],['Was kommt zuerst: Mahlen oder Rösten?','Rösten, dann Mahlen.'],['Was muss vor dem Gießen passieren?','Die Schokolade wird temperiert.']] },
+
+{ id:'qualitaet', title:'Qualität und Sicherheit', intro:'Hygiene, Stichproben, Fachbegriffe und Allergene.',
+  cards:[
+   { h:'Hygieneschleuse', lines:['Richtig: Schmuck und Uhr ablegen.','Richtig: Haarnetz aufsetzen (bei Bart ein Bartschutz).','Richtig: saubere Schutzkleidung und Arbeitsschuhe anziehen.','Richtig: Hände gründlich waschen und desinfizieren.','Nicht erlaubt: Handy, Kaugummi und Essen im Produktionsbereich, Straßenkleidung, Nagellack und künstliche Nägel.','Warum? Alles, was ins Produkt fallen oder Keime mitbringen könnte, bleibt draußen. Hygiene schützt Produkt und Gesundheit.'] },
+   { h:'Stichproben im Labor', lines:['Das Labor prüft nur einen Teil jeder Charge: Geschmack, Aussehen, Gewicht und Allergene.','Stichprobe = Anteil in Prozent von der Chargengröße. Beispiel: 2 % von 3.000 Tafeln = 60 Tafeln.','Fehlerfreie Tafeln = Stichprobe − fehlerhafte Tafeln.','Fehlerquote in Prozent = fehlerhafte ÷ Stichprobe · 100. Fehlerfrei in Prozent = 100 % − Fehlerquote.'] },
+   { h:'Fachbegriffe', lines:['Charge: alle Produkte, die zusammen mit denselben Zutaten in einem Durchgang hergestellt wurden.','Mindesthaltbarkeitsdatum (MHD): Bis dahin behält das ungeöffnete Lebensmittel bei richtiger Lagerung seine typischen Eigenschaften.','Stichprobe: Nur ein kleiner Teil der Produkte wird genau geprüft.','Rückverfolgbarkeit: Man kann nachvollziehen, woher die Zutaten kamen und wohin die Produkte geliefert wurden.','Lebensmittelrecht: Gesetze, die vorschreiben, wie sicher und gekennzeichnet Lebensmittel sein müssen.'] },
+   { h:'Allergenmanagement', lines:['Wichtige Allergene hier: Nüsse und Milch. Schon Spuren können gefährlich sein.','Reihenfolge planen: erst Sorten ohne Allergene, Nuss-Sorten zuletzt.','Zwischen den Sorten gründlich nach Reinigungsplan reinigen. Abfegen reicht nicht.','Allergen-Zutaten getrennt lagern, zum Beispiel in farbigen Behältern.','Allergene immer auf der Verpackung kennzeichnen. Das ist Pflicht.','Beschäftigte regelmäßig schulen.'] }
+  ],
+  recall:[['Was ist eine Charge?','Alle Produkte aus einem Produktionsdurchgang mit denselben Zutaten.'],['Warum reicht Abfegen bei Allergenen nicht?','Reste und Staub können Allergene weitertragen. Man braucht eine gründliche Reinigung nach Plan.'],['Wie berechnet man „fehlerfrei in Prozent“?','100 % minus den Anteil der fehlerhaften Tafeln.']] },
+
+{ id:'entwicklung', title:'Entwicklung und Planung', intro:'Neue Sorten, Planung, Einkauf und Verpackungsdesign.',
+  cards:[
+   { h:'Der Weg von der Idee zum Produkt', lines:['1. Idee: Kundenwünsche und Trends sammeln.','2. Rezeptur entwickeln und testen.','3. Verkostung mit Testpersonen.','4. Verpackung gestalten.','5. Einkauf und Produktionsplanung.','6. Herstellung und Verpacken.','7. Qualitätsprüfung und Versand.','Nicht in jeder Aufgabe sind alle Schritte dabei, die Reihenfolge bleibt aber gleich. Mehrere Abteilungen arbeiten zusammen.'] },
+   { h:'Umfrage und Hochrechnung', lines:['Das Entwicklungsteam fragt Jugendliche, was sie mögen. Aus Prozentanteilen werden Personen: p % von N Befragten.','Hochrechnung: Den Prozentsatz auf die ganze Zielgruppe der Region übertragen (p % von allen Jugendlichen der Region).','Alle Anteile zusammen ergeben 100 %. Fehlt ein Anteil, rechne 100 % minus die anderen.'] },
+   { h:'Einkauf und Planung: Mengen berechnen', lines:['Gesamtgewicht = Anzahl Tafeln · Gewicht einer Tafel. Wandle Gramm in Kilogramm um (÷ 1.000).','Anteil einer Zutat = Gesamtgewicht · Prozent ÷ 100. Beispiel: 40 % Kakaomasse von 1.000 kg sind 400 kg.','Verlust einplanen: Der Einkauf muss mehr einkaufen, nicht weniger (zum Beispiel 5 % mehr, also mal 1,05).'] },
+   { h:'Verpackungsdesign und Pflichtangaben', lines:['Pflicht (Lebensmittelrecht): Name des Lebensmittels, Zutatenliste mit hervorgehobenen Allergenen, Nettofüllmenge, Mindesthaltbarkeitsdatum, Name und Anschrift des Herstellers, außerdem zum Beispiel Nährwerte.','Freiwillig: Slogan, Lieblingslied, Fotos, QR-Code zum Onlineshop, Werbebilder.','Interne Daten wie Einkaufspreise stehen nie auf der Packung.'] }
+  ],
+  recall:[['Was kommt vor der Herstellung: Einkauf oder Qualitätsprüfung?','Der Einkauf. Geprüft wird das fertige Produkt.'],['Muss ein QR-Code auf die Packung?','Nein, er ist freiwillig.'],['Was bedeutet „Verlust einplanen“?','Mehr einkaufen, als die Rezeptur braucht.']] },
+
+{ id:'kaufmann', title:'Kaufmännische Bereiche', intro:'Abteilungen, Marketing, Quellenkritik, Preise und Gewinn.',
+  cards:[
+   { h:'Wer macht was in der Verwaltung?', lines:['Buchhaltung: erfasst alle Einnahmen und Ausgaben und schreibt Rechnungen.','Personalabteilung: stellt Beschäftigte ein und kümmert sich um Verträge, Gehalt und Urlaub.','Kundenservice: beantwortet Fragen und Beschwerden von Händlern und Kundinnen.','Einkauf: bestellt Rohstoffe und Material bei Lieferanten.','Vertrieb: verkauft die Produkte an Handelspartner.','Marketing: Werbung, Social Media, Onlineshop. Das Ziel ist zu verkaufen.'] },
+   { h:'Quellen kritisch prüfen', lines:['Frage immer: Wer hat den Text geschrieben, und was will er damit erreichen?','Werbung: Übertreibungen („die allerbeste“), Aufruf zum Kaufen, Hinweise wie #werbung.','Selbstdarstellung: Die Firma beschreibt sich selbst (zum Beispiel auf der Webseite). Das ist nicht neutral.','Einzelne Meinung: persönlich und gefühlt, zum Beispiel eine Bewertung.','Behauptung ohne Quelle: nicht überprüfbar.','Neutral ist: sachlich, ohne Übertreibung und mit einer unabhängigen Quelle, zum Beispiel Jahresbericht der Kammer, Statistikamt, Zeitung.'] },
+   { h:'Preise, Rabatt, Gutschein', lines:['Preis für mehrere Tafeln = Einzelpreis · Anzahl.','Mengenrabatt von r %: Preis · (100 − r) ÷ 100.','Ein Gutschein wird am Ende vom Preis abgezogen, nach dem Rabatt.','Im Werksverkauf gibt es direkten Kontakt zu den Kundinnen und Kunden.'] },
+   { h:'Gewinn berechnen', lines:['Ausgaben zusammenzählen: Rohstoffe, Löhne, Energie und Technik, Sonstiges.','Gewinn vor Steuern = Einnahmen − Ausgaben. Mit Prozenten: Gewinn in % = 100 % − alle Ausgaben in %.','Steuern zahlt man vom Gewinn, nicht von den Einnahmen. Gewinn nach Steuern = Gewinn · (100 − Steuersatz) ÷ 100.'] },
+   { h:'Gute Interviewfragen', lines:['Offene Fragen beginnen mit W-Wörtern (Wie? Was? Welche?) und lassen sich nicht mit Ja oder Nein beantworten.','Gut: „Wie sieht ein typischer Arbeitstag aus?“, „Was gefällt dir, was ist schwierig?“, „Welchen Schulabschluss braucht man, wie lange dauert die Ausbildung?“, „Wie läuft Betrieb und Berufsschule ab?“, „Welche Aufgaben darfst du schon allein?“.','Ungeeignet: Ja-Nein-Fragen („Gefällt dir die Arbeit?“), unhöfliche Fragen und private Fragen (Alter, Wohnort).','Antworten kannst du digital oder in einem Beobachtungsbogen festhalten und danach auswerten.'] }
+  ],
+  recall:[['Welche Abteilung bestellt Rohstoffe?','Der Einkauf.'],['Woran erkennst du Werbung?','An Übertreibungen, Kaufaufforderung und Hinweisen wie #werbung.'],['Wird die Steuer von den Einnahmen oder vom Gewinn berechnet?','Vom Gewinn.']] },
+
+{ id:'technik', title:'Arbeitsschutz, Energie und Technik', intro:'Sicher arbeiten, Gesundheit, Digitalisierung, Energie und Nachhaltigkeit.',
+  cards:[
+   { h:'Sicher an der Maschine', lines:['Bei der Wartung gilt immer: ausschalten, gegen Wiedereinschalten sichern (Schloss und Schild), prüfen, erst dann arbeiten.','Eine laufende Maschine wird nie gewartet, auch nicht „langsam“.','Schutzvorrichtungen dürfen nie entfernt werden, auch nicht unter Zeitdruck.','Wer arbeitet, sichert selbst. Man verlässt sich nicht darauf, dass jemand anderes ausschaltet.','Handschuhe an drehenden Teilen können eingezogen werden und ersetzen das Ausschalten nicht.'] },
+   { h:'Arbeitsbedingungen und Gesundheit', lines:['Schutzkleidung und Haarnetz schützen Produkt und Beschäftigte.','Pausen, Lärmschutz und Hautschutz gehören zum Gesundheitsschutz. Schichtarbeit und Stehen sind Belastungen.','Sicherheitsregeln gelten für alle immer, auch für Erfahrene. Arbeitsschutz ist Pflicht und nicht freiwillig.','Teamarbeit: Jeder hat eine Aufgabe, man spricht Probleme früh an und gibt sich Rückmeldung.'] },
+   { h:'Energie und Umwelt', lines:['Abwärme (zum Beispiel aus Kühlanlagen) kann Gebäude und Prozesse heizen und spart Gas.','Gesparte Wärme = Jahresbedarf · Prozent ÷ 100. Rest mit Gas = Jahresbedarf − gesparte Wärme.','CO₂-Einsparung = gesparte MWh · 0,2 Tonnen.','Weitere Maßnahmen: Abfall vermeiden, Fair-Trade- und Nachhaltigkeitssiegel beim Kakaoeinkauf.'] }
+  ],
+  recall:[['Was ist der erste Schritt vor einer Wartung?','Maschine ausschalten und gegen Wiedereinschalten sichern.'],['Darf man Schutzvorrichtungen entfernen, wenn es schnell gehen muss?','Nein, nie.'],['Wie viel CO₂ spart 1 MWh Gas?','Etwa 0,2 Tonnen.']] },
+
+{ id:'berufe', title:'Berufe, Ausbildung und Reflexion', intro:'Berufe im Betrieb, Ausbildungswege und deine Rückmeldung.',
+  cards:[
+   { h:'Berufe im Betrieb', lines:['Süßwarentechnologe / Süßwarentechnologin: stellt Schokolade und Süßwaren her und überwacht die Herstellung (3 Jahre).','Fachkraft für Lebensmitteltechnik: bedient und überwacht Produktionsanlagen und prüft die Qualität (3 Jahre).','Mechatroniker / Mechatronikerin: wartet und repariert Maschinen mit Mechanik, Elektrik und Steuerung (3,5 Jahre).','Fachkraft für Lagerlogistik: nimmt Waren an, lagert sie und stellt Lieferungen zusammen (3 Jahre).','Industriekaufmann / Industriekauffrau: arbeitet in Einkauf, Verkauf, Buchhaltung und Planung am Computer (3 Jahre).'] },
+   { h:'Ausbildungsweg', lines:['Dauer: 3 bis 3,5 Jahre, je nach Beruf.','Lernorte: Betrieb und Berufsschule (duale Ausbildung).','Abschluss: Abschlussprüfung, zum Beispiel vor der IHK.','Voraussetzung: meist wird ein Hauptschul- oder Realschulabschluss erwartet, vorgeschrieben ist er nicht.'] },
+   { h:'Berufe mit meinen Stärken vergleichen', lines:['Fachliche Anforderungen: zum Beispiel Mathe, Technikverständnis, genaues Arbeiten.','Persönliche Anforderungen: zum Beispiel Teamfähigkeit, Zuverlässigkeit, Sorgfalt.','Körperliche Anforderungen: zum Beispiel Stehen, Heben, Schichtarbeit.','Vergleiche: Was kann ich schon? Was interessiert mich? Was passt (nicht) zu mir? Chancen und Grenzen eines Berufsfeldes gehören dazu.'] },
+   { h:'Reflexion und nächste Schritte', lines:['Satzanfänge: „Mich hat überrascht, dass …“, „Der Beruf … passt zu mir, weil …“, „Als Nächstes möchte ich …“.','Nächste Schritte: Praktikumsplatz suchen, weitere Betriebe erkunden, mit Auszubildenden sprechen.','Teamfeedback: Das hat gut geklappt … Das wünsche ich mir beim nächsten Mal … Schreibe konkret und freundlich.'] }
+  ],
+  recall:[['Wie lange dauert die Ausbildung zum Mechatroniker?','3,5 Jahre.'],['Wo lernt man in der dualen Ausbildung?','Im Betrieb und in der Berufsschule.'],['Welcher Beruf wartet Maschinen?','Mechatroniker / Mechatronikerin.']] }
+];
+
+/* ====================================================================
+   2) WELT – Low-Poly-Aufbau aus Primitiven (Box, Zylinder, Kegel, Ikosaeder)
+   Statische Teile werden pro Farbe zu EINEM Mesh verschmolzen (wenig Draw-Calls).
+   ==================================================================== */
+const WORLD = { BOUND: 63, PR: 0.55, STATION_RANGE: 6.0 };
+const COLL = { c: [], r: [] };      // Kollisionskreise und -rechtecke (Welt-Koordinaten)
+const ST = {};                      // Stationen: id -> {task, pos, marker, hit, ...}
+const FENCES = [];                  // je gesperrtem Bereich ein Zaun
+const AREA_POS = [];                // Mittelpunkt, Richtung zum Startplatz, Winkel
+let scene, camera, renderer, staticMeshes = [], hitMeshes = [], markerMeshes = [], playerObj = null, particleList = [];
+let GEO = null, MATS = {};
+
+function mat(col){ return MATS[col] || (MATS[col] = new THREE.MeshLambertMaterial({ color: col })); }
+function nonIdx(g){ return g.index ? g.toNonIndexed() : g; }
+function initGeo(){
+  GEO = { box: nonIdx(new THREE.BoxGeometry(1,1,1)), ico: nonIdx(new THREE.IcosahedronGeometry(1,0)), octa: nonIdx(new THREE.OctahedronGeometry(1,0)), cyl:{} };
+}
+function cylGeo(rt, rb, seg){
+  const k = rt+'|'+rb+'|'+seg;
+  return GEO.cyl[k] || (GEO.cyl[k] = nonIdx(new THREE.CylinderGeometry(rt, rb, 1, seg, 1)));
+}
+
+function Bucket(){ this.m = new Map(); }
+Bucket.prototype.add = function(geom, matrix, col){
+  const g = geom.clone(); g.applyMatrix4(matrix); g.computeVertexNormals();
+  let e = this.m.get(col); if (!e){ e = { p:[], n:[], len:0 }; this.m.set(col, e); }
+  e.p.push(g.attributes.position.array); e.n.push(g.attributes.normal.array); e.len += g.attributes.position.array.length;
+  g.dispose();
+};
+Bucket.prototype.build = function(){
+  const out = [];
+  this.m.forEach((e, col) => {
+    const P = new Float32Array(e.len), N = new Float32Array(e.len); let o = 0;
+    for (let i = 0; i < e.p.length; i++){ P.set(e.p[i], o); N.set(e.n[i], o); o += e.p[i].length; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    g.computeBoundingSphere();
+    out.push(new THREE.Mesh(g, mat(col)));
+  });
+  return out;
+};
+
+function Frame(x, z, ry, bk, parent){
+  const l = new THREE.Matrix4().makeRotationY(ry || 0); l.setPosition(x, 0, z);
+  this.m = parent ? parent.m.clone().multiply(l) : l;
+  this.ry = (parent ? parent.ry : 0) + (ry || 0);
+  this.bk = bk;
+}
+Frame.prototype.sub = function(x, z, ry){ return new Frame(x, z, ry, this.bk, this); };
+Frame.prototype.wp = function(lx, lz){ const v = new THREE.Vector3(lx, 0, lz).applyMatrix4(this.m); return { x:v.x, z:v.z }; };
+Frame.prototype._put = function(geom, col, x, y, z, ry, rx, rz, sx, sy, sz){
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx||0, ry||0, rz||0, 'YXZ'));
+  const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz));
+  m.premultiply(this.m); this.bk.add(geom, m, col);
+};
+Frame.prototype.box = function(w,h,d,col,x,y,z,ry,rx,rz){ this._put(GEO.box, col, x, y, z, ry, rx, rz, w, h, d); };
+Frame.prototype.cyl = function(rt,rb,h,seg,col,x,y,z,ry,rx,rz){ this._put(cylGeo(rt, rb, seg), col, x, y, z, ry, rx, rz, 1, h, 1); };
+Frame.prototype.cone = function(r,h,seg,col,x,y,z,ry){ this._put(cylGeo(0, r, seg), col, x, y, z, ry, 0, 0, 1, h, 1); };
+Frame.prototype.ico = function(r,col,x,y,z,sx,sy,sz){ this._put(GEO.ico, col, x, y, z, 0, 0, 0, r*(sx||1), r*(sy||1), r*(sz||1)); };
+Frame.prototype.cc = function(lx, lz, r, h){ const p = this.wp(lx, lz); COLL.c.push({ x:p.x, z:p.z, r, h: h||3 }); };
+Frame.prototype.cr = function(lx, lz, hx, hz, h, ry){
+  const p = this.wp(lx, lz), a = this.ry + (ry||0);
+  COLL.r.push({ x:p.x, z:p.z, hx, hz, c:Math.cos(a), s:Math.sin(a), h: h||3 });
+};
+
+/* ---------- Beschriftungen als Sprites ---------- */
+function makeLabel(text, worldW, opt){
+  opt = opt || {};
+  const cv = document.createElement('canvas'), W = 640, fs = opt.fs || 44; cv.width = W;
+  const g = cv.getContext('2d');
+  g.font = '700 ' + fs + 'px "Trebuchet MS","Segoe UI",Arial,sans-serif';
+  const words = String(text).split(' '), lines = []; let cur = '';
+  words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > W - 48 && cur){ lines.push(cur); cur = w; } else cur = t; });
+  if (cur) lines.push(cur);
+  const H = lines.length * (fs + 10) + 30; cv.height = H;
+  g.font = '700 ' + fs + 'px "Trebuchet MS","Segoe UI",Arial,sans-serif';
+  g.fillStyle = opt.bg || 'rgba(74,42,28,0.94)';
+  const r = 26; g.beginPath(); g.moveTo(r,0); g.lineTo(W-r,0); g.quadraticCurveTo(W,0,W,r); g.lineTo(W,H-r); g.quadraticCurveTo(W,H,W-r,H);
+  g.lineTo(r,H); g.quadraticCurveTo(0,H,0,H-r); g.lineTo(0,r); g.quadraticCurveTo(0,0,r,0); g.closePath(); g.fill();
+  g.lineWidth = 6; g.strokeStyle = opt.edge || '#ffc83d'; g.stroke();
+  g.fillStyle = opt.fg || '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lines.forEach((l, i) => g.fillText(l, W/2, 15 + (fs + 10)*i + (fs + 10)/2));
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(worldW, worldW * H / W, 1);
+  return sp;
+}
+
+/* ---------- Figuren ---------- */
+function person(F, x, z, ry, body, hat, skin){
+  const f = F.sub(x, z, ry);
+  f.cyl(0.36, 0.44, 1.1, 8, body, 0, 0.55, 0);
+  f.ico(0.34, skin || 0xf2c9a0, 0, 1.45, 0);
+  f.cyl(0.3, 0.36, 0.22, 8, hat, 0, 1.78, 0);
+  f.cyl(0.12, 0.12, 0.9, 5, body, -0.5, 0.75, 0, 0, 0, 0.25);
+  f.cyl(0.12, 0.12, 0.9, 5, body, 0.5, 0.75, 0, 0, 0, -0.25);
+  f.cc(0, 0, 0.55, 2);
+}
+function tree(bk, x, z, s){
+  const F = new Frame(x, z, 0, bk);
+  F.cyl(0.25*s, 0.35*s, 1.6*s, 5, 0x8b5a2b, 0, 0.8*s, 0);
+  const g = [0x4caf6a, 0x3f9e5a, 0x58b86f][Math.floor(Math.abs(x*7 + z*3)) % 3];
+  F.cone(1.7*s, 2.8*s, 6, g, 0, 2.9*s, 0);
+  F.cone(1.25*s, 2.2*s, 6, 0x58b86f, 0, 4.1*s, 0);
+  COLL.c.push({ x, z, r: 0.9*s, h: 6*s });
+}
+
+/* ---------- Stationen (jede kind = ein Weltobjekt mit Aufgabe) ---------- */
+const STATION_BUILD = {
+  dock(F){
+    F.box(4.4,2.4,3,0xe9e4dc, 0,1.2,-0.4); F.box(5,0.3,3.5,0xb3124f, 0,2.55,-0.4);
+    F.box(2,1.9,0.1,0x8aa0b5, 0,1,1.12); F.box(0.9,0.5,0.6,0xd8b98a,-3,0.25,1.4); F.box(0.9,0.5,0.6,0xd8b98a,-3.9,0.25,1.4);
+    F.box(0.9,0.5,0.6,0xd8b98a,-3.4,0.75,1.4); F.cyl(0.3,0.3,0.7,6,0xd8b98a,-3.2,0.35,2.4);
+    F.cr(0,-0.4,2.5,1.7,3); F.cc(-3.4,1.5,1.2,1.5);
+  },
+  storage(F){
+    F.cyl(1.1,1.1,3.4,8,0xdfe6ee,-2,1.7,-0.4); F.cone(1.2,1,8,0xe0457b,-2,3.9,-0.4); F.cyl(0.15,0.15,3,5,0x9aa5b1,-0.7,1.5,-0.9);
+    [[0.6],[1.4],[2.2]].forEach(a => F.box(3,0.12,1,0x9aa5b1, 2,a[0],0));
+    [-0.5,3.5].forEach(x => { F.box(0.12,2.4,1,0x6b7280, x,1.2,0); });
+    [[0.6,0xd8b98a],[1.4,0xc8a26b],[2.2,0xd8b98a]].forEach(a => { F.box(0.7,0.55,0.7,a[1], 1.4,a[0]+0.34,0); F.box(0.7,0.55,0.7,a[1], 2.6,a[0]+0.34,0); });
+    F.cc(-2,-0.4,1.3,4); F.cr(1.5,0,2.1,0.7,2.8);
+  },
+  conche(F){
+    F.box(4.4,0.9,2,0x9aa5b1, 0,0.45,0); F.cyl(1,1,2.8,12,0xc0c7d0, 0,1.9,0, 0,0,Math.PI/2);
+    F.cyl(0.6,0.6,0.3,10,0x6b7280, -1.45,1.9,0, 0,0,Math.PI/2); F.cyl(0.6,0.6,0.3,10,0x6b7280, 1.45,1.9,0, 0,0,Math.PI/2);
+    F.box(1,2,0.9,0x2f6fdd, 3,1,0.2); F.box(0.7,0.5,0.1,0x7fe08a, 3,1.6,0.68);
+    F.cone(0.7,0.9,8,0xe0457b, -1,3.2,0); F.cyl(0.18,0.18,1.4,6,0x9aa5b1, -1,2.7,0);
+    F.cr(0.6,0,3.6,1.1,3);
+  },
+  robot(F){
+    F.box(2,0.5,2,0x444c56, 0,0.25,0); F.cyl(0.35,0.4,1.4,8,0xff8a00, 0,1.2,0); F.ico(0.45,0x444c56, 0,2,0);
+    F.box(0.3,0.3,2.2,0xff8a00, 0,2.6,0.7, 0,-0.6,0); F.box(0.5,0.25,0.5,0x333333, 0,2.4,1.9);
+    F.box(0.25,0.25,0.25,0xc8a26b, 0,1.3,2.3);
+    [[-2.1,0,0.1,4.2],[2.1,0,0.1,4.2]].forEach(a => F.box(a[2],1.1,a[3],0xffd400, a[0],0.55,a[1]));
+    F.box(4.2,1.1,0.1,0xffd400, 0,0.55,-2.1);
+    F.cc(0,0,2.2,3);
+  },
+  packing(F){
+    F.box(4.6,0.5,1.2,0x6b7280, -0.4,0.8,0); F.box(4.6,0.12,1.3,0x3b4350, -0.4,1.07,0);
+    [-2,-0.9,0.2,1.3].forEach(x => F.box(0.75,0.5,0.8,0xc8a26b, x,1.4,0));
+    [-1.8,0,1.8].forEach(x => { F.box(0.15,0.8,0.15,0x4b5563, x-0.4,0.4,0.55); });
+    F.box(1.4,0.15,1.4,0xb5864f, 3.2,0.1,0.3);
+    [0,1].forEach(a => [0,1].forEach(b => [0,1,2].forEach(c => F.box(0.62,0.5,0.62,0xc8a26b, 2.9+a*0.65,0.45+c*0.52,0+b*0.65))));
+    F.cr(-0.4,0,2.5,0.8,2); F.cc(3.5,0.4,1.2,2);
+  },
+  hygiene(F){
+    F.box(0.3,2.6,2.2,0x35c2a1, -1.7,1.3,0); F.box(0.3,2.6,2.2,0x35c2a1, 1.7,1.3,0); F.box(3.7,0.4,2.2,0x2bb673, 0,2.8,0);
+    F.box(3,0.05,1.8,0x9be3d0, 0,0.04,0); F.box(0.9,0.9,0.5,0xffffff, 3.1,0.45,-0.3); F.cyl(0.07,0.07,0.5,5,0x9ca3af, 3.1,1.15,-0.4);
+    F.cyl(0.4,0.35,0.5,8,0xe11d48, 3.1,0.25,1);
+    F.box(0.5,0.7,0.05,0x4cc3c9, 0,2.2,1.1);
+    F.cr(0,0,2.0,1.2,3);
+  },
+  lab(F){
+    F.box(3.2,0.2,1.4,0xe8e0d0, 0,0.95,0); [[-1.4,0.5],[1.4,0.5],[-1.4,-0.5],[1.4,-0.5]].forEach(a => F.box(0.12,0.9,0.12,0x6b7280, a[0],0.45,a[1]));
+    F.cyl(0.25,0.25,0.5,8,0x9bd7f5, -1.1,1.3,0); F.cone(0.28,0.5,8,0xf5c1d9, -0.5,1.3,0.1);
+    F.box(0.5,0.12,0.5,0x333333, 0.4,1.1,0); F.cyl(0.08,0.08,0.6,5,0x333333, 0.4,1.45,0, 0,0.5,0);
+    F.box(0.7,0.2,0.5,0xcbd5e1, 1.2,1.1,0); F.box(0.3,0.05,0.2,0x7fe08a, 1.2,1.22,0.2);
+    F.box(0.4,0.08,0.3,0x5b3a29, 0.9,1.1,-0.4);
+    F.cr(0,0,1.8,0.9,2);
+  },
+  trace(F){
+    F.box(3.6,2.4,0.9,0x9aa5b1, -0.6,1.2,0);
+    [0.55,1.25,1.95].forEach((y,i) => [-2,-1.3,-0.6,0.1,0.8].forEach((x,j) => F.box(0.5,0.5,0.7,[0xe0457b,0x4cc3c9,0xffc83d,0x9c7be0,0x4caf6a][(i+j)%5], x,y,0.1)));
+    F.box(1.5,0.1,1,0xb5864f, 2.4,0.8,0.3); F.box(0.9,0.6,0.1,0x222222, 2.4,1.2,0.1); F.box(0.8,0.5,0.05,0x7fd4ff, 2.4,1.2,0.16);
+    F.cr(-0.2,0,2.7,0.9,2.6);
+  },
+  allergen(F){
+    [[-1.5,0xe11d48],[0,0x2563eb],[1.5,0xfacc15]].forEach(a => { F.cyl(0.55,0.5,0.9,10,a[1], a[0],0.45,0); F.cyl(0.58,0.58,0.1,10,0xffffff, a[0],0.95,0); });
+    [-0.75,0.75].forEach(x => F.box(0.1,1.5,2,0xcbd5e1, x,0.75,0));
+    F.box(0.1,1.9,0.1,0x6b7280, 0,0.95,-1.2); F.box(1.8,0.7,0.1,0xffffff, 0,2.1,-1.2); F.box(0.4,0.4,0.12,0xe11d48, -0.5,2.1,-1.14);
+    F.cr(0,0,2.2,1.1,2);
+  },
+  kitchen(F){
+    F.box(3,0.15,1.3,0xd9d9d9, -0.6,0.95,0); [[-1.9,0.5],[0.7,0.5],[-1.9,-0.5],[0.7,-0.5]].forEach(a => F.box(0.12,0.9,0.12,0x6b7280, a[0],0.45,a[1]));
+    [0x5b3a29,0xf5f5f5,0xe0457b,0x4cc3c9].forEach((c,i) => F.box(0.45,0.1,0.8,c, -1.7+i*0.55,1.08,0));
+    F.cyl(0.3,0.3,0.6,8,0xcbd5e1, 0.1,1.3,0); F.cone(0.34,0.3,8,0xe0457b, 0.1,1.75,0);
+    F.box(0.1,2.4,0.1,0x6b7280, 1.9,1.2,-0.5); F.box(0.1,2.4,0.1,0x6b7280, 3.7,1.2,-0.5); F.box(2,1.4,0.1,0xffffff, 2.8,2.3,-0.5);
+    [[2.2,2.5,0xffc83d],[2.8,2.2,0xff8fb1],[3.3,2.6,0x7fe08a],[2.5,1.9,0x7fd4ff]].forEach(a => F.box(0.3,0.3,0.05,a[2], a[0],a[1],-0.42));
+    F.cr(-0.6,0,1.7,0.8,2); F.cr(2.8,-0.5,1.1,0.3,2.6);
+  },
+  desk(F){
+    F.box(2.6,0.12,1.2,0xb5864f, 0,0.85,0); [[-1.15,0.5],[1.15,0.5],[-1.15,-0.5],[1.15,-0.5]].forEach(a => F.box(0.1,0.85,0.1,0x6b7280, a[0],0.42,a[1]));
+    F.box(0.9,0.6,0.08,0x222222, -0.6,1.3,-0.3); F.box(0.8,0.5,0.04,0x7fd4ff, -0.6,1.3,-0.25); F.box(0.9,0.6,0.08,0x222222, 0.6,1.3,-0.3); F.box(0.8,0.5,0.04,0x7fd4ff, 0.6,1.3,-0.25);
+    [0x2563eb,0xe11d48,0x16a34a].forEach((c,i) => F.box(0.2,0.6,0.5,c, 1.1,1.2,0.3-i*0.05+0.1*i));
+    F.box(0.8,0.1,0.8,0x374151, 0,0.5,1.2); F.box(0.8,0.8,0.1,0x374151, 0,0.95,1.6);
+    F.cr(0,0.2,1.5,1.3,2);
+  },
+  design(F){
+    F.box(2.4,0.1,1.4,0xffffff, 0,1.1,0, 0,-0.4,0); [[-1,0.4],[1,0.4]].forEach(a => F.box(0.1,1.1,0.1,0x6b7280, a[0],0.55,a[1])); [[-1,-0.5],[1,-0.5]].forEach(a => F.box(0.1,1.4,0.1,0x6b7280, a[0],0.7,a[1]));
+    F.box(0.5,0.7,0.5,0xff4d8d, 2,0.35,0.2); F.box(0.5,0.9,0.5,0x4dd0e1, 2.7,0.45,-0.2); F.box(0.5,0.6,0.5,0xffd54f, 3.3,0.3,0.3);
+    [[-1.5,0.6,0xff4d8d],[-1.1,0.9,0x4dd0e1],[-0.7,0.6,0xffd54f]].forEach(a => F.cyl(0.18,0.18,0.1,8,a[2], a[0],1.5+a[1]*0.1,-0.6, 0,Math.PI/2,0));
+    F.cr(0.8,0,2.7,0.9,2);
+  },
+  planboard(F){
+    F.box(0.2,2.6,0.2,0x6b7280, -2.1,1.3,0); F.box(0.2,2.6,0.2,0x6b7280, 2.1,1.3,0); F.box(4.6,2.4,0.15,0xf8f8f8, 0,2.4,0); F.box(4.8,0.15,0.2,0x4a2a1c, 0,3.65,0);
+    [[-1.7,0xe0457b],[-0.85,0x4cc3c9],[0,0xffc83d],[0.85,0x9c7be0],[1.7,0x4caf6a]].forEach(a => { F.box(0.65,0.65,0.05,a[1], a[0],2.4,0.1); });
+    [-1.28,-0.43,0.43,1.28].forEach(x => F.box(0.2,0.1,0.05,0x333333, x,2.4,0.1));
+    F.cr(0,0,2.4,0.4,3.7);
+  },
+  billboard(F){
+    F.box(0.2,2.6,0.2,0x6b7280, -1.6,1.3,0); F.box(0.2,2.6,0.2,0x6b7280, 1.6,1.3,0); F.box(4,2.2,0.2,0xff4d8d, 0,2.8,0);
+    F.ico(0.8,0xffd54f, 0,2.8,0.2, 1,1,0.2); F.box(3.4,0.2,0.05,0xffffff, 0,2,0.12); F.cone(0.4,0.8,8,0x333333, 2.6,0.9,0.6); F.cyl(0.1,0.1,0.6,6,0x333333, 2.6,0.4,0.6);
+    F.cr(0,0,2.1,0.4,4);
+  },
+  shop(F){
+    F.box(3.4,1,1.3,0xffc27a, 0,0.5,0); F.box(3.6,0.12,1.5,0xb5864f, 0,1.05,0);
+    for (let i=0;i<6;i++) F.box(0.58,0.08,1.6,i%2?0xffffff:0xe11d48, -1.45+i*0.58,2.7,0.1, 0,0.25,0);
+    [-1.6,1.6].forEach(x => F.box(0.1,2.7,0.1,0x6b7280, x,1.35,-0.5));
+    [0x5b3a29,0xe0457b,0x4cc3c9].forEach((c,i) => { F.box(0.5,0.06,0.8,c, -0.9+i*0.8,1.15,0); F.box(0.5,0.06,0.8,c, -0.9+i*0.8,1.23,0); });
+    F.box(0.9,0.6,0.05,0xffffff, 1.4,1.5,0.7); F.box(0.8,0.1,0.06,0xe11d48, 1.4,1.6,0.72);
+    F.cr(0,0,2,1,2.8);
+  },
+  office(F){
+    [-1.4,1.4].forEach(x => { F.box(1.8,0.1,0.9,0xb5864f, x,0.85,0); F.box(0.1,0.85,0.8,0x6b7280, x-0.8,0.42,0); F.box(0.1,0.85,0.8,0x6b7280, x+0.8,0.42,0);
+      F.box(0.6,0.4,0.06,0x222222, x,1.2,-0.2); F.box(0.52,0.32,0.03,0x7fd4ff, x,1.2,-0.17); F.box(0.6,0.1,0.5,0x374151, x,0.5,0.9); F.box(0.6,0.7,0.1,0x374151, x,0.9,1.25); });
+    F.box(0.9,1.8,0.7,0x9aa5b1, 3.2,0.9,-0.2); F.box(0.8,0.05,0.05,0x333333, 3.2,1.2,0.2); F.cyl(0.3,0.25,0.4,6,0xb5864f, -3.2,0.2,0); F.ico(0.5,0x4caf6a, -3.2,0.8,0);
+    F.cr(0,0.2,3.1,1.3,2);
+  },
+  safe(F){
+    F.box(1.7,1.9,1.4,0x4b5563, -0.6,0.95,0); F.box(1.3,1.5,0.1,0x9ca3af, -0.6,0.95,0.72); F.cyl(0.22,0.22,0.12,10,0xfacc15, -0.6,0.95,0.8, 0,Math.PI/2,0);
+    [[1.5,0.35,3],[1.5,0.9,0],[2.2,0.3,0]].forEach((a,i) => { for (let k=0;k<[5,3,2][i];k++) F.cyl(0.4,0.4,0.12,10,0xfacc15, a[0]+i*0.15,0.1+k*0.14,i*0.9-0.2); });
+    F.cr(0.3,0,2.2,0.9,2);
+  },
+  meeting(F){
+    F.cyl(1.4,1.4,0.15,12,0xc8a26b, 0,0.85,0); F.cyl(0.25,0.35,0.85,8,0x6b7280, 0,0.42,0);
+    [[0,-1.9],[0,1.9],[-1.9,0],[1.9,0]].forEach((a,i) => { F.box(0.7,0.15,0.7,0x374151, a[0],0.5,a[1]); F.box(0.7,0.6,0.1,0x374151, a[0],0.85,a[1]+(i<2?(a[1]<0?-0.3:0.3):0), i>1?Math.PI/2:0); });
+    F.box(0.6,0.04,0.45,0xffffff, 0.3,0.95,0.2); F.box(0.5,0.03,0.4,0xffc83d, -0.5,0.95,-0.2);
+    F.cc(0,0,2.4,1.5);
+  },
+  workshop(F){
+    F.box(3.4,0.15,1.2,0xb5864f, 0,0.95,0); [[-1.5,0.45],[1.5,0.45],[-1.5,-0.45],[1.5,-0.45]].forEach(a => F.box(0.12,0.95,0.12,0x6b7280, a[0],0.47,a[1]));
+    F.box(0.6,0.35,0.35,0x374151, -1.2,1.25,0); F.box(0.7,0.3,0.4,0xdc2626, 0.8,1.2,0); F.box(0.7,0.06,0.06,0x9ca3af, 0.8,1.4,0);
+    F.cyl(0.8,0.8,0.25,12,0x9ca3af, 3,0.9,0.2, 0,Math.PI/2,0); for (let i=0;i<8;i++){ const a = i*Math.PI/4; F.box(0.3,0.3,0.25,0x9ca3af, 3+Math.cos(a)*0.9,0.9+Math.sin(a)*0.9,0.2, 0,0,a); }
+    F.cone(0.35,0.5,3,0xfacc15, -2.6,0.3,0.6); F.cr(0,0,1.8,0.7,2);
+  },
+  solar(F){
+    [-2.4,-0.8,0.8].forEach(x => { F.box(1.5,0.08,1.1,0x1e3a8a, x,1.0,0, 0,-0.7,0); F.box(1.6,0.05,1.2,0xe5e7eb, x,0.98,0, 0,-0.7,0); F.box(0.1,0.9,0.1,0x6b7280, x,0.45,0.2); });
+    F.cyl(0.6,0.6,3,10,0xf3f4f6, 3,1.5,-0.5); F.cyl(0.12,0.12,1.6,6,0x22c55e, 2.2,0.4,0.2, 0,0,Math.PI/2); F.ico(0.4,0x22c55e, 3,3.3,-0.5);
+    F.cyl(0.1,0.12,4.5,6,0xe5e7eb, -3.5,2.25,-1.5); F.ico(0.2,0x9ca3af, -3.5,4.5,-1.35);
+    [0,1,2].forEach(i => F.box(0.12,1.5,0.05,0xffffff, -3.5+Math.cos(i*2.09)*0.6*0+0, 4.5+0, -1.3, 0,0,i*2.094));
+    F.cr(-1,0,2.4,0.9,2); F.cc(3,-0.5,0.8,3); F.cc(-3.5,-1.5,0.4,4.5);
+  },
+  jobboard(F){
+    F.box(0.2,2.6,0.2,0x6b7280, -2.3,1.3,0); F.box(0.2,2.6,0.2,0x6b7280, 2.3,1.3,0); F.box(5,2.4,0.15,0x4a2a1c, 0,2.4,0);
+    [[-1.8,0xe0457b],[-0.9,0x4cc3c9],[0,0xffc83d],[0.9,0x9c7be0],[1.8,0x4caf6a]].forEach(a => { F.box(0.75,0.9,0.05,a[1], a[0],2.6,0.1); F.ico(0.2,0xf2c9a0, a[0],2.85,0.16); F.box(0.5,0.3,0.05,0xffffff, a[0],2.25,0.13); });
+    F.box(2,0.1,0.5,0xb5864f, 0,0.55,1.4); F.box(0.1,0.55,0.4,0x6b7280, -0.9,0.27,1.4); F.box(0.1,0.55,0.4,0x6b7280, 0.9,0.27,1.4);
+    F.cr(0,0,2.6,0.4,3.7);
+  },
+  bench(F){
+    F.box(2.4,0.12,0.7,0xb5864f, 0,0.5,0.5); F.box(2.4,0.6,0.1,0xb5864f, 0,0.85,0.15); [-1,1].forEach(x => F.box(0.1,0.5,0.6,0x6b7280, x,0.25,0.5));
+    F.box(0.4,0.04,0.3,0xffc83d, 0.4,0.58,0.5); F.cyl(0.18,0.25,1.4,6,0x8b5a2b, -2.3,0.7,-0.8); F.ico(1.0,0x58b86f, -2.3,2.0,-0.8);
+    F.cr(0,0.3,1.3,0.5,1.5); F.cc(-2.3,-0.8,0.8,3);
+  },
+  trophy(F){
+    F.box(2.4,0.5,1.6,0xe5e7eb, 0,0.25,0); F.box(1.6,0.9,1.6,0xcbd5e1, 0,0.95,0); F.box(1.0,0.5,1.0,0x9ca3af, 0,1.65,0);
+    F.cyl(0.8,0.3,0.9,10,0xfacc15, 0,2.4,0); F.cyl(0.12,0.12,0.5,6,0xfacc15, 0,1.95,0); F.box(0.15,0.55,0.15,0xfacc15, -0.85,2.5,0); F.box(0.15,0.55,0.15,0xfacc15, 0.85,2.5,0);
+    F.ico(0.3,0xffd54f, 0,3.1,0);
+    F.cr(0,0,1.3,0.9,3.3);
+  }
+};
+
+/* ---------- Hallen der Bereiche (Kulisse) ---------- */
+function buildHall(F, A){
+  F.box(14,4.5,5, A.hall, 0,2.25,-11.5); F.box(14.8,0.5,5.8, A.roof, 0,4.75,-11.5);
+  [-5.5,-3.5,3.5,5.5].forEach(x => F.box(1.4,1.2,0.1,0xbfe8ff, x,2.6,-8.95)); F.box(2.2,2.6,0.12,0x6b4423, 0,1.3,-8.95);
+  F.cr(0,-11.5,7.3,2.8,5);
+  if (A.id===1){ F.cyl(0.6,0.7,3,8,0x9aa5b1, -5,6.3,-12.5); F.cyl(0.6,0.7,3.6,8,0x9aa5b1, -3.5,6.5,-12.5); F.cyl(0.3,0.3,1,6,0xffffff, 6,5.5,-12); }
+  if (A.id===2){ F.box(2.4,0.7,0.2,0xffffff, 5.2,6,-9.1); F.box(0.7,2.4,0.2,0xffffff, 5.2,6,-9.1); }
+  if (A.id===3){ F.cyl(0.4,0.5,0.7,8,0x9ca3af, 5,5.3,-11.5); F.ico(1.0,0xffe066, 5,6.4,-11.5); }
+  if (A.id===4){ F.cyl(1.4,1.4,0.3,14,0xfacc15, 5,6.6,-9.2, 0,Math.PI/2,0); F.cyl(1.0,1.0,0.34,14,0xfde68a, 5,6.6,-9.2, 0,Math.PI/2,0); }
+  if (A.id===5){ [-4,-1.4,1.2].forEach(x => { F.box(2.2,0.08,3.2,0x1e3a8a, x,5.3,-11.5, 0,0,0); }); }
+}
+
+/* ---------- Aufbau der ganzen Welt ---------- */
+function frand(seed){ let t = seed >>> 0; return function(){ t += 0x6D2B79F5; let x = Math.imul(t ^ t>>>15, 1|t); x ^= x + Math.imul(x ^ x>>>7, 61|x); return ((x ^ x>>>14) >>> 0) / 4294967296; }; }
+
+function buildWorld(){
+  initGeo();
+  const bk = new Bucket(), root = new Frame(0, 0, 0, bk);
+  // Boden
+  root.cyl(120,120,0.2,24,0x9ad89a, 0,-0.1,0); root.cyl(66,66,0.12,32,0x8fd18a, 0,0.0,0);
+  // Hügel am Horizont
+  const rh = frand(7);
+  for (let i=0;i<26;i++){ const a = i/26*Math.PI*2, r = 90+rh()*20, s = 14+rh()*14; root.cone(s*1.4, s, 6, [0x7cc08a,0x6bb27c,0x8ccd96][i%3], Math.cos(a)*r, s/2-1, Math.sin(a)*r); }
+  // Startplatz
+  root.cyl(11,11,0.2,28,0xe6d5bb, 0,0.1,0); root.cyl(6,6,0.22,24,0xd9c4a3, 0,0.11,0);
+  const plaza = root.sub(0, 0, 0);
+  [[-8,6,0],[8,6,0],[-8,-6,Math.PI],[8,-6,Math.PI]].forEach(a => { const b = plaza.sub(a[0], a[1], a[2]); b.box(2.2,0.12,0.7,0xb5864f, 0,0.5,0); b.box(2.2,0.6,0.1,0xb5864f, 0,0.85,-0.3); b.box(0.1,0.5,0.6,0x6b7280, -0.9,0.25,0); b.box(0.1,0.5,0.6,0x6b7280, 0.9,0.25,0); b.cr(0,0,1.2,0.4,1.2); });
+  [[-9.5,1],[9.5,1]].forEach((a,i) => { plaza.cyl(0.08,0.1,5,6,0x9ca3af, a[0],2.5,a[1]); plaza.box(1.6,1,0.05,i?0xe0457b:0x4cc3c9, a[0]+(i?-0.8:0.8),4.3,a[1]); plaza.cc(a[0],a[1],0.3,5); });
+  // Infotafel Steckbrief
+  const info = root.sub(0, -4.5, 0);
+  info.box(0.2,2.8,0.2,0x6b7280, -2.4,1.4,0); info.box(0.2,2.8,0.2,0x6b7280, 2.4,1.4,0); info.box(5.2,2.6,0.15,0xffffff, 0,2.5,0); info.box(5.4,0.5,0.2,0x4a2a1c, 0,3.95,0);
+  for (let i=0;i<4;i++) for (let j=0;j<2;j++) info.box(0.5,0.4,0.05, (i+j)%2?0x7b4a33:0xe0457b, -1.2+i*0.8,2.8-j*0.6,0.1);
+  info.box(1,1,0.06,0x2563eb, -1.8,1.8,0.1); info.cr(0,0,2.7,0.4,4);
+  // Wege + Bereiche
+  const areaFrames = [];
+  AREAS.forEach((A, i) => {
+    const a = A.ang*Math.PI/180, R0 = 42, cx = Math.cos(a)*R0, cz = Math.sin(a)*R0;
+    const nx = -cx/R0, nz = -cz/R0, th = Math.atan2(nx, nz);
+    AREA_POS[i] = { x:cx, z:cz, nx, nz, th };
+    const ex = cx + nx*A.fenceR, ez = cz + nz*A.fenceR, len = Math.hypot(ex, ez), pth = Math.atan2(ex, ez);
+    root.box(4.4, 0.14, len-8, 0xe9d7b5, ex/2*(1)+0, 0.07, ez/2, pth);
+    // Kreisförmiger Boden
+    root.cyl(A.fenceR, A.fenceR, 0.3, 28, A.ground, cx, 0.15, cz);
+    const F = new Frame(cx, cz, th, bk); areaFrames.push(F);
+    buildHall(F, A);
+  });
+  // Wegbox: Mitte korrigieren (von Platzrand bis Zaun)
+  // Stationen
+  const counts = {};
+  const SKIN = [0xf2c9a0, 0xe0ac81, 0xc68642, 0x8d5524];
+  TASK_LIST.forEach((T, k) => {
+    const ai = T.area-1, A = AREAS[ai], idx = counts[ai] = (counts[ai]||0) + 1;
+    const slot = A.slots[idx-1], F = areaFrames[ai].sub(slot[0], slot[1], 0);
+    STATION_BUILD[T.kind](F);
+    person(F, 2.6, 1.8, -0.6, [0x2563eb,0xdc2626,0x16a34a,0x9333ea,0xea580c,0x0891b2][k%6], [0xffc83d,0xffffff,0x374151,0xe0457b][k%4], SKIN[k%4]);
+    const wpos = F.wp(0, 0);
+    ST[T.id] = { id:T.id, task:T, area:T.area, pos:{ x:wpos.x, z:wpos.z }, ly:3.7 };
+  });
+  ST.info = { id:'info', info:true, area:0, pos:{ x:0, z:-4.5 }, ly:4.9, label:'Betriebssteckbrief' };
+
+  // Bäume (Seed fest), nicht in Bereichen, auf Wegen und dem Startplatz
+  const rt = frand(1234); let placed = [];
+  const segs = AREA_POS.map((p, i) => { const A = AREAS[i]; return [0, 0, p.x + p.nx*A.fenceR, p.z + p.nz*A.fenceR]; });
+  const dseg = (px, pz, s) => { const dx = s[2]-s[0], dz = s[3]-s[1], t = Math.max(0, Math.min(1, ((px-s[0])*dx + (pz-s[1])*dz)/(dx*dx+dz*dz))); return Math.hypot(px-(s[0]+t*dx), pz-(s[1]+t*dz)); };
+  let tries = 0;
+  while (placed.length < 130 && tries++ < 4000){
+    const r = 16 + rt()*50, a = rt()*Math.PI*2, x = Math.cos(a)*r, z = Math.sin(a)*r;
+    if (AREA_POS.some(p => Math.hypot(x-p.x, z-p.z) < 21.5)) continue;
+    if (segs.some(s => dseg(x, z, s) < 5)) continue;
+    if (placed.some(q => Math.hypot(x-q[0], z-q[1]) < 4.2)) continue;
+    placed.push([x, z, 0.8 + rt()*0.7]);
+  }
+  for (let i=0;i<64;i++){ const a = i/64*Math.PI*2, r = 66 + (i%3)*2.2; placed.push([Math.cos(a)*r, Math.sin(a)*r, 1.3 + (i%4)*0.2]); }
+  placed.forEach(p => tree(bk, p[0], p[1], p[2]));
+
+  staticMeshes = bk.build(); staticMeshes.forEach(m => scene.add(m));
+
+  // Zäune (dynamisch), Schilder, Marker, Labels
+  AREAS.forEach((A, i) => {
+    const P = AREA_POS[i], g = new THREE.Group(); g.position.set(0, 0, 0);
+    const fb = new Bucket(), F = new Frame(P.x, P.z, P.th, fb);
+    const n = 20;
+    for (let k=0;k<n;k++){
+      const a0 = k/n*Math.PI*2, a1 = (k+1)/n*Math.PI*2, x0 = Math.sin(a0)*A.fenceR, z0 = Math.cos(a0)*A.fenceR, x1 = Math.sin(a1)*A.fenceR, z1 = Math.cos(a1)*A.fenceR;
+      F.box(0.4,1.9,0.4,0xe8590c, x0,0.95,z0, a0);
+      const len = Math.hypot(x1-x0, z1-z0), ang = Math.atan2(x1-x0, z1-z0);
+      F.box(0.14,0.26,len,0xffffff, (x0+x1)/2,0.7,(z0+z1)/2, ang); F.box(0.14,0.26,len,0xe8590c, (x0+x1)/2,1.35,(z0+z1)/2, ang);
+    }
+    fb.build().forEach(m => g.add(m));
+    // Eingangsschild am Fenster Richtung Start
+    if (i > 0){
+      const sp = makeLabel('Gesperrt – löse zuerst: ' + AREAS[i-1].name, 6.4, { bg:'rgba(180,30,30,0.95)', edge:'#ffffff', fs:42 });
+      const sw = F.wp(0, A.fenceR + 0.2); sp.position.set(sw.x, 3.3, sw.z); g.add(sp);
+      const sPost = new Bucket(), SF = new Frame(P.x, P.z, P.th, sPost); SF.box(0.2,2.4,0.2,0x6b7280, 0,1.2,A.fenceR+0.2); sPost.build().forEach(m => g.add(m));
+    }
+    scene.add(g); FENCES[i] = { group:g, locked: i>0, anim:-1 };
+    const hl = makeLabel((i+1) + ' · ' + A.name, 11, { bg:'rgba(255,255,255,0.95)', fg:'#4a2a1c', edge:'#b3124f', fs:46 });
+    const hp = F.wp(0, -8.9); hl.position.set(hp.x, 8.3, hp.z); scene.add(hl);
+  });
+  // Marker + Labels + Hitboxen
+  const octa = GEO.octa;
+  Object.keys(ST).forEach(id => {
+    const s = ST[id];
+    const m = new THREE.Mesh(octa, new THREE.MeshLambertMaterial({ color: s.info ? 0x4db8ff : 0xffc83d, emissive: s.info ? 0x0a3d66 : 0x6b4a00 }));
+    m.scale.set(0.55, 0.95, 0.55); m.position.set(s.pos.x, s.ly, s.pos.z); scene.add(m); s.marker = m; markerMeshes.push(m);
+    const lb = makeLabel(s.info ? 'Betriebssteckbrief' : s.task.label, 4.2); lb.position.set(s.pos.x, s.ly + 1.5, s.pos.z); scene.add(lb); s.labelSprite = lb;
+    const h = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.8, 6, 8), mat(0xffffff)); h.position.set(s.pos.x, 3, s.pos.z); h.visible = false; h.userData.id = id; scene.add(h); hitMeshes.push(h); s.hit = h;
+  });
+  // Spielerfigur
+  const pg = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 1.1, 8), mat(0x2563eb)); body.position.y = 0.95; pg.add(body);
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), mat(0xf2c9a0)); head.position.y = 1.7; pg.add(head);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.38, 0.22, 8), mat(0xe0457b)); cap.position.y = 2.02; pg.add(cap);
+  const peak = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.3), mat(0xe0457b)); peak.position.set(0, 1.95, 0.32); pg.add(peak);
+  const legs = [];
+  [-0.2, 0.2].forEach(x => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.26), mat(0x1e3a8a)); l.geometry.translate(0, -0.3, 0); l.position.set(x, 0.6, 0); pg.add(l); legs.push(l); });
+  const arms = [];
+  [-0.55, 0.55].forEach(x => { const a = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.2), mat(0x2563eb)); a.geometry.translate(0, -0.3, 0); a.position.set(x, 1.4, 0); pg.add(a); arms.push(a); });
+  const shadow = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.02, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })); shadow.position.y = 0.2; pg.add(shadow);
+  scene.add(pg); playerObj = { group: pg, legs, arms };
+  // Partikel-Pool für Freischalt-Effekt
+  const pgeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+  for (let i=0;i<36;i++){ const m = new THREE.Mesh(pgeo, new THREE.MeshBasicMaterial({ color: [0xffc83d,0xe0457b,0x4cc3c9,0x7fe08a][i%4] })); m.visible = false; scene.add(m); particleList.push({ m, v:new THREE.Vector3(), life:0 }); }
+}
+
+function initThree(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(dpr, 2));
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0xbfe6ff); scene.fog = new THREE.Fog(0xbfe6ff, 80, 190);
+  camera = new THREE.PerspectiveCamera(52, 1, 0.3, 400);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xa6d9a6, 0.55));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.42); sun.position.set(-30, 60, 25); scene.add(sun);
+}
+
+/* ====================================================================
+   3) LOGIK – Zustand, Prüfung, Fortschritt, Bewegung, Kamera
+   ==================================================================== */
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function el(tag, cls, txt){ const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function mulberry(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1|a); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function makeR(seedStr){
+  const f = mulberry(hashStr(seedStr));
+  return { f, int:(a,b) => a + Math.floor(f()*(b-a+1)), pick: arr => arr[Math.floor(f()*arr.length)],
+    shuffle(arr){ const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j = Math.floor(f()*(i+1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; } };
+}
+
+/* Zahleneingabe: Komma/Punkt, Einheiten, Leerzeichen, Tausendertrennzeichen */
+function parseNum(str){
+  if (typeof str === 'number') return isFinite(str) ? str : null;
+  const s = String(str == null ? '' : str).replace(/[\u2212\u2013]\s*(?=\d)/g, '-').replace(/-\s+(?=\d)/g, '-');
+  const m = s.match(/-?\d[\d\s.,'\u00a0\u202f]*/); if (!m) return null;
+  let t = m[0].replace(/[\s'\u00a0\u202f]/g, '');
+  const neg = t[0] === '-'; if (neg) t = t.slice(1);
+  const hasC = t.indexOf(',') >= 0, hasD = t.indexOf('.') >= 0;
+  if (hasC && hasD){ if (t.lastIndexOf(',') > t.lastIndexOf('.')) t = t.replace(/\./g,'').replace(',','.'); else t = t.replace(/,/g,''); }
+  else if (hasC){ const p = t.split(','); t = p.length > 2 ? p.join('') : t.replace(',','.'); }
+  else if (hasD){ const p = t.split('.'); if (p.length > 2) t = p.join(''); else if (/^\d{1,3}\.\d{3}$/.test(t) && p[0] !== '0') t = p.join(''); }
+  t = t.replace(/[.,]+$/, '');
+  const v = parseFloat(t); if (!isFinite(v)) return null; return neg ? -v : v;
+}
+
+/* Speicher (localStorage, mit Rückfall auf Arbeitsspeicher) */
+const Store = (function(){
+  let mem = null, ok = false;
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); ok = true; } catch(e){ ok = false; }
+  return {
+    persistent: ok,
+    load(){ try { const r = ok ? localStorage.getItem(SAVE_KEY) : mem; return r ? JSON.parse(r) : null; } catch(e){ return null; } },
+    save(o){ const j = JSON.stringify(o); mem = j; if (ok){ try { localStorage.setItem(SAVE_KEY, j); } catch(e){} } },
+    clear(){ mem = null; if (ok){ try { localStorage.removeItem(SAVE_KEY); } catch(e){} } }
+  };
+})();
+
+/* ---------- Spielzustand ---------- */
+const TASK_BY_ID = {}; TASK_LIST.forEach(t => TASK_BY_ID[t.id] = t);
+const TOTAL_POINTS = TASK_LIST.length * POINTS_PER_TASK;
+let S = null, STECK = null, INST = {}, pending = [], mode = 'boot';
+const P = { x:0, z:6, face:0, walk:0, moving:false };       // Spielerfigur
+const CAM = { yaw:0, pitch:0.5, dist:9.5, pos:null, look:null, over:null };
+
+function newState(lvl, seed){
+  return { v:1, lvl: lvl, seed: seed || String(Date.now()) + Math.floor(Math.random()*1e6), done:{}, work:{}, unlocked:1, finished:false, pos:[0,6], yaw:0, infoSeen:false, started:true, name: (typeof playerName === 'string' ? playerName : '') };
+}
+function initSession(){ STECK = makeSteck(makeR(S.seed + '|steck')); INST = {}; pending = []; }
+function getInst(id){
+  if (INST[id]) return INST[id];
+  const T = TASK_BY_ID[id];
+  const inst = T.make(makeR(S.seed + '|' + id + '|' + S.lvl), S.lvl, { steck: STECK });
+  inst.type = T.type; inst.id = id;
+  const cleanTraps = o => { if (o.traps) o.traps = o.traps.filter(t => Math.abs(t.v - o.answer) > 0.006); if (o.parts) o.parts.forEach(cleanTraps); };
+  cleanTraps(inst); INST[id] = inst; return inst;
+}
+function work(id){ return S.work[id] || (S.work[id] = { tips:0, fails:0 }); }
+function saveGame(){ if (!S) return; S.pos = [Math.round(P.x*10)/10, Math.round(P.z*10)/10]; S.yaw = Math.round(CAM.yaw*100)/100; Store.save(S); }
+function tasksOf(a){ return TASK_LIST.filter(t => t.area === a); }
+function areaDone(a){ return tasksOf(a).every(t => S.done[t.id]); }
+function areasDoneCount(){ let n = 0; for (let a=1;a<=5;a++) if (areaDone(a)) n++; return n; }
+function pointsNow(){ return Object.keys(S.done).reduce((a,k) => a + S.done[k].pts, 0); }
+function tasksDoneCount(){ return Object.keys(S.done).length; }
+
+/* ---------- Antworten prüfen ---------- */
+function decimalsOf(x){ return Number.isInteger(x) ? 0 : Math.min(3, (String(Math.round(x*1000)/1000).split('.')[1] || '').length); }
+function genericHint(type, n){ const a = GENERIC[type] || ['Noch nicht richtig.']; return a[n % a.length]; }
+
+function evaluate(inst, val, n){
+  n = n || 0;
+  switch (inst.type){
+    case 'num': {
+      const x = parseNum(val);
+      if (x === null) return { inc:true, hint:'Bitte gib eine Zahl ein, zum Beispiel 12,5.' };
+      const tol = inst.tol != null ? inst.tol : 0.005;
+      if (Math.abs(x - inst.answer) <= tol) return { ok:true };
+      for (const t of (inst.traps || [])) if (Math.abs(x - t.v) <= Math.max(0.005, Math.abs(t.v)*0.001)) return { ok:false, hint:t.hint, trap:true };
+      const a = inst.answer;
+      if (a !== 0 && (Math.abs(x/a - 10) < 0.001 || Math.abs(x/a - 100) < 0.001 || Math.abs(x/a - 0.1) < 0.001 || Math.abs(x/a - 0.01) < 0.001 || Math.abs(x/a - 1000) < 0.001 || Math.abs(x/a - 0.001) < 0.001))
+        return { ok:false, hint:'Die Ziffern stimmen fast, aber das Komma sitzt an der falschen Stelle. Prüfe die Einheit und das Umrechnen.' };
+      if (Math.abs(x - a) <= Math.abs(a)*0.12) return { ok:false, hint:'Du bist schon nah dran! Prüfe noch einmal einen Rechenschritt oder das Runden.' };
+      return { ok:false, hint: genericHint('num', n) };
+    }
+    case 'choice': {
+      if (val == null || val < 0) return { inc:true, hint:'Wähle eine Antwort aus.' };
+      if (val === inst.ok) return { ok:true };
+      const o = inst.options[val];
+      return { ok:false, hint: o && o.hint ? o.hint : genericHint('choice', n), trap: !!(o && o.hint) };
+    }
+    case 'multi': {
+      const sel = val || []; if (!sel.some(Boolean)) return { inc:true, hint:'Wähle mindestens eine Aussage aus.' };
+      let wrong = -1, missing = 0;
+      inst.options.forEach((o, i) => { if (sel[i] && !o.ok && wrong < 0) wrong = i; if (!sel[i] && o.ok) missing++; });
+      if (wrong < 0 && !missing) return { ok:true };
+      if (wrong >= 0) return { ok:false, hint: (inst.options[wrong].hint || genericHint('multi', n)), trap:true };
+      return { ok:false, hint:'Das ist noch nicht alles: Es fehlen noch richtige Aussagen. Lies die übrigen Aussagen noch einmal.' };
+    }
+    case 'order': {
+      const cur = val, cnt = cur.reduce((a, v, i) => a + (v === i ? 1 : 0), 0);
+      if (cnt === cur.length) return { ok:true };
+      for (const p of inst.pairs) if (cur.indexOf(p[0]) > cur.indexOf(p[1])) return { ok:false, hint: p[2] + ' (' + cnt + ' von ' + cur.length + ' Schritten stehen schon richtig.)', trap:true };
+      return { ok:false, hint: genericHint('order', n) + ' (' + cnt + ' von ' + cur.length + ' Schritten stehen schon richtig.)' };
+    }
+    case 'match': {
+      const sel = val || [];
+      if (inst.rows.some((r, i) => sel[i] == null || sel[i] < 0)) return { inc:true, hint:'Ordne zuerst jedem Begriff eine Erklärung zu.' };
+      const bad = inst.rows.findIndex((r, i) => sel[i] !== r.ok), cnt = inst.rows.reduce((a, r, i) => a + (sel[i] === r.ok ? 1 : 0), 0);
+      if (bad < 0) return { ok:true };
+      return { ok:false, hint:'Bei „' + inst.rows[bad].term + '“ stimmt die Zuordnung noch nicht. ' + inst.rows[bad].hint + ' (' + cnt + ' von ' + inst.rows.length + ' Paaren passen.)', trap:true };
+    }
+    case 'reflect': {
+      const v = (val || []).map(s => String(s || '').trim()), short = v.filter(s => s.length < inst.min).length;
+      if (v.length < inst.prompts.length || short) return { inc:true, hint:'Schreibe zu jedem Punkt mindestens ' + inst.min + ' Zeichen (ein bis zwei Sätze). Noch zu kurz: ' + (short || inst.prompts.length) + '.' };
+      return { ok:true };
+    }
+    case 'final': {
+      const res = inst.parts.map((p, i) => evaluate(p, (val || [])[i], n));
+      const ok = res.every(r => r.ok), inc = res.some(r => r.inc);
+      if (ok) return { ok:true, parts:res };
+      const i = res.findIndex(r => !r.ok), L = 'ABC'[i];
+      return { ok:false, inc, parts:res, hint:'Teil ' + L + ': ' + res[i].hint };
+    }
+  }
+}
+
+function describe(inst, val){
+  switch (inst.type){
+    case 'num': { const v = String(val).trim(); return v + (inst.unit && !v.toLowerCase().endsWith(inst.unit.toLowerCase()) ? ' ' + inst.unit : ''); }
+    case 'choice': return inst.options[val].t;
+    case 'multi': return inst.options.filter((o, i) => val[i]).map(o => o.t).join(' | ');
+    case 'order': return val.map((v, i) => (i+1) + '. ' + inst.items[v]).join(' | ');
+    case 'match': return inst.rows.map((r, i) => r.term + ' → ' + inst.options[val[i]]).join(' | ');
+    case 'reflect': return val.map((t, i) => inst.prompts[i].label + ' ' + String(t).trim()).join(' | ');
+    case 'final': return inst.parts.map((p, i) => 'Teil ' + 'ABC'[i] + ': ' + describe(p, val[i])).join(' | ');
+  }
+}
+/* Musterlösung als Eingabewert (für Tests und Debug) */
+function canon(inst){
+  switch (inst.type){
+    case 'num': return de(inst.answer, decimalsOf(inst.answer)) + (inst.unit ? ' ' + inst.unit : '');
+    case 'choice': return inst.ok;
+    case 'multi': return inst.options.map(o => !!o.ok);
+    case 'order': return inst.items.map((_, i) => i);
+    case 'match': return inst.rows.map(r => r.ok);
+    case 'reflect': return inst.prompts.map(() => 'Das ist meine ehrliche Antwort mit mehreren Wörtern und einem ganzen Satz zum Thema.');
+    case 'final': return inst.parts.map(canon);
+  }
+}
+
+/* ---------- Fortschritt ---------- */
+function submitAnswer(id, val){
+  if (S.done[id]) return { already:true };
+  const inst = getInst(id), w = work(id), res = evaluate(inst, val, w.fails);
+  if (res.ok){
+    const pts = Math.max(4, POINTS_PER_TASK - 2*w.tips - w.fails);
+    S.done[id] = { pts, tips:w.tips, fails:w.fails, sol:false, ans: describe(inst, val) };
+    checkProgress(); saveGame(); refreshWorld(); updateHud();
+    return { ok:true, pts, parts:res.parts };
+  }
+  if (!res.inc){ w.fails++; saveGame(); }
+  return { ok:false, inc:!!res.inc, hint:res.hint, parts:res.parts, fails:w.fails };
+}
+function useTip(id){
+  const inst = getInst(id), w = work(id);
+  if (w.tips >= inst.tips.length) return { none:true, text:inst.tips[inst.tips.length-1], n:w.tips };
+  w.tips++; saveGame(); return { text:inst.tips[w.tips-1], n:w.tips };
+}
+function showSolution(id){
+  const inst = getInst(id), w = work(id);
+  if (S.done[id]) return { already:true };
+  if (w.tips < inst.tips.length) return { denied:true };
+  S.done[id] = { pts:1, tips:w.tips, fails:w.fails, sol:true, ans:'(Lösung wurde angesehen)' };
+  checkProgress(); saveGame(); refreshWorld(); updateHud();
+  return { ok:true, lines:inst.solution };
+}
+function checkProgress(){
+  while (!S.finished && areaDone(S.unlocked)){
+    if (S.unlocked === 5){ S.finished = true; pending.push({ t:'end' }); break; }
+    S.unlocked++; pending.push({ t:'unlock', area:S.unlocked });
+  }
+}
+
+/* ---------- Kollision ---------- */
+let lastBlockedToast = -1e9;
+function collide(p, rad){
+  rad = rad || WORLD.PR; let blocked = -1;
+  for (let pass = 0; pass < 4; pass++){
+    const rr = Math.hypot(p.x, p.z); if (rr > WORLD.BOUND){ p.x *= WORLD.BOUND/rr; p.z *= WORLD.BOUND/rr; }
+    for (let i = S.unlocked; i < 5; i++){
+      const A = AREA_POS[i], dx = p.x - A.x, dz = p.z - A.z, d = Math.hypot(dx, dz), lim = AREAS[i].fenceR + 0.9;
+      if (d < lim){ const k = lim/(d || 1e-6); p.x = A.x + dx*k; p.z = A.z + dz*k; blocked = i; }
+    }
+    for (const c of COLL.c){ const dx = p.x - c.x, dz = p.z - c.z, lim = c.r + rad; if (Math.abs(dx) > lim || Math.abs(dz) > lim) continue;
+      const d = Math.hypot(dx, dz); if (d < lim){ const k = lim/(d || 1e-6); p.x = c.x + dx*k; p.z = c.z + dz*k; } }
+    for (const b of COLL.r){ const dx = p.x - b.x, dz = p.z - b.z; if (Math.abs(dx) > b.hx + b.hz + rad + 1 || Math.abs(dz) > b.hx + b.hz + rad + 1) continue;
+      const lx = dx*b.c - dz*b.s, lz = dx*b.s + dz*b.c, cx = clamp(lx, -b.hx, b.hx), cz = clamp(lz, -b.hz, b.hz), ex = lx - cx, ez = lz - cz, d = Math.hypot(ex, ez);
+      let nx = lx, nz = lz, hit = false;
+      if (d < rad && d > 1e-6){ nx = cx + ex/d*rad; nz = cz + ez/d*rad; hit = true; }
+      else if (d <= 1e-6){ const px = b.hx - Math.abs(lx), pz = b.hz - Math.abs(lz); if (px < pz) nx = (lx < 0 ? -1 : 1)*(b.hx + rad); else nz = (lz < 0 ? -1 : 1)*(b.hz + rad); hit = true; }
+      if (hit){ p.x = b.x + nx*b.c + nz*b.s; p.z = b.z - nx*b.s + nz*b.c; } }
+  }
+  const r2 = Math.hypot(p.x, p.z); if (r2 > WORLD.BOUND){ p.x *= WORLD.BOUND/r2; p.z *= WORLD.BOUND/r2; }
+  return blocked;
+}
+function pointBlocked(x, z, y, margin){
+  for (const c of COLL.c){ if (y < c.h + 0.6 && Math.hypot(x - c.x, z - c.z) < c.r + margin) return true; }
+  for (const b of COLL.r){ if (y > b.h + 0.6) continue; const dx = x - b.x, dz = z - b.z, lx = dx*b.c - dz*b.s, lz = dx*b.s + dz*b.c;
+    if (Math.abs(lx) < b.hx + margin && Math.abs(lz) < b.hz + margin) return true; }
+  return false;
+}
+
+/* ---------- Eingabezustand und Bewegung ---------- */
+const KEYS = {}; const JOY = { x:0, y:0, id:null }; const SPEED = 6.6;
+function inputVec(){
+  let ix = (KEYS.d || KEYS.arrowright ? 1 : 0) - (KEYS.a || KEYS.arrowleft ? 1 : 0), iy = (KEYS.w || KEYS.arrowup ? 1 : 0) - (KEYS.s || KEYS.arrowdown ? 1 : 0);
+  ix += JOY.x; iy += JOY.y; const l = Math.hypot(ix, iy); if (l > 1){ ix /= l; iy /= l; } return { ix, iy };
+}
+function stepPlayer(dt, v){
+  v = v || inputVec();
+  const sy = Math.sin(CAM.yaw), cy = Math.cos(CAM.yaw);
+  const mx = cy*v.ix - sy*v.iy, mz = -sy*v.ix - cy*v.iy;   // rechts = (cos,-sin), vorwärts = (-sin,-cos)
+  const len = Math.hypot(v.ix, v.iy); P.moving = len > 0.05;
+  if (P.moving){
+    const np = { x: P.x + mx*SPEED*dt, z: P.z + mz*SPEED*dt };
+    const b = collide(np);
+    if (b >= 0 && performance.now() - lastBlockedToast > 3000){ lastBlockedToast = performance.now(); toast('Gesperrt! Löse zuerst: „' + AREAS[S.unlocked-1].name + '“.'); }
+    else if (b < 0 && !P._lastBlk && false){}
+    P.x = np.x; P.z = np.z;
+    const target = Math.atan2(mx, mz); let d = target - P.face; while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
+    P.face += d * Math.min(1, dt*14); P.walk += dt*9*len;
+  } else P.walk *= 0.9;
+}
+function placePlayerMesh(){
+  if (!playerObj) return; const g = playerObj.group; g.position.set(P.x, 0, P.z); g.rotation.y = P.face;
+  const s = Math.sin(P.walk) * (P.moving ? 0.7 : 0.05); playerObj.legs[0].rotation.x = s; playerObj.legs[1].rotation.x = -s; playerObj.arms[0].rotation.x = -s*0.8; playerObj.arms[1].rotation.x = s*0.8;
+}
+
+/* ---------- Kamera: Third-Person mit Glättung und Hindernis-Vermeidung ---------- */
+function camTargetPos(){
+  const portrait = window.innerHeight > window.innerWidth;
+  let d = CAM.dist * (portrait ? 1.15 : 1);
+  const cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
+  const dirx = Math.sin(CAM.yaw)*cp, dirz = Math.cos(CAM.yaw)*cp, diry = sp;
+  const hx = P.x, hy = 1.7, hz = P.z;
+  // Strecke vom Kopf zur Kamera schrittweise prüfen; vor dem ersten Hindernis anhalten
+  for (let t = 2.0; t <= d; t += 0.5){
+    const x = hx + dirx*t, y = hy + diry*t, z = hz + dirz*t;
+    if (pointBlocked(x, z, Math.max(y, 0.4), 0.55)){ d = Math.max(3.4, t - 0.7); break; }
+  }
+  let x = hx + dirx*d, y = Math.max(1.1, hy + diry*d), z = hz + dirz*d;
+  for (let k = 0; k < 14 && pointBlocked(x, z, y, 0.3); k++) y += 1;
+  const r = Math.hypot(x, z); if (r > 90){ x *= 90/r; z *= 90/r; }
+  return { x, y, z, look:{ x:hx, y:hy, z:hz } };
+}
+function updateCamera(dt, snap){
+  let t;
+  if (CAM.over){ t = CAM.over; } else t = camTargetPos();
+  if (!CAM.pos || snap){ CAM.pos = { x:t.x, y:t.y, z:t.z }; CAM.look = { x:t.look.x, y:t.look.y, z:t.look.z }; }
+  else {
+    const k = 1 - Math.exp(-dt*(CAM.over ? 3 : 12));
+    CAM.pos.x += (t.x - CAM.pos.x)*k; CAM.pos.y += (t.y - CAM.pos.y)*k; CAM.pos.z += (t.z - CAM.pos.z)*k;
+    CAM.look.x += (t.look.x - CAM.look.x)*k; CAM.look.y += (t.look.y - CAM.look.y)*k; CAM.look.z += (t.look.z - CAM.look.z)*k;
+  }
+  if (camera){ camera.position.set(CAM.pos.x, CAM.pos.y, CAM.pos.z); camera.lookAt(CAM.look.x, CAM.look.y, CAM.look.z); }
+}
+
+/* ---------- Stationen finden ---------- */
+function stationVisible(s){ return s.info || s.area <= S.unlocked; }
+function nearestStation(maxD){
+  let best = null, bd = maxD || WORLD.STATION_RANGE;
+  Object.keys(ST).forEach(id => { const s = ST[id]; if (!stationVisible(s)) return; const d = Math.hypot(s.pos.x - P.x, s.pos.z - P.z); if (d < bd){ bd = d; best = s; } });
+  return best;
+}
+function nextTarget(){
+  let best = null, bd = 1e9;
+  TASK_LIST.forEach(t => { if (S.done[t.id] || t.area > S.unlocked) return; const s = ST[t.id], d = Math.hypot(s.pos.x - P.x, s.pos.z - P.z); if (d < bd){ bd = d; best = s; } });
+  if (best) best.dist = bd; return best;
+}
+/* Tippen/Klicken auf den Bildschirm: Raycast gegen Hitboxen, zusätzlich großzügig nach Bildschirmabstand zum Marker */
+function pickAt(nx, ny){
+  if (!camera) return null;
+  const rc = new THREE.Raycaster(); rc.setFromCamera({ x:nx, y:ny }, camera);
+  const hits = rc.intersectObjects(hitMeshes, false).filter(h => stationVisible(ST[h.object.userData.id]));
+  if (hits.length) return ST[hits[0].object.userData.id];
+  let best = null, bd = 0.14;
+  Object.keys(ST).forEach(id => { const s = ST[id]; if (!stationVisible(s)) return; const v = new THREE.Vector3(s.pos.x, s.ly, s.pos.z).project(camera);
+    if (v.z > 1) return; const d = Math.hypot(v.x - nx, (v.y - ny)*(window.innerHeight/window.innerWidth)); if (d < bd){ bd = d; best = s; } });
+  return best;
+}
+function tapStation(s){
+  if (!s) return false;
+  const d = Math.hypot(s.pos.x - P.x, s.pos.z - P.z);
+  if (d > WORLD.STATION_RANGE + 1){ toast('Noch zu weit weg (' + Math.round(d) + ' m). Geh näher heran und tippe nochmal.'); return false; }
+  openStation(s.id); return true;
+}
+
+/* ====================================================================
+   4) OBERFLÄCHE – Dialoge, HUD, Karte, Menüs, Eingabe, Hauptschleife
+   ==================================================================== */
+const SCREENS = { mappe:'sMappe', start:'sStart', dialog:'sDialog', map:'sMap', menu:'sMenu', confirm:'sConfirm', help:'sHelp', end:'sEnd' };
+let curTask = null, hintOn = false, helpReturn = 'start', confirmCtx = null, selLevel = 0, uid = 0, unlockState = null, savedGame = null, simTime = 0;
+
+function setMode(m){
+  mode = m;
+  Object.keys(SCREENS).forEach(k => $(SCREENS[k]).classList.toggle('on', k === m));
+  $('hud').hidden = (m === 'start' || !S || !S.started);
+  $('keyhint').hidden = !(m === 'play' && !document.body.classList.contains('touch'));
+  if (m !== 'play'){ JOY.x = JOY.y = 0; $('knob').style.transform = ''; Object.keys(KEYS).forEach(k => KEYS[k] = false); }
+  if (m !== 'unlock') $('banner').classList.remove('on');
+  updateOpenBtn();
+}
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 3000); }
+
+/* ---------- HUD ---------- */
+function updateHud(){
+  $('pts').textContent = pointsNow(); $('ptsMax').textContent = TOTAL_POINTS;
+  const ad = areasDoneCount(); $('areasDone').textContent = ad; $('barFill').style.width = (ad/5*100) + '%'; $('barWrap').setAttribute('aria-valuenow', ad);
+  let g;
+  if (S.finished) g = 'Geschafft! Du hast alle 5 Bereiche gelöst. Erkunde weiter oder öffne das Menü für deinen Spielbericht.';
+  else { const A = AREAS[S.unlocked-1], left = tasksOf(S.unlocked).filter(t => !S.done[t.id]).length;
+    g = 'Ziel: ' + A.name + ' – noch ' + left + ' ' + (left === 1 ? 'Aufgabe' : 'Aufgaben') + ' (gelbe Rauten).'; }
+  $('goal').textContent = g;
+}
+function refreshWorld(){
+  if (!scene) return;
+  FENCES.forEach((f, i) => { const locked = (i + 1 > S.unlocked); if (!f.anim || f.anim < 0){ f.group.visible = locked; f.group.scale.set(1, 1, 1); } f.locked = locked; });
+  Object.keys(ST).forEach(id => {
+    const s = ST[id], vis = stationVisible(s), done = !s.info && !!S.done[id];
+    s.marker.visible = vis; s.labelSprite.visible = vis;
+    s.marker.material.color.setHex(s.info ? 0x4db8ff : done ? 0x16a34a : 0xffc83d); s.marker.material.emissive.setHex(s.info ? 0x0a3d66 : done ? 0x064e22 : 0x6b4a00);
+    s.done = done;
+  });
+}
+
+/* ---------- Hinweis-Pfeil ---------- */
+function updateHint(){
+  const box = $('hintbox');
+  if (!hintOn || mode !== 'play'){ box.hidden = true; return; }
+  const t = nextTarget(); box.hidden = false;
+  if (!t){ $('hintText').textContent = 'Alle Aufgaben sind gelöst.'; return; }
+  const dx = t.pos.x - P.x, dz = t.pos.z - P.z, d = Math.hypot(dx, dz);
+  const fx = -Math.sin(CAM.yaw), fz = -Math.cos(CAM.yaw), rx = Math.cos(CAM.yaw), rz = -Math.sin(CAM.yaw);
+  const ang = Math.atan2(dx*rx + dz*rz, dx*fx + dz*fz);
+  $('arrow').style.transform = 'rotate(' + ang + 'rad)';
+  $('hintText').textContent = d < WORLD.STATION_RANGE ? 'Du bist da: ' + t.task.label + '. Drücke „Öffnen“.' : 'Nächstes Ziel: ' + t.task.label + ' – ' + Math.round(d) + ' m';
+  P._hint = { id:t.id, dist:d, ang };
+}
+function updateOpenBtn(){
+  const b = $('openBtn'); if (!S || mode !== 'play'){ b.hidden = true; return; }
+  const n = nearestStation(); b.hidden = !n;
+  if (n){ const txt = 'Öffnen: ' + (n.info ? 'Steckbrief' : n.task.label); if (b.textContent !== txt) b.textContent = txt; b._id = n.id; }
+}
+
+/* ---------- Dialoge ---------- */
+function openStation(id){ if (mode !== 'play') return; if (id === 'info') openInfo(); else openTask(id); }
+function showScreenCard(){ setMode('dialog'); const d = $('dlg'); d.textContent = ''; return d; }
+function openInfo(){
+  const d = showScreenCard(); S.infoSeen = true; saveGame();
+  d.append(el('span','who','Infotafel am Startplatz'));
+  const h = el('h2', null, 'Betriebssteckbrief'); h.id = 'dlgTitle'; d.append(h);
+  d.append(el('p','sub','Lies in Ruhe. Du kannst die Tafel jederzeit noch einmal ansehen.'));
+  const ul = el('ul'); ul.style.lineHeight = '1.5'; steckLines(STECK).forEach(l => ul.append(el('li', null, l))); d.append(ul);
+  const b = el('div','btns2'); const c = el('button','btn primary','Schließen'); c.type = 'button'; c.onclick = closeDialog; b.append(c); d.append(b); setTimeout(() => c.focus(), 30);
+}
+
+function buildInput(inst, host){
+  const id = 'q' + (++uid), c = {};
+  if (inst.type === 'num'){
+    const w = el('div','field'), inp = el('input'); inp.type = 'text'; inp.id = id; inp.setAttribute('inputmode','decimal'); inp.autocomplete = 'off'; inp.setAttribute('autocapitalize','off'); inp.spellcheck = false;
+    inp.setAttribute('aria-label','Deine Antwort' + (inst.unit ? ' in ' + inst.unit : '')); inp.placeholder = 'Antwort';
+    w.append(inp, el('span','unit', inst.unit || '')); host.append(w); c.get = () => inp.value; c.focus = () => inp.focus();
+  } else if (inst.type === 'choice' || inst.type === 'multi'){
+    const multi = inst.type === 'multi', fs = el('div'); fs.setAttribute('role', multi ? 'group' : 'radiogroup'); const ins = [];
+    inst.options.forEach((o, i) => { const lb = el('label','opt'), r = el('input'); r.type = multi ? 'checkbox' : 'radio'; r.name = id; r.value = i; ins.push(r); lb.append(r, el('span', null, o.t)); fs.append(lb); });
+    host.append(fs);
+    c.get = () => multi ? ins.map(r => r.checked) : ins.findIndex(r => r.checked); c.focus = () => ins[0] && ins[0].focus();
+  } else if (inst.type === 'order'){
+    let cur = inst.start.slice(); const list = el('div'); host.append(list);
+    const render = fi => { list.textContent = ''; cur.forEach((v, i) => { const row = el('div','ord'); row.append(el('span','n', String(i+1)), el('span','t', inst.items[v]));
+      const up = el('button', null, '▲ hoch'), dn = el('button', null, '▼ runter'); up.type = dn.type = 'button'; up.disabled = i === 0; dn.disabled = i === cur.length-1;
+      up.setAttribute('aria-label','Schritt ' + (i+1) + ' nach oben'); dn.setAttribute('aria-label','Schritt ' + (i+1) + ' nach unten');
+      up.onclick = () => { const t = cur[i]; cur[i] = cur[i-1]; cur[i-1] = t; render(i-1 + 'u'); }; dn.onclick = () => { const t = cur[i]; cur[i] = cur[i+1]; cur[i+1] = t; render(i+1 + 'd'); };
+      row.append(up, dn); list.append(row); });
+      if (fi != null){ const k = parseInt(fi, 10), btns = list.querySelectorAll('.ord'); const r = btns[k]; if (r){ const b = r.querySelectorAll('button'); const t = String(fi).slice(-1) === 'u' ? b[0] : b[1]; (t.disabled ? (b[0].disabled ? b[1] : b[0]) : t).focus(); } } };
+    render(); c.get = () => cur.slice(); c.focus = () => { const b = list.querySelector('button'); b && b.focus(); }; c.setOrder = a => { cur = a.slice(); render(); };
+  } else if (inst.type === 'match'){
+    const sels = [];
+    inst.rows.forEach((r, i) => { const row = el('div','mrow'), lb = el('label','t', r.term), s = el('select'); s.id = id + '_' + i; lb.setAttribute('for', s.id);
+      const o0 = el('option', null, '– bitte wählen –'); o0.value = -1; s.append(o0); inst.options.forEach((o, j) => { const op = el('option', null, o); op.value = j; s.append(op); });
+      row.append(lb, s); host.append(row); sels.push(s); });
+    c.get = () => sels.map(s => parseInt(s.value, 10)); c.focus = () => sels[0].focus();
+  } else if (inst.type === 'reflect'){
+    const w = el('div','reflect'), tas = [];
+    inst.prompts.forEach((p, i) => { const lb = el('label', null, p.label), ta = el('textarea'); ta.id = id + '_' + i; lb.setAttribute('for', ta.id); ta.placeholder = p.ph; ta.rows = 3; ta.maxLength = 600; w.append(lb, ta); tas.push(ta); });
+    host.append(w); c.get = () => tas.map(t => t.value); c.focus = () => tas[0].focus();
+  } else if (inst.type === 'final'){
+    const parts = inst.parts.map((p, i) => { const box = el('div','part'); box.append(el('h3', null, 'Teil ' + 'ABC'[i])); box.append(el('div','q', p.q)); host.append(box); const ctl = buildInput(p, box); ctl.box = box; return ctl; });
+    c.get = () => parts.map(p => p.get()); c.focus = () => parts[0].focus();
+    c.mark = res => parts.forEach((p, i) => { p.box.classList.remove('ok','bad'); if (res && res[i]) p.box.classList.add(res[i].ok ? 'ok' : 'bad'); });
+  }
+  return c;
+}
+
+function resultLine(rec){
+  if (rec.sol) return 'Mit angesehener Lösung gelöst (' + rec.pts + ' Punkt).';
+  return 'Richtig gelöst: ' + rec.pts + ' von ' + POINTS_PER_TASK + ' Punkten (' + rec.tips + ' ' + (rec.tips === 1 ? 'Tipp' : 'Tipps') + ', ' + rec.fails + ' ' + (rec.fails === 1 ? 'Fehlversuch' : 'Fehlversuche') + ').';
+}
+function solutionBox(inst){
+  const b = el('div','sol'); b.append(el('b', null, 'Lösungsweg:')); const ol = el('ol'); inst.solution.forEach(l => ol.append(el('li', null, l))); b.append(ol); return b;
+}
+
+function openTask(id){
+  const T = TASK_BY_ID[id], inst = getInst(id), rec = S.done[id], w = work(id);
+  const d = showScreenCard(); curTask = { id };
+  d.append(el('span','who', T.who));
+  const h = el('h2', null, T.title); h.id = 'dlgTitle'; d.append(h);
+  d.append(el('div','story', inst.story)); d.append(el('div','q', inst.q));
+  if (rec){
+    const b = el('div','box'); b.append(el('b', null, 'Deine Antwort:')); b.append(el('p', null, rec.ans)); d.append(b);
+    d.append(el('div','fb ok', resultLine(rec))); d.append(solutionBox(inst));
+    const bt = el('div','btns2'); const c = el('button','btn primary','Schließen'); c.type = 'button'; c.onclick = closeDialog; bt.append(c); d.append(bt); setTimeout(() => c.focus(), 30); return;
+  }
+  const form = el('fieldset'); form.className = 'nofs'; d.append(form);
+  const ctl = buildInput(inst, form); curTask.ctl = ctl;
+  const fb = el('div','fb info'); fb.id = 'fb'; fb.setAttribute('aria-live','polite'); fb.hidden = true; d.append(fb);
+  const tipsHost = el('div'); d.append(tipsHost);
+  const solHost = el('div'); d.append(solHost);
+  const bt = el('div','btns2'); d.append(bt);
+  const check = el('button','btn primary','Prüfen'), tip = el('button','btn'), sol = el('button','btn'), close = el('button','btn','Schließen');
+  [check, tip, sol, close].forEach(b => b.type = 'button'); bt.append(check, tip, sol, close);
+  const note = el('p','sub'); d.append(note);
+  const showFb = (txt, kind) => { fb.hidden = false; fb.className = 'fb ' + kind; fb.textContent = txt; };
+  const addTip = (n, text) => { const t = el('div','tipbox'); const bb = el('b', null, 'Tipp ' + n + ': '); t.append(bb, document.createTextNode(text)); tipsHost.append(t); };
+  const refresh = () => {
+    const n = inst.tips.length;
+    if (w.tips < n){ tip.textContent = 'Tipp ' + (w.tips+1) + ' von ' + n; tip.disabled = false; } else { tip.textContent = 'Alle Tipps gezeigt'; tip.disabled = true; }
+    sol.textContent = 'Lösungsweg zeigen'; sol.disabled = w.tips < n; note.textContent = w.tips < n ? 'Den Lösungsweg kannst du erst nach allen Tipps ansehen.' : '';
+  };
+  for (let i = 0; i < w.tips; i++) addTip(i+1, inst.tips[i]);
+  refresh();
+  const finish = () => { form.disabled = true; bt.textContent = ''; note.textContent = ''; const nx = el('button','btn good','Weiter'); nx.type = 'button'; nx.onclick = closeDialog; bt.append(nx); nx.focus(); };
+  check.onclick = () => {
+    const r = submitAnswer(id, ctl.get());
+    if (r.already) return;
+    if (ctl.mark && r.parts) ctl.mark(r.parts);
+    if (r.ok){
+      let txt = 'Richtig! Du bekommst ' + r.pts + ' Punkte.'; if (pending.some(p => p.t === 'unlock' || p.t === 'end')) txt += ' Du hast den Bereich geschafft!';
+      showFb(txt, 'ok'); solHost.append(solutionBox(inst)); finish();
+    } else showFb(r.hint, r.inc ? 'info' : 'bad');
+  };
+  tip.onclick = () => { const r = useTip(id); if (r.none) return; addTip(r.n, r.text); refresh(); };
+  sol.onclick = () => { const r = showSolution(id); if (!r.ok) return; showFb('Die Aufgabe gilt als gelöst (mit Lösungsweg, 1 Punkt). Beim nächsten Mal klappt es sicher auch allein!', 'info'); solHost.append(solutionBox(inst)); finish(); };
+  close.onclick = closeDialog;
+  setTimeout(() => ctl.focus && ctl.focus(), 30);
+}
+function closeDialog(){ curTask = null; setMode('play'); processPending(); saveGame(); }
+
+/* ---------- Freischalt-Effekt (überspringbar) ---------- */
+function processPending(){
+  if (mode !== 'play' || !pending.length) return;
+  const ev = pending.shift(); if (ev.t === 'unlock') startUnlock(ev.area); else if (ev.t === 'end') showEnd();
+}
+function startUnlock(area){
+  setMode('unlock'); const A = AREAS[area-1], Pp = AREA_POS[area-1], f = FENCES[area-1];
+  $('banTitle').textContent = 'Bereich ' + area + ' freigeschaltet!'; $('banText').textContent = A.name + ': ' + A.focus; $('banner').classList.add('on'); $('banSkip').focus();
+  unlockState = { area, t:0 }; f.anim = 0;
+  CAM.over = { x: Pp.x + Pp.nx*(A.fenceR + 12), y: 15, z: Pp.z + Pp.nz*(A.fenceR + 12), look:{ x:Pp.x, y:2, z:Pp.z } };
+  particleList.forEach((p, i) => { const a = i/particleList.length*Math.PI*2; p.m.position.set(Pp.x + Math.cos(a)*A.fenceR, 1, Pp.z + Math.sin(a)*A.fenceR); p.v.set(Math.cos(a)*2, 7 + (i%5), Math.sin(a)*2); p.life = 1.8; p.m.visible = true; });
+}
+function endUnlock(){
+  if (!unlockState) return; const f = FENCES[unlockState.area-1]; f.anim = -1; f.group.visible = false; f.group.scale.set(1,1,1);
+  particleList.forEach(p => { p.m.visible = false; p.life = 0; }); unlockState = null; CAM.over = null; $('banner').classList.remove('on');
+  setMode('play'); refreshWorld(); updateHud(); saveGame(); processPending();
+}
+
+/* ---------- Endbildschirm ---------- */
+function showEnd(){
+  setMode('end'); const c = $('endCard'); c.textContent = '';
+  const tips = Object.keys(S.done).reduce((a, k) => a + S.done[k].tips, 0), fails = Object.keys(S.done).reduce((a, k) => a + S.done[k].fails, 0), sols = Object.keys(S.done).filter(k => S.done[k].sol).length;
+  const h = el('h1', null, 'Glückwunsch!'); h.id = 'endTitle'; c.append(h);
+  c.append(el('p', null, 'Du hast die Schokoladenfabrik erkundet und alle 5 Bereiche gelöst. Du kennst jetzt Abteilungen, Abläufe, Berufe und Arbeitsbedingungen des Betriebs.'));
+  const st = el('div','stats');
+  [[pointsNow() + ' von ' + TOTAL_POINTS, 'Punkte'], [String(tips), 'benutzte Tipps'], [String(fails), 'Fehlversuche'], [String(sols), 'Lösungen angesehen']].forEach(a => { const d = el('div'); const b = el('b', null, a[0]); d.append(b, document.createTextNode(a[1])); st.append(d); });
+  c.append(st);
+  c.append(el('p','sub','Dein Spielbericht enthält deine Antworten, die Lösungswege und deine Reflexion. ' + (playerName ? 'Dein Name steht darin.' : 'Du hast keinen Namen eingetragen, schreibe ihn selbst auf den Bericht.')));
+  const b = el('div','btns2'); const mk = (t, cls, fn) => { const x = el('button','btn ' + cls, t); x.type = 'button'; x.onclick = fn; b.append(x); return x; };
+  mk('Spielbericht ansehen (PDF)', 'primary', () => openReport(false)); mk('Spielbericht herunterladen', 'primary', () => openReport(true));
+  mk('Weiter erkunden', '', () => setMode('play')); mk('Nochmal spielen', '', () => confirmThen('Nochmal spielen?', 'Dein jetziger Spielstand wird gelöscht und du beginnst von vorn. Lade vorher den Spielbericht herunter!', resetToStart, 'end'));
+  c.append(b);
+}
+
+/* ---------- Menü, Hilfe, Bestätigung ---------- */
+function showHelp(ret){
+  helpReturn = ret; const c = $('helpCard'); c.textContent = ''; const h = el('h2', null, 'Hilfe'); h.id = 'helpTitle'; c.append(h);
+  HELP_HTML.forEach(x => { c.append(el('h3', null, x[0])); c.append(el('p', null, x[1])); });
+  const b = el('div','btns2'); const x = el('button','btn primary','Schließen'); x.type = 'button'; x.onclick = () => setMode(helpReturn); b.append(x); c.append(b);
+  setMode('help'); setTimeout(() => x.focus(), 30);
+}
+function confirmThen(title, text, fn, ret){
+  $('confTitle').textContent = title; $('sConfirm').querySelector('p').textContent = text; confirmCtx = { fn, ret }; setMode('confirm'); setTimeout(() => $('cNo').focus(), 30);
+}
+function resetToStart(){
+  Store.clear(); savedGame = null; S = newState(selLevel, 'start'); S.started = false; initSession(); P.x = 0; P.z = 6; hintOn = false; $('btnHint').setAttribute('aria-pressed','false');
+  refreshWorld(); initStartScreen(); setMode('start');
+}
+
+/* ---------- Karte ---------- */
+function drawMap(){
+  const cv = $('mapC'), g = cv.getContext('2d'), W = cv.width, sc = W/150, X = x => (x + 75)*sc, Z = z => (z + 75)*sc;
+  g.clearRect(0, 0, W, W); g.fillStyle = '#cfeecf'; g.beginPath(); g.arc(X(0), Z(0), 66*sc, 0, 7); g.fill();
+  g.strokeStyle = '#e9d7b5'; g.lineWidth = 4.4*sc; AREA_POS.forEach((p, i) => { g.beginPath(); g.moveTo(X(0), Z(0)); g.lineTo(X(p.x + p.nx*17), Z(p.z + p.nz*17)); g.stroke(); });
+  g.fillStyle = '#f0e6d6'; g.beginPath(); g.arc(X(0), Z(0), 11*sc, 0, 7); g.fill();
+  g.font = '700 ' + Math.round(W/38) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  AREAS.forEach((A, i) => { const p = AREA_POS[i], locked = i + 1 > S.unlocked, done = areaDone(i + 1);
+    g.fillStyle = locked ? '#7a7a7a' : done ? '#0d9a4c' : '#d9a000'; g.globalAlpha = 0.9; g.beginPath(); g.arc(X(p.x), Z(p.z), 17*sc, 0, 7); g.fill(); g.globalAlpha = 1;
+    g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke(); g.fillStyle = '#fff'; g.font = '800 ' + Math.round(W/16) + 'px sans-serif'; g.fillText(String(A.id), X(p.x), Z(p.z) - W*0.012);
+    g.font = '700 ' + Math.round(W/44) + 'px sans-serif'; g.fillText(locked ? 'gesperrt' : done ? 'geschafft' : 'offen', X(p.x), Z(p.z) + W*0.045);
+    g.fillStyle = '#2a1a13'; g.font = '700 ' + Math.round(W/42) + 'px sans-serif'; g.fillText(A.short, X(p.x), Z(p.z) + 21*sc); });
+  Object.keys(ST).forEach(id => { const s = ST[id]; if (!stationVisible(s)) return; g.fillStyle = s.info ? '#2b8be0' : S.done[id] ? '#0d9a4c' : '#ffc83d'; g.strokeStyle = '#4a2a1c'; g.lineWidth = 2; g.beginPath(); g.arc(X(s.pos.x), Z(s.pos.z), W/90, 0, 7); g.fill(); g.stroke(); });
+  g.fillStyle = '#2a1a13'; g.font = '700 ' + Math.round(W/42) + 'px sans-serif'; g.fillText('Start', X(0), Z(0) + 9*sc);
+  g.save(); g.translate(X(P.x), Z(P.z)); g.rotate(-P.face + Math.PI); g.fillStyle = '#b3124f'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -W/34); g.lineTo(W/50, W/58); g.lineTo(-W/50, W/58); g.closePath(); g.fill(); g.stroke(); g.restore();
+}
+
+
+/* ---------- Name und Infomappe (eigene Speicherschlüssel, bleiben nur auf diesem Gerät) ---------- */
+function MiniStore(key){
+  let mem = null, ok = false; try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); ok = true; } catch(e){}
+  return { get(){ try { const r = ok ? localStorage.getItem(key) : mem; return r ? JSON.parse(r) : null; } catch(e){ return null; } },
+           set(o){ const j = JSON.stringify(o); mem = j; if (ok){ try { localStorage.setItem(key, j); } catch(e){} } } };
+}
+const NameStore = MiniStore('schokofabrik-name-v1'), MappeStore = MiniStore('schokofabrik-mappe-v1');
+let playerName = '', mappe = { read:{} }, mappeReturn = 'start', mappeChap = 0, mappeQuery = '';
+function cleanName(s){ return String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40); }
+function setPlayerName(s){ playerName = cleanName(s); NameStore.set({ name: playerName }); if (S) S.name = playerName; }
+function loadNameAndMappe(){ const n = NameStore.get(); playerName = n && typeof n.name === 'string' ? cleanName(n.name) : ''; const m = MappeStore.get(); mappe = m && m.read ? m : { read:{} }; }
+function mappeReadCount(){ return INFO_CHAPTERS.filter(c => mappe.read[c.id]).length; }
+function updateMappeButtons(){ const t = 'Infomappe lesen (' + mappeReadCount() + ' von ' + INFO_CHAPTERS.length + ' Kapiteln gelesen)'; const b = $('btnMappeStart'); if (b) b.textContent = mappeReadCount() ? t : 'Infomappe lesen'; }
+function openMappe(ret){ mappeReturn = ret; mappeQuery = ''; renderMappe(); setMode('mappe'); }
+function closeMappe(){ setMode(mappeReturn); updateMappeButtons(); }
+function hl(host, text, q){
+  if (!q){ host.textContent = text; return; }
+  const low = text.toLowerCase(), ql = q.toLowerCase(); let i = 0, j;
+  while ((j = low.indexOf(ql, i)) >= 0){ host.append(document.createTextNode(text.slice(i, j))); const m = el('mark', null, text.slice(j, j + q.length)); host.append(m); i = j + q.length; }
+  host.append(document.createTextNode(text.slice(i)));
+}
+function cardEl(card, q, label, open){
+  const d = el('details', 'mc'); if (open) d.open = true; const sm = el('summary'); sm.append(document.createTextNode(card.h)); if (label){ const l = el('span','chaplab',' · ' + label); sm.append(l); } d.append(sm);
+  const ul = el('ul'); card.lines.forEach(l => { const li = el('li'); hl(li, l, q); ul.append(li); }); d.append(ul); return d;
+}
+function renderMappe(){
+  const c = $('mappeCard'); c.textContent = ''; const h = el('h2', null, 'Infomappe: alle Informationen für die Aufgaben'); h.id = 'mappeTitle'; c.append(h);
+  c.append(el('p','sub','Lies die Kapitel in Ruhe. Klicke auf eine Überschrift, um sie zu öffnen. Mit den Fragen am Ende kannst du dich selbst testen. Du kannst die Infomappe auch im Spiel über das Menü öffnen.'));
+  const n = mappeReadCount(), bar = el('div','bar'); bar.append(el('i')); bar.firstChild.style.width = (n/INFO_CHAPTERS.length*100) + '%'; c.append(el('div', null, 'Gelesen: ' + n + ' von ' + INFO_CHAPTERS.length + ' Kapiteln'), bar);
+  const q = el('input'); q.type = 'text'; q.id = 'mq'; q.placeholder = 'Stichwort suchen, zum Beispiel „Charge“ oder „Prozent“'; q.value = mappeQuery; q.setAttribute('aria-label','In der Infomappe suchen'); q.style.marginTop = '10px'; c.append(q);
+  const tabs = el('div'); tabs.id = 'mappeTabs'; tabs.setAttribute('role','tablist');
+  INFO_CHAPTERS.forEach((ch, i) => { const b = el('button', mappe.read[ch.id] ? 'read' : '', (i+1) + ' ' + ch.title); b.type = 'button'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(i === mappeChap && !mappeQuery)); b.onclick = () => { mappeChap = i; mappeQuery = ''; renderMappe(); const t = $('mappeCard'); t.scrollTop = 0; }; tabs.append(b); });
+  c.append(tabs);
+  const body = el('div'); body.id = 'mappeBody'; c.append(body);
+  const fill = () => {
+    body.textContent = ''; const qq = mappeQuery.trim();
+    if (qq.length >= 2){
+      let cnt = 0; INFO_CHAPTERS.forEach(ch => ch.cards.forEach(cd => { if ((cd.h + ' ' + cd.lines.join(' ')).toLowerCase().indexOf(qq.toLowerCase()) >= 0){ cnt++; body.append(cardEl(cd, qq, ch.title, true)); } }));
+      if (!cnt) body.append(el('p','fb info','Keine Treffer für „' + qq + '“. Versuche ein anderes Stichwort.')); else body.prepend(el('p','sub', cnt + (cnt === 1 ? ' Treffer' : ' Treffer') + ' für „' + qq + '“:'));
+      return;
+    }
+    const ch = INFO_CHAPTERS[mappeChap]; body.append(el('h3', null, (mappeChap+1) + '. ' + ch.title)); body.append(el('p', null, ch.intro));
+    ch.cards.forEach((cd, i) => body.append(cardEl(cd, '', '', i === 0)));
+    const rc = el('details','mc'); rc.append(el('summary', null, 'Teste dich selbst'));
+    ch.recall.forEach(r => { const box = el('div'); box.style.margin = '6px 0 12px'; box.append(el('div','q',r[0])); const a = el('div','fb ok', r[1]); a.hidden = true; const b = el('button','btn','Antwort zeigen'); b.type = 'button'; b.onclick = () => { a.hidden = !a.hidden; b.textContent = a.hidden ? 'Antwort zeigen' : 'Antwort verbergen'; }; box.append(b, a); rc.append(box); });
+    body.append(rc);
+    const bt = el('div','btns2');
+    const rd = el('button', 'btn ' + (mappe.read[ch.id] ? '' : 'good'), mappe.read[ch.id] ? 'Als ungelesen markieren' : 'Kapitel gelesen ✓'); rd.type = 'button';
+    rd.onclick = () => { mappe.read[ch.id] = !mappe.read[ch.id]; if (!mappe.read[ch.id]) delete mappe.read[ch.id]; MappeStore.set(mappe); renderMappe(); };
+    const pv = el('button','btn','Zurück'), nx = el('button','btn','Nächstes Kapitel'); pv.type = nx.type = 'button'; pv.disabled = mappeChap === 0; nx.disabled = mappeChap === INFO_CHAPTERS.length - 1;
+    pv.onclick = () => { mappeChap--; renderMappe(); $('mappeCard').scrollTop = 0; }; nx.onclick = () => { mappeChap++; renderMappe(); $('mappeCard').scrollTop = 0; };
+    bt.append(rd, pv, nx); body.append(bt);
+  };
+  fill(); q.oninput = () => { mappeQuery = q.value; tabs.querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-selected', String(i === mappeChap && !mappeQuery.trim()))); fill(); };
+  const cl = el('div','btns2'); const x = el('button','btn primary', mappeReturn === 'start' ? 'Zurück zum Hauptmenü' : 'Zurück zum Menü'); x.type = 'button'; x.onclick = closeMappe; cl.append(x); c.append(cl);
+}
+
+/* ---------- Startbildschirm ---------- */
+function initStartScreen(){
+  loadNameAndMappe(); savedGame = Store.load(); if (savedGame && (savedGame.v !== 1 || typeof savedGame.lvl !== 'number' || !savedGame.done || !savedGame.seed)) savedGame = null;
+  if (!playerName && savedGame && savedGame.name) playerName = cleanName(savedGame.name);
+  $('pname').value = playerName; updateMappeButtons();
+  const seg = $('lvlSeg'); seg.textContent = '';
+  LEVELS.forEach((L, i) => { const lb = el('label'), r = el('input'); r.type = 'radio'; r.name = 'lvl'; r.value = i; r.checked = i === selLevel; r.onchange = () => { selLevel = i; $('lvlDesc').textContent = L.desc; }; lb.append(r, document.createTextNode(L.name)); seg.append(lb); });
+  $('lvlDesc').textContent = LEVELS[selLevel].desc;
+  $('btnStart').hidden = !!savedGame; $('btnContinue').hidden = !savedGame; $('btnNew').hidden = !savedGame;
+  const ci = $('contInfo'); ci.hidden = false;
+  if (savedGame){ const pts = Object.keys(savedGame.done).reduce((a, k) => a + savedGame.done[k].pts, 0); ci.textContent = 'Gespeicherter Spielstand: Niveau ' + LEVELS[savedGame.lvl].id + ', ' + pts + ' Punkte, Bereich ' + savedGame.unlocked + ' von 5. Das gewählte Niveau gilt nur für „Neu beginnen“.'; }
+  else if (!Store.persistent) ci.textContent = 'Hinweis: In diesem Browsermodus (z. B. Privatmodus) kann der Spielstand nicht gespeichert werden. Das Spiel läuft trotzdem.';
+  else ci.hidden = true;
+}
+function startNew(){
+  setPlayerName($('pname').value);
+  S = newState(selLevel); initSession(); P.x = 0; P.z = 6; P.face = Math.PI; CAM.yaw = 0; CAM.pitch = 0.5; hintOn = false; $('btnHint').setAttribute('aria-pressed','false');
+  refreshWorld(); updateHud(); saveGame(); setMode('play'); updateCamera(0, true); toast('Willkommen! Lies zuerst die Infotafel in der Mitte (blaue Raute).');
+}
+function continueGame(){
+  if (!savedGame) return; S = savedGame; setPlayerName($('pname').value || S.name || playerName); S.started = true; selLevel = S.lvl; initSession(); P.x = S.pos[0]; P.z = S.pos[1]; CAM.yaw = S.yaw || 0; CAM.pitch = 0.5;
+  refreshWorld(); updateHud(); setMode('play'); updateCamera(0, true);
+}
+
+/* ---------- Eingabe ---------- */
+function bindEvents(){
+  document.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (mode === 'unlock'){ if (k === 'enter' || k === ' ' || k === 'escape') { e.preventDefault(); endUnlock(); } return; }
+    if (mode === 'play'){
+      if (['arrowup','arrowdown','arrowleft','arrowright',' '].indexOf(k) >= 0) e.preventDefault();
+      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].indexOf(k) >= 0) KEYS[k] = true;
+      else if (k === 'e' || k === 'enter'){ const n = nearestStation(); if (n) openStation(n.id); }
+      else if (k === 'escape') setMode('menu');
+      return;
+    }
+    if (mode === 'dialog'){
+      if (k === 'escape'){ e.preventDefault(); closeDialog(); }
+      else if (k === 'enter'){ const t = e.target; if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.tagName === 'SELECT')) return; const b = $('dlg').querySelector('.btn.primary,.btn.good'); if (b){ e.preventDefault(); b.click(); } }
+      return;
+    }
+    if (k === 'escape'){
+      if (mode === 'mappe') closeMappe(); else if (mode === 'map') setMode('play'); else if (mode === 'menu') setMode('play'); else if (mode === 'help') setMode(helpReturn);
+      else if (mode === 'confirm') setMode(confirmCtx ? confirmCtx.ret : 'menu');
+    }
+  });
+  document.addEventListener('keyup', e => { KEYS[e.key.toLowerCase()] = false; });
+  window.addEventListener('blur', () => { Object.keys(KEYS).forEach(k => KEYS[k] = false); });
+  ['gesturestart','gesturechange','gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+  document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.card')) e.preventDefault(); }, { passive:false });
+  document.addEventListener('contextmenu', e => { if (e.target.id === 'c') e.preventDefault(); });
+  document.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.body.classList.add('touch'); }, true);
+  if (window.matchMedia && matchMedia('(pointer:coarse)').matches) document.body.classList.add('touch');
+
+  // Umschauen und Tippen auf der Spielfläche
+  const cv = $('c'); let drag = null;
+  cv.addEventListener('pointerdown', e => { if (mode !== 'play' && mode !== 'start') return; drag = { id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now(), moved:0 }; try { cv.setPointerCapture(e.pointerId); } catch(x){} });
+  cv.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+    CAM.yaw += dx*0.0055; CAM.pitch = clamp(CAM.pitch - dy*0.004, 0.12, 1.2); });
+  const up = e => { if (!drag || drag.id !== e.pointerId) return; const was = drag; drag = null;
+    if (e.type === 'pointerup' && was.moved < 12 && performance.now() - was.t < 600 && mode === 'play'){ const r = cv.getBoundingClientRect(); tapStation(pickAt(((e.clientX - r.left)/r.width)*2 - 1, -(((e.clientY - r.top)/r.height)*2 - 1))); } };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+
+  // Joystick
+  const joy = $('joy'), knob = $('knob'), RJ = 52;
+  const jm = e => { const r = joy.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2; let dx = e.clientX - cx, dy = e.clientY - cy; const l = Math.hypot(dx, dy); if (l > RJ){ dx *= RJ/l; dy *= RJ/l; }
+    JOY.x = Math.abs(dx/RJ) < 0.12 ? 0 : dx/RJ; JOY.y = Math.abs(dy/RJ) < 0.12 ? 0 : -dy/RJ; knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; };
+  joy.addEventListener('pointerdown', e => { if (mode !== 'play') return; JOY.id = e.pointerId == null ? 1 : e.pointerId; try { joy.setPointerCapture(e.pointerId); } catch(x){} jm(e); e.preventDefault(); });
+  joy.addEventListener('pointermove', e => { if (JOY.id !== null && (e.pointerId == null ? 1 : e.pointerId) === JOY.id) jm(e); });
+  const jend = e => { if (JOY.id !== null && (e.pointerId == null ? 1 : e.pointerId) === JOY.id){ JOY.id = null; JOY.x = JOY.y = 0; knob.style.transform = ''; } };
+  joy.addEventListener('pointerup', jend); joy.addEventListener('pointercancel', jend);
+
+  // Knöpfe
+  $('btnMap').onclick = () => { drawMap(); setMode('map'); }; $('btnMapClose').onclick = () => setMode('play');
+  $('btnMenu').onclick = () => setMode('menu'); $('mResume').onclick = () => setMode('play');
+  $('btnHint').onclick = () => { hintOn = !hintOn; $('btnHint').setAttribute('aria-pressed', String(hintOn)); updateHint(); };
+  $('openBtn').onclick = () => { const n = nearestStation(); if (n) openStation(n.id); };
+  $('mHelp').onclick = () => showHelp('menu'); $('btnHelpStart').onclick = () => showHelp('start');
+  $('mReport').onclick = () => openReport(true);
+  $('mMappe').onclick = () => openMappe('menu'); $('btnMappeStart').onclick = () => openMappe('start');
+  $('pname').addEventListener('input', () => { playerName = cleanName($('pname').value); NameStore.set({ name: playerName }); });
+  $('mRestart').onclick = () => confirmThen('Wirklich neu beginnen?', 'Dein gesamter Fortschritt (Punkte, gelöste Aufgaben, Spielbericht) wird gelöscht.', resetToStart, 'menu');
+  $('cNo').onclick = () => setMode(confirmCtx ? confirmCtx.ret : 'menu'); $('cYes').onclick = () => { const f = confirmCtx && confirmCtx.fn; confirmCtx = null; if (f) f(); };
+  $('btnStart').onclick = startNew; $('btnContinue').onclick = continueGame;
+  $('btnNew').onclick = () => confirmThen('Wirklich neu beginnen?', 'Der gespeicherte Spielstand wird gelöscht und du startest ein neues Spiel mit dem gewählten Niveau.', () => { Store.clear(); savedGame = null; startNew(); }, 'start');
+  $('banSkip').onclick = endUnlock; $('banner').addEventListener('click', endUnlock);
+  window.addEventListener('resize', onResize); window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+  window.addEventListener('pagehide', saveGame);
+  setInterval(() => { if (mode === 'play') saveGame(); }, 5000);
+}
+
+function onResize(){
+  const w = window.innerWidth, h = window.innerHeight; if (!renderer) return;
+  renderer.setSize(w, h, false); camera.aspect = w/h; camera.fov = (w/h < 1) ? 66 : 52; camera.updateProjectionMatrix();
+}
+
+/* ---------- Hauptschleife ---------- */
+let fpsAcc = 0, fpsN = 0, pr = 0;
+function tick(dt){
+  simTime += dt;
+  if (mode === 'play') stepPlayer(dt);
+  else if (mode === 'start'){ CAM.yaw += dt*0.12; P.moving = false; }
+  else if (mode === 'unlock' && unlockState){ unlockState.t += dt; const f = FENCES[unlockState.area-1], k = Math.min(1, unlockState.t/1.6); f.group.scale.y = Math.max(0.001, 1 - k); if (unlockState.t > 2.8) endUnlock(); }
+  if (S) Object.keys(ST).forEach((id, i) => { const s = ST[id]; if (!s.marker.visible) return; if (s.done){ s.marker.position.y = s.ly - 0.2; s.marker.scale.set(0.4, 0.65, 0.4); } else { s.marker.position.y = s.ly + Math.sin(simTime*2.2 + i)*0.25; s.marker.rotation.y = simTime*1.3; } });
+  particleList.forEach(p => { if (p.life > 0){ p.life -= dt; p.v.y -= 12*dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += dt*4; p.m.rotation.y += dt*3; if (p.life <= 0) p.m.visible = false; } });
+  placePlayerMesh(); updateCamera(dt); updateOpenBtn(); updateHint();
+  if (renderer) renderer.render(scene, camera);
+}
+let lastT = 0;
+function frame(now){
+  requestAnimationFrame(frame); const dt = Math.min(0.05, (now - lastT)/1000 || 0.016); lastT = now;
+  try { tick(dt); } catch(e){ console.error(e); }
+  if (renderer && mode !== 'start'){ fpsAcc += dt; fpsN++; if (fpsAcc > 2.5){ const fps = fpsN/fpsAcc; fpsAcc = 0; fpsN = 0; pr = renderer.getPixelRatio(); if (fps < 38 && pr > 1){ renderer.setPixelRatio(Math.max(1, pr - 0.25)); onResize(); } } }
+}
+
+function fatal(msg){ $('fbText').textContent = msg; $('fallback').classList.add('on'); }
+
+function boot(){
+  bindEvents();
+  if (typeof THREE === 'undefined'){ fatal('Die 3D-Bibliothek konnte nicht geladen werden. Bitte prüfe die Internetverbindung und lade die Seite neu. Falls das Problem bleibt, frage deine Lehrkraft.'); }
+  else {
+    try { initThree($('c')); buildWorld(); $('c').addEventListener('webglcontextlost', e => { e.preventDefault(); fatal('Die 3D-Grafik wurde unterbrochen. Lade die Seite neu. Dein Spielstand bleibt erhalten.'); }); }
+    catch (e){ console.error(e); renderer = null; fatal('Dein Gerät oder Browser kann die 3D-Welt nicht anzeigen (WebGL fehlt). Bitte nutze einen aktuellen Browser (Safari, Chrome, Edge oder Firefox) oder ein anderes Gerät.'); return; }
+  }
+  S = newState(0, 'start'); S.started = false; initSession(); refreshWorld(); onResize(); initStartScreen(); setMode('start'); updateHud();
+  P.x = 0; P.z = 6; updateCamera(0, true); requestAnimationFrame(frame);
+}
+
+/* ====================================================================
+   5) SPIELBERICHT (PDF) – eigener minimaler PDF-Schreiber, keine Bibliothek
+   ==================================================================== */
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const WIN = { '€':0x80,'‚':0x82,'„':0x84,'…':0x85,'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'•':0x95,'–':0x96,'—':0x97,'₂':0x32,'→':0x2D,'≈':0x7E,'✓':0x2B };
+function pdfCode(ch){
+  const c = ch.charCodeAt(0);
+  if (WIN[ch] !== undefined) return WIN[ch];
+  if (c < 256) return c;
+  return 0x3F;
+}
+function pdfText(s){ return String(s).replace(/→/g, '->').replace(/≈/g, 'ca.'); }
+function pdfW(s, size, bold){
+  let w = 0; s = pdfText(s);
+  for (let i=0;i<s.length;i++){ const c = pdfCode(s[i]); let u = (c >= 32 && c <= 126) ? HELV[c-32] : (c === 0x80 || c === 0x95 ? 556 : c === 0x96 ? 556 : c === 0x97 ? 1000 : c === 0x85 ? 1000 : (c >= 0xC0 && c <= 0xFF) ? ('ÄÖÜ'.indexOf(s[i]) >= 0 ? 722 : 556) : 556); if (s[i] === 'ß') u = 611; w += u; }
+  return w*size/1000*(bold ? 1.07 : 1);
+}
+function pdfWrap(text, size, bold, width){
+  const out = [];
+  String(text).split('\n').forEach(par => {
+    const words = pdfText(par).split(' '); let cur = '';
+    words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (pdfW(t, size, bold) > width && cur){ out.push(cur); cur = w; } else cur = t; });
+    out.push(cur);
+  });
+  return out;
+}
+function pdfEsc(s){ let o = ''; s = pdfText(s); for (let i=0;i<s.length;i++){ const c = pdfCode(s[i]), ch = String.fromCharCode(c); o += (ch === '(' || ch === ')' || ch === '\\') ? '\\' + ch : ch; } return o; }
+
+function buildReportPdf(){
+  const PW = 595, PH = 842, M = 50, CW = PW - 2*M, pages = []; let ops = null, y = 0;
+  const col = c => (c[0]/255).toFixed(3) + ' ' + (c[1]/255).toFixed(3) + ' ' + (c[2]/255).toFixed(3);
+  const COCOA = [74,42,28], BERRY = [179,18,79], INK = [42,26,19], MUTE = [95,80,70], GOOD = [13,107,54], LINE = [200,185,175];
+  const newPage = () => { ops = []; pages.push(ops); y = PH - 56; };
+  const T = (x, yy, s, size, bold, c) => ops.push('BT /' + (bold ? 'F2' : 'F1') + ' ' + size + ' Tf ' + col(c || INK) + ' rg ' + x.toFixed(1) + ' ' + yy.toFixed(1) + ' Td (' + pdfEsc(s) + ') Tj ET');
+  const RECT = (x, yy, w, h, c) => ops.push(col(c) + ' rg ' + x.toFixed(1) + ' ' + yy.toFixed(1) + ' ' + w.toFixed(1) + ' ' + h.toFixed(1) + ' re f');
+  const BOX = (x, yy, w, h, c) => ops.push('0.8 w ' + col(c) + ' RG ' + x.toFixed(1) + ' ' + yy.toFixed(1) + ' ' + w.toFixed(1) + ' ' + h.toFixed(1) + ' re S');
+  const HL = (x1, x2, yy, c) => ops.push('0.6 w ' + col(c || LINE) + ' RG ' + x1 + ' ' + yy.toFixed(1) + ' m ' + x2 + ' ' + yy.toFixed(1) + ' l S');
+  const need = h => { if (y - h < 62) newPage(); };
+  const para = (s, size, bold, c, indent, gap) => { size = size || 10.5; const lh = size*1.38, lines = pdfWrap(s, size, bold, CW - (indent || 0)); lines.forEach(l => { need(lh); y -= lh; T(M + (indent || 0), y, l, size, bold, c); }); y -= (gap == null ? 3 : gap); };
+  const kv = (k, v, indent) => { const size = 10.5, lh = size*1.38, kw = 124, lines = pdfWrap(v, size, false, CW - kw - (indent || 0)); lines.forEach((l, i) => { need(lh); y -= lh; if (i === 0) T(M + (indent || 0), y, k, size, true, MUTE); T(M + (indent || 0) + kw, y, l, size, false, INK); }); y -= 2; };
+  const heading = (s, c) => { need(46); y -= 14; RECT(M, y - 24, CW, 28, c || COCOA); T(M + 10, y - 16, s, 13.5, true, [255,255,255]); y -= 38; };
+
+  newPage();
+  RECT(0, PH - 110, PW, 110, COCOA); T(M, PH - 56, 'Spielbericht', 28, true, [255,255,255]); T(M, PH - 80, 'Du und die Schokoladenfabrik – Betriebserkundung, Klasse 8', 12.5, false, [255,224,200]);
+  T(M, PH - 98, 'Arbeitslehre / Berufsorientierung', 10.5, false, [255,200,61]); y = PH - 134;
+  const lvl = LEVELS[S.lvl], now = new Date(), dt = now.toLocaleDateString('de-DE');
+  T(M, y, 'Name:', 11, true, MUTE); if (playerName) T(M + 44, y, playerName, 12, true, INK); HL(M + 42, M + 300, y - 2, MUTE); T(M + 320, y, 'Datum: ' + dt, 11, false, INK); y -= 22;
+  T(M, y, 'Niveau: ' + lvl.name, 11, false, INK); T(M + 320, y, S.finished ? 'Status: Spiel abgeschlossen' : 'Status: Zwischenbericht', 11, false, INK); y -= 12;
+  const tips = Object.keys(S.done).reduce((a, k) => a + S.done[k].tips, 0), fails = Object.keys(S.done).reduce((a, k) => a + S.done[k].fails, 0), sols = Object.keys(S.done).filter(k => S.done[k].sol).length;
+  heading('Zusammenfassung', BERRY);
+  kv('Punkte:', pointsNow() + ' von ' + TOTAL_POINTS); kv('Aufgaben gelöst:', tasksDoneCount() + ' von ' + TASK_LIST.length); kv('Bereiche geschafft:', areasDoneCount() + ' von 5');
+  kv('Benutzte Tipps:', String(tips)); kv('Fehlversuche:', String(fails)); kv('Lösungen angesehen:', String(sols));
+  y -= 4; para('So liest du den Bericht: Zu jeder Aufgabe stehen deine Antwort, dein Ergebnis und der Lösungsweg. Markiere Aufgaben, bei denen du Tipps gebraucht hast, und übe sie noch einmal.', 10, false, MUTE, 0, 6);
+  // Betriebssteckbrief
+  heading('Der Betrieb im Überblick');
+  steckLines(STECK).slice(0, 6).forEach(l => { const k = l.indexOf(':'); if (k > 0 && k <= 14) kv(l.slice(0, k + 1), l.slice(k + 2)); else para(l, 10.5); });
+
+  AREAS.forEach(A => {
+    heading('Bereich ' + A.id + ': ' + A.name, [Math.max(40, (A.roof >> 16) & 255), (A.roof >> 8) & 255, A.roof & 255]);
+    para(A.focus, 10, false, MUTE, 0, 6);
+    tasksOf(A.id).forEach(t => {
+      const inst = getInst(t.id), rec = S.done[t.id];
+      need(90); y -= 6; RECT(M, y - 3, 4, 14, BERRY); T(M + 10, y, t.title, 12, true, INK); y -= 16;
+      kv('Station:', t.label + ' (Gespräch mit ' + t.who + ')', 10);
+      kv('Aufgabe:', inst.story + ' ' + inst.q, 10);
+      if (inst.parts) inst.parts.forEach((p, i) => kv('Teil ' + 'ABC'[i] + ':', p.q, 10));
+      if (rec){
+        kv(t.type === 'reflect' ? 'Meine Reflexion:' : 'Meine Antwort:', rec.ans, 10);
+        kv('Ergebnis:', resultLine(rec), 10);
+        need(30); y -= 12; T(M + 10, y, 'Lösungsweg:', 10.5, true, GOOD); y -= 1;
+        inst.solution.forEach((l, i) => para((i + 1) + '. ' + l, 10, false, INK, 22, 1));
+      } else kv('Ergebnis:', 'Diese Aufgabe ist noch offen.', 10);
+      y -= 6; HL(M, M + CW, y, LINE); y -= 4;
+    });
+  });
+
+  heading('Kompetenz-Check: Das kann ich jetzt', BERRY);
+  const goals = ['Ich kann den Betrieb vorstellen (Branche, Produkte, Größe, Aufbau).','Ich kann Abteilungen nennen und ihre Aufgaben beschreiben.','Ich kann den Weg von der Idee bis zum fertigen Produkt erklären.','Ich kann erklären, wie der Betrieb Geld verdient.','Ich kann mindestens drei Berufe im Betrieb und ihre Tätigkeiten beschreiben.','Ich kann Arbeitsschutz, Hygiene und Nachhaltigkeit im Betrieb erklären.','Ich kann Werbung und neutrale Information unterscheiden.','Ich kann Interviewfragen formulieren und meine Erkundung reflektieren.'];
+  need(26); y -= 12; ['sicher','unsicher','noch nicht'].forEach((s, i) => T(PW - M - 150 + i*52, y, s, 8.5, true, MUTE)); y -= 4;
+  goals.forEach(g => { const lines = pdfWrap(g, 10, false, CW - 170); need(lines.length*14 + 8); y -= 14; lines.forEach((l, i) => { if (i) y -= 13; T(M, y, l, 10, false, INK); });
+    for (let i=0;i<3;i++) BOX(PW - M - 148 + i*52 + 8, y - 2, 11, 11, MUTE); y -= 4; });
+  y -= 10; para('Meine nächsten Schritte in der Berufsorientierung:', 11, true, INK, 0, 4);
+  for (let i=0;i<4;i++){ need(26); y -= 22; HL(M, M + CW, y, MUTE); }
+
+  // Fußzeilen
+  const n = pages.length;
+  pages.forEach((p, i) => { ops = p; HL(M, M + CW, 44, LINE); T(M, 30, 'Spielbericht · Du und die Schokoladenfabrik', 8.5, false, MUTE); const s = 'Seite ' + (i+1) + ' von ' + n; T(PW - M - pdfW(s, 8.5, false), 30, s, 8.5, false, MUTE); });
+
+  // Datei zusammensetzen
+  let out = '%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n'; const off = [];
+  const add = (num, body) => { off[num] = out.length; out += num + ' 0 obj\n' + body + '\nendobj\n'; };
+  add(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  add(2, '<< /Type /Pages /Kids [' + pages.map((_, i) => (5 + 2*i) + ' 0 R').join(' ') + '] /Count ' + n + ' >>');
+  add(3, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  add(4, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  pages.forEach((p, i) => { const s = p.join('\n'); add(5 + 2*i, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + (6 + 2*i) + ' 0 R >>');
+    add(6 + 2*i, '<< /Length ' + s.length + ' >>\nstream\n' + s + '\nendstream'); });
+  const total = 5 + 2*n, xref = out.length; out += 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (let i=1;i<total;i++) out += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+  out += 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+  const bytes = new Uint8Array(out.length); for (let i=0;i<out.length;i++) bytes[i] = out.charCodeAt(i) & 255;
+  return bytes;
+}
+function openReport(download){
+  let url;
+  try { url = URL.createObjectURL(new Blob([buildReportPdf()], { type:'application/pdf' })); } catch(e){ console.error(e); toast('Der Bericht konnte nicht erstellt werden.'); return; }
+  if (download){ const a = document.createElement('a'); a.href = url; a.download = 'Spielbericht-Schokoladenfabrik.pdf'; document.body.appendChild(a); a.click(); a.remove(); toast('Der Spielbericht wird heruntergeladen.'); }
+  else { const w = window.open(url, '_blank'); if (!w) toast('Das Fenster wurde blockiert. Nutze „Spielbericht herunterladen“.'); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+/* ====================================================================
+   6) DEBUG-OBJEKT für automatisierte Tests: window.Schokofabrik
+   ==================================================================== */
+window[GAME_NAME] = {
+  setName: setPlayerName, name: () => playerName, openMappe, closeMappe, mappe: () => mappe, INFO_CHAPTERS, mappeChap: () => mappeChap,
+  get S(){ return S; }, get mode(){ return mode; }, P, CAM, ST, FENCES, COLL, AREAS, TASK_LIST, pending: () => pending,
+  newGame(lvl, seed){ selLevel = lvl || 0; S = newState(selLevel, seed || 'testseed'); initSession(); P.x = 0; P.z = 6; CAM.yaw = 0; refreshWorld(); updateHud(); saveGame(); setMode('play'); updateCamera(0, true); return S; },
+  inst: id => getInst(id), canon: id => canon(getInst(id)), evaluate: (id, v) => evaluate(getInst(id), v, 0),
+  open: id => { if (mode !== 'play') setMode('play'); openStation(id); }, close: closeDialog,
+  submit: submitAnswer, tip: useTip, solution: showSolution, parseNum,
+  solveArea(a){ tasksOf(a).forEach(t => { if (!S.done[t.id]) submitAnswer(t.id, canon(getInst(t.id))); }); },
+  processPending, endUnlock, unlockNow: a => { while (S.unlocked < a){ S.unlocked++; } refreshWorld(); },
+  step: (dt, n) => { for (let i = 0; i < (n || 1); i++) tick(dt); },
+  setInput: (ix, iy) => { JOY.x = ix; JOY.y = iy; }, key: (k, v) => { KEYS[k] = v; },
+  tapStation, pickAt, nearestStation, nextTarget, collide, hint: () => P._hint, toggleHint: () => $('btnHint').click(),
+  pdf: buildReportPdf, startNew, continueGame, resetToStart, drawMap, steck: () => STECK, setMode, camTargetPos, pointBlocked,
+  hudText: () => ({ pts: $('pts').textContent, max: $('ptsMax').textContent, areas: $('areasDone').textContent, goal: $('goal').textContent }),
+  total: TOTAL_POINTS
+};
+
+boot();
+
+</script>
+</body>
+</html>

@@ -478,4 +478,16 @@ const posts = [
     titleEn: "Percent Island",
     excerptEn: "3D learning game on percentages: explore the island, solve puzzles and conquer the castle at the end."
    },
+   {
+    title: "Du und die Schokoladenfabrik",
+    excerpt: "3D-Betriebserkundung für Arbeitslehre und Berufsorientierung: Eine Schokoladenfabrik erkunden und Aufgaben lösen (ca. 45–60 Minuten).",
+    date: "2026-10-02",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "schokoladenfabrik.html",
+    emoji: "🍫",
+    tags: ["spiel", "einzelarbeit", "jg8"],
+    titleEn: "You and the Chocolate Factory",
+    excerptEn: "3D company tour for work studies and career orientation: explore a chocolate factory and solve tasks (about 45–60 minutes)."
+   },
 ];
