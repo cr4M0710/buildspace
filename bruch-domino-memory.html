@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bruch-Domino & Bruch-Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#EDF2F7; --panel:#FFFFFF; --ink:#13213B; --muted:#53647E; --line:#D3DCE8;
+  --accent:#0B7A85; --accent-ink:#FFFFFF; --accent-soft:#DDF1F2;
+  --felt:#1B5D63; --felt-edge:#144A4F; --bad:#B3261E; --good:#157347;
+  --tile:#FBFAF3; --tile-ink:#13213B; --tile-line:#C4C1AE;
+  --h:clamp(64px, calc((100vw - 60px) / 4.4), 100px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1622; --panel:#172233; --ink:#E8EEF7; --muted:#A3B3CB; --line:#2B3B54;
+    --accent:#3DBBC7; --accent-ink:#05222A; --accent-soft:#143A43;
+    --felt:#14474D; --felt-edge:#0C2F33; --bad:#FF8A80; --good:#7BD8A4;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1622; --panel:#172233; --ink:#E8EEF7; --muted:#A3B3CB; --line:#2B3B54;
+  --accent:#3DBBC7; --accent-ink:#05222A; --accent-soft:#143A43;
+  --felt:#14474D; --felt-edge:#0C2F33; --bad:#FF8A80; --good:#7BD8A4;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Lexend,system-ui,-apple-system,"Segoe UI",Roboto,"Trebuchet MS",sans-serif;font-size:16px;line-height:1.45}
+h1,h2,h3{font-family:Fredoka,"Trebuchet MS",system-ui,sans-serif;margin:0;line-height:1.15}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid #F5B301;outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:860px;margin:0 auto;padding:18px 14px 56px}
+.mast h1{font-size:clamp(28px,6vw,42px);font-weight:700;letter-spacing:-.01em}
+.mast p{margin:6px 0 18px;color:var(--muted)}
+
+/* ---------- Bausteine ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:6px 20px 22px}
+.sec{padding:18px 0 4px;border-top:1px solid var(--line)}
+.sec:first-child{border-top:0}
+.sec h2{font-size:20px;font-weight:600;margin-bottom:4px}
+.hint{margin:0 0 10px;color:var(--muted);font-size:14px}
+.err{margin:8px 0 0;color:var(--bad);font-weight:500;font-size:14px}
+.btn{min-height:46px;padding:9px 18px;border-radius:14px;border:2px solid var(--line);background:var(--panel);font-weight:500}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.big{min-height:56px;padding:12px 28px;font-size:18px;font-family:Fredoka,sans-serif}
+.btn.small{min-height:40px;padding:6px 14px;font-size:14px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;align-items:center}
+.opt{border:2px solid var(--line);border-radius:16px;background:var(--panel);text-align:left;position:relative}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent) inset}
+.opt.on::after{content:"✓";position:absolute;top:8px;right:11px;font-weight:700;color:var(--accent)}
+.opt:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- Kacheln (Steine, Karten, Beispiele) ---------- */
+.piece,.tile{display:inline-flex;background:var(--tile);color:var(--tile-ink);border:2px solid var(--tile-line);border-radius:12px;overflow:hidden;box-shadow:0 3px 0 rgba(0,0,0,.25);padding:0;font-size:calc(var(--h)*.27)}
+.half{width:var(--h);height:var(--h);display:flex;align-items:center;justify-content:center;flex:none}
+.piece .half + .half{border-left:3px solid var(--tile-line)}
+.half.open{box-shadow:inset 0 0 0 4px #FFC93C}
+.half.hl{box-shadow:inset 0 0 0 4px var(--accent)}
+.face{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Fredoka,"Trebuchet MS",sans-serif;font-weight:600;line-height:1;white-space:nowrap;color:var(--tile-ink)}
+.face svg{width:88%;height:88%}
+.frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05}
+.frac .fn{padding:0 .2em .07em;border-bottom:.09em solid currentColor}
+.frac .fd{padding-top:.07em}
+.mixed{display:inline-flex;align-items:center;gap:.14em}
+.mixed .wh{font-size:1.15em}
+.per{text-decoration:overline;text-decoration-thickness:.08em}
+
+/* ---------- Setup ---------- */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode{padding:14px;display:grid;gap:8px}
+.mode .mt{font:600 22px Fredoka,sans-serif}
+.mode .md{font-size:14px;color:var(--muted)}
+.mprev{--h:44px;display:flex;gap:8px;align-items:center;min-height:52px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.chip{padding:12px 8px 10px;display:grid;gap:8px;justify-items:center;text-align:center;font-weight:500}
+.chip .tile{--h:62px}
+.levels{display:grid;gap:10px}
+.level{padding:12px 44px 12px 14px;display:grid;gap:2px}
+.level b{font:600 18px Fredoka,sans-serif}
+.level span{font-size:14px;color:var(--muted)}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg .opt{min-width:56px;min-height:48px;padding:6px 16px;text-align:center;font:600 18px Fredoka,sans-serif}
+.seg .opt.on::after{display:none}
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.nameline{display:flex;align-items:center;gap:10px}
+.pbadge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--pc);color:#fff;font-size:14px;flex:none}
+.nameline input{flex:1;min-width:0;min-height:46px;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+.nameline input:focus{border-color:var(--accent);outline:none}
+
+/* ---------- Spiel ---------- */
+.gbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ginfo{font-size:14px;color:var(--muted)}
+.gactions{display:flex;gap:8px}
+.scoreboard{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pchip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:999px;border:2px solid var(--line);background:var(--panel)}
+.pchip.active{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc)}
+.pchip .pname{font-weight:600}
+.pchip .pval{font-size:14px;color:var(--muted)}
+.pchip .turn{font-size:12px;font-weight:600;background:var(--pc);color:#fff;border-radius:999px;padding:1px 9px}
+.msg{min-height:48px;margin:0 0 10px;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-size:16px}
+.msg.ok{border-color:var(--good)} .msg.bad{border-color:var(--bad)}
+.msg.ok b.mk{color:var(--good)} .msg.bad b.mk{color:var(--bad)}
+
+.felt{background:var(--felt);border:6px solid var(--felt-edge);border-radius:22px;padding:12px;display:flex;flex-wrap:wrap;gap:10px 4px;align-content:flex-start;max-height:44vh;min-height:calc(var(--h) + 30px);overflow:auto}
+.felt .piece{box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.pop{animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(.6);opacity:.2}to{transform:scale(1);opacity:1}}
+.ends{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.endbtn{display:flex;align-items:center;gap:12px;padding:8px 12px;--h:56px;min-height:76px}
+.endbtn .et{display:grid;gap:0;font-size:14px;color:var(--muted)}
+.endbtn .et b{font:600 17px Fredoka,sans-serif;color:var(--ink)}
+.endbtn.ready{border-color:#E8A400;background:var(--accent-soft);animation:glow 1.2s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 0 0 rgba(245,179,1,.0)}to{box-shadow:0 0 0 5px rgba(245,179,1,.55)}}
+.handhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.handhead h2{font-size:19px;display:flex;align-items:center;gap:8px}
+.hand{display:flex;flex-wrap:wrap;gap:14px 12px;padding:6px 2px 12px}
+.hand .piece{border-color:var(--tile-line);transition:transform .15s}
+.hand .piece:hover{transform:translateY(-3px)}
+.hand .piece.sel{transform:translateY(-8px);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent),0 8px 0 rgba(0,0,0,.2)}
+
+.mgrid{display:grid;grid-template-columns:repeat(var(--cols,4),var(--cw,90px));gap:10px;justify-content:center;margin:6px 0 12px;--fs:24px}
+.mcard{width:var(--cw);height:var(--ch);padding:0;border:0;background:none;perspective:800px;position:relative}
+.mcard .inner{position:absolute;inset:0;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transition:transform .45s}
+.mcard.up .inner,.mcard.matched .inner{transform:rotateY(180deg)}
+.mcard .side{position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mcard .back{background:repeating-linear-gradient(90deg,#0B7A85 0 13px,#13949F 13px 26px);border:4px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.mcard .back i{width:42%;aspect-ratio:1;border-radius:50%;background:#fff;color:#0B7A85;display:flex;align-items:center;justify-content:center;font:700 calc(var(--cw)*.26) Fredoka,sans-serif;font-style:normal}
+.mcard .front{transform:rotateY(180deg);background:var(--tile);color:var(--tile-ink);border:3px solid var(--tile-line);box-shadow:0 3px 0 rgba(0,0,0,.25);font-size:var(--fs)}
+.mcard.matched .front{border-color:var(--pc);box-shadow:0 0 0 4px var(--pc)}
+.mcard:not(.up):not(.matched):hover .back{filter:brightness(1.08)}
+.mlog{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mlog span{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--panel);border:2px solid var(--pc)}
+
+/* ---------- Ende ---------- */
+.rank{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}
+.rank li{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;border:2px solid var(--pc);background:var(--bg)}
+.rank .pl{font:700 22px Fredoka,sans-serif;min-width:32px}
+.rank .nm{font-weight:600;flex:1}
+.rank .st{color:var(--muted);font-size:14px}
+details.rev{margin-top:14px}
+details.rev summary{cursor:pointer;font-weight:600;padding:8px 0}
+.rev table{border-collapse:collapse;width:100%;font-size:15px;margin-top:6px}
+.rev th,.rev td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.rev td .ib{display:inline-block;width:40px;height:40px;background:#fff;border-radius:6px}
+.rev td .ib svg{width:100%;height:100%}
+
+/* ---------- Anleitung ---------- */
+dialog{border:0;border-radius:22px;padding:0;width:min(720px,94vw);background:var(--panel);color:var(--ink)}
+dialog::backdrop{background:rgba(8,16,30,.6)}
+.dlg{padding:20px 20px 22px;max-height:88vh;overflow:auto}
+.dlghead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs .opt{padding:8px 18px;font:600 17px Fredoka,sans-serif;min-height:44px}
+.tabs .opt.on::after{display:none}
+.howto{padding-left:22px;margin:0 0 12px;display:grid;gap:10px}
+.demo{--h:60px;background:var(--felt);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin:6px 0 16px}
+.demo .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.demo .note{color:#fff;font-size:14px}
+.demo .ghost{opacity:.7;border-style:dashed;box-shadow:none}
+.demo .eq{color:#fff;font:600 20px Fredoka,sans-serif;padding:0 4px}
+.demo .good{color:#9BE7BC;font-weight:600}
+.demo .nope{color:#FFB4AB;font-weight:600}
+.confirm p{margin:0 0 16px;font-size:17px}
+
+@media (max-width:560px){
+  .chips{grid-template-columns:repeat(2,1fr)}
+  .modes{grid-template-columns:1fr}
+  .panel{padding:4px 14px 18px}
+  .ends{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <h1>Bruch-Domino & Bruch-Memory</h1>
+    <p>Ordne Brüche, Dezimalzahlen, Prozentangaben und Bilder einander zu.</p>
+  </header>
+
+  <!-- ===================== SETUP ===================== -->
+  <section id="screen-setup" class="panel" aria-label="Spieleinstellungen">
+    <div class="sec">
+      <h2>Spiel</h2>
+      <div class="modes" role="radiogroup" aria-label="Spielart">
+        <button type="button" class="opt mode" data-mode="domino" role="radio"><span class="mprev" id="prevDomino"></span><span class="mt">Domino</span><span class="md">Steine zu einer Kette legen. Wo sich zwei Hälften berühren, muss der Wert gleich sein.</span></button>
+        <button type="button" class="opt mode" data-mode="memory" role="radio"><span class="mprev" id="prevMemory"></span><span class="mt">Memory</span><span class="md">Zwei Karten aufdecken. Zeigen sie den gleichen Wert, ist es ein Paar.</span></button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Darstellungen</h2>
+      <p class="hint">Mit diesen Darstellungen wird gespielt. Wähle mindestens zwei.</p>
+      <div class="chips" id="reps"></div>
+      <p class="err" id="repErr" hidden>Bitte wähle mindestens zwei Darstellungen aus.</p>
+    </div>
+
+    <div class="sec">
+      <h2>Schwierigkeit</h2>
+      <div class="levels" role="radiogroup" aria-label="Schwierigkeitsstufe">
+        <button type="button" class="opt level" data-level="1" role="radio"><b>Stufe 1 · Einstieg</b><span>Halbe, Viertel, Fünftel und Zehntel, zum Beispiel ¾ oder ⅗.</span></button>
+        <button type="button" class="opt level" data-level="2" role="radio"><b>Stufe 2 · Fortgeschritten</b><span>Dazu Achtel, Zwanzigstel und 25stel. Manche Brüche sind erweitert, zum Beispiel 6⁄8 statt ¾.</span></button>
+        <button type="button" class="opt level" data-level="3" role="radio"><b>Stufe 3 · Profi</b><span>Dazu Drittel und Sechstel (mit Periode) sowie Werte über 1, als gemischte Zahl oder unechter Bruch.</span></button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2 id="countH">Anzahl</h2>
+      <div class="seg" id="counts" role="radiogroup" aria-labelledby="countH"></div>
+      <p class="hint" id="countHint" style="margin-top:10px"></p>
+    </div>
+
+    <div class="sec">
+      <h2>Spieler</h2>
+      <div class="seg" id="pcount" role="radiogroup" aria-label="Anzahl der Spieler"></div>
+      <div class="names" id="names"></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary big" id="start">Spiel starten</button>
+      <button type="button" class="btn" id="helpSetup">Spielanleitung ansehen</button>
+    </div>
+  </section>
+
+  <!-- ===================== SPIEL ===================== -->
+  <section id="screen-game" hidden aria-label="Spiel">
+    <div class="gbar">
+      <div class="ginfo" id="ginfo"></div>
+      <div class="gactions">
+        <button type="button" class="btn small" id="helpGame">Anleitung</button>
+        <button type="button" class="btn small" id="quit">Beenden</button>
+      </div>
+    </div>
+    <div class="scoreboard" id="score"></div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <div id="dominoUI" hidden>
+      <div class="felt" id="chain" aria-label="Die Kette"></div>
+      <div class="ends" id="ends"></div>
+      <div class="handhead">
+        <h2 id="handTitle"></h2>
+        <button type="button" class="btn" id="passBtn">Kein passendes Stück</button>
+      </div>
+      <div class="hand" id="hand"></div>
+    </div>
+
+    <div id="memoryUI" hidden>
+      <div class="mgrid" id="mgrid"></div>
+      <div class="mlog" id="mlog" aria-label="Gefundene Paare"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ENDE ===================== -->
+  <section id="screen-end" class="panel" hidden aria-label="Ergebnis">
+    <div class="sec">
+      <h2 id="endTitle"></h2>
+      <ol class="rank" id="rank"></ol>
+      <details class="rev"><summary>Alle Werte aus diesem Spiel ansehen</summary><div id="review"></div></details>
+      <div class="actions">
+        <button type="button" class="btn primary big" id="again">Nochmal spielen</button>
+        <button type="button" class="btn" id="toSetup">Neue Einstellungen</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<dialog id="helpDlg" aria-labelledby="helpTitle">
+  <div class="dlg">
+    <div class="dlghead"><h2 id="helpTitle">Spielanleitung</h2><button type="button" class="btn small" id="helpClose">Schließen</button></div>
+    <div class="tabs" role="tablist">
+      <button type="button" class="opt" role="tab" data-tab="domino">Domino</button>
+      <button type="button" class="opt" role="tab" data-tab="memory">Memory</button>
+    </div>
+    <div id="helpBody"></div>
+  </div>
+</dialog>
+
+<dialog id="confirmDlg" aria-labelledby="confirmText">
+  <div class="dlg confirm">
+    <p id="confirmText"></p>
+    <div class="actions" style="margin-top:0">
+      <button type="button" class="btn primary" id="confirmYes">Ja, beenden</button>
+      <button type="button" class="btn" id="confirmNo">Weiterspielen</button>
+    </div>
+  </div>
+</dialog>
+
+<script id="logic">
+/* LOGIC-START */
+const REPS = ['bruch','dez','pct','bild'];
+const REP_LABEL = {bruch:'Bruch', dez:'Dezimalzahl', pct:'Prozent', bild:'Bild'};
+const mkVal = a => ({n:a[0], d:a[1], id:a[0]+'/'+a[1]});
+const TIERS = {
+  1:[[1,2],[1,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,10],[3,10],[7,10],[9,10]].map(mkVal),
+  2:[[1,8],[3,8],[5,8],[7,8],[1,20],[3,20],[7,20],[9,20],[11,20],[13,20],[17,20],[19,20],[1,25],[2,25],[3,25],[4,25],[6,25]].map(mkVal),
+  3:[[1,3],[2,3],[1,6],[5,6],[3,2],[5,4],[7,4],[6,5],[7,5],[8,5],[9,5],[4,3],[5,3],[9,8],[11,8],[13,8],[15,8]].map(mkVal)
+};
+const poolUpTo = l => { let r = []; for (let i = 1; i <= l; i++) r = r.concat(TIERS[i]); return r; };
+const poolSize = l => poolUpTo(l).length;
+
+function shuffle(a, rng = Math.random){
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+const pickN = (arr, k, rng) => shuffle(arr, rng).slice(0, Math.max(0, k));
+
+/* Werte so auswählen, dass die Schwierigkeitsstufe überwiegend "neue" Brüche enthält */
+function pickValues(level, k, rng = Math.random){
+  const tiers = level === 1 ? [[TIERS[1], 1]]
+              : level === 2 ? [[TIERS[2], .7], [TIERS[1], 1]]
+              : [[TIERS[3], .6], [TIERS[2], .6], [TIERS[1], 1]];
+  let need = k, res = [];
+  for (const [arr, share] of tiers){
+    if (need <= 0) break;
+    const take = Math.min(arr.length, share >= 1 ? need : Math.ceil(need * share));
+    res = res.concat(pickN(arr, take, rng)); need -= take;
+  }
+  if (need > 0){
+    const rest = poolUpTo(level).filter(v => !res.includes(v));
+    res = res.concat(pickN(rest, need, rng));
+  }
+  return res;
+}
+
+/* ---------- Zahlen in Text umwandeln ---------- */
+const PER = s => '<span class="per">' + s + '</span>';
+const DEC_TAIL = {'1/3':PER('3'), '2/3':PER('6'), '1/6':'1'+PER('6'), '5/6':'8'+PER('3')};
+const PCT_TAIL = {'1/3':[33,'⅓'], '2/3':[66,'⅔'], '1/6':[16,'⅔'], '5/6':[83,'⅓']};
+const parts = v => ({w: Math.floor(v.n / v.d), r: v.n % v.d});
+
+function decHTML(v){
+  const {w, r} = parts(v);
+  if (v.d === 3 || v.d === 6) return w + ',' + DEC_TAIL[r + '/' + v.d];
+  const x = v.n * 1000 / v.d;
+  return (x / 1000).toFixed(3).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',');
+}
+function pctHTML(v){
+  const {w, r} = parts(v);
+  if (v.d === 3 || v.d === 6){ const [a, sym] = PCT_TAIL[r + '/' + v.d]; return (w * 100 + a) + sym + '\u00A0%'; }
+  const p = v.n * 1000 / v.d / 10;
+  return (Number.isInteger(p) ? String(p) : p.toFixed(1)).replace('.', ',') + '\u00A0%';
+}
+/* Satz für Rückmeldungen, z. B. "3/4 = 0,75 = 75 %" */
+function eqText(v){
+  const {w, r} = parts(v);
+  const b = w ? w + ' ' + r + '/' + v.d + ' (= ' + v.n + '/' + v.d + ')' : v.n + '/' + v.d;
+  return b + ' = ' + decHTML(v) + ' = ' + pctHTML(v);
+}
+function shortText(v){
+  const {w, r} = parts(v);
+  return w ? w + ' ' + r + '/' + v.d : v.n + '/' + v.d;
+}
+
+/* ---------- Darstellungen (Gesichter) ---------- */
+function makeFace(v, rep, level, rng = Math.random){
+  if (rep === 'dez') return {t:'dez', html:decHTML(v)};
+  if (rep === 'pct') return {t:'pct', html:pctHTML(v)};
+  const {w, r} = parts(v);
+  if (rep === 'bruch'){
+    const pExt = level === 2 ? .3 : level >= 3 ? .45 : 0;
+    let k = 1;
+    if (rng() < pExt){
+      const opts = [2, 3].filter(m => v.d * m <= 50);
+      if (opts.length) k = opts[Math.floor(rng() * opts.length)];
+    }
+    if (w >= 1){
+      if (level >= 3 && rng() < .5) return {t:'bruch', whole:0, n:v.n * k, d:v.d * k};
+      return {t:'bruch', whole:w, n:r * k, d:v.d * k};
+    }
+    return {t:'bruch', whole:0, n:v.n * k, d:v.d * k};
+  }
+  /* Bild */
+  let kind, cols = 0, rows = 0;
+  if (v.d === 20){ kind = 'grid'; cols = 5; rows = 4; }
+  else if (v.d === 25){ kind = 'grid'; cols = 5; rows = 5; }
+  else kind = rng() < .5 ? 'pie' : 'bar';
+  return {t:'bild', whole:w, num:w ? r : v.n, den:v.d, kind, cols, rows};
+}
+
+const INK = '#13213B', SH = '#F08A24', UN = '#FFFFFF';
+function slicePath(cx, cy, r, i, n){
+  const a0 = -90 + i * 360 / n, a1 = -90 + (i + 1) * 360 / n, rad = Math.PI / 180;
+  const x0 = cx + r * Math.cos(a0 * rad), y0 = cy + r * Math.sin(a0 * rad);
+  const x1 = cx + r * Math.cos(a1 * rad), y1 = cy + r * Math.sin(a1 * rad);
+  return `M${cx} ${cy}L${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${(a1 - a0) > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}Z`;
+}
+function bildSVG(f){
+  const list = [];
+  for (let i = 0; i < f.whole; i++) list.push(f.den);
+  if (f.num > 0) list.push(f.num);
+  const k = list.length;
+  let o = '<svg class="bild" viewBox="0 0 100 100" aria-hidden="true" focusable="false">';
+  list.forEach((filled, i) => {
+    if (f.kind === 'pie'){
+      const r = k === 1 ? 40 : 22, cx = k === 1 ? 50 : (i ? 75 : 25);
+      for (let s = 0; s < f.den; s++)
+        o += `<path d="${slicePath(cx, 50, r, s, f.den)}" fill="${s < filled ? SH : UN}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`;
+    } else if (f.kind === 'bar' || (f.kind === 'grid' && k > 1)){
+      const w = k === 1 ? 88 : 84, h = k === 1 ? 40 : 26, x = k === 1 ? 6 : 8, y = k === 1 ? 30 : (i ? 58 : 16), sw = w / f.den;
+      for (let s = 0; s < f.den; s++)
+        o += `<rect x="${(x + s * sw).toFixed(2)}" y="${y}" width="${sw.toFixed(2)}" height="${h}" fill="${s < filled ? SH : UN}" stroke="${INK}" stroke-width="1.6"/>`;
+    } else {
+      const c = f.cols, rw = f.rows, cs = Math.min(80 / c, 80 / rw), x0 = (100 - cs * c) / 2, y0 = (100 - cs * rw) / 2;
+      for (let s = 0; s < c * rw; s++)
+        o += `<rect x="${(x0 + (s % c) * cs).toFixed(2)}" y="${(y0 + Math.floor(s / c) * cs).toFixed(2)}" width="${cs.toFixed(2)}" height="${cs.toFixed(2)}" fill="${s < filled ? SH : UN}" stroke="${INK}" stroke-width="1.1"/>`;
+    }
+  });
+  return o + '</svg>';
+}
+const plainLen = h => h.replace(/<[^>]*>/g, '').length;
+function faceHTML(f){
+  if (f.t === 'bild') return '<span class="face">' + bildSVG(f) + '</span>';
+  if (f.t === 'bruch'){
+    const fr = `<span class="frac"><span class="fn">${f.n}</span><span class="fd">${f.d}</span></span>`;
+    const big = String(f.n).length > 1 || String(f.d).length > 1 || f.whole;
+    return `<span class="face" style="font-size:${big ? .88 : 1}em">` + (f.whole ? `<span class="mixed"><span class="wh">${f.whole}</span>${fr}</span>` : fr) + '</span>';
+  }
+  const len = plainLen(f.html), s = len <= 4 ? 1 : len === 5 ? .9 : len === 6 ? .8 : .7;
+  return `<span class="face" style="font-size:${s}em"><span>${f.html}</span></span>`;
+}
+
+/* ---------- Domino ---------- */
+/* Zyklus aus N Werten: Stein i = [Wert i | Wert i+1]. Jeder Wert steht genau zweimal im Spiel, immer in zwei verschiedenen Darstellungen. */
+function buildDomino(S, rng = Math.random){
+  const N = S.count, vals = shuffle(pickValues(S.level, N, rng), rng), reps = shuffle(S.reps, rng);
+  const L = [], R = [], use = {}; reps.forEach(r => use[r] = 0);
+  const least = list => { const m = Math.min(...list.map(r => use[r])); return shuffle(list.filter(r => use[r] === m), rng)[0]; };
+  if (reps.length === 2){
+    for (let i = 0; i < N; i++){ L.push(reps[0]); R.push(reps[1]); }
+  } else {
+    for (let i = 0; i < N; i++){ const r = least(reps); use[r]++; L.push(r); }
+    for (let i = 0; i < N; i++){
+      const nx = (i + 1) % N, allowed = reps.filter(r => r !== L[nx] && r !== L[i]);
+      const r = least(allowed); use[r]++; R.push(r);
+    }
+  }
+  const half = (v, rep) => ({val:v, rep, face:makeFace(v, rep, S.level, rng)});
+  const pieces = [];
+  for (let i = 0; i < N; i++) pieces.push({id:i, halves:[half(vals[i], L[i]), half(vals[(i + 1) % N], R[i])]});
+  return {pieces, vals};
+}
+function tryPlace(chain, piece, end){
+  const [a, b] = piece.halves;
+  if (end === 'right'){
+    const e = chain[chain.length - 1].halves[1].val.id;
+    if (a.val.id === e) return {halves:[a, b]};
+    if (b.val.id === e) return {halves:[b, a]};
+  } else {
+    const e = chain[0].halves[0].val.id;
+    if (b.val.id === e) return {halves:[a, b]};
+    if (a.val.id === e) return {halves:[b, a]};
+  }
+  return null;
+}
+const hasMove = (chain, hand) => hand.some(p => tryPlace(chain, p, 'left') || tryPlace(chain, p, 'right'));
+
+function dealDomino(S, rng = Math.random){
+  const {pieces, vals} = buildDomino(S, rng), N = pieces.length, p = S.players;
+  const start = Math.floor(rng() * N), chainLen = 1 + ((N - 1) % p);
+  const chain = [];
+  for (let i = 0; i < chainLen; i++) chain.push({halves:pieces[(start + i) % N].halves});
+  const rest = [];
+  for (let i = chainLen; i < N; i++) rest.push(pieces[(start + i) % N]);
+  const hands = Array.from({length:p}, () => []);
+  shuffle(rest, rng).forEach((pc, i) => hands[i % p].push({id:pc.id, halves: rng() < .5 ? pc.halves.slice().reverse() : pc.halves}));
+  return {chain, hands, vals, total:N};
+}
+
+/* ---------- Memory ---------- */
+function buildMemory(S, rng = Math.random){
+  const vals = pickValues(S.level, S.count, rng), use = {};
+  S.reps.forEach(r => use[r] = 0);
+  const cards = [];
+  vals.forEach(v => {
+    const order = shuffle(S.reps, rng).sort((a, b) => use[a] - use[b]);
+    const two = order.slice(0, 2);
+    two.forEach(rep => { use[rep]++; cards.push({val:v, rep, face:makeFace(v, rep, S.level, rng)}); });
+  });
+  const deck = shuffle(cards, rng);
+  deck.forEach((c, i) => { c.uid = i; c.state = 'down'; });
+  return {cards: deck, vals};
+}
+/* LOGIC-END */
+</script>
+
+<script id="ui">
+(function(){
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const PLAYER_STYLE = [{c:'#D64550', s:'●'}, {c:'#2B7FD8', s:'▲'}, {c:'#B87F00', s:'■'}, {c:'#1F9D6B', s:'◆'}];
+const SAMPLE = {n:3, d:4, id:'3/4'};
+const COUNTS = [6, 8, 10, 12, 16];
+const KEY = 'bruchspiel-v1';
+
+const S = {mode:'domino', reps:['bruch','dez','pct'], level:1, count:8, players:2, names:['', '', '', '']};
+let G = null, timer = null;
+
+/* ---------- gespeicherte Einstellungen (nur Komfort) ---------- */
+try {
+  const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (raw){
+    if (raw.mode === 'domino' || raw.mode === 'memory') S.mode = raw.mode;
+    if (Array.isArray(raw.reps)){ const r = raw.reps.filter(x => REPS.includes(x)); if (r.length) S.reps = r; }
+    if ([1, 2, 3].includes(raw.level)) S.level = raw.level;
+    if (COUNTS.includes(raw.count)) S.count = raw.count;
+    if ([1, 2, 3, 4].includes(raw.players)) S.players = raw.players;
+    if (Array.isArray(raw.names)) S.names = raw.names.slice(0, 4).map(x => String(x || '').slice(0, 16)).concat(['', '', '', '']).slice(0, 4);
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const pname = i => (S.names[i] || '').trim() || 'Spieler ' + (i + 1);
+function say(html, kind){ const m = $('#msg'); m.className = 'msg' + (kind ? ' ' + kind : ''); m.innerHTML = html; }
+const show = id => { ['setup', 'game', 'end'].forEach(n => $('#screen-' + n).hidden = n !== id); window.scrollTo(0, 0); };
+const fixedFace = (rep, v = SAMPLE) => faceHTML(makeFace(v, rep, 1, () => .1));
+const tileHTML = (rep, v) => `<span class="tile"><span class="half">${fixedFace(rep, v)}</span></span>`;
+
+/* ---------- Setup ---------- */
+function buildStaticSetup(){
+  $('#prevDomino').innerHTML = `<span class="piece"><span class="half">${fixedFace('bruch', {n:1, d:2, id:'1/2'})}</span><span class="half">${fixedFace('dez', {n:1, d:4, id:'1/4'})}</span></span>`;
+  $('#prevMemory').innerHTML = tileHTML('pct') + `<span class="tile" style="background:repeating-linear-gradient(90deg,#0B7A85 0 9px,#13949F 9px 18px);border-color:#fff"><span class="half"></span></span>`;
+  $('#reps').innerHTML = REPS.map(r => `<button type="button" class="opt chip" data-rep="${r}" aria-pressed="false">${tileHTML(r)}<span>${REP_LABEL[r]}</span></button>`).join('');
+  $('#pcount').innerHTML = [1, 2, 3, 4].map(n => `<button type="button" class="opt" data-p="${n}" role="radio">${n}</button>`).join('');
+}
+function renderNames(){
+  const box = $('#names'); box.innerHTML = '';
+  for (let i = 0; i < S.players; i++){
+    const row = document.createElement('label'); row.className = 'nameline'; row.style.setProperty('--pc', PLAYER_STYLE[i].c);
+    row.innerHTML = `<span class="pbadge" aria-hidden="true">${PLAYER_STYLE[i].s}</span>`;
+    const inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 16; inp.placeholder = 'Spieler ' + (i + 1); inp.value = S.names[i] || '';
+    inp.setAttribute('aria-label', 'Name von Spieler ' + (i + 1)); inp.autocomplete = 'off';
+    inp.addEventListener('input', () => { S.names[i] = inp.value; save(); });
+    row.appendChild(inp); box.appendChild(row);
+  }
+}
+function renderSetup(){
+  $$('.mode').forEach(b => { const on = b.dataset.mode === S.mode; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  $$('#reps .chip').forEach(b => { const on = S.reps.includes(b.dataset.rep); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  const bad = S.reps.length < 2; $('#repErr').hidden = !bad; $('#start').disabled = bad;
+  $$('.level').forEach(b => { const on = +b.dataset.level === S.level; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  const max = poolSize(S.level), ok = COUNTS.filter(c => c <= max);
+  if (!ok.includes(S.count)) S.count = ok[ok.length - 1];
+  const dom = S.mode === 'domino';
+  $('#countH').textContent = dom ? 'Anzahl der Dominosteine' : 'Anzahl der Kartenpaare';
+  $('#counts').innerHTML = COUNTS.map(c => `<button type="button" class="opt${c === S.count ? ' on' : ''}" data-count="${c}" role="radio" aria-checked="${c === S.count}" ${c > max ? 'disabled' : ''}>${c}</button>`).join('');
+  const lowNote = max < COUNTS[COUNTS.length - 1] ? ` Auf dieser Stufe gibt es nur ${max} verschiedene Brüche, größere Spiele gibt es ab Stufe 2.` : '';
+  $('#countHint').textContent = (dom ? `${S.count} Steine. Ein Teil der Steine liegt zum Start schon in der Kette, der Rest wird gleichmäßig verteilt.` : `${S.count} Paare, also ${S.count * 2} Karten.`) + lowNote;
+  $$('#pcount .opt').forEach(b => { const on = +b.dataset.p === S.players; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  save();
+}
+$('#screen-setup').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.mode){ S.mode = t.dataset.mode; renderSetup(); }
+  else if (t.dataset.rep){ const r = t.dataset.rep; S.reps = S.reps.includes(r) ? S.reps.filter(x => x !== r) : REPS.filter(x => S.reps.includes(x) || x === r); renderSetup(); }
+  else if (t.dataset.level){ S.level = +t.dataset.level; renderSetup(); }
+  else if (t.dataset.count){ S.count = +t.dataset.count; renderSetup(); }
+  else if (t.dataset.p){ S.players = +t.dataset.p; renderNames(); renderSetup(); }
+});
+$('#start').addEventListener('click', startGame);
+$('#helpSetup').addEventListener('click', () => openHelp(S.mode));
+$('#helpGame').addEventListener('click', () => openHelp(G ? G.mode : S.mode));
+
+/* ---------- Spielstart ---------- */
+function makePlayers(){
+  return Array.from({length:S.players}, (_, i) => ({name:pname(i), color:PLAYER_STYLE[i].c, shape:PLAYER_STYLE[i].s, hand:[], score:0, mistakes:0, place:0}));
+}
+function startGame(){
+  clearTimeout(timer); timer = null;
+  const players = makePlayers();
+  const info = (S.mode === 'domino' ? 'Domino' : 'Memory') + ' · Stufe ' + S.level + ' · ' + S.reps.map(r => REP_LABEL[r]).join(', ');
+  $('#ginfo').textContent = info;
+  if (S.mode === 'domino'){
+    const d = dealDomino(S);
+    d.hands.forEach((h, i) => players[i].hand = h);
+    G = {mode:'domino', players, chain:d.chain, vals:d.vals, total:d.total, cur:Math.floor(Math.random() * players.length), sel:null, over:false, placed:0, newIdx:-1};
+    $('#dominoUI').hidden = false; $('#memoryUI').hidden = true;
+    show('game'); renderScore(); renderDomino();
+    say(`<b>${esc(G.players[G.cur].name)}</b> beginnt. Wähle einen Stein, der zu einem Ende der Kette passt.`, '');
+  } else {
+    const m = buildMemory(S);
+    G = {mode:'memory', players, cards:m.cards, vals:m.vals, cur:0, first:null, second:null, pending:false, found:0, moves:0};
+    $('#dominoUI').hidden = true; $('#memoryUI').hidden = false;
+    show('game'); buildMemoryGrid(); renderScore(); layoutMemory();
+    say(`<b>${esc(players[0].name)}</b> beginnt. Decke zwei Karten auf.`, '');
+  }
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c])); }
+
+/* ---------- Anzeigetafel ---------- */
+function renderScore(){
+  const el = $('#score'); el.innerHTML = '';
+  G.players.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'pchip' + (i === G.cur && !G.over && G.players.length > 1 ? ' active' : '');
+    d.style.setProperty('--pc', p.color);
+    let val;
+    if (G.mode === 'domino') val = p.place ? p.place + '. Platz' : p.hand.length + (p.hand.length === 1 ? ' Stein' : ' Steine');
+    else val = p.score + (p.score === 1 ? ' Paar' : ' Paare');
+    d.innerHTML = `<span class="pbadge" aria-hidden="true">${p.shape}</span><span class="pname">${esc(p.name)}</span><span class="pval">${val}</span>` + (d.classList.contains('active') ? '<span class="turn">am Zug</span>' : '');
+    el.appendChild(d);
+  });
+}
+
+/* ---------- Domino ---------- */
+const halfEl = (h, cls = '') => `<span class="half ${cls}">${faceHTML(h.face)}</span>`;
+function nextIdx(from){
+  const n = G.players.length;
+  for (let i = 1; i <= n; i++){ const j = (from + i) % n; if (G.players[j].hand.length) return j; }
+  return -1;
+}
+function renderDomino(){
+  const ch = $('#chain'); ch.innerHTML = '';
+  const last = G.chain.length - 1;
+  G.chain.forEach((pc, i) => {
+    const el = document.createElement('div'); el.className = 'piece' + (i === G.newIdx ? ' pop' : '');
+    el.innerHTML = halfEl(pc.halves[0], !G.over && i === 0 ? 'open' : '') + halfEl(pc.halves[1], !G.over && i === last ? 'open' : '');
+    ch.appendChild(el);
+  });
+  G.newIdx = -1;
+  /* offene Enden */
+  const ends = $('#ends');
+  if (G.over){ ends.innerHTML = ''; }
+  else {
+    const ready = G.sel !== null;
+    const a = G.chain[0].halves[0], b = G.chain[last].halves[1];
+    ends.innerHTML =
+      `<button type="button" class="opt endbtn${ready ? ' ready' : ''}" data-end="left" ${ready ? '' : 'disabled'}><span class="tile"><span class="half">${faceHTML(a.face)}</span></span><span class="et"><b>Anfang der Kette</b><span>${ready ? 'Hier anlegen' : 'Offenes Ende'}</span></span></button>` +
+      `<button type="button" class="opt endbtn${ready ? ' ready' : ''}" data-end="right" ${ready ? '' : 'disabled'}><span class="tile"><span class="half">${faceHTML(b.face)}</span></span><span class="et"><b>Ende der Kette</b><span>${ready ? 'Hier anlegen' : 'Offenes Ende'}</span></span></button>`;
+  }
+  /* Hand des aktuellen Spielers */
+  const pl = G.players[G.cur], hand = $('#hand'); hand.innerHTML = '';
+  const title = $('#handTitle');
+  title.innerHTML = `<span class="pbadge" style="--pc:${pl.color}" aria-hidden="true">${pl.shape}</span><span>Steine von ${esc(pl.name)}</span>`;
+  pl.hand.forEach(pc => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'piece' + (G.sel === pc.id ? ' sel' : ''); b.dataset.id = pc.id;
+    b.setAttribute('aria-pressed', G.sel === pc.id);
+    b.innerHTML = halfEl(pc.halves[0]) + halfEl(pc.halves[1]);
+    hand.appendChild(b);
+  });
+  $('#passBtn').disabled = G.over || !pl.hand.length;
+  renderScore();
+}
+$('#hand').addEventListener('click', e => {
+  const b = e.target.closest('.piece'); if (!b || !G || G.over) return;
+  const id = +b.dataset.id;
+  G.sel = G.sel === id ? null : id;
+  renderDomino();
+  say(G.sel !== null ? 'Stein gewählt. Wohin passt er? Tippe auf Anfang oder Ende der Kette.' : `<b>${esc(G.players[G.cur].name)}</b> ist dran. Wähle einen Stein.`, '');
+});
+$('#ends').addEventListener('click', e => {
+  const b = e.target.closest('.endbtn'); if (!b || !G || G.over || G.sel === null) return;
+  placeSelected(b.dataset.end);
+});
+function placeSelected(end){
+  const pl = G.players[G.cur], idx = pl.hand.findIndex(p => p.id === G.sel);
+  if (idx < 0) return;
+  const piece = pl.hand[idx], res = tryPlace(G.chain, piece, end);
+  if (!res){
+    pl.mistakes++; G.sel = null;
+    if (G.players.length > 1){
+      const nx = nextIdx(G.cur), prev = pl.name; G.cur = nx;
+      renderDomino();
+      say(`<b class="mk">✗</b> Das passt dort nicht. ${esc(prev)} setzt aus. <b>${esc(G.players[nx].name)}</b> ist dran.`, 'bad');
+    } else {
+      renderDomino();
+      say('<b class="mk">✗</b> Das passt dort nicht. Prüfe die Werte noch einmal oder probiere das andere Ende.', 'bad');
+    }
+    return;
+  }
+  /* gelungen: gemeinsamen Wert für die Rückmeldung bestimmen */
+  const joined = end === 'right' ? res.halves[0].val : res.halves[1].val;
+  pl.hand.splice(idx, 1);
+  if (end === 'right') G.chain.push({halves:res.halves}); else G.chain.unshift({halves:res.halves});
+  G.newIdx = end === 'right' ? G.chain.length - 1 : 0; G.sel = null;
+  let extra = '';
+  if (!pl.hand.length){ pl.place = ++G.placed; extra = ` <b>${esc(pl.name)}</b> hat keine Steine mehr: ${pl.place}. Platz!`; }
+  if (G.players.every(p => !p.hand.length)){
+    G.over = true; renderDomino();
+    say(`<b class="mk">✓</b> ${eqText(joined)}.${extra} Die Kette ist zu einem Kreis geschlossen!`, 'ok');
+    timer = setTimeout(showEnd, 1600);
+    return;
+  }
+  G.cur = nextIdx(G.cur);
+  renderDomino();
+  const nx = G.players[G.cur];
+  say(`<b class="mk">✓</b> ${eqText(joined)}.${extra} <b>${esc(nx.name)}</b> ist dran.`, 'ok');
+  const last = $('#chain').children[end === 'right' ? G.chain.length - 1 : 0]; if (last && last.scrollIntoView) last.scrollIntoView({block:'nearest'});
+}
+$('#passBtn').addEventListener('click', () => {
+  if (!G || G.over) return;
+  const pl = G.players[G.cur];
+  if (hasMove(G.chain, pl.hand)){ say('Schau noch einmal genau hin: Du hast noch einen passenden Stein. Vergleiche die offenen Enden mit deinen Steinen.', 'bad'); return; }
+  const nx = nextIdx(G.cur); G.sel = null;
+  if (nx === G.cur || nx < 0){ say('Du hast keinen passenden Stein mehr.', ''); return; }
+  const prev = pl.name; G.cur = nx; renderDomino();
+  say(`${esc(prev)} hat keinen passenden Stein. <b>${esc(G.players[nx].name)}</b> ist dran.`, '');
+});
+
+/* ---------- Memory ---------- */
+function buildMemoryGrid(){
+  const g = $('#mgrid'); g.innerHTML = ''; $('#mlog').innerHTML = '';
+  G.cards.forEach((c, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mcard'; b.dataset.i = i;
+    b.setAttribute('aria-label', 'Karte ' + (i + 1) + ', verdeckt');
+    b.innerHTML = `<span class="inner"><span class="side back"><i>?</i></span><span class="side front">${faceHTML(c.face)}</span></span>`;
+    g.appendChild(b);
+  });
+}
+function layoutMemory(){
+  if (!G || G.mode !== 'memory') return;
+  const grid = $('#mgrid'), n = G.cards.length, gap = 10;
+  const W = Math.min($('#screen-game').clientWidth || 360, 960);
+  const availH = Math.max(260, window.innerHeight - grid.getBoundingClientRect().top - 70);
+  let fit = null, near = null;
+  for (let cols = 3; cols <= 9; cols++){
+    const cw = Math.min(150, Math.floor((W - (cols - 1) * gap) / cols)), rows = Math.ceil(n / cols), ch = Math.round(cw * .95), need = rows * ch + (rows - 1) * gap;
+    if (cw < 60) continue;
+    const o = {cols, cw, ch, need};
+    if (need <= availH && (!fit || cw > fit.cw)) fit = o;
+    if (cw >= 70 && (!near || need < near.need)) near = o;
+  }
+  const best = fit || near || {cols:3, cw:80, ch:76};
+  grid.style.setProperty('--cols', best.cols); grid.style.setProperty('--cw', best.cw + 'px'); grid.style.setProperty('--ch', best.ch + 'px');
+  grid.style.setProperty('--fs', Math.round(best.cw * .27) + 'px');
+}
+let rz = null;
+window.addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layoutMemory); });
+
+$('#mgrid').addEventListener('click', e => {
+  const b = e.target.closest('.mcard'); if (!b || !G || G.mode !== 'memory') return;
+  if (G.pending){ resolveMismatch(); return; }
+  const i = +b.dataset.i, c = G.cards[i];
+  if (c.state !== 'down') return;
+  flip(i, true);
+  if (G.first === null){ G.first = i; say('Decke eine zweite Karte auf.', ''); return; }
+  G.second = i; G.moves++;
+  const a = G.cards[G.first], d = c, pl = G.players[G.cur];
+  if (a.val.id === d.val.id){
+    a.state = d.state = 'matched'; pl.score++; G.found++;
+    [G.first, G.second].forEach(k => { const el = $('#mgrid').children[k]; el.classList.remove('up'); el.classList.add('matched'); el.style.setProperty('--pc', pl.color); el.setAttribute('aria-label', 'Karte ' + (k + 1) + ', Paar gefunden'); });
+    const tag = document.createElement('span'); tag.style.setProperty('--pc', pl.color); tag.innerHTML = esc(pl.name) + ': ' + eqText(a.val);
+    if (G.players.length === 1) tag.innerHTML = eqText(a.val);
+    $('#mlog').appendChild(tag);
+    G.first = G.second = null; renderScore();
+    if (G.found === G.cards.length / 2){
+      G.over = true;
+      say(`<b class="mk">✓</b> ${eqText(a.val)}. Alle Paare sind gefunden!`, 'ok');
+      timer = setTimeout(showEnd, 1500);
+    } else {
+      say(`<b class="mk">✓</b> ${eqText(a.val)}. <b>${esc(pl.name)}</b> darf noch einmal.`, 'ok');
+    }
+  } else {
+    G.pending = true;
+    say(`<b class="mk">✗</b> Kein Paar: ${shortText(a.val)} ≠ ${shortText(d.val)}. Tippe irgendwo oder warte kurz.`, 'bad');
+    timer = setTimeout(resolveMismatch, 1900);
+  }
+});
+function flip(i, up){
+  const el = $('#mgrid').children[i], c = G.cards[i];
+  c.state = up ? 'up' : 'down'; el.classList.toggle('up', up);
+  el.setAttribute('aria-label', up ? 'Karte ' + (i + 1) + ', aufgedeckt: ' + (c.face.t === 'bild' ? 'Bild' : c.face.t === 'bruch' ? (c.face.whole ? c.face.whole + ' ' : '') + c.face.n + '/' + c.face.d : c.face.html.replace(/<[^>]*>/g, '')) : 'Karte ' + (i + 1) + ', verdeckt');
+}
+function resolveMismatch(){
+  if (!G || !G.pending) return;
+  clearTimeout(timer); timer = null;
+  flip(G.first, false); flip(G.second, false);
+  G.first = G.second = null; G.pending = false;
+  if (G.players.length > 1){ G.cur = (G.cur + 1) % G.players.length; say(`<b>${esc(G.players[G.cur].name)}</b> ist dran.`, ''); }
+  else say('Probiere es noch einmal.', '');
+  renderScore();
+}
+
+/* ---------- Ende ---------- */
+function showEnd(){
+  clearTimeout(timer); timer = null;
+  const P = G.players, solo = P.length === 1;
+  let order, title, stat;
+  if (G.mode === 'domino'){
+    order = P.slice().sort((a, b) => (a.place || 99) - (b.place || 99));
+    stat = p => p.mistakes + (p.mistakes === 1 ? ' Fehlversuch' : ' Fehlversuche');
+    title = solo ? 'Geschafft! Die Kette ist geschlossen.' : 'Gewonnen hat ' + order[0].name + '!';
+  } else {
+    order = P.slice().sort((a, b) => b.score - a.score);
+    stat = p => p.score + (p.score === 1 ? ' Paar' : ' Paare');
+    const top = order.filter(p => p.score === order[0].score);
+    title = solo ? 'Geschafft! Alle Paare gefunden.' : top.length > 1 ? 'Unentschieden: ' + top.map(p => p.name).join(' und ') : 'Gewonnen hat ' + order[0].name + '!';
+  }
+  $('#endTitle').textContent = title;
+  const medals = ['🥇', '🥈', '🥉', ''];
+  let place = 0, prevScore = null;
+  $('#rank').innerHTML = order.map((p, i) => {
+    let pl;
+    if (G.mode === 'domino') pl = p.place || i + 1; else { if (p.score !== prevScore) place = i + 1; prevScore = p.score; pl = place; }
+    const extra = solo ? (G.mode === 'memory' ? `${G.moves} Züge` : '') : '';
+    return `<li style="--pc:${p.color}"><span class="pl">${pl}.</span><span class="nm">${p.shape} ${esc(p.name)} ${pl <= 3 && !solo ? medals[pl - 1] : ''}</span><span class="st">${solo ? (G.mode === 'domino' ? stat(p) : extra) : stat(p) + (G.mode === 'memory' ? '' : '')}</span></li>`;
+  }).join('');
+  const vals = G.vals.slice().sort((a, b) => a.n / a.d - b.n / b.d);
+  const frac = v => { const {w, r} = parts(v); return w ? w + ' ' + r + '/' + v.d + ' = ' + v.n + '/' + v.d : v.n + '/' + v.d; };
+  $('#review').innerHTML = '<table><thead><tr><th>Bruch</th><th>Dezimalzahl</th><th>Prozent</th><th>Bild</th></tr></thead><tbody>' +
+    vals.map(v => `<tr><td>${frac(v)}</td><td>${decHTML(v)}</td><td>${pctHTML(v)}</td><td><span class="ib">${bildSVG(makeFace(v, 'bild', 1, () => .1))}</span></td></tr>`).join('') + '</tbody></table>';
+  show('end');
+}
+$('#again').addEventListener('click', startGame);
+$('#toSetup').addEventListener('click', () => { clearTimeout(timer); G = null; show('setup'); });
+
+/* ---------- Beenden (eigener Dialog) ---------- */
+function dlgOpen(d){ if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+function dlgClose(d){ if (d.close) d.close(); else d.removeAttribute('open'); }
+$('#quit').addEventListener('click', () => {
+  $('#confirmText').textContent = 'Möchtest du das Spiel wirklich beenden? Der Spielstand geht verloren.';
+  dlgOpen($('#confirmDlg'));
+});
+$('#confirmYes').addEventListener('click', () => { dlgClose($('#confirmDlg')); clearTimeout(timer); G = null; show('setup'); });
+$('#confirmNo').addEventListener('click', () => dlgClose($('#confirmDlg')));
+
+/* ---------- Spielanleitung ---------- */
+function helpHTML(tab){
+  const V = {h:{n:1, d:2, id:'1/2'}, q:{n:1, d:4, id:'1/4'}, t:{n:3, d:4, id:'3/4'}, f:{n:2, d:5, id:'2/5'}};
+  const half = (rep, v, cls = '') => `<span class="half ${cls}">${fixedFace(rep, v)}</span>`;
+  const tile = (rep, v) => tileHTML(rep, v);
+  if (tab === 'domino') return `
+  <ol class="howto">
+    <li><b>Start:</b> Ein paar Steine liegen schon als Kette in der Mitte. Der Rest wird auf alle Spieler verteilt. Du siehst nur die Steine der Person, die gerade dran ist.</li>
+    <li><b>Passenden Stein suchen:</b> Die Kette hat zwei offene Enden (gelb umrandet). Gesucht ist ein Stein mit einer Hälfte, die <b>gleich viel</b> zeigt, aber anders dargestellt ist.</li>
+    <li><b>Anlegen:</b> Tippe deinen Stein an und danach auf <i>Anfang</i> oder <i>Ende der Kette</i>. Der Stein darf in beide Richtungen liegen.</li>
+    <li><b>Richtig</b> bedeutet: Der Stein bleibt liegen und der Nächste ist dran. <b>Falsch</b> bedeutet: Du setzt aus.</li>
+    <li><b>Kein passender Stein?</b> Tippe auf <i>Kein passendes Stück</i>. Das geht nur, wenn wirklich keiner passt.</li>
+    <li><b>Gewonnen</b> hat, wer zuerst keine Steine mehr hat. Am Ende schließt sich die Kette zu einem Kreis.</li>
+  </ol>
+  <div class="demo">
+    <div class="row">
+      <span class="piece">${half('bruch', V.h)}${half('dez', V.q)}</span>
+      <span class="piece">${half('pct', V.q, 'hl')}${half('bild', V.t)}</span>
+      <span class="piece ghost">${half('dez', V.t)}${half('pct', V.f)}</span>
+    </div>
+    <div class="note">Die Hälften ¼ als Dezimalzahl <b>0,25</b> und als Prozentangabe <b>25 %</b> berühren sich: gleicher Wert, andere Darstellung. Der gestrichelte Stein (<b>0,75</b>) passt als Nächstes an das Bild von ¾.</div>
+  </div>`;
+  return `
+  <ol class="howto">
+    <li><b>Start:</b> Alle Karten liegen verdeckt auf dem Tisch.</li>
+    <li><b>Aufdecken:</b> Wer dran ist, tippt nacheinander zwei Karten an.</li>
+    <li><b>Paar:</b> Zeigen beide Karten <b>gleich viel</b> in unterschiedlicher Darstellung, bleiben sie offen liegen. Du bekommst einen Punkt und darfst noch einmal.</li>
+    <li><b>Kein Paar:</b> Die Karten drehen sich wieder um und der Nächste ist dran. Merke dir, wo was liegt!</li>
+    <li><b>Gewonnen</b> hat, wer am Ende die meisten Paare hat.</li>
+  </ol>
+  <div class="demo">
+    <div class="row">${tile('bruch', V.t)}<span class="eq">=</span>${tile('pct', V.t)}<span class="good">Paar!</span></div>
+    <div class="row">${tile('bruch', V.t)}<span class="eq">≠</span>${tile('dez', V.h)}<span class="nope">Kein Paar</span></div>
+    <div class="note">¾ und 75 % sind dasselbe. ¾ und 0,5 sind verschieden.</div>
+  </div>`;
+}
+function openHelp(tab){
+  const set = t => {
+    $$('#helpDlg .tabs .opt').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $('#helpBody').innerHTML = helpHTML(t);
+  };
+  $$('#helpDlg .tabs .opt').forEach(b => b.onclick = () => set(b.dataset.tab));
+  set(tab === 'memory' ? 'memory' : 'domino');
+  dlgOpen($('#helpDlg'));
+}
+$('#helpClose').addEventListener('click', () => dlgClose($('#helpDlg')));
+
+/* ---------- Start ---------- */
+buildStaticSetup(); renderNames(); renderSetup(); show('setup');
+window.__bruch = {S, get G(){ return G; }, startGame, placeSelected, resolveMismatch};
+})();
+</script>
+</body>
+</html>

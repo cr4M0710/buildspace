@@ -490,4 +490,16 @@ const posts = [
     titleEn: "You and the Chocolate Factory",
     excerptEn: "3D company tour for work studies and career orientation: explore a chocolate factory and solve tasks (about 45–60 minutes)."
    },
+   {
+    title: "Bruch-Domino & Bruch-Memory",
+    excerpt: "Brüche, Dezimalzahlen, Prozentangaben und Bilder einander zuordnen: als Domino oder Memory, allein oder mit bis zu 4 Spielenden, in drei Stufen.",
+    date: "2026-10-02",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "bruch-domino-memory.html",
+    emoji: "🎲",
+    tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    titleEn: "Fraction Domino & Fraction Memory",
+    excerptEn: "Match fractions, decimals, percentages and pictures as domino or memory, solo or with up to 4 players, in three levels."
+   },
 ];
