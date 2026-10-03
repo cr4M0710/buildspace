@@ -551,18 +551,6 @@ const posts = [
     excerptEn: "Spin, roll, draw: run random experiments and watch how chance turns into reliability – with relative frequencies and tree diagrams."
    },
    {
-    title: "Escape-Room-Baukasten",
-    excerpt: "Gemeinsam den Code knacken: Rätsel lösen, Code-Teile sammeln und aus dem Raum entkommen. Mit verschiedenen Szenarien und Schwierigkeitsstufen.",
-    date: "2026-10-03",
-    category: "schule",
-    subcategory: "faecheruebergreifend",
-    url: "escape-room-baukasten.html",
-    emoji: "🔐",
-    tags: ["spiel", "gruppenarbeit"],
-    titleEn: "Escape Room Kit",
-    excerptEn: "Crack the code together: solve puzzles, collect code parts and escape the room. With different scenarios and difficulty levels."
-   },
-   {
     title: "Rätsel des Tages",
     excerpt: "Jeden Tag ein neues Rätsel zum Knobeln, mit Hinweisen, Sternen und Serie. Für verschiedene Klassenstufen.",
     date: "2026-10-03",
