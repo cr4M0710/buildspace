@@ -538,4 +538,16 @@ const posts = [
     titleEn: "My Budget Life",
     excerptEn: "Consumer education hands-on: pay rent, phone contract and insurance from an income and cope with surprises. The game adapts to you."
    },
+   {
+    title: "Zufalls-Labor",
+    excerpt: "Drehen, würfeln, ziehen: Zufallsexperimente durchführen und beobachten, wie aus Zufall Verlässlichkeit wird – mit Häufigkeiten und Baumdiagrammen.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "zufalls-labor.html",
+    emoji: "🎲",
+    tags: ["tool"],
+    titleEn: "Chance Lab",
+    excerptEn: "Spin, roll, draw: run random experiments and watch how chance turns into reliability – with relative frequencies and tree diagrams."
+   },
 ];

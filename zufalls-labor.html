@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zufalls-Labor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎲%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+<style>
+:root{
+  --paper:#F4F8FC;--grid:#D6E4F3;--ink:#15213B;--soft:#4B5A78;--pen:#2744D6;--onpen:#fff;
+  --card:#fff;--line:#15213B;--shadow:#A9BEDC;--mark:#FFE15A;--ok:#0F7A59;--okbg:#DDF5EA;--bad:#B3232F;--badbg:#FFE4E6;
+  --c1:#E5484D;--c2:#2F6BFF;--c3:#F2B600;--c4:#1B9E6B;--c5:#8A4FD6;--c6:#F07F1B;--c7:#0E94A3;--muted:#E8EFF8;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1B27;--grid:#1B2D3F;--ink:#E9EFF7;--soft:#A7B6CB;--pen:#7F9CFF;--onpen:#0B1522;
+    --card:#162534;--line:#DCE6F3;--shadow:#0A121B;--mark:#6B5A00;--ok:#46D89E;--okbg:#12382D;--bad:#FF8A93;--badbg:#431B20;
+    --c1:#F0646A;--c2:#5E8CFF;--c3:#F5C21F;--c4:#2FBE86;--c5:#A47CE8;--c6:#F59A45;--c7:#2BB5C4;--muted:#1E3144;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1B27;--grid:#1B2D3F;--ink:#E9EFF7;--soft:#A7B6CB;--pen:#7F9CFF;--onpen:#0B1522;
+  --card:#162534;--line:#DCE6F3;--shadow:#0A121B;--mark:#6B5A00;--ok:#46D89E;--okbg:#12382D;--bad:#FF8A93;--badbg:#431B20;
+  --c1:#F0646A;--c2:#5E8CFF;--c3:#F5C21F;--c4:#2FBE86;--c5:#A47CE8;--c6:#F59A45;--c7:#2BB5C4;--muted:#1E3144;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+html,body{margin:0}
+body{
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;color:var(--ink);
+  font:400 17px/1.5 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;min-height:100%;
+}
+h1,h2,h3{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;line-height:1.1;margin:0}
+h1{font-weight:800;font-size:clamp(44px,9vw,88px);letter-spacing:-.02em}
+h2{font-weight:700;font-size:clamp(24px,4vw,32px)}
+h3{font-weight:700;font-size:19px;margin-bottom:6px}
+p{margin:0 0 .6em}
+button{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:16px}
+.hide{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+
+/* Bausteine */
+.card{background:var(--card);border:2px solid var(--line);border-radius:14px;box-shadow:4px 4px 0 var(--shadow);padding:16px}
+.btn{min-height:46px;padding:0 20px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-weight:700;cursor:pointer;box-shadow:2px 2px 0 var(--line);transition:transform .08s,box-shadow .08s;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:0 0 0 var(--line)}
+.btn.pri{background:var(--pen);color:var(--onpen)}
+.btn.sm{min-height:38px;padding:0 14px;font-size:15px}
+.btn.ghost{box-shadow:none;border-color:transparent;background:transparent;text-decoration:underline}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sp{flex:1}
+.muted{color:var(--soft)}
+.mk{background:linear-gradient(transparent 58%,var(--mark) 58%);padding:0 .15em;font-weight:700}
+.tag{display:inline-block;border:2px solid var(--line);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;background:var(--muted)}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15;font-weight:700;margin:0 .12em}
+.frac>span:first-child{border-bottom:2px solid currentColor;padding:0 .3em}
+.frac>span:last-child{padding:0 .3em}
+.tg{min-height:42px;padding:0 14px;border-radius:10px;border:2px solid var(--line);background:var(--card);cursor:pointer;font-weight:700;display:inline-flex;gap:8px;align-items:center}
+.tg[aria-pressed="true"]{background:var(--pen);color:var(--onpen)}
+.tg[aria-pressed="false"]{border-style:dashed;color:var(--soft);background:transparent;font-weight:400}
+.tg[aria-pressed="true"]::before{content:"✓"}
+.tg:disabled{opacity:.35;cursor:not-allowed}
+input[type=text]{font:inherit;min-height:46px;padding:0 12px;border:2px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:100%}
+label{font-weight:700;display:block;margin-bottom:4px}
+
+/* Start */
+.home{display:grid;gap:28px;padding-top:12px}
+.hero{display:grid;gap:18px}
+.lead{font-size:clamp(18px,2.6vw,22px);max-width:34ch;color:var(--soft)}
+.curve{margin:0;border:2px solid var(--line);border-radius:14px;background:var(--card);padding:10px;box-shadow:4px 4px 0 var(--shadow);cursor:pointer}
+.curve svg{width:100%;height:auto;display:block}
+.curve figcaption{font-size:14px;color:var(--soft);padding:2px 6px}
+@media(min-width:900px){.hero{grid-template-columns:1fr 1.2fr;align-items:center;gap:36px}}
+.modes{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.mode{text-align:left;cursor:pointer;display:grid;gap:4px;padding:16px;border-radius:14px;border:2px solid var(--line);background:var(--card);box-shadow:4px 4px 0 var(--shadow);transition:transform .08s}
+.mode:hover:not(:disabled){transform:translate(-1px,-1px)}
+.mode:disabled{opacity:.5;cursor:not-allowed}
+.mode b{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:21px}
+.mode span{color:var(--soft);font-size:15px}
+
+/* Einrichtung */
+.setup{display:grid;gap:16px;max-width:860px;margin:0 auto}
+.setup section{display:grid;gap:10px}
+.mx{display:grid;gap:6px;overflow-x:auto;padding-bottom:4px}
+.mxr{display:grid;grid-template-columns:minmax(150px,1.6fr) repeat(5,minmax(62px,1fr));gap:6px;align-items:center;min-width:480px}
+.mxr.off .tg{opacity:.35;pointer-events:none}
+.mxh{font-size:13px;font-weight:700;color:var(--soft);text-align:center}
+.mxr .tg{justify-content:center;padding:0;min-height:46px;font-size:15px}
+.mxr .tg::before{content:""}
+.mxr .tg[aria-pressed="true"]::after{content:"✓"}
+.mxr .tg[aria-pressed="false"]::after{content:"–"}
+.lv{text-align:left;display:grid;gap:0;min-height:50px;padding:6px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);cursor:pointer}
+.lv[aria-pressed="true"]{background:var(--pen);color:var(--onpen)}
+.lv[aria-pressed="false"]{border-style:dashed;color:var(--soft);background:transparent}
+.lv b{font-size:16px}.lv span{font-size:13px;opacity:.9}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+
+/* Spiel */
+.gbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.logo{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:800;font-size:20px}
+.pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--card)}
+.pill.cur{background:var(--pen);color:var(--onpen)}
+.pill.done{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.score{display:flex;gap:8px;flex-wrap:wrap}
+.sc{border:2px solid var(--line);border-radius:10px;padding:2px 10px;background:var(--card);font-weight:700;font-size:15px}
+.sc.act{background:var(--mark);color:var(--ink)}
+.sc small{font-weight:400;color:var(--soft);margin-left:6px}
+.task{display:grid;gap:6px;margin-bottom:14px}
+.task .row{gap:8px}
+.lab{display:grid;gap:14px;grid-template-columns:minmax(290px,370px) 1fr;align-items:start}
+@media(max-width:880px){.lab{grid-template-columns:1fr}}
+.stage{display:grid;gap:12px;justify-items:center}
+.visbox{width:100%;display:grid;place-items:center;min-height:200px}
+.say{min-height:28px;font-weight:700;text-align:center}
+.status{width:100%;border-top:2px dashed var(--grid);padding-top:8px;font-size:15px;text-align:center}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.seg{display:inline-flex;width:fit-content;max-width:100%;justify-self:start;border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:0 14px;min-height:40px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pen);color:var(--onpen)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:2px solid var(--line);border-radius:10px 10px 0 0;background:var(--muted);min-height:40px;padding:0 14px;font-weight:700;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--card);border-bottom-color:var(--card);transform:translateY(2px)}
+.panel{min-height:240px}
+.panel svg{width:100%;height:auto;display:block}
+.ax{fill:var(--soft);font-size:11px}
+.axl{stroke:var(--grid);stroke-width:1}
+.lg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:14px;margin-top:6px}
+.lg i{display:inline-block;width:14px;height:6px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{border-bottom:2px solid var(--grid);padding:6px 8px;text-align:right}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl tr.te td{background:var(--mark);color:var(--ink);font-weight:700}
+.ur{display:flex;flex-wrap:wrap;gap:4px}
+.uc{min-width:30px;height:30px;padding:0 4px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--c,var(--muted));color:#fff}
+.dock{margin-top:14px;display:grid;gap:12px}
+.est{display:grid;gap:8px;grid-template-columns:1fr 130px;align-items:center}
+.est input[type=range]{width:100%;accent-color:var(--pen);height:34px}
+.echo{font-weight:700;min-height:26px}
+.err{color:var(--bad);font-weight:700}
+.q{display:grid;gap:8px;padding:12px;border:2px solid var(--grid);border-radius:12px}
+.opts{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.opt{display:flex;gap:10px;align-items:center;text-align:left;min-height:48px;padding:6px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);cursor:pointer}
+.opt .k{width:26px;height:26px;border-radius:7px;background:var(--muted);display:grid;place-items:center;font-weight:700;flex:none}
+.opt.ok{background:var(--okbg);border-color:var(--ok)}
+.opt.bad{background:var(--badbg);border-color:var(--bad)}
+.opt:disabled{cursor:default}
+.fb{font-weight:700}.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
+.res{display:grid;gap:6px}
+.res table{width:100%;border-collapse:collapse}
+.res td,.res th{padding:6px 8px;border-bottom:2px solid var(--grid);text-align:left}
+.res td:not(:first-child),.res th:not(:first-child){text-align:right}.res td:not(:first-child){font-weight:700}
+.res tr.tot td{border-bottom:0;font-size:20px}
+.expl{background:var(--muted);border-radius:10px;padding:10px 12px}
+.big{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:800;font-size:clamp(34px,7vw,56px);letter-spacing:.06em}
+.mid{display:grid;gap:14px;max-width:640px;margin:40px auto;text-align:center;justify-items:center}
+
+/* Zufallsgeräte */
+.wheel{width:min(100%,270px);height:auto}
+.wheel g.rot{transition:transform 1.1s cubic-bezier(.12,.7,.15,1)}
+.dice{display:flex;gap:16px;justify-content:center}
+.die{width:84px;height:84px}
+.die.roll{animation:wob .12s infinite alternate}
+@keyframes wob{from{transform:rotate(-8deg)}to{transform:rotate(8deg)}}
+.tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px;width:100%}
+.tk{height:36px;border:2px solid var(--line);border-radius:6px;display:grid;place-items:center;font-weight:700;background:var(--card);color:var(--soft);transition:transform .2s,background .2s}
+.tk.pick{transform:translateY(-6px) scale(1.12);background:var(--c,var(--mark));color:#fff;border-color:var(--ink)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;justify-content:center;font-size:14px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:2px solid var(--line)}
+.doors{width:100%;height:auto}
+.doors .dr{cursor:default}.doors .dr.can{cursor:pointer}
+.doors .dr.can:hover rect.d{stroke-width:5}
+
+/* Dialoge */
+.modal{position:fixed;inset:0;background:rgba(10,18,32,.6);display:grid;place-items:center;padding:14px;z-index:20}
+.sheet{max-width:720px;width:100%;max-height:100%;overflow:auto;display:grid;gap:14px}
+.steps{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center}
+.step svg{width:110px;height:auto;border:2px solid var(--line);border-radius:10px;background:var(--paper)}
+.step b{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:19px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:10px;font-weight:700;z-index:30}
+@media(max-width:520px){.step{grid-template-columns:80px 1fr}.step svg{width:80px}.est{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<script>
+'use strict';
+/* ================= Hilfsfunktionen ================= */
+const $=(s,e=document)=>e.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const REDUCED=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rng32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rint=(r,a,b)=>a+Math.floor(r()*(b-a+1));
+const pick=(r,a)=>a[Math.floor(r()*a.length)];
+function shuf(r,arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+const F=(n,d=1)=>{const g=gcd(n,d)||1;return{n:n/g,d:d/g}};
+const ONE=F(1,1),ZERO=F(0,1);
+const fv=f=>f.n/f.d;
+const fmul=(a,b)=>F(a.n*b.n,a.d*b.d);
+const fadd=(a,b)=>F(a.n*b.d+b.n*a.d,a.d*b.d);
+const fsub=(a,b)=>F(a.n*b.d-b.n*a.d,a.d*b.d);
+const fstr=f=>f.d===1?String(f.n):f.n+'/'+f.d;
+const fh=f=>f.d===1?`<b>${f.n}</b>`:`<span class="frac"><span>${f.n}</span><span>${f.d}</span></span>`;
+const fhRaw=(n,d)=>`<span class="frac"><span>${n}</span><span>${d}</span></span>`;
+const dec=(x,k=2)=>x.toLocaleString('de-DE',{minimumFractionDigits:k,maximumFractionDigits:k});
+const pctS=x=>{const v=x*100,r=Math.round(v);return(Math.abs(v-r)<0.05?String(r):v.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1}))+' %'};
+function parseProb(str){
+  if(str==null)return null;
+  let s=String(str).trim().replace(/\s+/g,'').replace(',','.');
+  if(!s)return null;
+  let v;
+  if(s.includes('/')){const [a,b]=s.split('/');const x=parseFloat(a),y=parseFloat(b);if(!(y>0)||isNaN(x))return null;v=x/y;}
+  else if(s.endsWith('%')){v=parseFloat(s)/100;}
+  else if(/^[01]?\.\d+$/.test(s)||s==='0'||s==='1.0'){v=parseFloat(s);}
+  else{v=parseFloat(s)/100;}
+  if(isNaN(v)||v<0||v>1)return null;
+  return v;
+}
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+/* ================= Stammdaten ================= */
+const STATIONS={rad:{name:'Glücksrad',ico:'🎡'},wuerfel:{name:'Würfel',ico:'🎲'},lose:{name:'Lose',ico:'🎟️'},ziege:{name:'Ziegenproblem',ico:'🐐'}};
+const REPS=['urliste','tabelle','balken','verlauf','baum'];
+const REPNAME={urliste:'Urliste',tabelle:'Tabelle',balken:'Balken',verlauf:'Verlauf',baum:'Baum'};
+const LEVELS=[{n:1,jg:7,t:'Beobachten & ablesen'},{n:2,jg:8,t:'Vergleichen & berechnen'},{n:3,jg:9,t:'Mehrstufig & begründen'}];
+const defMatrix=()=>[{urliste:1,tabelle:1,balken:1,verlauf:1,baum:0},{urliste:0,tabelle:1,balken:1,verlauf:1,baum:0},{urliste:0,tabelle:1,balken:0,verlauf:1,baum:1}];
+const COL={
+  rot:{id:'rot',label:'Rot',css:'var(--c1)',ch:'Ro'},
+  blau:{id:'blau',label:'Blau',css:'var(--c2)',ch:'Bl'},
+  gelb:{id:'gelb',label:'Gelb',css:'var(--c3)',ch:'Ge',dark:1},
+  gruen:{id:'gruen',label:'Grün',css:'var(--c4)',ch:'Gr'}
+};
+const COLIDS=['rot','blau','gelb','gruen'];
+
+/* ================= Fragen-Bausteine ================= */
+const CONCEPT={
+ 1:[
+  {q:'Was passiert mit der relativen Häufigkeit eines Ergebnisses, wenn du den Versuch sehr oft wiederholst?',ok:'Sie schwankt immer weniger und pendelt sich bei einem festen Wert ein.',bad:['Sie wird immer größer, bis sie 100 % erreicht.','Sie schwankt auch bei sehr vielen Versuchen noch genauso stark wie am Anfang.','Sie wird immer kleiner, bis sie 0 % erreicht.']},
+  {q:'Nach 5 Versuchen hat ein Ergebnis die relative Häufigkeit 60 %. Was kannst du daraus schließen?',ok:'Noch nicht viel – bei so wenigen Versuchen schwankt die relative Häufigkeit stark.',bad:['Die Wahrscheinlichkeit des Ergebnisses beträgt sicher 60 %.','Das Ergebnis tritt beim nächsten Versuch bestimmt nicht ein.','Der Zufallsversuch ist kaputt.']},
+  {q:'Was bedeutet „absolute Häufigkeit“?',ok:'Die Anzahl, wie oft ein Ergebnis eingetreten ist.',bad:['Der Anteil an allen Versuchen.','Die Wahrscheinlichkeit, die man vorher berechnet.','Die Zahl aller möglichen Ergebnisse.']},
+  {q:'Eine Münze ist viermal hintereinander auf Kopf gefallen. Wie wahrscheinlich ist Kopf beim nächsten Wurf?',ok:'Wieder 1/2 – der Zufall hat kein Gedächtnis.',bad:['Kleiner als 1/2, jetzt ist Zahl „dran“.','Größer als 1/2, Kopf hat gerade eine Serie.','Genau 0, denn Serien gehen nie weiter.']}
+ ],
+ 2:[
+  {q:'Du vergleichst die relative Häufigkeit nach 10 Versuchen mit der nach 1000 Versuchen. Welcher Wert eignet sich besser, um die Wahrscheinlichkeit zu schätzen?',ok:'Der nach 1000 Versuchen, weil er meist weniger schwankt.',bad:['Der nach 10 Versuchen, weil er „frischer“ ist.','Beide gleich gut, die Anzahl der Versuche spielt keine Rolle.','Keiner von beiden, relative Häufigkeiten sagen nie etwas aus.']},
+  {q:'Welche Summe ergeben die Wahrscheinlichkeiten aller möglichen Ergebnisse eines Zufallsversuchs?',ok:'1 (also 100 %)',bad:['0','1/2','Das kommt auf den Versuch an, meist 10.']},
+  {q:'Was unterscheidet die relative Häufigkeit von der Wahrscheinlichkeit?',ok:'Die relative Häufigkeit stammt aus einem Versuch und schwankt; die Wahrscheinlichkeit ist der Wert, dem sie sich nähert.',bad:['Es gibt keinen Unterschied, beides ist dasselbe.','Die relative Häufigkeit ist immer genau so groß wie die Wahrscheinlichkeit.','Die Wahrscheinlichkeit wird aus einem Versuch berechnet, die relative Häufigkeit nie.']},
+  {q:'Ein Ereignis hat die Wahrscheinlichkeit 0. Was bedeutet das?',ok:'Es ist unmöglich.',bad:['Es tritt manchmal ein.','Es tritt genau einmal ein.','Es ist sicher.']}
+ ],
+ 3:[
+  {q:'Du vervierfachst die Anzahl der Versuche. Wie verändert sich die typische Schwankung der relativen Häufigkeit?',ok:'Sie halbiert sich ungefähr.',bad:['Sie vervierfacht sich.','Sie bleibt gleich.','Sie sinkt auf ein Viertel.']},
+  {q:'Wie erhältst du in einem Baumdiagramm die Wahrscheinlichkeit eines Ereignisses, das zu mehreren Pfaden gehört?',ok:'Entlang jedes Pfades multiplizieren, die passenden Pfade addieren.',bad:['Alle Zahlen im Baum addieren.','Nur den ersten Pfad nehmen.','Alle Pfade multiplizieren.']},
+  {q:'Die Wahrscheinlichkeiten aller Pfade eines vollständigen Baumdiagramms ergeben zusammen …',ok:'1 (also 100 %).',bad:['0.','die Anzahl der Pfade.','1/2.']},
+  {q:'Warum ist es sinnvoll, einen Versuch am Computer 1000-mal zu simulieren, statt ihn nur 10-mal von Hand durchzuführen?',ok:'Mit mehr Versuchen liegt die relative Häufigkeit meist näher an der Wahrscheinlichkeit.',bad:['Weil dann die Wahrscheinlichkeit größer wird.','Weil der Computer „besser“ würfelt.','Weil 10 Versuche gar kein Ergebnis liefern können.']}
+ ]
+};
+function mcText(r,it){const o=shuf(r,[{t:it.ok,ok:1},...it.bad.map(t=>({t}))]);return{html:it.q,opts:o.map(x=>esc(x.t)),ok:o.findIndex(x=>x.ok)};}
+function mcFrac(r,correct,extras,qHtml){
+  const seen=new Set([fstr(correct)]),c=[];
+  const push=f=>{if(!f||f.n<=0||f.n>=f.d)return;const s=fstr(f);if(seen.has(s))return;seen.add(s);c.push(f)};
+  extras.forEach(push);
+  push(fsub(ONE,correct));push(F(correct.n,correct.d+1));push(F(correct.n+1,correct.d));push(F(1,correct.d));push(fmul(correct,F(1,2)));
+  for(let k=2;k<12;k++){push(F(1,correct.d+k));push(F(k,correct.d+k));}
+  const o=shuf(r,[{f:correct,ok:1},...c.slice(0,3).map(f=>({f}))]);
+  return{html:qHtml,opts:o.map(x=>fh(x.f)),ok:o.findIndex(x=>x.ok)};
+}
+const NEARER=(p)=>`≈ ${pctS(fv(p))}`;
+
+/* ================= Aufgaben ================= */
+function base(level,station,i,reps){return{round:i,level,station,reps,minN:30,cap:5000};}
+/* kategoriale Aufgabe: Reihen = Ergebnisse, E = Ereignis (ggf. abgeleitete Reihe) */
+function finishCat(t,defs,targetIds,sample){
+  const derived=targetIds.length>1;
+  t.series=defs.slice();
+  let pE=ZERO;targetIds.forEach(id=>{pE=fadd(pE,defs.find(s=>s.id===id).p)});
+  t.pE=pE;t.targetIds=targetIds;
+  if(derived){t.series.push({id:'E',label:'Ereignis E',css:'var(--ink)',p:pE,derived:true,short:'E'});t.tid='E';}else t.tid=targetIds[0];
+  const all=t.series.map(s=>s.id);
+  t.run=(rng,opt)=>{const r=sample(rng);const hits=[r.cid];if(derived&&targetIds.includes(r.cid))hits.push('E');return{cnt:all,hits,leaf:r.leaf||r.cid,chip:r.chip,vis:r.vis,say:r.say};};
+  return t;
+}
+function arrangeSlices(rng,counts){
+  const rem={...counts};const out=[];let last=null;const tot=Object.values(rem).reduce((a,b)=>a+b,0);
+  for(let i=0;i<tot;i++){
+    const ids=Object.keys(rem).filter(k=>rem[k]>0);
+    let cand=ids.filter(k=>k!==last);if(!cand.length)cand=ids;
+    const mx=Math.max(...cand.map(k=>rem[k]));cand=cand.filter(k=>rem[k]===mx);
+    const c=pick(rng,cand);out.push(c);rem[c]--;last=c;
+  }
+  return out;
+}
+const secAt=(sectors,u)=>sectors.find(x=>u>=x.start&&u<x.start+x.deg)||sectors[sectors.length-1];
+
+/* ---- Zweistufige Versuche (Jg. 9) ---- */
+function twoStage(t,rng,o){
+  const q1=fsub(ONE,o.p1);
+  const P={SS:fmul(o.p1,o.p2S),SF:fmul(o.p1,fsub(ONE,o.p2S)),FS:fmul(q1,o.p2F),FF:fmul(q1,fsub(ONE,o.p2F))};
+  const k2=P.SS,k1=fadd(P.SF,P.FS),k0=P.FF;
+  const sd=[
+    {id:'k2',label:'2× '+o.S.label,css:'var(--c4)',p:k2,short:'2×'},
+    {id:'k1',label:'1× '+o.S.label,css:'var(--c3)',p:k1,short:'1×'},
+    {id:'k0',label:'0× '+o.S.label,css:'var(--c1)',p:k0,short:'0×'}];
+  const evs=[{ids:['k1','k2'],t:o.texts.mind1},{ids:['k1'],t:o.texts.genau1},{ids:['k2'],t:o.texts.beide},{ids:['k0'],t:o.texts.keins}]
+    .filter(e=>{let p=ZERO;e.ids.forEach(id=>{p=fadd(p,sd.find(s=>s.id===id).p)});return fv(p)>=0.12&&fv(p)<=0.9});
+  const ev=pick(rng,evs);
+  finishCat(t,sd,ev.ids,r=>{
+    const d=o.draw(r);const cnt=(d.a==='S')+(d.b==='S');
+    const sh=x=>x==='S'?o.S.short:o.F.short;
+    return{cid:['k0','k1','k2'][cnt],leaf:d.a+d.b,chip:{t:sh(d.a)+sh(d.b),css:sd[2-cnt].css},vis:d.vis,say:d.say};
+  });
+  t.eText=`${o.intro} Ereignis E: <b>${ev.t}</b>.`;
+  const lbl=x=>x==='S'?o.S.label:o.F.label;
+  const lf=(id,p,pp)=>({label:lbl(id[0])+', '+lbl(id[1]),leaf:id,p:pp});
+  t.tree={denom:'n',leafP:P,leafE:Object.fromEntries(['SS','SF','FS','FF'].map(id=>[id,ev.ids.includes(['k0','k1','k2'][(id[0]==='S')+(id[1]==='S')])])),
+    root:{label:'Start',children:[
+      {label:o.S.label,css:o.S.css,p:o.p1,children:[{label:o.S.label,p:o.p2S,leaf:'SS',lab:lbl('S')+', '+lbl('S')},{label:o.F.label,p:fsub(ONE,o.p2S),leaf:'SF',lab:lbl('S')+', '+lbl('F')}]},
+      {label:o.F.label,css:o.F.css,p:q1,children:[{label:o.S.label,p:o.p2F,leaf:'FS',lab:lbl('F')+', '+lbl('S')},{label:o.F.label,p:fsub(ONE,o.p2F),leaf:'FF',lab:lbl('F')+', '+lbl('F')}]}]}};
+  const names={SS:'SS',SF:'SF',FS:'FS',FF:'FF'};
+  const inE=['SS','SF','FS','FF'].filter(id=>t.tree.leafE[id]);
+  const prod=id=>id==='SS'?[o.p1,o.p2S]:id==='SF'?[o.p1,fsub(ONE,o.p2S)]:id==='FS'?[q1,o.p2F]:[q1,fsub(ONE,o.p2F)];
+  t.explain=`<b>Pfadregel:</b> Entlang eines Pfades wird multipliziert, die Pfade zum Ereignis werden addiert.<br>`+
+    inE.map(id=>`Pfad ${lbl(id[0])} → ${lbl(id[1])}: ${fstr(prod(id)[0])} · ${fstr(prod(id)[1])} = ${fstr(P[id])}`).join('<br>')+
+    `<br>Zusammen: <b>P(E) = ${fstr(t.pE)} ${NEARER(t.pE)}</b>`;
+  const extras=[fmul(o.p1,o.p1),fadd(o.p1,o.p2S),o.p1,fsub(ONE,t.pE)];
+  t.q2=mcFrac(rng,t.pE,extras,`Berechne mit der Pfadregel: Wie groß ist die Wahrscheinlichkeit für „${ev.t}“?${o.replace?'':' <span class="muted">(ohne Zurücklegen!)</span>'}`);
+  t.vis.spins=2;
+  return t;
+}
+
+/* ---- Glücksrad ---- */
+function bRad(level,rng,i,reps){
+  const t=base(level,'rad',i,reps);
+  if(level===1){
+    const n=pick(rng,[8,10,12]);
+    const CS={8:[[4,2,2],[3,3,2],[4,3,1],[5,2,1]],10:[[5,3,2],[4,4,2],[5,4,1],[6,3,1],[4,3,3]],12:[[6,4,2],[6,3,3],[5,4,3],[8,3,1],[4,4,4]]};
+    const counts=shuf(rng,pick(rng,CS[n]));const cols=shuf(rng,COLIDS).slice(0,3);
+    const cm={};cols.forEach((c,k)=>cm[c]=counts[k]);
+    const order=arrangeSlices(rng,cm),deg=360/n;
+    const sectors=order.map((c,k)=>({id:c,css:COL[c].css,ch:COL[c].ch,start:k*deg,deg,dark:COL[c].dark}));
+    const tc=pick(rng,cols),c=cm[tc],p=F(c,n);
+    t.title=`Glücksrad mit ${n} gleich großen Feldern`;
+    t.story='Das Rad wird gedreht. Der Zeiger zeigt auf das Feld, bei dem es stehen bleibt.';
+    t.eText=`Ereignis E: Das Rad bleibt auf <b>${COL[tc].label}</b> stehen.`;
+    t.vis={type:'rad',sectors,spins:1};
+    finishCat(t,cols.map(x=>({id:x,label:COL[x].label,css:COL[x].css,short:COL[x].ch,p:F(cm[x],n)})),[tc],r=>{
+      const u=r()*360,s=secAt(sectors,u);return{cid:s.id,chip:{t:COL[s.id].ch,css:COL[s.id].css},vis:{u:[u]},say:COL[s.id].label};});
+    t.explain=`Das Rad hat ${n} gleich große Felder, ${c} davon sind ${COL[tc].label}. Also gilt <b>P(${COL[tc].label}) = ${c}/${n}${p.d!==n?' = '+fstr(p):''} ${NEARER(p)}</b>.`;
+    t.q2=rng()<0.55?mcFrac(rng,p,[F(1,n),F(n-c,n),F(c,n-c)],`Das Rad hat ${n} gleich große Felder, davon ${c} in <b>${COL[tc].label}</b>. Wie groß ist P(${COL[tc].label})?`):mcText(rng,pick(rng,CONCEPT[1]));
+    return t;
+  }
+  if(level===2){
+    const SP=[[180,90,90],[120,120,120],[180,120,60],[150,120,90],[240,60,60],[180,90,60,30],[120,90,90,60],[150,90,60,60],[210,90,60],[180,150,30]];
+    const degs=shuf(rng,pick(rng,SP)),cols=shuf(rng,COLIDS).slice(0,degs.length);
+    let s0=0;const sectors=degs.map((d,k)=>{const o={id:cols[k],css:COL[cols[k]].css,ch:COL[cols[k]].ch,start:s0,deg:d,dark:COL[cols[k]].dark,angle:true};s0+=d;return o;});
+    const kinds=['single','not'];if(degs.length>=3)kinds.push('union');
+    const kind=pick(rng,kinds);const k0=rint(rng,0,degs.length-1);
+    let ids,txt;
+    if(kind==='single'){ids=[cols[k0]];txt=`Das Rad bleibt auf <b>${COL[cols[k0]].label}</b> stehen.`;}
+    else if(kind==='not'){ids=cols.filter((_,k)=>k!==k0);txt=`Das Rad bleibt <b>nicht</b> auf ${COL[cols[k0]].label} stehen.`;}
+    else{const k1=(k0+1+rint(rng,0,degs.length-2))%degs.length;ids=[cols[k0],cols[k1]];txt=`Das Rad bleibt auf <b>${COL[cols[k0]].label} oder ${COL[cols[k1]].label}</b> stehen.`;}
+    t.title='Glücksrad mit unterschiedlich großen Sektoren';
+    t.story='Die Größe eines Sektors steht als Mittelpunktswinkel im Rad. Der ganze Kreis hat 360°.';
+    t.eText='Ereignis E: '+txt;
+    t.vis={type:'rad',sectors,spins:1};
+    finishCat(t,cols.map((x,k)=>({id:x,label:COL[x].label,css:COL[x].css,short:COL[x].ch,p:F(degs[k],360)})),ids,r=>{
+      const u=r()*360,s=secAt(sectors,u);return{cid:s.id,chip:{t:COL[s.id].ch,css:COL[s.id].css},vis:{u:[u]},say:COL[s.id].label};});
+    const sumDeg=ids.reduce((a,id)=>a+degs[cols.indexOf(id)],0);
+    t.explain=`Wahrscheinlichkeit = Winkel : 360°. Für E gehören ${sumDeg}° zum Ereignis, also <b>P(E) = ${sumDeg}/360${t.pE.d!==360?' = '+fstr(t.pE):''} ${NEARER(t.pE)}</b>.`+(kind==='not'?`<br>Tipp: P(nicht ${COL[cols[k0]].label}) = 1 − P(${COL[cols[k0]].label}).`:'');
+    const r2=rng();
+    if(r2<0.4){const d=degs[k0];t.q2=mcFrac(rng,F(d,360),[F(d,180),F(360-d,360),F(1,degs.length)],`Der Sektor <b>${COL[cols[k0]].label}</b> hat einen Mittelpunktswinkel von ${d}°. Wie groß ist P(${COL[cols[k0]].label})?`);}
+    else if(r2<0.7){const d=degs[k0];t.q2=mcFrac(rng,F(360-d,360),[F(d,360),F(d,180),F(1,degs.length)],`Der Sektor <b>${COL[cols[k0]].label}</b> hat ${d}°. Wie groß ist die Wahrscheinlichkeit, dass <b>nicht</b> ${COL[cols[k0]].label} fällt?`);}
+    else t.q2=mcText(rng,pick(rng,CONCEPT[2]));
+    return t;
+  }
+  const n=pick(rng,[6,8,10]),r=pick(rng,[2,3,4]);
+  const order=arrangeSlices(rng,{rot:r,blau:n-r}),deg=360/n;
+  const sectors=order.map((c,k)=>({id:c,css:COL[c].css,ch:COL[c].ch,start:k*deg,deg}));
+  t.title=`Glücksrad, zweimal gedreht (${r} von ${n} Feldern rot)`;
+  t.story='Das Rad wird zweimal hintereinander gedreht. Beide Drehungen sind unabhängig.';
+  t.vis={type:'rad',sectors,spins:2};
+  const p1=F(r,n);
+  twoStage(t,rng,{S:{label:'Rot',short:'R',css:'var(--c1)'},F:{label:'Blau',short:'B',css:'var(--c2)'},p1,p2S:p1,p2F:p1,replace:true,
+    intro:'Das Rad wird zweimal gedreht.',texts:{mind1:'mindestens einmal Rot',genau1:'genau einmal Rot',beide:'zweimal Rot',keins:'keinmal Rot'},
+    draw:rg=>{const u1=rg()*360,u2=rg()*360;const a=secAt(sectors,u1).id==='rot'?'S':'F',b=secAt(sectors,u2).id==='rot'?'S':'F';return{a,b,vis:{u:[u1,u2]},say:(a==='S'?'Rot':'Blau')+' · '+(b==='S'?'Rot':'Blau')};}});
+  return t;
+}
+
+/* ---- Würfel ---- */
+function bWuerfel(level,rng,i,reps){
+  const t=base(level,'wuerfel',i,reps);
+  const faceSeries=(P)=>[1,2,3,4,5,6].map(f=>({id:'f'+f,label:String(f),short:String(f),css:`var(--c${(f-1)%7+1})`,p:P[f-1]}));
+  t.vis={type:'wuerfel',dice:1};
+  if(level===3){
+    t.title='Zwei Würfel';t.story='Zwei faire Würfel werden gleichzeitig geworfen.';t.vis.dice=2;
+    twoStage(t,rng,{S:{label:'6',short:'6',css:'var(--c1)'},F:{label:'keine 6',short:'–',css:'var(--c2)'},p1:F(1,6),p2S:F(1,6),p2F:F(1,6),replace:true,
+      intro:'Zwei Würfel werden geworfen.',texts:{mind1:'mindestens eine 6',genau1:'genau eine 6',beide:'zwei Sechsen',keins:'keine 6'},
+      draw:rg=>{const f1=1+Math.floor(rg()*6),f2=1+Math.floor(rg()*6);return{a:f1===6?'S':'F',b:f2===6?'S':'F',vis:{f:[f1,f2]},say:f1+' und '+f2};}});
+    t.series.forEach(s=>{s.label=s.label.replace('× 6','× Sechs').replace('× keine 6','× Sechs');});
+    return t;
+  }
+  const faceSample=(w)=>{const tot=w.reduce((a,b)=>a+b,0);return r=>{let u=r()*tot,f=0;while(f<5&&u>=w[f]){u-=w[f];f++;}return{cid:'f'+(f+1),chip:{t:String(f+1),css:`var(--c${f%7+1})`},vis:{f:[f+1]},say:'Augenzahl '+(f+1)};};};
+  if(level===1){
+    const EV=[...[1,2,3,4,5,6].map(f=>({ids:[f],e:`Es fällt die <b>${f}</b>.`})),{ids:[2,4,6],e:'Es fällt eine <b>gerade Zahl</b>.'},{ids:[1,3,5],e:'Es fällt eine <b>ungerade Zahl</b>.'},{ids:[5,6],e:'Es fällt eine Zahl <b>größer als 4</b>.'},{ids:[1,2],e:'Es fällt eine Zahl <b>kleiner als 3</b>.'}];
+    const ev=pick(rng,EV);
+    t.title='Ein Würfel';t.story='Ein fairer Würfel wird geworfen.';t.eText='Ereignis E: '+ev.e;
+    finishCat(t,faceSeries(Array(6).fill(F(1,6))),ev.ids.map(f=>'f'+f),faceSample(Array(6).fill(1)));
+    t.explain=`Ein Würfel hat 6 gleich wahrscheinliche Ergebnisse. Für E sind ${ev.ids.length} davon günstig: <b>P(E) = ${ev.ids.length}/6${t.pE.d!==6?' = '+fstr(t.pE):''} ${NEARER(t.pE)}</b>.`;
+    t.q2=rng()<0.55?mcFrac(rng,t.pE,[F(1,6),F(ev.ids.length,5),fsub(ONE,t.pE)],`Ein fairer Würfel hat 6 gleich wahrscheinliche Ergebnisse. ${ev.ids.length} davon sind günstig für E. Wie groß ist P(E)?`):mcText(rng,pick(rng,CONCEPT[1]));
+    return t;
+  }
+  // Stufe 2
+  if(rng()<0.35){
+    const f0=rint(rng,1,6),w=Array(6).fill(1);w[f0-1]=3;
+    t.title='Ein verdächtiger Würfel';t.story='Dieser Würfel sieht ungewöhnlich aus. Vielleicht ist er gezinkt – das lässt sich nur durch Ausprobieren herausfinden.';
+    t.eText=`Ereignis E: Es fällt die <b>${f0}</b>.`;
+    finishCat(t,faceSeries(w.map(x=>F(x,8))),['f'+f0],faceSample(w));
+    t.explain=`Der Würfel war gezinkt: Die ${f0} hat das Gewicht 3, alle anderen Zahlen 1. Insgesamt gibt es 8 „Anteile“, also <b>P(${f0}) = 3/8 = ${pctS(3/8)}</b> statt 1/6. Nur mit vielen Versuchen siehst du das.`;
+    t.q2=mcText(rng,{q:'Wie findest du am besten heraus, ob ein Würfel gezinkt ist?',ok:'Sehr oft würfeln und die relativen Häufigkeiten mit 1/6 ≈ 16,7 % vergleichen.',bad:['Einmal würfeln und schauen, ob eine 6 kommt.','Den Würfel nur fünfmal werfen.','Das kann man nicht herausfinden.']});
+    return t;
+  }
+  const EV=[{ids:[2,3,5],e:'Es fällt eine <b>Primzahl</b>.'},{ids:[3,6],e:'Es fällt ein <b>Vielfaches von 3</b>.'},{ids:[1,2,3,4,5],e:'Es fällt <b>keine 6</b>.'},{ids:[1,2,3,4],e:'Es fällt eine Zahl <b>höchstens 4</b>.'},{ids:[3,4,5,6],e:'Es fällt eine Zahl <b>mindestens 3</b>.'},{ids:[1,4],e:'Es fällt eine <b>Quadratzahl</b>.'}];
+  const ev=pick(rng,EV);
+  t.title='Ein Würfel – zusammengesetzte Ereignisse';t.story='Ein fairer Würfel wird geworfen. Das Ereignis umfasst mehrere Augenzahlen.';t.eText='Ereignis E: '+ev.e;
+  finishCat(t,faceSeries(Array(6).fill(F(1,6))),ev.ids.map(f=>'f'+f),faceSample(Array(6).fill(1)));
+  t.explain=`Günstig für E sind die Augenzahlen ${ev.ids.join(', ')} – das sind ${ev.ids.length} von 6. Also <b>P(E) = ${ev.ids.length}/6${t.pE.d!==6?' = '+fstr(t.pE):''} ${NEARER(t.pE)}</b>. Gegenereignis: P(nicht E) = 1 − P(E) = ${fstr(fsub(ONE,t.pE))}.`;
+  const r2=rng();
+  if(r2<0.4)t.q2=mcFrac(rng,t.pE,[F(1,6),F(ev.ids.length,5),fsub(ONE,t.pE)],`Welche Augenzahlen sind günstig für E? ${ev.ids.join(', ')} – also ${ev.ids.length} von 6. Wie groß ist P(E)?`);
+  else if(r2<0.7)t.q2=mcFrac(rng,fsub(ONE,t.pE),[t.pE,F(1,6),F(6-ev.ids.length,5)],`Für E gilt P(E) = ${fh(t.pE)}. Wie groß ist die Wahrscheinlichkeit des Gegenereignisses „nicht E“?`);
+  else t.q2=mcText(rng,pick(rng,CONCEPT[2]));
+  return t;
+}
+
+/* ---- Lose ---- */
+function bLose(level,rng,i,reps){
+  const t=base(level,'lose',i,reps);
+  const KIND={G:{label:'Gewinn',icon:'⭐',css:'var(--c4)'},N:{label:'Niete',icon:'✕',css:'var(--soft)'},H:{label:'Hauptgewinn',icon:'🏆',css:'var(--c3)'},T:{label:'Trostpreis',icon:'🎁',css:'var(--c2)'}};
+  if(level===1){
+    const N=pick(rng,[10,12,20]);const g=pick(rng,{10:[2,3,4,5],12:[3,4,6],20:[4,5,8]}[N]);
+    const types=shuf(rng,[...Array(g).fill('G'),...Array(N-g).fill('N')]);
+    t.title=`Lostrommel mit ${N} Losen`;t.story='Ein Los wird gezogen, angeschaut und wieder zurückgelegt.';
+    t.eText='Ereignis E: Du ziehst einen <b>Gewinn</b>.';
+    t.vis={type:'lose',N,types,draws:1,replace:true,kinds:KIND,legend:[['G',g],['N',N-g]]};
+    finishCat(t,[{id:'gewinn',label:'Gewinn',css:KIND.G.css,p:F(g,N),short:'G'},{id:'niete',label:'Niete',css:KIND.N.css,p:F(N-g,N),short:'N'}],['gewinn'],r=>{
+      const ix=Math.floor(r()*N),ty=types[ix];return{cid:ty==='G'?'gewinn':'niete',chip:{t:ty,css:KIND[ty].css},vis:{idx:[ix]},say:KIND[ty].label};});
+    t.explain=`In der Trommel sind ${N} Lose, ${g} davon Gewinne. <b>P(Gewinn) = ${g}/${N}${t.pE.d!==N?' = '+fstr(t.pE):''} ${NEARER(t.pE)}</b>.`;
+    t.q2=rng()<0.55?mcFrac(rng,t.pE,[F(1,N),F(N-g,N),F(g,N-g)],`Von ${N} Losen sind ${g} Gewinne. Wie groß ist die Wahrscheinlichkeit für einen Gewinn?`):mcText(rng,pick(rng,CONCEPT[1]));
+    return t;
+  }
+  if(level===2){
+    const N=pick(rng,[10,20]);const [h,tr]=pick(rng,{10:[[1,3],[1,2],[2,3]],20:[[1,4],[2,5],[2,4]]}[N]);
+    const types=shuf(rng,[...Array(h).fill('H'),...Array(tr).fill('T'),...Array(N-h-tr).fill('N')]);
+    const sd=[{id:'haupt',label:'Hauptgewinn',css:KIND.H.css,p:F(h,N),short:'H'},{id:'trost',label:'Trostpreis',css:KIND.T.css,p:F(tr,N),short:'T'},{id:'niete',label:'Niete',css:KIND.N.css,p:F(N-h-tr,N),short:'N'}];
+    const EVS=[{ids:['haupt','trost'],t:'Du ziehst <b>irgendeinen Gewinn</b> (Haupt- oder Trostpreis)',p:F(h+tr,N)},{ids:['niete'],t:'Du ziehst eine <b>Niete</b>',p:F(N-h-tr,N)},{ids:['haupt'],t:'Du ziehst den <b>Hauptgewinn</b>',p:F(h,N)},{ids:['trost','niete'],t:'Du ziehst <b>keinen Hauptgewinn</b>',p:F(N-h,N)}].filter(e=>fv(e.p)>=0.09);
+    const ev=pick(rng,EVS);
+    t.title=`Lostrommel mit Haupt-, Trostpreisen und Nieten`;t.story=`In der Trommel liegen ${N} Lose. Gezogen wird mit Zurücklegen.`;
+    t.eText='Ereignis E: '+ev.t+'.';
+    t.vis={type:'lose',N,types,draws:1,replace:true,kinds:KIND,legend:[['H',h],['T',tr],['N',N-h-tr]]};
+    finishCat(t,sd,ev.ids,r=>{const ix=Math.floor(r()*N),ty=types[ix];return{cid:{H:'haupt',T:'trost',N:'niete'}[ty],chip:{t:ty,css:KIND[ty].css},vis:{idx:[ix]},say:KIND[ty].label};});
+    t.explain=`Günstig für E sind ${t.pE.n*N/t.pE.d} von ${N} Losen. <b>P(E) = ${t.pE.n*N/t.pE.d}/${N}${t.pE.d!==N?' = '+fstr(t.pE):''} ${NEARER(t.pE)}</b>.`;
+    const r2=rng();
+    if(r2<0.45)t.q2=mcFrac(rng,t.pE,[F(1,N),F(N-t.pE.n*N/t.pE.d,N),F(h,N)],`In der Trommel: ${h} Hauptgewinn(e), ${tr} Trostpreise, ${N-h-tr} Nieten. Wie groß ist P(E)?`);
+    else if(r2<0.75)t.q2=mcFrac(rng,fsub(ONE,t.pE),[t.pE,F(h,N),F(1,N)],`Für E gilt P(E) = ${fh(t.pE)}. Wie groß ist die Wahrscheinlichkeit für das Gegenereignis?`);
+    else t.q2=mcText(rng,pick(rng,CONCEPT[2]));
+    return t;
+  }
+  const N=pick(rng,[6,8,10]),g=pick(rng,[2,3,4]);
+  const types=shuf(rng,[...Array(g).fill('G'),...Array(N-g).fill('N')]);
+  t.title=`Zwei Lose ohne Zurücklegen (${g} Gewinne unter ${N})`;t.story='Es werden nacheinander zwei Lose gezogen – das erste Los wird nicht zurückgelegt.';
+  t.vis={type:'lose',N,types,draws:2,replace:false,kinds:KIND,legend:[['G',g],['N',N-g]]};
+  twoStage(t,rng,{S:{label:'Gewinn',short:'G',css:'var(--c4)'},F:{label:'Niete',short:'N',css:'var(--soft)'},p1:F(g,N),p2S:F(g-1,N-1),p2F:F(g,N-1),replace:false,
+    intro:'Es werden zwei Lose ohne Zurücklegen gezogen.',texts:{mind1:'mindestens ein Gewinn',genau1:'genau ein Gewinn',beide:'zwei Gewinne',keins:'kein Gewinn'},
+    draw:rg=>{const i1=Math.floor(rg()*N);let i2=Math.floor(rg()*(N-1));if(i2>=i1)i2++;const a=types[i1]==='G'?'S':'F',b=types[i2]==='G'?'S':'F';return{a,b,vis:{idx:[i1,i2]},say:KIND[types[i1]].label+' · '+KIND[types[i2]].label};}});
+  return t;
+}
+
+/* ---- Ziegenproblem ---- */
+function zRound(N,open,rng,pickDoor){
+  const car=Math.floor(rng()*N),all=[...Array(N).keys()];
+  const goats=all.filter(d=>d!==pickDoor&&d!==car);
+  const opened=shuf(rng,goats).slice(0,open);
+  const rest=all.filter(d=>d!==pickDoor&&!opened.includes(d));
+  return{pick:pickDoor,car,opened,rest};
+}
+function zFinish(r,strat,rng){
+  const final=strat==='stay'?r.pick:r.rest[Math.floor(rng()*r.rest.length)];
+  return{...r,final,strat,win:final===r.car,firstCar:r.pick===r.car};
+}
+function bZiege(level,rng,i,reps){
+  const t=base(level,'ziege',i,reps);
+  const N=level===1?3:level===2?10:4,open=level===1?1:level===2?8:1,closed=N-1-open;
+  const pStay=F(1,N),pSw=fmul(F(N-1,N),F(1,closed));
+  t.title=N===3?'Das Ziegenproblem':N===10?'Ziegenproblem mit 10 Türen':'Ziegenproblem mit 4 Türen';
+  t.story=N===3?'Hinter einer von 3 Türen steht ein Auto, hinter den anderen beiden je eine Ziege. Du wählst eine Tür. Der Moderator kennt das Auto und öffnet eine andere Tür mit einer Ziege. Dann darfst du bei deiner Tür bleiben oder wechseln.'
+    :N===10?`Hinter einer von 10 Türen steht ein Auto, hinter den anderen 9 je eine Ziege. Du wählst eine Tür. Der Moderator öffnet 8 andere Türen mit Ziegen. Es bleiben deine Tür und eine weitere. Bleiben oder wechseln?`
+    :'Hinter einer von 4 Türen steht ein Auto. Du wählst eine Tür, der Moderator öffnet eine andere Tür mit einer Ziege. Beim Wechseln wählst du zufällig eine der beiden übrigen geschlossenen Türen.';
+  t.eText='Ereignis E: Du <b>gewinnst das Auto, wenn du immer wechselst</b>.';
+  t.vis={type:'ziege',N,open};t.strategy=true;t.minN=20;
+  t.series=[{id:'stay',label:'Bleiben',css:'var(--c2)',p:pStay,short:'B'},{id:'switch',label:'Wechseln',css:'var(--c1)',p:pSw,short:'W'}];
+  t.tid='switch';t.targetIds=['switch'];t.pE=pSw;
+  t.resOf=(z,st)=>({cnt:[st],hits:z.win?[st]:[],leaf:st==='switch'?(z.firstCar?'AL':(z.win?'ZW':'ZL')):null,
+      chip:{t:(st==='switch'?'W':'B')+(z.win?'✓':'✗'),css:z.win?'var(--ok)':'var(--bad)'},vis:z,say:(st==='switch'?'Wechseln':'Bleiben')+': '+(z.win?'Auto gewonnen! 🚗':'Ziege. 🐐')});
+  t.run=(rng2,opt)=>{
+    const st=opt.strategy||'switch';const z=zFinish(zRound(N,open,rng2,Math.floor(rng2()*N)),st,rng2);
+    return t.resOf(z,st);
+  };
+  const pZL=fsub(F(N-1,N),pSw);
+  const zc=[{label:'Ziege gewählt',css:'var(--c3)',p:F(N-1,N),children:[{label:'Auto',p:F(1,closed),leaf:'ZW',lab:'Ziege gewählt, Wechsel → Auto'}]}];
+  if(closed>1)zc[0].children.push({label:'Ziege',p:fsub(ONE,F(1,closed)),leaf:'ZL',lab:'Ziege gewählt, Wechsel → Ziege'});
+  t.tree={denom:'switch',title:'Baum für die Strategie „Wechseln“',leafP:{AL:pStay,ZW:pSw,ZL:pZL},leafE:{AL:false,ZW:true,ZL:false},
+    root:{label:'Erste Wahl',children:[{label:'Auto gewählt',css:'var(--c4)',p:pStay,children:[{label:'Ziege',p:ONE,leaf:'AL',lab:'Auto gewählt, Wechsel → Ziege'}]},...zc]}};
+  t.explain=N===3?`Mit Wahrscheinlichkeit 1/3 steht das Auto hinter deiner ersten Tür – dann gewinnt „Bleiben“. Mit 2/3 steht es hinter einer anderen Tür; der Moderator öffnet dann die einzige andere Ziegen-Tür, und „Wechseln“ gewinnt. <b>P(Bleiben) = 1/3 ≈ 33,3 %, P(Wechseln) = 2/3 ≈ 66,7 %.</b>`
+    :N===10?`Deine erste Wahl ist nur mit 1/10 richtig. Mit 9/10 steht das Auto woanders – und der Moderator hat alle anderen Ziegen-Türen geöffnet, sodass das Auto hinter der letzten verbleibenden Tür steckt. <b>P(Wechseln) = 1 − 1/10 = 9/10 = 90 %.</b>`
+    :`Mit 1/4 ist deine erste Tür richtig (Wechseln verliert dann). Mit 3/4 steht das Auto woanders; unter den zwei übrigen geschlossenen Türen ist es dann mit 1/2 die gewählte. Pfadregel: <b>P(Wechseln) = 3/4 · 1/2 = 3/8 = 37,5 %</b>, P(Bleiben) = 1/4 = 25 %.`;
+  if(N===3){
+    t.q2=rng()<0.5?mcFrac(rng,F(2,3),[F(1,2),F(1,3),F(3,4)],'Du hast eine Tür gewählt und der Moderator hat eine Ziegen-Tür geöffnet. Wie groß ist deine Gewinnchance, wenn du <b>wechselst</b>?')
+      :mcText(rng,{q:'Warum gewinnt man mit „Wechseln“ häufiger?',ok:'Mit 2/3 steht das Auto hinter einer der beiden anderen Türen – und der Moderator verrät dort die Ziege.',bad:['Weil das Auto nach dem Öffnen immer hinter der anderen Tür steht.','Weil der Moderator das Auto heimlich verschiebt.','Es stimmt nicht – es steht 50 : 50.']});
+  }else if(N===10){
+    t.q2=rng()<0.5?mcFrac(rng,F(1,10),[F(1,2),F(9,10),F(1,8)],'Es gibt 10 Türen, der Moderator öffnet 8 Ziegen-Türen. Wie groß ist die Gewinnchance, wenn du <b>bleibst</b>?')
+      :mcFrac(rng,F(9,10),[F(1,10),F(1,2),F(4,5)],'Es gibt 10 Türen. Die Chance, dass deine erste Tür richtig ist, beträgt 1/10. Wie groß ist die Gewinnchance beim <b>Wechseln</b> (Gegenereignis)?');
+  }else{
+    t.q2=mcFrac(rng,F(3,8),[F(3,4),F(1,2),F(1,4)],'Es gibt 4 Türen, der Moderator öffnet eine Ziegen-Tür. Beim Wechseln wählst du zufällig eine der zwei übrigen Türen. Berechne P(Gewinn bei Wechseln) mit der Pfadregel.');
+  }
+  return t;
+}
+const BUILD={rad:bRad,wuerfel:bWuerfel,lose:bLose,ziege:bZiege};
+
+function buildTasks(cfg){
+  const rng=rng32(cfg.seed);
+  const levels=[1,2,3].filter(l=>cfg.levels[l-1]);
+  const sts=Object.keys(STATIONS).filter(k=>cfg.stations[k]);
+  const R=cfg.rounds,out=[];let queue=[],prev=null;
+  for(let i=0;i<R;i++){
+    const level=levels[Math.min(levels.length-1,Math.floor(i*levels.length/R))];
+    if(!queue.length)queue=shuf(rng,sts);
+    let ix=queue.findIndex(s=>s!==prev);if(ix<0)ix=0;
+    const st=queue.splice(ix,1)[0];prev=st;
+    const reps=REPS.filter(k=>cfg.matrix[level-1][k]);
+    out.push(BUILD[st](level,rng,i,reps));
+  }
+  return out;
+}
+
+/* ================= Versuchs-Engine ================= */
+function newLab(task){
+  const lab={n:0,per:{},k:{},hist:{},leaf:{},urlist:[]};
+  task.series.forEach(s=>{lab.per[s.id]=0;lab.k[s.id]=0;lab.hist[s.id]=[];});
+  return lab;
+}
+function applyRes(lab,res){
+  res.cnt.forEach(id=>{lab.per[id]++;});
+  res.hits.forEach(id=>{lab.k[id]++;});
+  res.cnt.forEach(id=>{lab.hist[id].push(lab.k[id]/lab.per[id]);});
+  if(res.leaf)lab.leaf[res.leaf]=(lab.leaf[res.leaf]||0)+1;
+  lab.n++;lab.urlist.push(res.chip);if(lab.urlist.length>80)lab.urlist.shift();
+}
+const relOf=(lab,id)=>lab.per[id]?lab.k[id]/lab.per[id]:0;
+
+/* ================= Zufallsgeräte ================= */
+function polar(cx,cy,r,deg){const a=deg*Math.PI/180;return[cx+r*Math.sin(a),cy-r*Math.cos(a)];}
+let wheelRot=0;
+function wheelSVG(sectors){
+  const cx=140,cy=150,r=124;let sh='';
+  sectors.forEach(s=>{
+    const[x0,y0]=polar(cx,cy,r,s.start),[x1,y1]=polar(cx,cy,r,s.start+s.deg);
+    const d=s.deg>=359.9?`M${cx-r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0`:`M${cx} ${cy}L${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${s.deg>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}Z`;
+    const mid=s.start+s.deg/2,[tx,ty]=polar(cx,cy,r*0.66,mid);
+    const fill=s.dark?'#15213B':'#fff';
+    let txt;
+    if(s.angle&&s.deg>=50)txt=`<text x="${tx.toFixed(1)}" y="${(ty-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="${fill}">${s.ch}</text><text x="${tx.toFixed(1)}" y="${(ty+9).toFixed(1)}" text-anchor="middle" font-size="12" fill="${fill}">${s.deg}°</text>`;
+    else if(s.angle)txt=`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="${fill}">${s.deg}°</text>`;
+    else txt=`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" fill="${fill}">${s.ch}</text>`;
+    sh+=`<path d="${d}" style="fill:${s.css}" stroke="var(--line)" stroke-width="2"/>${txt}`;
+  });
+  return`<svg class="wheel" viewBox="0 0 280 290" role="img" aria-label="Glücksrad"><g class="rot" id="wrot" style="transform-origin:${cx}px ${cy}px;transform:rotate(${wheelRot}deg)">${sh}</g><circle cx="${cx}" cy="${cy}" r="9" fill="var(--card)" stroke="var(--line)" stroke-width="3"/><path d="M140 40 L127 8 L153 8 Z" fill="var(--ink)" stroke="var(--card)" stroke-width="2"/></svg>`;
+}
+async function spinTo(u,quick){
+  const g=$('#wrot');if(!g)return;
+  const turns=quick?1:3+Math.floor(Math.random()*2);
+  wheelRot=(Math.floor(wheelRot/360)+turns)*360+(360-u);
+  const ms=REDUCED?0:quick?300:1100;
+  g.style.transitionDuration=ms+'ms';g.style.transform=`rotate(${wheelRot}deg)`;
+  await sleep(ms?ms+40:0);
+}
+const PIPS={1:[[1,1]],2:[[0,0],[2,2]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[2,0],[0,2],[2,2]],5:[[0,0],[2,0],[1,1],[0,2],[2,2]],6:[[0,0],[2,0],[0,1],[2,1],[0,2],[2,2]]};
+const dieSVG=(v,cls='')=>`<svg class="die ${cls}" viewBox="0 0 84 84" role="img" aria-label="Würfel zeigt ${v}"><rect x="3" y="3" width="78" height="78" rx="14" fill="var(--card)" stroke="var(--line)" stroke-width="3"/>${PIPS[v].map(([a,b])=>`<circle cx="${22+a*20}" cy="${22+b*20}" r="7" fill="var(--ink)"/>`).join('')}</svg>`;
+const diceHTML=(arr,cls)=>`<div class="dice" id="dice">${arr.map(v=>dieSVG(v,cls)).join('')}</div>`;
+
+function doorsSVG(N,st,can){
+  st=st||{};const W=520,w=Math.min(104,Math.floor(500/N)-10),gap=(W-N*w)/(N+1),h=Math.round(w*1.5),y=18;let s='';
+  for(let i=0;i<N;i++){
+    const x=gap+i*(w+gap),open=(st.opened&&st.opened.includes(i))||st.reveal;
+    const mark=st.pick===i?'Deine Wahl':(st.final!=null&&st.final!==st.pick&&st.final===i?'Neue Wahl':'');
+    const sel=st.pick===i||(st.final===i);
+    s+=`<g class="dr ${can&&!open?'can':''}" data-door="${i}" ${can?`role="button" tabindex="0" aria-label="Tür ${i+1} wählen"`:''}>`+
+      `<rect class="d" x="${x}" y="${y}" width="${w}" height="${h}" rx="6" style="fill:${open?'var(--muted)':'var(--c5)'}" stroke="var(--line)" stroke-width="${sel?5:3}"/>`+
+      (open?`<text x="${x+w/2}" y="${y+h/2}" text-anchor="middle" dominant-baseline="central" font-size="${Math.round(w*0.55)}">${i===st.car?'🚗':'🐐'}</text>`:
+      `<text x="${x+w/2}" y="${y+h/2-4}" text-anchor="middle" dominant-baseline="central" font-size="${Math.round(w*0.38)}" font-weight="700" fill="#fff">${i+1}</text><circle cx="${x+w-9}" cy="${y+h*0.58}" r="${Math.max(3,w/14)}" fill="#fff"/>`)+
+      (mark?`<text x="${x+w/2}" y="${y+h+22}" text-anchor="middle" font-size="${N>6?10:13}" font-weight="700" fill="var(--ink)">${mark}</text>`:'')+`</g>`;
+  }
+  return`<svg class="doors" viewBox="0 0 520 ${y+h+34}" role="img" aria-label="${N} Türen">${s}</svg>`;
+}
+const Vis={
+  html(task){
+    const v=task.vis;
+    if(v.type==='rad')return wheelSVG(v.sectors);
+    if(v.type==='wuerfel')return diceHTML(Array(v.dice).fill(v.dice===1?3:1));
+    if(v.type==='lose'){
+      return`<div class="tickets" id="tk">${Array.from({length:v.N},(_,i)=>`<div class="tk" data-i="${i}">?</div>`).join('')}</div>`+
+        `<div class="legend">${v.legend.map(([k,c])=>`<span><i style="background:${v.kinds[k].css}"></i>${c}× ${v.kinds[k].label}</span>`).join('')}</div>`;
+    }
+    if(v.type==='ziege')return`<div id="zbox" style="width:100%">${doorsSVG(v.N,{},false)}</div>`;
+  },
+  async play(task,res,quick){
+    const v=task.vis;const say=$('#say');
+    if(v.type==='rad'){for(const u of res.vis.u){await spinTo(u,quick);} }
+    else if(v.type==='wuerfel'){
+      const box=$('#dice');if(!box)return;const fin=res.vis.f;
+      if(!quick&&!REDUCED){for(let k=0;k<7;k++){box.innerHTML=fin.map(()=>dieSVG(1+Math.floor(Math.random()*6),'roll')).join('');await sleep(70);}}
+      box.innerHTML=fin.map(f=>dieSVG(f)).join('');
+    }else if(v.type==='lose'){
+      const cells=res.vis.idx.map(i=>$(`#tk .tk[data-i="${i}"]`)).filter(Boolean);
+      cells.forEach((c,k)=>{const ty=v.types[res.vis.idx[k]];c.classList.add('pick');c.style.setProperty('--c',v.kinds[ty].css);c.textContent=v.kinds[ty].icon;});
+      await sleep(REDUCED?0:quick?350:1100);
+      cells.forEach(c=>{c.classList.remove('pick');c.textContent='?';});
+    }else if(v.type==='ziege'){
+      const z=res.vis,box=$('#zbox');if(!box)return;
+      if(quick||REDUCED){box.innerHTML=doorsSVG(v.N,{pick:z.pick,opened:z.opened,final:z.final,car:z.car,reveal:true});await sleep(REDUCED?0:250);return;}
+      box.innerHTML=doorsSVG(v.N,{pick:z.pick});await sleep(450);
+      box.innerHTML=doorsSVG(v.N,{pick:z.pick,opened:z.opened,car:z.car});await sleep(550);
+      box.innerHTML=doorsSVG(v.N,{pick:z.pick,opened:z.opened,final:z.final,car:z.car});await sleep(450);
+      box.innerHTML=doorsSVG(v.N,{pick:z.pick,opened:z.opened,final:z.final,car:z.car,reveal:true});await sleep(500);
+    }
+    if(say&&res.say)say.textContent=res.say;
+  }
+};
+
+/* ================= Darstellungen ================= */
+const NICE=[0.1,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1];
+const niceMax=v=>NICE.find(x=>x>=v)||1;
+const serLab=s=>s.short&&s.short.length<=2&&!s.derived&&s.label.length>9?s.label:s.label;
+function legendHTML(ser){return`<div class="lg">${ser.map(s=>`<span><i style="background:${s.css}"></i>${esc(s.label)}</span>`).join('')}</div>`;}
+
+function repUrliste(g){
+  const l=g.lab;
+  if(!l.n)return'<p class="muted">Noch keine Versuche. Starte ein Experiment!</p>';
+  return`<p class="muted">Die letzten ${l.urlist.length} von ${l.n} Versuchen (links der älteste):</p><div class="ur">${l.urlist.map(c=>`<span class="uc" style="--c:${c.css}">${esc(c.t)}</span>`).join('')}</div>`;
+}
+function relHTML(k,n,fmt){
+  if(!n)return'–';
+  if(fmt==='bruch')return fhRaw(k,n);
+  if(fmt==='dez')return dec(k/n,3);
+  return pctS(k/n);
+}
+function repTabelle(g,reveal,fmt){
+  const t=g.task,l=g.lab;
+  const seg=`<div class="seg" role="group" aria-label="Zahlenformat" style="margin-bottom:8px">${[['bruch','Bruch'],['dez','Dezimal'],['proz','Prozent']].map(([k,n])=>`<button data-act="fmt" data-v="${k}" aria-pressed="${fmt===k}">${n}</button>`).join('')}</div>`;
+  const rows=t.series.map(s=>`<tr class="${s.id===t.tid?'te':''}"><td>${esc(s.label)}${s.id===t.tid?' <small>(E)</small>':''}</td>${t.strategy?`<td>${l.per[s.id]}</td>`:''}<td>${l.k[s.id]}</td><td>${relHTML(l.k[s.id],l.per[s.id],fmt)}</td>${reveal?`<td>${fh(s.p)} <small>${pctS(fv(s.p))}</small></td>`:''}</tr>`).join('');
+  const foot=t.strategy?'':`<tr><td><b>alle Versuche</b></td><td><b>${l.n}</b></td><td></td>${reveal?'<td></td>':''}</tr>`;
+  return seg+`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Ergebnis</th>${t.strategy?'<th>Versuche</th>':''}<th>absolut</th><th>relativ</th>${reveal?'<th>P (Theorie)</th>':''}</tr></thead><tbody>${rows}${foot}</tbody></table></div>`;
+}
+function repBalken(g,reveal){
+  const t=g.task,l=g.lab,ser=t.series;
+  const W=520,H=270,L=50,Rr=10,T=16,B=44,pw=W-L-Rr,ph=H-T-B;
+  const vals=ser.map(s=>relOf(l,s.id));
+  const m=Math.max(0.05,...vals,...(reveal?ser.map(s=>fv(s.p)):[0]));
+  const ym=niceMax(m*1.15);let ax='';
+  for(let j=0;j<=4;j++){const v=ym*j/4,y=T+ph-ph*v/ym;ax+=`<line class="axl" x1="${L}" x2="${W-Rr}" y1="${y}" y2="${y}"/><text class="ax" x="${L-6}" y="${y+4}" text-anchor="end">${pctS(v)}</text>`;}
+  const bw=pw/ser.length;let bars='';
+  ser.forEach((s,i)=>{
+    const x=L+i*bw+bw*0.17,w=bw*0.66,hh=ph*vals[i]/ym,y=T+ph-hh;
+    bars+=`<rect x="${x}" y="${y}" width="${w}" height="${Math.max(hh,0)}" rx="3" style="fill:${s.css}" stroke="var(--line)" stroke-width="2" opacity="${s.derived?0.85:1}"/>`;
+    if(l.per[s.id])bars+=`<text class="ax" x="${x+w/2}" y="${y-5}" text-anchor="middle" style="font-weight:700;fill:var(--ink)">${pctS(vals[i])}</text>`;
+    bars+=`<text class="ax" x="${x+w/2}" y="${H-B+16}" text-anchor="middle" style="font-size:${ser.length>6?10:12}px;fill:var(--ink)">${esc(s.label)}</text>`;
+    if(reveal){const yp=T+ph-ph*fv(s.p)/ym;bars+=`<line x1="${x-5}" x2="${x+w+5}" y1="${yp}" y2="${yp}" stroke="var(--ink)" stroke-width="3" stroke-dasharray="5 3"/>`;}
+  });
+  return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Balkendiagramm der relativen Häufigkeiten">${ax}${bars}<line x1="${L}" x2="${W-Rr}" y1="${T+ph}" y2="${T+ph}" stroke="var(--line)" stroke-width="2"/></svg>`+
+    `<p class="muted" style="margin:0;font-size:14px">Höhe = relative Häufigkeit${reveal?' · gestrichelte Marke = Wahrscheinlichkeit (Theorie)':''}</p>`;
+}
+function repVerlauf(g,reveal,logx){
+  const t=g.task,l=g.lab,ser=t.series;
+  const W=520,H=290,L=50,Rr=14,T=14,B=46,pw=W-L-Rr,ph=H-T-B;
+  const maxN=Math.max(10,...ser.map(s=>l.per[s.id]));
+  const fin=ser.map(s=>relOf(l,s.id));
+  const m=Math.max(0.1,...fin,...(reveal?ser.map(s=>fv(s.p)):[0]));
+  const ym=niceMax(m*1.45);
+  const X=n=>L+pw*(logx?Math.log(n)/Math.log(maxN):(n-1)/(maxN-1));
+  const Y=v=>T+ph-ph*v/ym;let ax='';
+  for(let j=0;j<=4;j++){const v=ym*j/4;ax+=`<line class="axl" x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+4}" text-anchor="end">${pctS(v)}</text>`;}
+  let ticks=[];
+  if(logx){for(let v=1;v<=maxN;v*=10)ticks.push(v);}else{for(let j=0;j<=4;j++)ticks.push(Math.max(1,Math.round(maxN*j/4)));}
+  ticks.forEach(v=>{ax+=`<line class="axl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${T+ph}"/><text class="ax" x="${X(v)}" y="${H-B+16}" text-anchor="middle">${v}</text>`;});
+  ax+=`<text class="ax" x="${L+pw/2}" y="${H-6}" text-anchor="middle">Anzahl der Versuche</text>`;
+  let lines='';
+  ser.forEach(s=>{
+    const a=l.hist[s.id];if(!a.length)return;
+    const step=Math.max(1,Math.floor(a.length/300));let pts=[];
+    for(let i=0;i<a.length;i+=step)pts.push(`${X(i+1).toFixed(1)},${Y(a[i]).toFixed(1)}`);
+    if((a.length-1)%step)pts.push(`${X(a.length).toFixed(1)},${Y(a[a.length-1]).toFixed(1)}`);
+    const main=s.id===t.tid;
+    lines+=`<polyline points="${pts.join(' ')}" fill="none" style="stroke:${s.css}" stroke-width="${main?3.5:2}" opacity="${main?1:0.75}" stroke-linejoin="round"/>`;
+    if(reveal)lines+=`<line x1="${L}" x2="${W-Rr}" y1="${Y(fv(s.p))}" y2="${Y(fv(s.p))}" style="stroke:${s.css}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  });
+  return`<div style="margin-bottom:6px"><button class="tg" data-act="logx" aria-pressed="${!!logx}">x-Achse logarithmisch</button></div>`+
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlauf der relativen Häufigkeiten"><defs><clipPath id="clipv"><rect x="${L}" y="${T}" width="${pw}" height="${ph}"/></clipPath></defs>${ax}<g clip-path="url(#clipv)">${lines}</g></svg>`+
+    legendHTML(ser)+`<p class="muted" style="margin:6px 0 0;font-size:14px">${reveal?'Gestrichelt: die Wahrscheinlichkeit (Theorie). ':''}Je mehr Versuche, desto ruhiger werden die Linien.</p>`;
+}
+function repBaum(g,reveal){
+  const tr=g.task.tree,l=g.lab;
+  if(!tr)return'<p class="muted">Für diese Aufgabe gibt es kein Baumdiagramm.</p>';
+  const denom=tr.denom==='n'?l.n:l.per[tr.denom];
+  const leaves=[];(function walk(n){if(n.children)n.children.forEach(walk);else leaves.push(n);})(tr.root);
+  const rowH=56,T=22,W=620,H=leaves.length*rowH+T*2;
+  leaves.forEach((lf,i)=>{lf.y=T+rowH*(i+0.5);});
+  (function pos(n){if(n.children){n.children.forEach(pos);n.y=n.children.reduce((a,c)=>a+c.y,0)/n.children.length;}})(tr.root);
+  const xs=[34,210,372];let s='';
+  const lbl=(x,y,txt)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--pen)" style="paint-order:stroke;stroke:var(--card);stroke-width:5px">${txt}</text>`;
+  (function draw(n,d){
+    (n.children||[]).forEach(c=>{
+      s+=`<line x1="${xs[d]}" y1="${n.y}" x2="${xs[d+1]}" y2="${c.y}" stroke="var(--line)" stroke-width="2"/>`+lbl((xs[d]+xs[d+1])/2,(n.y+c.y)/2-6,fstr(c.p));
+      draw(c,d+1);
+    });
+  })(tr.root,0);
+  s+=`<circle cx="${xs[0]}" cy="${tr.root.y}" r="8" fill="var(--ink)"/>`;
+  tr.root.children.forEach(c=>{s+=`<circle cx="${xs[1]}" cy="${c.y}" r="8" style="fill:${c.css||'var(--card)'}" stroke="var(--line)" stroke-width="2"/><text x="${xs[1]}" y="${c.y-14}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${esc(c.label)}</text>`;});
+  leaves.forEach(lf=>{
+    const cnt=l.leaf[lf.leaf]||0,inE=tr.leafE[lf.leaf];
+    if(inE)s+=`<rect x="${xs[2]+10}" y="${lf.y-22}" width="${W-xs[2]-14}" height="44" rx="8" style="fill:var(--mark)" opacity=".55"/>`;
+    s+=`<circle cx="${xs[2]}" cy="${lf.y}" r="6" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>`+
+      `<text x="${xs[2]+16}" y="${lf.y-4}" font-size="12.5" font-weight="700" fill="var(--ink)">${esc(lf.lab||lf.label)}</text>`+
+      `<text x="${xs[2]+16}" y="${lf.y+14}" font-size="12.5" fill="var(--ink)">${cnt}× ${denom?'('+pctS(cnt/denom)+')':''}${reveal?' · P = '+fstr(tr.leafP[lf.leaf])+' ≈ '+pctS(fv(tr.leafP[lf.leaf])):''}</text>`;
+  });
+  return`<p style="margin:0 0 4px;font-weight:700">${esc(tr.title||'Baumdiagramm')}</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Baumdiagramm">${s}</svg>`+
+    `<p class="muted" style="margin:6px 0 0;font-size:14px">Zahlen an den Ästen: Wahrscheinlichkeit der Stufe. Gelb hinterlegt: Pfade, die zum Ereignis E gehören.${reveal?'':' Die Pfadwahrscheinlichkeiten (Produkte) werden nach der Runde aufgedeckt.'}</p>`;
+}
+
+/* ================= Zustand ================= */
+const LS='zl.v1';
+const cleanName=s=>String(s==null?'':s).replace(/[\u0000-\u001f<>&"']/g,'').trim().slice(0,16);
+function loadPrefs(){try{return JSON.parse(localStorage.getItem(LS)||'{}')||{};}catch(e){return{};}}
+function savePrefs(){try{const c=S.cfg;localStorage.setItem(LS,JSON.stringify({names:c.names,levels:c.levels,matrix:c.matrix,stations:c.stations,rounds:c.rounds,theme:S.theme}));}catch(e){}}
+const S={screen:'home',mode:'solo',players:[],tasks:[],r:0,turn:0,g:null,fmt:'dez',logx:false,msg:'',started:false,
+  cfg:{names:['',''],levels:[1,1,1],matrix:defMatrix(),stations:{rad:1,wuerfel:1,lose:1,ziege:1},rounds:6,seed:1}};
+(function init(){
+  const p=loadPrefs();
+  if(Array.isArray(p.names))S.cfg.names=[cleanName(p.names[0]),cleanName(p.names[1])];
+  if(Array.isArray(p.levels)&&p.levels.length===3&&p.levels.some(Boolean))S.cfg.levels=p.levels.map(x=>x?1:0);
+  if(Array.isArray(p.matrix)&&p.matrix.length===3)S.cfg.matrix=p.matrix.map((m,i)=>{const o={};REPS.forEach(k=>o[k]=m&&m[k]?1:0);if(!REPS.some(k=>o[k]))o.tabelle=1;return o;});
+  if(p.stations&&Object.keys(STATIONS).some(k=>p.stations[k]))S.cfg.stations=Object.fromEntries(Object.keys(STATIONS).map(k=>[k,p.stations[k]?1:0]));
+  if([4,6,8,10,12].includes(p.rounds))S.cfg.rounds=p.rounds;
+  if(p.theme==='light'||p.theme==='dark'){S.theme=p.theme;document.documentElement.setAttribute('data-theme',p.theme);}
+})();
+const G=()=>S.g;
+const myName=()=>cleanName(S.cfg.names[0])||(S.mode==='solo'?'Spieler':'Spieler 1');
+const nameOf=i=>cleanName(S.cfg.names[i])||(S.mode==='solo'?'Spieler':'Spieler '+(i+1));
+const PH={pro:'schätzt',exp:'experimentiert',quiz:'beantwortet Fragen',res:'wertet aus'};
+function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2200);}
+const lvlTag=l=>`Stufe ${l} · Jg. ${LEVELS[l-1].jg}`;
+const stationTotal=(p)=>p.rounds.reduce((a,r)=>a+(r?r.total:0),0);
+
+/* ================= Punkte & Fragen ================= */
+const ptsPro=(est,p)=>Math.round(20*clamp(1-Math.max(0,Math.abs(est-p)-0.02)/0.28,0,1));
+const ptsFin=(est,p)=>Math.round(40*clamp(1-Math.max(0,Math.abs(est-p)-0.01)/0.11,0,1));
+function uniqOpts(correct,cands,fmt,fallback){
+  const seen=new Set([fmt(correct)]),out=[];
+  const add=x=>{if(x==null||isNaN(x))return;const s=fmt(x);if(seen.has(s))return;seen.add(s);out.push(x);};
+  cands.forEach(add);let j=1;while(out.length<3&&j<40){add(fallback(j));j++;}
+  return out.slice(0,3);
+}
+function makeQ1(g){
+  const t=g.task,l=g.lab,id=t.tid,n=l.per[id],k=l.k[id],r=n?k/n:0;
+  const who=t.strategy?`Du hast <b>${n}-mal gewechselt</b> und dabei <b>${k}-mal das Auto gewonnen</b>.`:`In deinem Experiment ist das Ereignis E bei <b>${n} Versuchen ${k}-mal</b> eingetreten.`;
+  let html,correct,fmt,cands,fb;
+  if(t.level===1){
+    const r2=x=>Math.round(x*100)/100;correct=r2(r);fmt=x=>dec(x,2);
+    html=`${who} Wie groß ist die relative Häufigkeit? <span class="muted">(Dezimalzahl, auf 2 Stellen gerundet)</span>`;
+    cands=[r2(1-r),r2(k/Math.max(1,n-k)),r2(r+0.1),r2(r-0.1),r2(r*2),r2(r/2)].filter(x=>x>=0&&x<=2);
+    fb=j=>r2(r+0.03*j*(j%2?1:-1));
+  }else if(t.level===2){
+    correct=Math.round(r*100);fmt=x=>x+' %';
+    html=`${who} Wie groß ist die relative Häufigkeit in Prozent? <span class="muted">(auf ganze Prozent gerundet)</span>`;
+    cands=[100-correct,Math.round(k/Math.max(1,n-k)*100),correct+10,correct-10,correct+5,Math.round(correct/2)].filter(x=>x>=0&&x<=100);
+    fb=j=>correct+3*j*(j%2?1:-1);
+  }else{
+    correct=Math.round(r*10000);fmt=x=>x.toLocaleString('de-DE');
+    html=`${who} Mit dieser relativen Häufigkeit: Wie oft würde E bei <b>10 000 Versuchen</b> ungefähr eintreten?`;
+    cands=[10000-correct,Math.round(r*1000),Math.round(r*100000),correct+500,correct-500,Math.round(correct/2)].filter(x=>x>=0);
+    fb=j=>correct+300*j*(j%2?1:-1);
+  }
+  const wrong=uniqOpts(correct,cands,fmt,fb).filter(x=>x>=0);
+  while(wrong.length<3)wrong.push(correct+(wrong.length+1)*(t.level===3?700:t.level===2?4:0.04));
+  const o=shuf(Math.random,[{v:correct,ok:1},...wrong.slice(0,3).map(v=>({v}))]);
+  const calc=t.level===1?`${k} : ${n} = ${dec(r,3)} ≈ ${fmt(correct)}`:t.level===2?`${k} : ${n} = ${dec(r,3)} ≈ ${fmt(correct)}`:`${k} : ${n} · 10 000 ≈ ${fmt(correct)}`;
+  return{html,opts:o.map(x=>fmt(x.v)),ok:o.findIndex(x=>x.ok),chosen:null,calc};
+}
+const enough=g=>g.task.strategy?(g.lab.per.stay>=10&&g.lab.per.switch>=10):g.lab.n>=g.task.minN;
+const missing=g=>g.task.strategy?`Spiele noch mindestens ${Math.max(0,10-g.lab.per.stay)}× „Bleiben“ und ${Math.max(0,10-g.lab.per.switch)}× „Wechseln“ (je 10 Spiele).`:`Noch ${Math.max(0,g.task.minN-g.lab.n)} Versuche, dann kannst du abgeben.`;
+const curN=g=>g.task.strategy?g.lab.per[g.strategy]:g.lab.n;
+
+/* ================= Ablauf ================= */
+function newSeed(){return(Math.random()*2147483647)|0||1;}
+let GID=0;
+function beginTurn(){
+  const t=S.tasks[S.r];wheelRot=0;
+  S.fmt=['bruch','dez','proz'][t.level-1];
+  S.g={id:++GID,task:t,lab:newLab(t),phase:'pro',pro:null,fin:null,q:null,strategy:'switch',tab:t.reps[0]||'tabelle',auto:null,busy:false,zm:null,rec:null,vhtml:null,say:''};
+}
+function startGame(){
+  S.cfg.seed=newSeed();S.tasks=buildTasks(S.cfg);S.r=0;S.turn=0;
+  S.players=(S.mode==='hot'?[0,1]:[0]).map(i=>({name:nameOf(i),rounds:[]}));
+  if(S.mode==='solo')S.players[0].name=myName();
+  beginTurn();S.screen=S.mode==='hot'?'hand':'game';render();
+}
+function commitRec(){
+  const g=G(),p=g.task.pE?fv(g.task.pE):0;
+  const q1=g.q[0],q2=g.q[1];
+  g.rec={pro:{est:g.pro.est,pts:ptsPro(g.pro.est,p)},fin:{est:g.fin.est,pts:ptsFin(g.fin.est,p)},q1:{ok:q1.chosen===q1.ok,pts:q1.chosen===q1.ok?20:0},q2:{ok:q2.chosen===q2.ok,pts:q2.chosen===q2.ok?20:0},n:g.task.strategy?g.lab.per.stay+g.lab.per.switch:g.lab.n};
+  g.rec.total=g.rec.pro.pts+g.rec.fin.pts+g.rec.q1.pts+g.rec.q2.pts;
+  S.players[S.turn].rounds[S.r]=g.rec;
+}
+function nextStep(){
+  stopAuto();
+  if(S.mode==='hot'){
+    if(S.turn<S.players.length-1){S.turn++;beginTurn();S.screen='hand';render();return;}
+    S.screen='cmp';render();return;
+  }
+  advanceRound();
+}
+function advanceRound(){
+  S.r++;S.turn=0;
+  if(S.r>=S.cfg.rounds){S.screen='final';render();NETsend();return;}
+  beginTurn();S.screen=S.mode==='hot'?'hand':'game';render();NETsend();
+}
+
+/* ================= Ansichten ================= */
+function vHead(){
+  const R=S.cfg.rounds;
+  const pills=Array.from({length:R},(_,i)=>{
+    const done=S.players.every(p=>p.rounds[i])||(S.mode!=='hot'&&S.players[0]&&S.players[0].rounds[i]);
+    return`<span class="pill ${i===S.r?'cur':done?'done':''}" aria-label="Runde ${i+1}">${i+1}</span>`;}).join('');
+  let sc='';
+  S.players.forEach((p,i)=>{sc+=`<span class="sc ${S.mode==='hot'&&i===S.turn&&S.screen==='game'?'act':''}">${esc(p.name)}: ${stationTotal(p)}</span>`;});
+  if(S.mode==='remote'&&NET.opp){const o=NET.opp;const live=Date.now()-o.seen<9000;
+    sc+=`<span class="sc">${esc(o.name)}: ${(o.res||[]).reduce((a,r)=>a+r[0]+r[1]+r[2]+r[3],0)}<small>${o.fin?'fertig':live?`R ${Math.min(o.round+1,R)} · ${PH[o.phase]||''}`:'Verbindung?'}</small></span>`;}
+  return`<div class="gbar"><span class="logo">Zufalls-Labor</span><div class="pills">${pills}</div><div class="score">${sc}</div><span class="sp"></span><button class="btn sm" data-act="help">? Anleitung</button><button class="btn sm" data-act="quit">Beenden</button></div>`;
+}
+const homeCurve=`<svg viewBox="0 0 520 250" role="img" aria-label="Eine Linie, die zu Beginn stark schwankt und sich dann bei 1/6 einpendelt"><defs><clipPath id="hcl"><rect x="46" y="10" width="464" height="200"/></clipPath></defs>
+<g class="ax"><line class="axl" x1="46" x2="510" y1="10" y2="10"/><line class="axl" x1="46" x2="510" y1="60" y2="60"/><line class="axl" x1="46" x2="510" y1="110" y2="110"/><line class="axl" x1="46" x2="510" y1="160" y2="160"/><line x1="46" x2="510" y1="210" y2="210" stroke="var(--line)" stroke-width="2"/>
+<text x="40" y="14" text-anchor="end">50 %</text><text x="40" y="64" text-anchor="end">37,5 %</text><text x="40" y="114" text-anchor="end">25 %</text><text x="40" y="164" text-anchor="end">12,5 %</text><text x="40" y="214" text-anchor="end">0 %</text></g>
+<line x1="46" x2="510" y1="143.3" y2="143.3" stroke="var(--c1)" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="506" y="136" text-anchor="end" font-size="13" font-weight="700" fill="var(--c1)">P(6) = 1/6 ≈ 16,7 %</text>
+<g clip-path="url(#hcl)"><polyline id="hc" points="" fill="none" stroke="var(--pen)" stroke-width="3.5" stroke-linejoin="round"/></g>
+<text id="hn" x="46" y="238" font-size="13" fill="var(--soft)">Würfe: 0</text></svg>`;
+function vHome(){
+  const none=NET.state==='none';
+  return`<div class="wrap home"><section class="hero"><div style="display:grid;gap:14px"><h1>Zufalls-Labor</h1><p class="lead">Drehen, würfeln, ziehen – und zusehen, wie aus Zufall Verlässlichkeit wird.</p><div class="row"><button class="btn sm" data-act="help">? Spielanleitung</button><button class="btn sm ghost" data-act="theme">Hell/Dunkel</button></div></div>
+  <figure class="curve" data-act="curve" title="Noch einmal würfeln">${homeCurve}<figcaption>Relative Häufigkeit der Augenzahl 6 bei einem Würfel – Klick zum Wiederholen.</figcaption></figure></section>
+  <section class="modes" aria-label="Spielmodus">
+   <button class="mode" data-act="mode" data-m="solo"><b>Allein</b><span>Trainiere in deinem Tempo.</span></button>
+   <button class="mode" data-act="mode" data-m="hot"><b>1 gegen 1 · ein Gerät</b><span>Ihr wechselt euch am selben Gerät ab.</span></button>
+   <button class="mode" data-act="mode" data-m="host" ${none?'disabled':''}><b>1 gegen 1 · Raum erstellen</b><span>Zwei Geräte, du bekommst einen Code.</span></button>
+   <button class="mode" data-act="mode" data-m="guest" ${none?'disabled':''}><b>Mit Code beitreten</b><span>Zwei Geräte, du gibst den Code ein.</span></button>
+  </section>${none?'<p class="muted" style="max-width:60ch">Der Zwei-Geräte-Modus ist in dieser Ansicht nicht verfügbar. Öffne die Seite über den Veröffentlichungslink und melde dich an.</p>':''}</div>`;
+}
+function vSetup(){
+  const c=S.cfg,host=S.mode==='host',hot=S.mode==='hot';
+  const mx=`<div class="mx"><div class="mxr"><span></span>${REPS.map(k=>`<span class="mxh">${REPNAME[k]}</span>`).join('')}</div>`+
+    LEVELS.map((L,i)=>`<div class="mxr ${c.levels[i]?'':'off'}"><button class="lv" data-act="lvl" data-l="${i}" aria-pressed="${!!c.levels[i]}"><b>Stufe ${L.n} · Jg. ${L.jg}</b><span>${L.t}</span></button>${REPS.map(k=>`<button class="tg" data-act="rep" data-l="${i}" data-k="${k}" aria-pressed="${!!c.matrix[i][k]}" aria-label="${REPNAME[k]} in Stufe ${L.n}"></button>`).join('')}</div>`).join('')+`</div>`;
+  const chips=Object.keys(STATIONS).map(k=>`<button class="tg" data-act="st" data-k="${k}" aria-pressed="${!!c.stations[k]}">${STATIONS[k].ico} ${STATIONS[k].name}</button>`).join('');
+  const rs=[4,6,8,10,12].map(n=>`<button data-act="rounds" data-n="${n}" aria-pressed="${c.rounds===n}">${n}</button>`).join('');
+  return`<div class="wrap setup"><div class="row"><button class="btn sm" data-act="home">← Zurück</button><h2>${S.mode==='solo'?'Allein spielen':hot?'1 gegen 1 · ein Gerät':'Raum erstellen'}</h2></div>
+  <section class="card"><h3>${hot?'Namen der Spieler':'Dein Name'}</h3><div class="two"><div><label for="n0">${hot?'Spieler 1':'Name'}</label><input type="text" id="n0" maxlength="16" autocomplete="off" value="${esc(c.names[0])}" placeholder="${hot?'Spieler 1':'Dein Name'}"></div>
+  ${hot?`<div><label for="n1">Spieler 2</label><input type="text" id="n1" maxlength="16" autocomplete="off" value="${esc(c.names[1])}" placeholder="Spieler 2"></div>`:''}</div></section>
+  <section class="card"><h3>Stufen und Darstellungen</h3><p class="muted">Schalte links eine ganze Stufe an oder aus. Rechts wählst du, welche Darstellungen in dieser Stufe zur Verfügung stehen.</p>${mx}<p class="err" id="msg">${esc(S.msg)}</p></section>
+  <section class="card"><h3>Stationen</h3><div class="chips">${chips}</div></section>
+  <section class="card"><h3>Anzahl der Runden</h3><div class="seg" role="group" aria-label="Rundenzahl">${rs}</div></section>
+  <div class="row"><button class="btn pri" data-act="${host?'create':'start'}">${host?'Raum erstellen':'Spiel starten'}</button></div></div>`;
+}
+function vJoin(){
+  return`<div class="wrap setup"><div class="row"><button class="btn sm" data-act="home">← Zurück</button><h2>Mit Code beitreten</h2></div>
+  <section class="card"><div class="two"><div><label for="jc">Code</label><input type="text" id="jc" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="z. B. K7M4P" style="text-transform:uppercase;letter-spacing:.2em;font-weight:700"></div>
+  <div><label for="n0">Dein Name</label><input type="text" id="n0" maxlength="16" autocomplete="off" value="${esc(S.cfg.names[0])}" placeholder="Dein Name"></div></div><p class="err" id="msg">${esc(S.msg)}</p></section>
+  <div class="row"><button class="btn pri" data-act="join">Beitreten</button></div></div>`;
+}
+function vLobby(){
+  const host=NET.role==='host',o=NET.opp;
+  return`<div class="wrap"><div class="mid"><h2>${host?'Raum bereit':'Du bist im Raum'}</h2>
+  <div class="card" style="display:grid;gap:6px;justify-items:center"><span class="muted">Code</span><output class="big" aria-live="polite">${esc(NET.code)}</output><button class="btn sm" data-act="copy">Code kopieren</button></div>
+  <p>${host?(o?`<b>${esc(o.name)}</b> ist beigetreten.`:'Warte auf Mitspieler … Gib den Code auf dem zweiten Gerät unter „Mit Code beitreten“ ein.'):(NET.hostSeen?`Verbunden mit <b>${esc(NET.hostName)}</b>. Warte, bis das Spiel gestartet wird …`:'Verbinde …')}</p>
+  ${S.msg?`<p class="err">${esc(S.msg)}</p>`:''}
+  <div class="row">${host?`<button class="btn pri" data-act="hoststart" ${o?'':'disabled'}>Spiel starten</button>`:''}<button class="btn" data-act="quit">Abbrechen</button></div></div></div>`;
+}
+function vHand(){
+  const p=S.players[S.turn];
+  return`<div class="wrap">${vHead()}<div class="mid"><h2>Runde ${S.r+1} von ${S.cfg.rounds}</h2><p style="font-size:20px">Bitte das Gerät an <span class="mk">${esc(p.name)}</span> weitergeben.</p><p class="muted">${esc(p.name)} bekommt dieselbe Aufgabe und experimentiert selbst.</p><button class="btn pri" data-act="go">Ich bin ${esc(p.name)} – los!</button></div></div>`;
+}
+function vCmp(){
+  const R=S.r,a=S.players[0].rounds[R],b=S.players[1].rounds[R];
+  const row=(l,x,y)=>`<tr><td>${l}</td><td>${x}</td><td>${y}</td></tr>`;
+  const q=v=>`${v.ok?'✓':'✗'} ${v.pts}`;
+  const win=a.total===b.total?'Unentschieden in dieser Runde!':`Runde geht an <span class="mk">${esc(a.total>b.total?S.players[0].name:S.players[1].name)}</span>`;
+  return`<div class="wrap">${vHead()}<div class="mid"><h2>Rundenergebnis ${R+1}</h2><p style="font-size:20px">${win}</p>
+  <div class="card res" style="width:100%"><table><thead><tr><th></th><th>${esc(S.players[0].name)}</th><th>${esc(S.players[1].name)}</th></tr></thead><tbody>
+  ${row('Prognose',a.pro.pts,b.pro.pts)}${row('Endschätzung',a.fin.pts,b.fin.pts)}${row('Frage 1',q(a.q1),q(b.q1))}${row('Frage 2',q(a.q2),q(b.q2))}
+  <tr class="tot"><td>Runde</td><td>${a.total}</td><td>${b.total}</td></tr>
+  <tr class="tot"><td>Gesamt</td><td>${stationTotal(S.players[0])}</td><td>${stationTotal(S.players[1])}</td></tr></tbody></table></div>
+  <button class="btn pri" data-act="adv">${R+1>=S.cfg.rounds?'Gesamtergebnis':'Nächste Runde'}</button></div></div>`;
+}
+function vFinal(){
+  const R=S.cfg.rounds;const me=S.players[0];
+  const tot=stationTotal(me);let body='';
+  if(S.mode==='solo'){
+    const pc=tot/(R*100);const ti=pc>=0.85?'Zufalls-Profi':pc>=0.65?'Labor-Expertin / Labor-Experte':pc>=0.4?'Auf gutem Weg':'Weiter üben lohnt sich';
+    body=`<p style="font-size:20px">${esc(me.name)}: <span class="mk">${tot} von ${R*100} Punkten</span></p><p class="big" style="letter-spacing:0;font-size:32px">${ti}</p>`;
+  }else{
+    let other,onm,oWait=false;
+    if(S.mode==='hot'){other=S.players[1];onm=other.name;}
+    else{const o=NET.opp;onm=o?o.name:'Gegner';other={rounds:(o&&o.res||[]).map(r=>({total:r[0]+r[1]+r[2]+r[3]}))};oWait=!(o&&o.fin);}
+    const ot=stationTotal(other);
+    const verdict=oWait?`<span class="muted">${esc(onm)} spielt noch … Das Ergebnis erscheint gleich.</span>`:tot===ot?'Unentschieden!':`Gewonnen hat <span class="mk">${esc(tot>ot?me.name:onm)}</span>`;
+    body=`<p style="font-size:20px">${verdict}</p><div class="card res" style="width:100%"><table><thead><tr><th>Runde</th><th>${esc(me.name)}</th><th>${esc(onm)}</th></tr></thead><tbody>`+
+      Array.from({length:R},(_,i)=>`<tr><td>${i+1}</td><td>${me.rounds[i]?me.rounds[i].total:'–'}</td><td>${other.rounds[i]?other.rounds[i].total:'–'}</td></tr>`).join('')+
+      `<tr class="tot"><td>Gesamt</td><td>${tot}</td><td>${ot}</td></tr></tbody></table></div>`;
+  }
+  return`<div class="wrap">${vHead()}<div class="mid"><h2>Geschafft!</h2>${body}<div class="row" style="justify-content:center">${S.mode==='remote'?'':'<button class="btn pri" data-act="again">Nochmal spielen</button>'}<button class="btn" data-act="home">Zum Start</button></div></div></div>`;
+}
+function estimateHTML(init){
+  return`<div class="est"><input type="range" id="sl" min="0" max="100" step="1" value="${init}" aria-label="Schätzung in Prozent"><input type="text" id="tx" inputmode="decimal" autocomplete="off" value="${init} %" aria-label="Schätzung eingeben"></div>
+  <div class="echo" id="echo"></div><p class="muted" style="margin:0;font-size:14px">Du darfst auch einen Bruch (1/6), eine Dezimalzahl (0,17) oder Prozent (17 %) eintippen.</p>`;
+}
+function quizHTML(g){
+  return g.q.map((q,qi)=>`<div class="q"><b>Frage ${qi+1}</b><div>${q.html}</div><div class="opts">${q.opts.map((o,oi)=>{
+      const cls=q.chosen==null?'':oi===q.ok?'ok':oi===q.chosen?'bad':'';
+      return`<button class="opt ${cls}" data-act="ans" data-q="${qi}" data-o="${oi}" ${q.chosen!=null?'disabled':''}><span class="k">${'ABCD'[oi]}</span><span>${o}</span></button>`;}).join('')}</div>
+    ${q.chosen!=null?`<div class="fb ${q.chosen===q.ok?'ok':'bad'}">${q.chosen===q.ok?'Richtig! +20 Punkte':'Leider falsch.'}${q.calc?` <span class="muted" style="font-weight:400">Rechnung: ${esc(q.calc)}</span>`:''}</div>`:''}</div>`).join('');
+}
+function dockHTML(g){
+  const t=g.task;
+  if(g.phase==='pro')return`<h3>1 · Deine Prognose</h3><p>Wie wahrscheinlich ist das Ereignis E? Schätze, <b>bevor</b> du experimentierst.</p>${estimateHTML(50)}<div class="row"><button class="btn pri" data-act="pro">Prognose abgeben</button></div>`;
+  if(g.phase==='exp'){
+    const init=Math.round(g.pro.est*100);
+    return`<h3>3 · Deine Endschätzung</h3><p>Experimentiere oben, beobachte die Darstellungen und schätze dann die Wahrscheinlichkeit von E erneut. Mehr Versuche machen die Schätzung genauer.</p>${estimateHTML(init)}<p class="muted" id="finhint" style="margin:0"></p><div class="row"><button class="btn pri" id="finbtn" data-act="fin" disabled>Endschätzung abgeben</button></div>`;
+  }
+  if(g.phase==='quiz')return`<h3>4 · Zwei Fragen</h3>${quizHTML(g)}<div class="row"><button class="btn pri" data-act="qdone" ${g.q.every(q=>q.chosen!=null)?'':'disabled'}>Runde auswerten</button></div>`;
+  const r=g.rec,p=fv(t.pE);
+  let opp='';
+  if(S.mode==='remote'&&NET.opp){const o=NET.opp,rr=(o.res||[])[S.r];opp=`<p>${esc(o.name)}: ${rr?`<b>${rr[0]+rr[1]+rr[2]+rr[3]} Punkte</b> in dieser Runde`:'ist noch bei dieser Runde'}.</p>`;}
+  return`<h3>Auswertung</h3><div class="res"><table><tbody>
+  <tr><td>Prognose ${pctS(r.pro.est)} <span class="muted">(Ziel ${pctS(p)})</span></td><td>${r.pro.pts} / 20</td></tr>
+  <tr><td>Endschätzung ${pctS(r.fin.est)} <span class="muted">(${r.n} Versuche)</span></td><td>${r.fin.pts} / 40</td></tr>
+  <tr><td>Frage 1 ${r.q1.ok?'✓':'✗'}</td><td>${r.q1.pts} / 20</td></tr><tr><td>Frage 2 ${r.q2.ok?'✓':'✗'}</td><td>${r.q2.pts} / 20</td></tr>
+  <tr class="tot"><td>Runde</td><td>${r.total} / 100</td></tr></tbody></table></div>
+  <div class="expl"><b>Die Auflösung:</b> ${t.explain}</div>${opp}
+  <div class="row"><button class="btn pri" data-act="next">${S.mode==='hot'&&S.turn<S.players.length-1?'Gerät weitergeben':S.mode!=='hot'&&S.r+1>=S.cfg.rounds?'Gesamtergebnis':S.mode==='hot'?'Rundenvergleich':'Nächste Runde'}</button></div>`;
+}
+function controlsHTML(g){
+  const t=g.task;
+  const strat=t.strategy?`<div class="seg" role="group" aria-label="Strategie"><button data-act="strat" data-s="stay" aria-pressed="${g.strategy==='stay'}">Immer bleiben</button><button data-act="strat" data-s="switch" aria-pressed="${g.strategy==='switch'}">Immer wechseln</button></div>`:'';
+  return`${strat}<div class="ctl">${[1,10,100,1000].map(n=>`<button class="btn sm" data-act="run" data-n="${n}">×${n}</button>`).join('')}</div>
+  <div class="ctl"><button class="btn sm" data-act="auto" id="autob">▶ Dauerlauf</button>${t.strategy?'<button class="btn sm" data-act="manual">Selbst spielen</button>':''}<button class="btn sm ghost" data-act="reset">Daten löschen</button></div><div id="zui" style="width:100%"></div>`;
+}
+function vGame(){
+  const g=G(),t=g.task,st=STATIONS[t.station];
+  const hotTurn=S.mode==='hot'?`<span class="tag" style="background:var(--mark)">Am Zug: ${esc(S.players[S.turn].name)}</span>`:'';
+  const tabs=t.reps.length?t.reps:['tabelle'];
+  const repsCard=g.phase==='pro'?`<section class="card"><h3>Messwerte</h3><p class="muted">Hier erscheinen deine Darstellungen (${tabs.map(k=>REPNAME[k]).join(', ')}), sobald du experimentierst. Erst schätzen, dann forschen!</p></section>`:
+    `<section class="card"><div class="tabs" role="tablist">${tabs.map(k=>`<button class="tab" role="tab" data-act="tab" data-k="${k}" aria-selected="${g.tab===k}">${REPNAME[k]}</button>`).join('')}</div><div class="panel" id="panel"></div></section>`;
+  return`<div class="wrap">${vHead()}
+  <section class="card task"><div class="row"><span class="tag">Runde ${S.r+1}/${S.cfg.rounds}</span><span class="tag">${lvlTag(t.level)}</span><span class="tag">${st.ico} ${st.name}</span>${hotTurn}</div>
+  <h2>${esc(t.title)}</h2><p>${esc(t.story)}</p><p style="margin:0"><span class="mk">${t.eText}</span></p></section>
+  <div class="lab"><section class="card stage"><div class="visbox" id="visbox" data-gid="${g.id}">${Vis.html(t)}</div><div class="say" id="say" aria-live="polite"></div><div class="status" id="status"></div>${g.phase==='exp'?controlsHTML(g):''}</section>${repsCard}</div>
+  <section class="card dock" id="dock">${dockHTML(g)}</section></div>`;
+}
+const VIEWS={home:vHome,setup:vSetup,join:vJoin,lobby:vLobby,hand:vHand,game:vGame,cmp:vCmp,final:vFinal};
+let curveTimer=null;
+function render(){
+  const g=G();
+  if(S.screen==='game'&&g&&$('#visbox')&&$('#visbox').dataset.gid==g.id){g.vhtml=$('#visbox').innerHTML;g.say=$('#say')?$('#say').textContent:'';}
+  stopCurve();
+  $('#app').innerHTML=VIEWS[S.screen]();
+  window.scrollTo(0,0);
+  if(S.screen==='home')startCurve();
+  if(S.screen==='game')afterGame();
+}
+function afterGame(){
+  const g=G();
+  if(g.vhtml){$('#visbox').innerHTML=g.vhtml;$('#say').textContent=g.say||'';}
+  drawStatus();drawReps();updateCtl();
+  if(g.phase==='pro'||g.phase==='exp')syncEst($('#tx'));
+  updateFin();drawZui();
+}
+function drawStatus(){
+  const g=G(),el=$('#status');if(!el)return;const l=g.lab,t=g.task;
+  if(g.phase==='pro'){el.textContent='Noch keine Versuche.';return;}
+  el.innerHTML=t.strategy?`Bleiben: <b>${l.per.stay}</b> Spiele, <b>${l.k.stay}</b> gewonnen · Wechseln: <b>${l.per.switch}</b> Spiele, <b>${l.k.switch}</b> gewonnen`:`Versuche: <b>${l.n}</b> · Ereignis E: <b>${l.k[t.tid]}</b>-mal eingetreten`;
+}
+function drawReps(){
+  const g=G(),el=$('#panel');if(!el)return;
+  const reveal=g.phase==='res';let h='';
+  const k=g.tab;
+  if(k==='urliste')h=repUrliste(g);else if(k==='tabelle')h=repTabelle(g,reveal,S.fmt);else if(k==='balken')h=repBalken(g,reveal);else if(k==='verlauf')h=repVerlauf(g,reveal,S.logx);else if(k==='baum')h=repBaum(g,reveal);
+  el.innerHTML=h;
+}
+function updateCtl(){
+  const g=G();if(!g)return;
+  document.querySelectorAll('.ctl [data-act="run"],[data-act="manual"],[data-act="strat"]').forEach(b=>b.disabled=!!(g.busy||g.zm||g.auto));
+  const a=$('#autob');if(a){a.textContent=g.auto?'⏸ Stopp':'▶ Dauerlauf';a.disabled=!!(g.busy||g.zm);}
+}
+function updateFin(){
+  const g=G(),b=$('#finbtn');if(!b)return;
+  const ok=enough(g);b.disabled=!ok;const h=$('#finhint');if(h)h.textContent=ok?'':missing(g);
+}
+function syncEst(tx){
+  if(!tx)return;const echo=$('#echo'),v=parseProb(tx.value);
+  if(v==null){echo.innerHTML='<span class="err">Bitte eine Zahl zwischen 0 und 100 % eingeben.</span>';return;}
+  echo.textContent=`= ${pctS(v)} = ${dec(v,3)} als Dezimalzahl`;
+}
+function readEst(){const v=parseProb($('#tx').value);if(v==null){syncEst($('#tx'));return null;}return v;}
+
+/* ================= Experimente ================= */
+function stopAuto(){const g=G();if(g&&g.auto){clearInterval(g.auto);g.auto=null;updateCtl();}}
+async function runTrials(count){
+  const g=G(),t=g.task;if(g.busy||g.zm)return;
+  const room=t.cap-curN(g);if(room<=0){toast('Maximale Anzahl erreicht ('+t.cap+').');return;}
+  count=Math.min(count,room);const opts={strategy:g.strategy};
+  if(count===1){
+    const res=t.run(Math.random,opts);g.busy=true;updateCtl();
+    await Vis.play(t,res,false);applyRes(g.lab,res);g.busy=false;
+    const s=$('#say');if(s)s.textContent=res.say;
+  }else{
+    let last;for(let i=0;i<count;i++){last=t.run(Math.random,opts);applyRes(g.lab,last);}
+    g.busy=true;updateCtl();await Vis.play(t,last,true);g.busy=false;
+    const s=$('#say');if(s)s.textContent=`${count} Versuche durchgeführt`;
+  }
+  if(S.screen!=='game'||G()!==g)return;
+  drawStatus();drawReps();updateCtl();updateFin();
+}
+function toggleAuto(){
+  const g=G();if(g.busy||g.zm)return;
+  if(g.auto){stopAuto();return;}
+  g.auto=setInterval(()=>{
+    const cur=curN(g),room=g.task.cap-cur;
+    if(room<=0){stopAuto();toast('Maximale Anzahl erreicht.');return;}
+    const add=Math.min(room,Math.max(1,Math.floor(cur*0.1)));
+    for(let i=0;i<add;i++)applyRes(g.lab,g.task.run(Math.random,{strategy:g.strategy}));
+    drawStatus();drawReps();updateFin();
+  },150);
+  updateCtl();
+}
+/* Ziegenproblem: selbst spielen */
+function drawZui(){
+  const g=G(),el=$('#zui');if(!el||!g||g.task.station!=='ziege')return;
+  const v=g.task.vis,zm=g.zm,box=$('#zbox');
+  if(!zm){el.innerHTML='';return;}
+  if(zm.stage==='pick'){box.innerHTML=doorsSVG(v.N,{},true);el.innerHTML='<p class="say">Wähle eine Tür.</p><div class="ctl"><button class="btn sm" data-act="mend">Abbrechen</button></div>';}
+  else if(zm.stage==='decide'){const r=zm.r;box.innerHTML=doorsSVG(v.N,{pick:r.pick,opened:r.opened,car:r.car},false);
+    el.innerHTML=`<p class="say">Der Moderator öffnet ${r.opened.length>1?r.opened.length+' Türen mit Ziegen':'eine Tür mit einer Ziege'}. Bleiben oder wechseln?</p><div class="ctl"><button class="btn sm" data-act="decide" data-s="stay">Bleiben</button><button class="btn sm pri" data-act="decide" data-s="switch">Wechseln${r.rest.length>1?' (zufällig)':''}</button></div>`;}
+  else{const z=zm.z;box.innerHTML=doorsSVG(v.N,{pick:z.pick,opened:z.opened,final:z.final,car:z.car,reveal:true},false);
+    el.innerHTML=`<p class="say">${z.win?'Gewonnen! 🚗':'Ziege. 🐐'}</p><div class="ctl"><button class="btn sm pri" data-act="manual">Nochmal spielen</button><button class="btn sm" data-act="mend">Fertig</button></div>`;}
+}
+
+/* ================= Hilfe ================= */
+function helpHTML(){
+  const ic=(inner)=>`<svg viewBox="0 0 110 80" aria-hidden="true">${inner}</svg>`;
+  const s1=ic(`<rect x="12" y="38" width="86" height="6" rx="3" fill="var(--grid)" stroke="var(--line)" stroke-width="2"/><circle cx="46" cy="41" r="9" fill="var(--pen)" stroke="var(--line)" stroke-width="2"/><rect x="28" y="10" width="40" height="18" rx="6" fill="var(--mark)" stroke="var(--line)" stroke-width="2"/><text x="48" y="23" text-anchor="middle" font-size="12" font-weight="700" fill="#15213B">40 %</text>`);
+  const s2=ic(`<circle cx="34" cy="40" r="22" fill="var(--c2)" stroke="var(--line)" stroke-width="2"/><path d="M34 40 L34 18 A22 22 0 0 1 56 40Z" fill="var(--c1)" stroke="var(--line)" stroke-width="2"/><path d="M34 40 L56 40 A22 22 0 0 1 34 62Z" fill="var(--c3)" stroke="var(--line)" stroke-width="2"/><rect x="68" y="24" width="32" height="32" rx="7" fill="var(--card)" stroke="var(--line)" stroke-width="2"/><circle cx="76" cy="32" r="3" fill="var(--ink)"/><circle cx="92" cy="48" r="3" fill="var(--ink)"/><circle cx="84" cy="40" r="3" fill="var(--ink)"/>`);
+  const s3=ic(`<line x1="10" x2="104" y1="46" y2="46" stroke="var(--c1)" stroke-width="2" stroke-dasharray="5 4"/><polyline points="12,70 20,18 28,60 36,26 46,54 58,36 70,48 82,42 94,46 104,45" fill="none" stroke="var(--pen)" stroke-width="3" stroke-linejoin="round"/>`);
+  const s4=ic(`<path d="M55 12l8 18 19 2-14 13 4 19-17-10-17 10 4-19-14-13 19-2z" fill="var(--mark)" stroke="var(--line)" stroke-width="2.5" stroke-linejoin="round"/><text x="55" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">100 P.</text>`);
+  return`<div class="modal" data-act="closehelp"><div class="card sheet" role="dialog" aria-modal="true" aria-label="Spielanleitung"><div class="row"><h2>So funktioniert das Zufalls-Labor</h2><span class="sp"></span><button class="btn sm" data-act="closehelp">Schließen</button></div>
+  <div class="steps">
+   <div class="step">${s1}<div><b>1 · Tippen</b><p style="margin:0">Du bekommst einen Zufallsversuch und ein Ereignis E. Schätze, wie wahrscheinlich E ist – bevor du etwas ausprobierst.</p></div></div>
+   <div class="step">${s2}<div><b>2 · Forschen</b><p style="margin:0">Drehe das Glücksrad, wirf Würfel, ziehe Lose oder spiele das Ziegenproblem. Mit ×10, ×100, ×1000 oder dem Dauerlauf simulierst du viele Versuche.</p></div></div>
+   <div class="step">${s3}<div><b>3 · Beobachten</b><p style="margin:0">Die Darstellungen zeigen die relativen Häufigkeiten. Je mehr Versuche, desto ruhiger werden sie – sie nähern sich der Wahrscheinlichkeit. Dann gibst du deine Endschätzung ab.</p></div></div>
+   <div class="step">${s4}<div><b>4 · Punkte</b><p style="margin:0">Pro Runde bis zu 100 Punkte: Prognose (20), Endschätzung (40) und zwei Fragen (je 20). Wer mehr Versuche macht, schätzt meist genauer.</p></div></div>
+  </div>
+  <div class="expl"><b>Spielmodi:</b> allein, zu zweit an einem Gerät (ihr wechselt euch pro Runde ab) oder zu zweit an zwei Geräten – eine Person erstellt einen Raum, die andere gibt den Code ein. Beide spielen dieselben Aufgaben.</div></div></div>`;
+}
+
+/* ================= Startseite: Kurve ================= */
+function stopCurve(){if(curveTimer){cancelAnimationFrame(curveTimer);curveTimer=null;}}
+function startCurve(){
+  stopCurve();const hc=$('#hc'),hn=$('#hn');if(!hc)return;
+  const X0=46,W=464,Y0=210,H=200,YM=0.5,N=600;let k=0,n=0,pts=[];
+  const draw=()=>{hc.setAttribute('points',pts.join(' '));hn.textContent='Würfe: '+n;};
+  const add=(c)=>{for(let i=0;i<c&&n<N;i++){n++;if(Math.random()*6<1)k++;const x=X0+W*(n-1)/(N-1),y=Y0-H*Math.min(1,(k/n)/YM);pts.push(x.toFixed(1)+','+y.toFixed(1));}};
+  if(REDUCED){add(N);draw();return;}
+  const tick=()=>{add(n<40?2:n<150?6:12);draw();if(n<N)curveTimer=requestAnimationFrame(tick);else curveTimer=null;};
+  curveTimer=requestAnimationFrame(tick);
+}
+
+/* ================= Mehrgeräte-Modus ================= */
+const rid=()=>Math.random().toString(36).slice(2,10);
+const NET={ROOM:null,state:'pending',room:null,id:rid(),role:null,code:'',opp:null,hostSeen:false,hostName:'',timer:null,offs:[]};
+(function(){
+  try{
+    if(window.claude&&typeof window.claude.use==='function'){
+      window.claude.use('room').then(r=>{NET.ROOM=r||null;NET.state=r?'ok':'none';if(S.screen==='home')render();}).catch(()=>{NET.state='none';if(S.screen==='home')render();});
+    }else NET.state='none';
+  }catch(e){NET.state='none';}
+})();
+const CODECH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode=()=>Array.from({length:5},()=>CODECH[Math.floor(Math.random()*CODECH.length)]).join('');
+async function netJoin(code){
+  if(!NET.ROOM)throw new Error('Mehrgeräte-Modus nicht verfügbar.');
+  NET.code=code;NET.opp=null;NET.hostSeen=false;
+  NET.room=await NET.ROOM.join('zl-'+code.toLowerCase());
+  NET.offs.push(NET.room.on('zl_msg',onNetMsg,()=>{}));
+  NET.offs.push(NET.room.onPeers(()=>{NETsend();},()=>{}));
+  NET.timer=setInterval(()=>{NETsend();if(S.screen==='lobby'||S.screen==='game'||S.screen==='final'){updateOppBadge();}},2500);
+}
+async function netLeave(){
+  try{clearInterval(NET.timer);NET.timer=null;NET.offs.forEach(f=>{try{f();}catch(e){}});NET.offs=[];if(NET.room)await NET.room.leave();}catch(e){}
+  NET.room=null;NET.opp=null;NET.role=null;NET.hostSeen=false;S.started=false;
+}
+function cfgPack(){const c=S.cfg;return{v:1,seed:c.seed,rounds:c.rounds,levels:c.levels.map(x=>x?1:0),stations:Object.fromEntries(Object.keys(STATIONS).map(k=>[k,c.stations[k]?1:0])),mx:c.matrix.map(m=>REPS.map(k=>m[k]?'1':'0').join(''))};}
+function cfgUnpack(d){
+  if(!d||d.v!==1)return null;
+  const levels=[0,1,2].map(i=>d.levels&&d.levels[i]?1:0);if(!levels.some(Boolean))return null;
+  const stations=Object.fromEntries(Object.keys(STATIONS).map(k=>[k,d.stations&&d.stations[k]?1:0]));if(!Object.values(stations).some(Boolean))return null;
+  const matrix=[0,1,2].map(i=>{const s=String(d.mx&&d.mx[i]||'');const o={};REPS.forEach((k,j)=>o[k]=s[j]==='1'?1:0);if(!REPS.some(k=>o[k]))o.tabelle=1;return o;});
+  const rounds=[4,6,8,10,12].includes(d.rounds)?d.rounds:6;
+  const seed=Number.isFinite(d.seed)?(d.seed|0):1;
+  return{levels,stations,matrix,rounds,seed};
+}
+function NETsend(){
+  if(!NET.room||S.mode!=='remote')return;
+  const me=S.players[0];
+  const d={t:'state',id:NET.id,name:myName(),host:NET.role==='host',started:!!S.started,round:S.r,phase:S.g?S.g.phase:'',
+    res:me?me.rounds.filter(Boolean).map(r=>[r.pro.pts,r.fin.pts,r.q1.pts,r.q2.pts]):[],fin:S.screen==='final'};
+  if(NET.role==='host')d.cfg=cfgPack();
+  if(NET.role==='guest'&&!NET.hostSeen)d.t='hello';
+  NET.room.emit('zl_msg',d).catch(()=>{});
+}
+function onNetMsg(m){
+  try{
+    if(!m||m.isMe||!m.data||typeof m.data!=='object')return;
+    const d=m.data;if(d.id===NET.id||typeof d.id!=='string')return;
+    const nm=cleanName(d.name)||'Gegner';
+    if(d.t==='full'){if(d.to===NET.id){S.msg='Dieser Raum ist schon voll.';netLeave();S.screen='join';render();}return;}
+    if(NET.role==='host'){
+      if(d.t!=='hello'&&d.t!=='state')return;
+      if(NET.opp&&NET.opp.id!==d.id){NET.room.emit('zl_msg',{t:'full',id:NET.id,to:d.id}).catch(()=>{});return;}
+      if(d.host)return;
+      const first=!NET.opp;
+      NET.opp={id:d.id,name:nm,round:+d.round||0,phase:String(d.phase||''),res:cleanRes(d.res),fin:!!d.fin,seen:Date.now()};
+      if(first){if(S.screen==='lobby')render();NETsend();}else afterOpp();
+      return;
+    }
+    if(NET.role==='guest'){
+      if(d.t!=='state'||!d.host)return;
+      const firstSeen=!NET.hostSeen;NET.hostSeen=true;NET.hostName=nm;
+      NET.opp={id:d.id,name:nm,round:+d.round||0,phase:String(d.phase||''),res:cleanRes(d.res),fin:!!d.fin,seen:Date.now()};
+      if(d.started&&!S.started){
+        const cfg=cfgUnpack(d.cfg);
+        if(!cfg){S.msg='Die Spieleinstellungen des Raums sind ungültig.';render();return;}
+        Object.assign(S.cfg,cfg);S.started=true;
+        S.tasks=buildTasks(S.cfg);S.r=0;S.turn=0;S.players=[{name:myName(),rounds:[]}];beginTurn();S.screen='game';render();NETsend();
+      }else if(S.screen==='lobby'){if(firstSeen)render();}else afterOpp();
+    }
+  }catch(e){console.error(e);}
+}
+function cleanRes(a){
+  if(!Array.isArray(a))return[];
+  return a.slice(0,12).map(r=>Array.isArray(r)?[0,1,2,3].map(i=>clamp(+r[i]||0,0,100)):[0,0,0,0]);
+}
+function afterOpp(){updateOppBadge();const o=NET.opp,sig=o?JSON.stringify([o.name,o.fin,o.res]):'';if(S.screen==='final'&&sig!==NET.sig){NET.sig=sig;render();}}
+function updateOppBadge(){
+  if(S.screen!=='game')return;
+  const h=document.querySelector('.gbar .score');if(!h||!NET.opp)return;
+  const keep=[...h.querySelectorAll('.sc')].slice(0,S.players.length).map(x=>x.outerHTML).join('');
+  const o=NET.opp,live=Date.now()-o.seen<9000,R=S.cfg.rounds;
+  h.innerHTML=keep+`<span class="sc">${esc(o.name)}: ${(o.res||[]).reduce((a,r)=>a+r[0]+r[1]+r[2]+r[3],0)}<small>${o.fin?'fertig':live?`R ${Math.min(o.round+1,R)} · ${PH[o.phase]||''}`:'Verbindung?'}</small></span>`;
+}
+async function createRoom(){
+  savePrefs();
+  try{
+    S.cfg.seed=newSeed();NET.role='host';S.mode='remote';S.started=false;S.msg='';
+    for(let i=0;i<6;i++){try{await netJoin(genCode());break;}catch(e){if(i===5)throw e;}}
+    S.screen='lobby';render();NETsend();
+  }catch(e){NET.role=null;S.msg='Raum konnte nicht erstellt werden.';S.mode='host';render();}
+}
+async function joinRoom(){
+  const code=($('#jc').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');S.cfg.names[0]=cleanName($('#n0').value);
+  if(code.length!==5){S.msg='Bitte den 5-stelligen Code eingeben.';render();return;}
+  savePrefs();S.msg='';
+  try{NET.role='guest';S.mode='remote';await netJoin(code);S.screen='lobby';render();NETsend();}
+  catch(e){NET.role=null;S.msg='Beitritt nicht möglich. Prüfe den Code und die Verbindung.';render();}
+}
+function hostStart(){
+  if(!NET.opp)return;
+  S.cfg.seed=S.cfg.seed||newSeed();S.started=true;
+  S.tasks=buildTasks(S.cfg);S.r=0;S.turn=0;S.players=[{name:myName(),rounds:[]}];beginTurn();S.screen='game';render();NETsend();
+}
+
+/* ================= Ereignisse ================= */
+function showHelp(){$('#modal').innerHTML=helpHTML();}
+function closeHelp(){$('#modal').innerHTML='';}
+function confirmQuit(){
+  $('#modal').innerHTML=`<div class="modal"><div class="card sheet" role="dialog" aria-modal="true" style="max-width:420px"><h3>Spiel beenden?</h3><p>Der Spielstand geht verloren.</p><div class="row"><button class="btn pri" data-act="quityes">Ja, beenden</button><button class="btn" data-act="closehelp">Weiterspielen</button></div></div></div>`;
+}
+async function goHome(){stopAuto();await netLeave();S.screen='home';S.mode='solo';S.msg='';S.g=null;render();}
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,g=G(),c=S.cfg;
+  if(a==='closehelp'){if(b.classList.contains('modal')&&ev.target!==b)return;closeHelp();return;}
+  switch(a){
+    case'help':showHelp();break;
+    case'theme':{const cur=document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');S.theme=cur==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',S.theme);savePrefs();break;}
+    case'curve':startCurve();break;
+    case'home':goHome();break;
+    case'quit':confirmQuit();break;
+    case'quityes':closeHelp();goHome();break;
+    case'mode':{const m=b.dataset.m;S.msg='';if(m==='guest'){S.screen='join';render();}else{S.mode=m;S.screen='setup';render();}break;}
+    case'lvl':{const i=+b.dataset.l;if(c.levels[i]&&c.levels.filter(Boolean).length===1){S.msg='Mindestens eine Stufe muss aktiv bleiben.';}else{c.levels[i]=c.levels[i]?0:1;S.msg='';}render();break;}
+    case'rep':{const i=+b.dataset.l,k=b.dataset.k,m=c.matrix[i];if(m[k]&&REPS.filter(x=>m[x]).length===1){S.msg='In jeder Stufe braucht es mindestens eine Darstellung.';}else{m[k]=m[k]?0:1;S.msg='';}render();break;}
+    case'st':{const k=b.dataset.k;if(c.stations[k]&&Object.values(c.stations).filter(Boolean).length===1){S.msg='Mindestens eine Station muss aktiv bleiben.';}else{c.stations[k]=c.stations[k]?0:1;S.msg='';}render();break;}
+    case'rounds':c.rounds=+b.dataset.n;render();break;
+    case'start':savePrefs();startGame();break;
+    case'create':createRoom();break;
+    case'join':joinRoom();break;
+    case'hoststart':hostStart();break;
+    case'copy':try{await navigator.clipboard.writeText(NET.code);toast('Code kopiert');}catch(e){toast('Code: '+NET.code);}break;
+    case'go':S.screen='game';render();break;
+    case'adv':advanceRound();break;
+    case'again':startGame();break;
+    case'pro':{const v=readEst();if(v==null)break;g.pro={est:v};g.phase='exp';render();NETsend();break;}
+    case'fin':{if(!enough(g))break;const v=readEst();if(v==null)break;stopAuto();g.fin={est:v};g.q=[makeQ1(g),{...g.task.q2,chosen:null}];g.phase='quiz';g.zm=null;render();NETsend();break;}
+    case'ans':{const q=g.q[+b.dataset.q];if(q.chosen!=null)break;q.chosen=+b.dataset.o;$('#dock').innerHTML=dockHTML(g);break;}
+    case'qdone':{commitRec();g.phase='res';render();NETsend();break;}
+    case'next':nextStep();break;
+    case'tab':g.tab=b.dataset.k;document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===g.tab));drawReps();break;
+    case'fmt':S.fmt=b.dataset.v;drawReps();break;
+    case'logx':S.logx=!S.logx;drawReps();break;
+    case'run':runTrials(+b.dataset.n);break;
+    case'auto':toggleAuto();break;
+    case'reset':{stopAuto();g.lab=newLab(g.task);const s=$('#say');if(s)s.textContent='';drawStatus();drawReps();updateFin();break;}
+    case'strat':g.strategy=b.dataset.s;document.querySelectorAll('[data-act="strat"]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.s===g.strategy));break;
+    case'manual':stopAuto();g.zm={stage:'pick'};updateCtl();drawZui();break;
+    case'mend':g.zm=null;{const box=$('#zbox');if(box)box.innerHTML=doorsSVG(g.task.vis.N,{},false);}updateCtl();drawZui();break;
+    case'decide':{const z=zFinish(g.zm.r,b.dataset.s,Math.random);const res=g.task.resOf(z,b.dataset.s);applyRes(g.lab,res);g.zm={stage:'done',z};drawZui();drawStatus();drawReps();updateFin();break;}
+  }
+});
+document.addEventListener('click',ev=>{
+  const d=ev.target.closest('.dr.can');if(!d)return;const g=G();if(!g||!g.zm||g.zm.stage!=='pick')return;
+  const v=g.task.vis;g.zm={stage:'decide',r:zRound(v.N,v.open,Math.random,+d.dataset.door)};drawZui();
+});
+document.addEventListener('keydown',ev=>{
+  if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches&&ev.target.matches('.dr.can')){ev.preventDefault();ev.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+  if(ev.key==='Escape')closeHelp();
+  if(ev.key==='Enter'&&ev.target.id==='tx'){const b=$('[data-act="pro"]')||$('#finbtn');if(b&&!b.disabled)b.click();}
+});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='sl'){const tx=$('#tx');tx.value=t.value+' %';syncEst(tx);}
+  else if(t.id==='tx'){const v=parseProb(t.value);if(v!=null)$('#sl').value=Math.round(v*100);syncEst(t);}
+  else if(t.id==='n0'){S.cfg.names[0]=cleanName(t.value);}
+  else if(t.id==='n1'){S.cfg.names[1]=cleanName(t.value);}
+});
+render();
+</script>
+</body>
+</html>
