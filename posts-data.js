@@ -586,4 +586,28 @@ const posts = [
     titleEn: "Workshop Check: Safety and Tools",
     excerptEn: "Find hazards in the workshop, match tools to their use and test safety signs. Three games in one."
    },
+   {
+    title: "Escape-Room-Baukasten 3D",
+    excerpt: "Gemeinsam den Code knacken: Rätsel lösen, Code-Teile sammeln und die Tür öffnen, jetzt in 3D. Mit eigenen Räumen zum Erstellen, Speichern und Exportieren.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "escape-room-baukasten-3d.html",
+    emoji: "🔐",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Escape Room Kit 3D",
+    excerptEn: "Crack the code together: solve puzzles, collect code parts and open the door, now in 3D. With your own rooms to create, save and export."
+   },
+   {
+    title: "Escape-Room-Baukasten 3D",
+    excerpt: "Gemeinsam den Code knacken: Rätsel lösen, Code-Teile sammeln und die Tür öffnen, jetzt in 3D. Mit eigenen Räumen zum Erstellen, Speichern und Exportieren.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "escape-room-baukasten-3d.html",
+    emoji: "🔐",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Escape Room Kit 3D",
+    excerptEn: "Crack the code together: solve puzzles, collect code parts and open the door, now in 3D. With your own rooms to create, save and export."
+   },
 ];
