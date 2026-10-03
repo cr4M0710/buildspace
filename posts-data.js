@@ -622,4 +622,16 @@ const posts = [
     titleEn: "Job Interview Simulator",
     excerptEn: "Practise the job interview in 3D: answer questions, see reactions and try typical situations before the real thing."
    },
+   {
+    title: "Gehaltszettel-Detektiv",
+    excerpt: "Wo bleibt das Geld zwischen Brutto und Netto? Fünf Fälle lösen: Abzüge auf echten Gehaltszetteln aufspüren, ordnen, rechnen, vergleichen und Fehler finden.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "gehaltszettel-detektiv.html",
+    emoji: "🕵️",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Payslip Detective",
+    excerptEn: "Where does the money go between gross and net? Solve five cases: track down deductions on real payslips, sort, calculate, compare and find mistakes."
+   },
 ];
