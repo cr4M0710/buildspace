@@ -634,4 +634,16 @@ const posts = [
     titleEn: "Payslip Detective",
     excerptEn: "Where does the money go between gross and net? Solve five cases: track down deductions on real payslips, sort, calculate, compare and find mistakes."
    },
+   {
+    title: "KI-Führerschein – Das Rechenzentrum",
+    excerpt: "Wie funktioniert KI? Im 3D-Rechenzentrum Stationen zu Training, Daten, Sprachmodellen und Fakten-Check durchlaufen und den KI-Führerschein in zwei Klassen (Basis und Profi) machen.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "ki-fuehrerschein.html",
+    emoji: "🪪",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "AI Driving Licence – The Data Centre",
+    excerptEn: "How does AI work? Visit stations on training, data, language models and fact-checking in a 3D data centre and earn the AI licence in two classes (Basic and Pro)."
+   },
 ];
