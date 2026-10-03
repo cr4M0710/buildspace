@@ -646,4 +646,16 @@ const posts = [
     titleEn: "AI Driving Licence – The Data Centre",
     excerptEn: "How does AI work? Visit stations on training, data, language models and fact-checking in a 3D data centre and earn the AI licence in two classes (Basic and Pro)."
    },
+   {
+    title: "Pummelparty",
+    excerpt: "Brettspiel-Chaos für 2–8 Spieler: Alle spielen mit dem eigenen Gerät, per Code oder Link beitreten, Bots können mitspielen.",
+    date: "2026-10-04",
+    category: "freizeit",
+    subcategory: null,
+    url: "pummelparty.html",
+    emoji: "🎉",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Pummelparty",
+    excerptEn: "Board game chaos for 2–8 players: everyone plays on their own device, join by code or link, bots can join in."
+   },
 ];
