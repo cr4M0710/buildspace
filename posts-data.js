@@ -526,4 +526,16 @@ const posts = [
     titleEn: "Coordinate Battleships",
     excerptEn: "Battleships with coordinates: read points in the coordinate system correctly, solo against the computer or online against a classmate."
    },
+   {
+    title: "Mein Budget-Leben",
+    excerpt: "Verbraucherbildung zum Ausprobieren: Mit einem Einkommen Miete, Handyvertrag und Versicherungen bezahlen und mit Überraschungen klarkommen. Das Spiel passt sich an.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "budget-lebensspiel.html",
+    emoji: "💶",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "My Budget Life",
+    excerptEn: "Consumer education hands-on: pay rent, phone contract and insurance from an income and cope with surprises. The game adapts to you."
+   },
 ];
