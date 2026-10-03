@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vorstellungsgespräch-Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f4;--card:#ffffff;--ink:#1d2733;--mute:#5b6876;--line:#d3dae2;--acc:#2a5d9f;--accink:#ffffff;--good:#1b8a5a;--mid:#b86f0c;--bad:#c4364a;--mark:#ffe27a;--markink:#3a2f00;--soft:#e4ebf3;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a21;--card:#1e2731;--ink:#e8edf2;--mute:#9aa8b6;--line:#303c49;--acc:#6aa6ff;--accink:#0b1a2d;--good:#4fd098;--mid:#f0b25a;--bad:#ff7a8c;--mark:#5a4a10;--markink:#fff1b8;--soft:#263341}}
+:root[data-theme="dark"]{--bg:#141a21;--card:#1e2731;--ink:#e8edf2;--mute:#9aa8b6;--line:#303c49;--acc:#6aa6ff;--accink:#0b1a2d;--good:#4fd098;--mid:#f0b25a;--bad:#ff7a8c;--mark:#5a4a10;--markink:#fff1b8;--soft:#263341}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;overflow:hidden}
+.app{display:grid;grid-template-rows:minmax(190px,37%) 1fr;height:100%}
+@media (min-width:900px){.app{grid-template-rows:none;grid-template-columns:1.25fr 1fr}}
+#stage{position:relative;overflow:hidden;background:#cdd6df;touch-action:pan-y}
+#stage canvas{display:block;width:100%;height:100%}
+#nameTag{position:absolute;left:10px;bottom:10px;background:rgba(20,26,33,.72);color:#fff;padding:5px 10px;border-radius:8px;font-size:13px;max-width:70%}
+#voiceBtn{position:absolute;right:10px;top:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(20,26,33,.65);color:#fff;font-size:18px;cursor:pointer}
+#fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;font-size:64px;text-align:center}
+#fallback span{font-size:14px;color:#33414f;max-width:80%}
+#panel{overflow-y:auto;padding:14px 14px 28px;-webkit-overflow-scrolling:touch}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-size:26px;line-height:1.15;margin:2px 0 6px}
+h2{font-size:18px;margin:20px 0 8px}
+h3{font-size:16px;margin:0 0 4px}
+p{margin:0 0 8px}
+.mute{color:var(--mute)}
+.small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 16px;background:var(--acc);color:var(--accink);cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+.btn.soft{background:var(--soft);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.full{width:100%}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.job{font:inherit;text-align:left;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.job[aria-pressed="true"]{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.job .ic{font-size:28px;line-height:1}
+.job b{display:block}
+.tagc{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--ink);margin-top:4px}
+.lvls{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.lvl{font:inherit;text-align:left;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.lvl[aria-pressed="true"]{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.lvl b{display:block}
+input[type=text],textarea,select{font:inherit;width:100%;padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+textarea{min-height:110px;resize:vertical}
+label{display:block;font-weight:700;margin:12px 0 4px;font-size:14px}
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.topbar .grow{flex:1}
+.prog{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--acc);transition:width .4s}
+.badge{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--soft)}
+.meter{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute);margin-bottom:10px}
+.meter .prog{flex:1;height:6px}
+.meter .prog i{background:var(--good)}
+.bubble{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--acc);border-radius:4px 14px 14px 14px;padding:10px 14px;margin:0 0 10px}
+.bubble .who{font-size:12px;font-weight:700;color:var(--mute);display:block;margin-bottom:2px}
+.bubble.react{border-left-color:var(--mid)}
+.scene{font-style:italic;color:var(--mute);margin:0 0 8px}
+.task{background:var(--mark);color:var(--markink);border-radius:10px;padding:10px 14px;font-weight:700;margin:0 0 10px}
+.opt{display:block;width:100%;text-align:left;font:inherit;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:11px 14px;margin:0 0 8px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--acc)}
+.opt:disabled{cursor:default}
+.opt.sel{border-color:var(--acc);background:var(--soft)}
+.opt.best{border-color:var(--good)}
+.opt.wrong{border-color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);padding:6px 10px;border-radius:99px;cursor:pointer;text-align:left}
+.chip[aria-pressed="true"]{border-color:var(--acc);background:var(--soft)}
+.tipbox{background:var(--mark);color:var(--markink);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:15px}
+.pill{display:inline-block;font-weight:700;padding:3px 10px;border-radius:99px;color:#fff}
+.pill.g{background:var(--good)}.pill.m{background:var(--mid)}.pill.b{background:var(--bad)}
+.notes{list-style:none;margin:6px 0 0;padding:0}
+.notes li{padding-left:22px;position:relative;margin:2px 0;font-size:15px}
+.notes li::before{content:"✓";position:absolute;left:0;color:var(--good);font-weight:700}
+.notes li.no::before{content:"✗";color:var(--bad)}
+.timer{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;margin:0 0 10px}
+.timer i{display:block;height:100%;background:var(--bad);width:100%}
+.big{display:flex;align-items:center;gap:16px;margin:8px 0 12px}
+.ring{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;flex:none}
+.ring div{width:78px;height:78px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:28px;font-weight:700}
+.cat{display:grid;grid-template-columns:90px 1fr 42px;gap:8px;align-items:center;margin:5px 0}
+.cat .prog{height:10px}
+details.card summary{cursor:pointer;font-weight:700}
+.sw{display:flex;flex-wrap:wrap;gap:8px}
+.sw button{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0}
+.sw button[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--card) inset}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.codebox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;min-height:70px}
+.msg{font-size:14px;margin:6px 0}
+.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+.sticky{position:sticky;bottom:-28px;padding:10px 0 4px;background:linear-gradient(transparent,var(--bg) 30%)}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="stage">
+    <div id="fallback">🧑‍💼<span>Die 3D-Ansicht wird auf diesem Gerät nicht unterstützt. Das Spiel funktioniert trotzdem.</span></div>
+    <div id="nameTag">Büro</div>
+    <button id="voiceBtn" aria-label="Sprachausgabe ein- oder ausschalten" aria-pressed="false" title="Sprachausgabe">🔇</button>
+  </div>
+  <div id="panel"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+function h(tag,props,...kids){const e=document.createElement(tag);for(const k in (props||{})){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k==="value")e.value=v;else if(k.slice(0,2)==="on")e[k]=v;else if(v===true)e.setAttribute(k,"");else e.setAttribute(k,v)}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
+
+/* ===== Chef-Charaktere ===== */
+const STYLES={
+ streng:{lab:"streng",base:-.15,ten:.5,rate:.9,
+  greet:"Guten Tag. Ich bin {A}. Setzen wir uns, ich habe nicht viel Zeit. Ich erwarte klare Antworten.",
+  g:["Gut. So stelle ich mir das vor.","Das ist eine ordentliche Antwort.","Hm, durchaus überzeugend."],
+  o:["Das war etwas dünn. Das geht genauer.","Na ja. Mit mehr Substanz wäre es besser gewesen.","Ausbaufähig."],
+  b:["Das reicht mir nicht. So kommen Sie bei mir nicht weit.","Das ist keine Antwort, mit der ich arbeiten kann.","Ich erwarte von Bewerbern mehr Vorbereitung."],
+  end:{z:"Sie haben mich überzeugt. Sie bekommen den Ausbildungsplatz. Enttäuschen Sie mich nicht.",v:"Es war nicht schlecht, aber auch nicht überragend. Sie hören bis Ende der Woche von uns.",a:"Ich muss Ihnen leider absagen. Üben Sie noch etwas und bewerben Sie sich gern wieder."}},
+ freundlich:{lab:"freundlich",base:.35,ten:0,rate:1,
+  greet:"Herzlich willkommen! Ich bin {A}. Schön, dass Sie da sind. Machen Sie es sich bequem, wir plaudern ein bisschen.",
+  g:["Das gefällt mir richtig gut!","Wunderbar, vielen Dank für die ehrliche Antwort.","Genau so, das war sehr sympathisch."],
+  o:["Okay, danke. Vielleicht noch ein bisschen konkreter?","Verstehe. Da ist noch etwas Luft nach oben.","Hm, da hätte ich gern noch ein Beispiel gehört."],
+  b:["Oh, das war leider nicht ganz ideal. Aber keine Sorge, wir haben ja noch Zeit.","Hm. Da würde ich beim nächsten Mal etwas anders antworten.","Schade, damit tue ich mich etwas schwer."],
+  end:{z:"Das war ein richtig schönes Gespräch! Ich würde mich freuen, Sie bei uns auszubilden. Herzlich willkommen im Team!",v:"Vielen Dank, das war ein netter Termin. Wir überlegen noch und melden uns bald bei Ihnen.",a:"Vielen Dank für Ihr Kommen. Leider haben wir uns für jemand anderen entschieden. Bleiben Sie dran, Sie schaffen das!"}},
+ locker:{lab:"locker",base:.3,ten:0,rate:1.05,
+  greet:"Hallo und willkommen! Ich bin {A}. Bei uns geht es entspannt zu, aber wir meinen es ernst. Schön, dass es geklappt hat.",
+  g:["Cool, genau so jemanden suchen wir!","Nice, das passt!","Läuft bei Ihnen, das gefällt mir."],
+  o:["Joa, geht so. Da kommt noch was, oder?","Mhm, okay. Etwas mehr Pep bitte.","Na ja, das ist schon in Ordnung."],
+  b:["Uff, das kam jetzt nicht so überzeugend rüber.","Hm, da hatte ich mir mehr erhofft.","Okay, das war leider nicht so der Hit."],
+  end:{z:"Ich sag es einfach: Sie sind dabei! Willkommen bei uns, das passt richtig gut.",v:"War ein solides Gespräch. Wir schlafen noch eine Nacht drüber und melden uns.",a:"Ich muss ehrlich sein: Es hat diesmal nicht gereicht. Üben Sie weiter, dann klappt es beim nächsten Mal."}},
+ sachlich:{lab:"sachlich",base:0,ten:.15,rate:.95,
+  greet:"Guten Tag. Mein Name ist {A}. Wir beginnen mit dem Gespräch. Bitte beantworten Sie meine Fragen vollständig.",
+  g:["Das ist nachvollziehbar und gut begründet.","Das entspricht den Anforderungen der Position.","Diese Antwort ist vollständig. Danke."],
+  o:["Die Antwort ist unvollständig. Bitte ergänzen Sie künftig eine Begründung.","Das ist nur teilweise ausreichend.","Ich notiere: durchschnittlich."],
+  b:["Das entspricht nicht den Anforderungen der Position.","Diese Antwort ist nicht zielführend.","Das muss ich negativ vermerken."],
+  end:{z:"Nach Abwägung aller Kriterien möchten wir Ihnen den Ausbildungsplatz anbieten. Die Unterlagen erhalten Sie schriftlich.",v:"Ihre Bewerbung bleibt im Auswahlverfahren. Sie erhalten bis Freitag eine schriftliche Rückmeldung.",a:"Nach Abwägung aller Kriterien müssen wir Ihre Bewerbung leider ablehnen. Die Begründung erhalten Sie schriftlich."}},
+ direkt:{lab:"direkt & knapp",base:-.05,ten:.3,rate:1.1,
+  greet:"Tag. {A}. Los geht es. Kurz und klar bitte.",
+  g:["Gut. Weiter.","Passt.","Okay, das reicht mir."],
+  o:["Mehr Details.","Geht besser.","Zu ungenau."],
+  b:["Nein. Das ist zu wenig.","Das war nichts.","Falsche Richtung."],
+  end:{z:"Sie sind eingestellt. Montag, 7 Uhr.",v:"Ich melde mich diese Woche. Wenn nicht, rufen Sie an.",a:"Es reicht nicht. Tut mir leid. Alles Gute."}},
+ hektisch:{lab:"hektisch",base:0,ten:.2,rate:1.25,
+  greet:"Ah, da sind Sie ja! {A}. Entschuldigung, heute ist die Hölle los. Wir fangen direkt an, ja?",
+  g:["Prima, prima, genau das!","Super, weiter, weiter!","Ja, perfekt, das passt!"],
+  o:["Mhm, mhm, schneller auf den Punkt bitte.","Ja, ja, okay. Geht das noch genauer, aber kurz?","Na gut, weiter, weiter."],
+  b:["Oje, da fehlt mir jetzt wirklich die Zeit für so etwas.","Hm, das bringt mich gerade nicht weiter.","Oh weh, das war nicht ideal. Weiter!"],
+  end:{z:"Wunderbar, Sie sind genommen! Ich schicke Ihnen gleich alles zu, versprochen, wenn ich mal zum Tippen komme.",v:"Ich muss noch zwei Gespräche führen. Melde mich! Ganz sicher! Vermutlich!",a:"Es tut mir leid, aber es passt diesmal nicht. Ich muss schon wieder los, alles Gute!"}}
+};
+
+/* ===== Stellen ===== */
+const JOBS=[
+{id:"kfz",icon:"🔧",beruf:"Kfz-Mechatroniker/in",firma:"AutoHaus Brandt",branche:"Autowerkstatt",ort:"Wetzlar",wall:"#c9d3dd",
+ aufg:"Fahrzeuge prüfen, Fehler suchen und reparieren",warum:"ich schon lange gern an Mofas und Fahrrädern schraube und lernen möchte, Fehler an Autos systematisch zu finden",
+ bsp:"ich mit meinem Onkel ein altes Mofa wieder flottgemacht habe",e:["Sorgfalt","technisches Verständnis"],
+ kw:["auto","fahrzeug","kfz","werkstatt","motor","technik","schrauben","reparier","mechanik"],fq:"Arbeiten Sie in der Werkstatt auch an Hybrid- und Elektroautos?",
+ chef:{name:"Brandt",anr:"Herr",style:"streng",g:"m",skin:"#d9a77f",hair:"#8a8d91",hs:"short",gl:false,beard:true,cloth:"#2f4858",tie:""},
+ fach:[{lv:1,q:"Welche Flüssigkeit kontrolliert man mit dem Ölmessstab?",o:["Kühlwasser","Motoröl","Bremsflüssigkeit","Scheibenwischwasser"],c:1,ex:"Der Ölmessstab zeigt den Motorölstand."},
+  {lv:3,q:"Auf einem Reifen steht 205/55 R16. Was bedeutet die 16?",o:["Felgendurchmesser in Zoll","Reifenbreite in cm","Tragfähigkeitsindex","Alter in Wochen"],c:0,ex:"R16 steht für einen Radialreifen für 16-Zoll-Felgen."}]},
+{id:"verk",icon:"🛒",beruf:"Verkäufer/in",firma:"Frischemarkt Lindner",branche:"Supermarkt",ort:"Gießen",wall:"#d9e8d2",
+ aufg:"Kunden beraten, Regale einräumen und kassieren",warum:"ich gern mit Menschen spreche und es mir Spaß macht, Kunden bei der Auswahl zu helfen",
+ bsp:"ich auf dem Schulbasar zwei Stunden lang Kuchen verkauft und Kunden beraten habe",e:["Freundlichkeit","Zuverlässigkeit"],
+ kw:["verkauf","kunde","laden","handel","beratung","kasse","ware","regal","markt"],fq:"Wie werden neue Auszubildende an der Kasse und im Kundenkontakt eingearbeitet?",
+ chef:{name:"Lindner",anr:"Frau",style:"freundlich",g:"f",skin:"#f0c8a4",hair:"#7b4a2b",hs:"long",gl:false,beard:false,cloth:"#5a8f69",tie:""},
+ fach:[{lv:1,q:"Eine Kundin zahlt mit einem 50-€-Schein. Die Ware kostet 37,80 €. Wie viel Rückgeld bekommt sie?",o:["12,20 €","13,20 €","12,80 €","11,80 €"],c:0,ex:"50,00 − 37,80 = 12,20 €."},
+  {lv:3,q:"Ein Pullover kostet 49,90 €. Es gibt 20 % Rabatt. Was kostet er jetzt?",o:["39,92 €","29,90 €","41,90 €","44,90 €"],c:0,ex:"49,90 € · 0,8 = 39,92 €."}]},
+{id:"it",icon:"💻",beruf:"Fachinformatiker/in",firma:"Pixelwerk GmbH",branche:"Software-Firma",ort:"Wettenberg",wall:"#d5dcf0",
+ aufg:"Software entwickeln, testen und Fehler beheben",warum:"ich mich für Computer und Programmieren interessiere und gern knifflige Probleme löse",
+ bsp:"ich für unseren Handballverein eine kleine Webseite programmiert habe",e:["logisches Denken","Lernbereitschaft"],
+ kw:["programmier","computer","software","informatik","code","app","webseite","technik","\\bit\\b"],fq:"Mit welchen Programmiersprachen und Projekten würde ich in der Ausbildung arbeiten?",
+ chef:{name:"Okafor",anr:"Herr",style:"locker",g:"m",skin:"#8d5a3b",hair:"#1e1e1e",hs:"short",gl:true,beard:true,cloth:"#4d6fd1",tie:""},
+ fach:[{lv:1,q:"Wie viele Bit hat ein Byte?",o:["4","8","16","10"],c:1,ex:"1 Byte besteht aus 8 Bit."},
+  {lv:3,q:"Welche Dezimalzahl ist die Binärzahl 1011?",o:["9","10","11","13"],c:2,ex:"8 + 0 + 2 + 1 = 11."}]},
+{id:"mfa",icon:"🩺",beruf:"Medizinische/r Fachangestellte/r",firma:"Praxis Dr. Yilmaz",branche:"Hausarztpraxis",ort:"Marburg",wall:"#dff0ee",
+ aufg:"Patienten empfangen, Termine planen und bei Untersuchungen helfen",warum:"ich anderen Menschen helfen möchte und mich für Gesundheit und Medizin interessiere",
+ bsp:"ich in der Schulsanitäter-AG mitgemacht habe",e:["Einfühlungsvermögen","Verschwiegenheit"],
+ kw:["praxis","patient","medizin","gesundheit","arzt","hilfe","helfen","pflege"],fq:"Wie läuft die Einarbeitung am Empfang und bei den Untersuchungen ab?",
+ chef:{name:"Dr. Yilmaz",anr:"Frau",style:"freundlich",g:"f",skin:"#e3b58f",hair:"#1e1e1e",hs:"bun",gl:true,beard:false,cloth:"#f2f5f7",tie:"#2a9d8f"},
+ fach:[{lv:1,q:"Wie viele Milliliter sind 0,25 Liter?",o:["25 ml","250 ml","2.500 ml","2,5 ml"],c:1,ex:"1 l = 1.000 ml, also 0,25 l = 250 ml."},
+  {lv:3,q:"Ein Patient soll 3-mal täglich 5 ml Saft nehmen, 7 Tage lang. Wie viel Saft braucht er insgesamt?",o:["35 ml","105 ml","150 ml","21 ml"],c:1,ex:"5 · 3 · 7 = 105 ml."}]},
+{id:"elek",icon:"⚡",beruf:"Elektroniker/in",firma:"Elektro Hoffmann",branche:"Elektrobetrieb",ort:"Biedenkopf",wall:"#efe2c9",
+ aufg:"Elektroanlagen installieren, prüfen und reparieren",warum:"mich Strom und Schaltungen faszinieren und ich genau und sicher arbeiten möchte",
+ bsp:"ich in der Schule eine einfache LED-Schaltung gebaut habe",e:["Genauigkeit","Verantwortungsbewusstsein"],
+ kw:["elektr","strom","schaltung","kabel","installation","technik","anlage"],fq:"Welche Anlagen und Kunden betreuen Sie: eher Privathaushalte oder Industrie?",
+ chef:{name:"Hoffmann",anr:"Herr",style:"direkt",g:"m",skin:"#e8b998",hair:"#4a3426",hs:"bald",gl:false,beard:true,cloth:"#d68c2f",tie:""},
+ fach:[{lv:1,q:"In welcher Einheit wird die elektrische Spannung gemessen?",o:["Ampere","Volt","Watt","Ohm"],c:1,ex:"Spannung misst man in Volt (V)."},
+  {lv:3,q:"Nach dem Ohmschen Gesetz: U = 12 V und R = 4 Ω. Wie groß ist die Stromstärke I?",o:["3 A","48 A","8 A","0,33 A"],c:0,ex:"I = U : R = 12 : 4 = 3 A."}]},
+{id:"buero",icon:"🗂️",beruf:"Kaufmann/-frau für Büromanagement",firma:"Stadtwerke Mittelhessen",branche:"Energieversorger",ort:"Gießen",wall:"#dedfe6",
+ aufg:"Termine organisieren, Rechnungen bearbeiten und Kunden betreuen",warum:"ich gern organisiere, am Computer arbeite und den Überblick behalte",
+ bsp:"ich für die Klassenfahrt Listen, Kosten und Anmeldungen organisiert habe",e:["Organisationstalent","Sorgfalt"],
+ kw:["büro","organis","verwaltung","computer","kunden","telefon","planen","kaufmänn"],fq:"Welche Abteilungen lerne ich während der Ausbildung kennen?",
+ chef:{name:"Albrecht",anr:"Frau",style:"sachlich",g:"f",skin:"#f1d0b5",hair:"#8a6a3b",hs:"bun",gl:true,beard:false,cloth:"#2d3b55",tie:""},
+ fach:[{lv:1,q:"Welches Papierformat ist im Büro für Briefe üblich?",o:["DIN A3","DIN A4","DIN A6","DIN B2"],c:1,ex:"Standardbriefe haben das Format DIN A4."},
+  {lv:3,q:"Eine Rechnung beträgt brutto 1.190 € (inklusive 19 % Umsatzsteuer). Wie hoch ist der Nettobetrag?",o:["1.000 €","1.071,10 €","964,00 €","1.150 €"],c:0,ex:"1.190 € : 1,19 = 1.000 €."}]},
+{id:"back",icon:"🥖",beruf:"Bäcker/in",firma:"Backstube Kowalski",branche:"Handwerksbäckerei",ort:"Wettenberg",wall:"#f0dfcf",
+ aufg:"Teige herstellen, Brot und Brötchen backen und die Backwaren verkaufsfertig machen",warum:"ich gern backe, mit den Händen arbeite und es mich begeistert, aus einfachen Zutaten Brot zu machen",
+ bsp:"ich zu Hause regelmäßig Brötchen und Zopf selbst gebacken habe",e:["Pünktlichkeit","Teamfähigkeit"],
+ kw:["back","brot","brötchen","teig","backstube","konditor","handwerk","frühschicht"],fq:"Wie sieht ein typischer Arbeitstag in der Backstube aus, und wann beginnt die Schicht?",
+ chef:{name:"Kowalski",anr:"Herr",style:"locker",g:"m",skin:"#e4b393",hair:"#cfc8bd",hs:"short",gl:false,beard:false,cloth:"#ececec",tie:""},
+ fach:[{lv:1,q:"Wozu braucht man Hefe im Brotteig hauptsächlich?",o:["Zum Färben","Zum Lockern des Teigs","Zum Süßen","Zum Haltbarmachen"],c:1,ex:"Hefe bildet Gase und lockert den Teig."},
+  {lv:3,q:"Ein Rezept braucht auf 500 g Mehl 300 ml Wasser. Wie viel Wasser braucht man bei 2 kg Mehl?",o:["900 ml","1.200 ml","1.500 ml","600 ml"],c:1,ex:"2 kg sind 4 · 500 g, also 4 · 300 ml = 1.200 ml."}]},
+{id:"pfl",icon:"🧓",beruf:"Pflegefachmann/-frau",firma:"Seniorenzentrum Sonnenhof",branche:"Pflegeeinrichtung",ort:"Lahnau",wall:"#e6dcea",
+ aufg:"Bewohner im Alltag unterstützen, pflegen und begleiten",warum:"ich mit älteren Menschen gut umgehen kann und es mir wichtig ist, anderen zu helfen",
+ bsp:"ich meine Großmutter regelmäßig besucht und ihr im Alltag geholfen habe",e:["Einfühlungsvermögen","Belastbarkeit"],
+ kw:["pflege","mensch","bewohner","senior","helfen","älter","gesundheit"],fq:"Wie werden Auszubildende im Umgang mit den Bewohnern angeleitet und begleitet?",
+ chef:{name:"Demir",anr:"Frau",style:"hektisch",g:"f",skin:"#c68d63",hair:"#4a3426",hs:"long",gl:false,beard:false,cloth:"#8a4a5e",tie:""},
+ fach:[{lv:1,q:"Wie viele Minuten sind 1,5 Stunden?",o:["75","90","100","150"],c:1,ex:"1,5 · 60 = 90 Minuten."},
+  {lv:3,q:"Welcher Ruhepuls ist bei einem gesunden Erwachsenen typisch?",o:["etwa 20 bis 30 Schläge pro Minute","etwa 60 bis 80 Schläge pro Minute","etwa 120 bis 140 Schläge pro Minute","etwa 200 Schläge pro Minute"],c:1,ex:"Der Ruhepuls liegt meist bei 60 bis 80 Schlägen pro Minute."}]}
+];
+
+/* ===== Allgemeine Einstellungstest-Fragen ===== */
+const POOL=[
+{lv:1,q:"Wie viel sind 15 % von 80?",o:["8","10","12","15"],c:2,ex:"80 · 0,15 = 12."},
+{lv:1,q:"Ein T-Shirt kostet 24 €. Du bekommst 25 % Rabatt. Wie viel zahlst du?",o:["12 €","18 €","20 €","6 €"],c:1,ex:"25 % von 24 € sind 6 €, also 24 − 6 = 18 €."},
+{lv:1,q:"Welches Wort ist richtig geschrieben?",o:["Praktikum","Praktikom","Prakticum","Praktickum"],c:0,ex:"Richtig: Praktikum."},
+{lv:1,q:"Welcher Satz ist richtig geschrieben?",o:["Ich Bewerbe mich als Azubi.","Ich bewerbe mich als Azubi.","ich bewerbe mich als Azubi.","Ich bewerbe Mich als Azubi."],c:1,ex:"Am Satzanfang groß, Verben und „mich“ klein."},
+{lv:1,q:"Setze die Zahlenreihe fort: 2, 4, 6, 8, ?",o:["9","10","12","16"],c:1,ex:"Es kommen immer 2 dazu."},
+{lv:1,q:"Wofür steht die Abkürzung IHK?",o:["Internationale Handwerks-Kommission","Industrie- und Handelskammer","Innerbetriebliche Hilfskasse","Informations- und Hilfs-Katalog"],c:1,ex:"IHK = Industrie- und Handelskammer."},
+{lv:1,q:"Wie heißt die Hauptstadt von Hessen?",o:["Frankfurt","Kassel","Wiesbaden","Darmstadt"],c:2,ex:"Wiesbaden ist die Landeshauptstadt (größte Stadt ist Frankfurt)."},
+{lv:2,q:"Du arbeitest 7,5 Stunden pro Tag an 5 Tagen. Wie viele Stunden sind das pro Woche?",o:["35 Stunden","37,5 Stunden","40 Stunden","42,5 Stunden"],c:1,ex:"7,5 · 5 = 37,5 Stunden."},
+{lv:2,q:"Wie viel wiegen 4 Pakete mit je 2,5 kg in Gramm?",o:["8.000 g","10.000 g","1.000 g","12.500 g"],c:1,ex:"4 · 2,5 kg = 10 kg = 10.000 g."},
+{lv:2,q:"Welcher Satz ist richtig?",o:["Ich hoffe, das Sie mich einladen.","Ich hoffe, dass Sie mich einladen.","Ich hoffe dass, Sie mich einladen.","Ich hoffe, dass sie Mich einladen."],c:1,ex:"Die Konjunktion „dass“ schreibt man mit ss."},
+{lv:2,q:"Wie schreibt man die höfliche Anrede richtig?",o:["Vielen Dank für ihre Einladung.","Vielen Dank für Ihre Einladung.","Vielen Dank für Ihre einladung.","vielen Dank für Ihre Einladung."],c:1,ex:"Die Anrede „Sie/Ihr/Ihnen“ schreibt man groß."},
+{lv:2,q:"Setze fort: 3, 6, 12, 24, ?",o:["30","36","48","27"],c:2,ex:"Die Zahl wird immer verdoppelt."},
+{lv:2,q:"Was bedeutet „Probezeit“ in der Ausbildung?",o:["Beide Seiten können ohne Frist und ohne Begründung kündigen.","Man bekommt in dieser Zeit keinen Lohn.","Man darf in dieser Zeit nicht krank werden.","Die Ausbildung verlängert sich automatisch."],c:0,ex:"In der Probezeit (1 bis 4 Monate) kann jede Seite ohne Frist kündigen."},
+{lv:3,q:"Ein Material kostet netto 200 €. Dazu kommen 19 % Mehrwertsteuer. Wie hoch ist der Bruttopreis?",o:["219 €","238 €","228 €","240 €"],c:1,ex:"200 € · 1,19 = 238 €."},
+{lv:3,q:"3 Mitarbeiter brauchen für einen Auftrag 8 Stunden. Wie lange brauchen 4 Mitarbeiter bei gleicher Leistung?",o:["5 Stunden","6 Stunden","7 Stunden","10 Stunden 40 Minuten"],c:1,ex:"3 · 8 = 24 Arbeitsstunden. 24 : 4 = 6 Stunden."},
+{lv:3,q:"Setze fort: 1, 4, 9, 16, ?",o:["20","24","25","32"],c:2,ex:"Quadratzahlen: 5 · 5 = 25."},
+{lv:3,q:"Alle Auszubildenden hier sind pünktlich. Max ist pünktlich. Was folgt daraus sicher?",o:["Max ist Azubi.","Max ist kein Azubi.","Man kann nicht sicher sagen, ob Max Azubi ist.","Alle Pünktlichen sind Azubis."],c:2,ex:"Aus „alle A sind B“ folgt nicht „alle B sind A“."},
+{lv:3,q:"Was bedeutet „zuverlässig“?",o:["Man kann sich darauf verlassen, dass jemand Aufgaben erledigt.","Jemand arbeitet besonders schnell.","Jemand ist immer gut gelaunt.","Jemand macht gern Überstunden."],c:0,ex:"Zuverlässig ist, auf wen man sich verlassen kann."},
+{lv:3,q:"Was ist ein Tarifvertrag?",o:["Ein Vertrag zwischen Gewerkschaft und Arbeitgeber über Löhne und Arbeitsbedingungen","Ein Vertrag über den Kauf eines Autos","Die Hausordnung eines Betriebs","Ein Vertrag mit der Berufsschule"],c:0,ex:"Im Tarifvertrag werden z. B. Löhne und Arbeitszeiten für eine Branche geregelt."}
+];
+
+/* ===== Fragen an den Betrieb ===== */
+const GOODQ=[
+["Wie sieht ein typischer Arbeitstag bei Ihnen aus?",100,"Zeigt echtes Interesse am Alltag."],
+["Welche Aufgaben würde ich im ersten Ausbildungsjahr übernehmen?",100,"Sehr gute Frage zu den Aufgaben."],
+["Welche Möglichkeiten zur Weiterbildung oder Übernahme gibt es nach der Ausbildung?",95,"Zeigt Ehrgeiz und langfristiges Interesse."],
+["Wie läuft die Einarbeitung ab, und wer ist mein Ansprechpartner?",95,"Zeigt, dass du Verantwortung übernehmen willst."],
+["Wie groß ist das Team, in dem ich arbeiten würde?",85,"Gute Frage zum Team."],
+["Bis wann kann ich mit einer Rückmeldung rechnen?",80,"Passt gut zum Schluss, ist aber keine Fachfrage."]];
+const BADQ=[
+["Wie viel Urlaub habe ich im Jahr?",30,"Urlaub und Geld sind erlaubte Themen, aber als erste Frage wirkt es, als ginge es dir nur darum."],
+["Wie viel verdiene ich genau, und gibt es Bonuszahlungen?",30,"Besser erst fragen, wenn der Betrieb das Thema anspricht oder zusagt."],
+["Kann ich früher gehen, wenn mal wenig los ist?",0,"Das wirkt, als wolltest du möglichst wenig arbeiten."],
+["Was macht Ihre Firma eigentlich genau?",5,"Zeigt fehlende Vorbereitung. Lies vorher die Webseite."],
+["Muss ich wirklich auch am Wochenende arbeiten?",20,"Klingt nach Abwehr. Frage lieber neutral nach den Arbeitszeiten."],
+["Darf ich bei der Arbeit mein Handy benutzen?",10,"Wirkt unkonzentriert, und das Thema stellt sich meist von allein."]];
+
+/* ===== Rückmeldungen & Tipps ===== */
+const IMPROVE={
+ Auftreten:["Übe die ersten 30 Sekunden: Händedruck, Blickkontakt, Namen nennen und deutlich „Guten Tag“ sagen.","Achte auf aufrechte, offene Haltung und stelle dein Handy vor dem Gespräch komplett lautlos.","Plane 10 Minuten Puffer ein und geh den Weg vorher einmal ab."],
+ Antwort:["Begründe Antworten mit „weil“ und einem konkreten Beispiel aus Schule, Hobby oder Praktikum.","Informiere dich vorher über Betrieb, Beruf und typische Aufgaben und nenne sie in deiner Motivation.","Übe Stärken und Schwächen laut: eine echte, kleine Schwäche mit Gegenmaßnahme."],
+ Test:["Übe typische Einstellungstests regelmäßig: Prozentrechnen, Dreisatz, Rechtschreibung, Zahlenreihen.","Rechne Schritt für Schritt und kontrolliere mit einer Überschlagsrechnung.","Bei Zeitdruck: erst die sicheren Aufgaben lösen und falsche Antworten ausschließen."],
+ Fragen:["Bereite 3 eigene Fragen vor: Alltag, Aufgaben, Einarbeitung oder Weiterbildung.","Gehalt und Urlaub besser erst ansprechen, wenn der Betrieb das Thema eröffnet.","Lies vorher die Webseite des Betriebs, damit du keine Fragen stellst, die dort stehen."]};
+const PRAISE={Auftreten:"Du wirkst höflich und sicher.",Antwort:"Deine Antworten sind überzeugend und gut begründet.",Test:"Du löst die Testaufgaben sicher.",Fragen:"Deine Fragen zeigen echtes Interesse am Betrieb."};
+const WEIGHT={Antwort:.35,Auftreten:.25,Test:.2,Fragen:.2};
+const TIP_PEN=8;
+/* ===== Textbewertung ===== */
+function kwRe(job){let k=(job.kw||[]).filter(Boolean);if(!k.length)k=job.beruf.split(/[^A-Za-zÄÖÜäöüß]+/).filter(w=>w.length>3).map(w=>w.toLowerCase().slice(0,Math.max(4,w.length-2)));
+ if(!k.length)k=["beruf"];return new RegExp(k.map(x=>x.indexOf("\\")===0?x:(x.length<=3?"\\b"+esc(x)+"\\b":esc(x))).join("|"),"i")}
+function evalText(text,crit,job){
+ const t=text.trim(),notes=[];let s=0;
+ for(const c of crit){const hit=c.re?c.re.test(t):c.fn(t,job);if(hit){s+=c.w;notes.push({ok:1,msg:c.ok})}else notes.push({ok:0,msg:c.no})}
+ const slang=/(keine ahnung|wei(ß|ss) nicht|\bbock\b|krass|digga|\balter\b|\bey\b|voll geil|\blol\b|irgendwie so|halt so)/i.test(t);
+ const formal=/^[A-ZÄÖÜ]/.test(t)&&/[.!?]$/.test(t);
+ let st=15;
+ if(slang){st=-10;notes.push({ok:0,msg:"Vermeide Umgangssprache und Floskeln wie „keine Ahnung“."})}
+ else if(!formal){st=8;notes.push({ok:0,msg:"Beginne mit einem Großbuchstaben und schließe mit einem Satzzeichen ab."})}
+ else notes.push({ok:1,msg:"Höflich und sauber formuliert."});
+ s+=st;
+ if(t.length<25){s=Math.min(s,15);notes.unshift({ok:0,msg:"Die Antwort ist viel zu kurz."})}
+ return{s:clamp(Math.round(s),0,100),notes}}
+const sentences=t=>(t.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[]).filter(x=>x.trim().length>2).length;
+
+const CR_INTRO=lim=>job=>[
+ {re:/(ich hei(ß|ss)e|mein name|ich bin [A-ZÄÖÜ][a-zäöüß]+|hei(ß|ss)e )/,w:15,ok:"Du hast dich mit Namen vorgestellt.",no:"Nenne zu Beginn deinen Namen."},
+ {re:/(klasse|schule|gesamtschule|realschule|hauptschule|gymnasium|abschluss|schüler)/i,w:15,ok:"Du hast deine Schule oder deinen Abschluss genannt.",no:"Erwähne deine Schule oder deinen angestrebten Abschluss."},
+ {re:/(hobby|freizeit|gern|gerne|sport|verein|handball|fußball|musik|zeichne|lese|spiele)/i,w:15,ok:"Du hast etwas über deine Interessen gesagt.",no:"Ein Hobby macht dich greifbarer."},
+ {fn:t=>kwRe(job).test(t),w:20,ok:"Du hast den Bezug zum Beruf hergestellt.",no:"Stelle einen Bezug zum Beruf her."},
+ {re:/(praktikum|nebenjob|ferienjob|ehrenamt|projekt|erfahrung|schnupper)/i,w:10,ok:"Du hast eine Erfahrung genannt.",no:"Eine Erfahrung (Praktikum, Projekt, Ehrenamt) stärkt deine Vorstellung."},
+ lim?{fn:t=>sentences(t)<=4,w:10,ok:"Du hast dich kurz gefasst.",no:"Fasse dich kürzer (höchstens 3 bis 4 Sätze)."}:{fn:t=>t.length>=120,w:10,ok:"Die Länge passt.",no:"Erzähle etwas ausführlicher."}];
+const CR_MOTIV=job=>{const fw=job.firma.split(" ")[0].toLowerCase();return[
+ {fn:t=>t.toLowerCase().includes(fw)||/(betrieb|firma|ihr unternehmen|bei ihnen|ihre werkstatt|ihre praxis)/i.test(t),w:15,ok:"Du hast einen Bezug zum Betrieb hergestellt.",no:"Zeige, dass du dich über den Betrieb informiert hast."},
+ {fn:t=>kwRe(job).test(t),w:20,ok:"Du nennst Inhalte des Berufs.",no:"Nenne, was dich an den Aufgaben im Beruf interessiert."},
+ {re:/(weil|\bda\b|denn|deshalb|darum|gefällt|interessiert|begeistert|spa(ß|ss))/i,w:20,ok:"Du begründest deine Wahl.",no:"Begründe: Warum genau dieser Beruf?"},
+ {re:/(praktikum|hobby|schon|gemacht|ausprobiert|erfahrung|zu hause|selbst|projekt)/i,w:15,ok:"Du nennst eine eigene Erfahrung.",no:"Ein Beispiel aus deinem Leben macht die Motivation glaubhaft."},
+ {re:/(lernen|ausbildung|später|zukunft|ziel|weiterentwickeln|abschluss|geselle|fachkraft)/i,w:15,ok:"Du zeigst ein Ziel für die Zukunft.",no:"Sage, was du in der Ausbildung lernen und erreichen willst."}]};
+const CR_ASK=job=>[
+ {re:/\?\s*$/,w:30,ok:"Als Frage formuliert.",no:"Formuliere es als Frage mit Fragezeichen."},
+ {fn:t=>t.length>=20,w:20,ok:"Ausreichend ausführlich.",no:"Formuliere die Frage etwas ausführlicher."},
+ {fn:t=>!/(urlaub|gehalt|geld|verdien|feierabend|früher gehen|krank|bonus|handy)/i.test(t),w:25,ok:"Du fragst nicht nach Urlaub oder Geld.",no:"Fragen zu Urlaub oder Geld besser später stellen."},
+ {re:/(aufgabe|team|ausbildung|einarbeit|weiterbild|übernahme|alltag|\btag\b|entwickl|betrieb|kollegen|projekt|kunden)/i,w:25,ok:"Die Frage zeigt Interesse an Aufgaben oder Team.",no:"Frage nach Aufgaben, Team, Einarbeitung oder Weiterbildung."}];
+
+/* ===== Fragen-Bausteine ===== */
+const O=(...rows)=>rows.map(r=>({t:r[0],s:r[1],fb:r[2]||"",fu:r[3]}));
+const SL={
+ entry:{cat:"Auftreten",kind:"choice",vs:[
+  {lv:1,scene:"Sie betreten das Büro. {A} kommt Ihnen entgegen und streckt Ihnen die Hand hin.",say:"{GREET}",tip:"Händedruck, Blickkontakt, Namen nennen: Die ersten 30 Sekunden prägen den Eindruck.",
+   opts:O(["Kurzer, fester Händedruck, Blickkontakt: „Guten Tag, {A}. Schön, dass ich vorbeikommen darf.“",100,"Perfekt: Händedruck, Blickkontakt, Name und freundlicher Ton."],
+    ["Sie lächeln, nicken und sagen leise „Hi“, ohne die Hand zu geben.",35,"Zu locker. Im Vorstellungsgespräch sagt man „Guten Tag“ und gibt die Hand, wenn sie angeboten wird."],
+    ["Sie geben die Hand, schauen aber zu Boden und murmeln „’n Tag“.",45,"Der Händedruck stimmt, aber ohne Blickkontakt und mit leiser Stimme wirkst du unsicher."],
+    ["Sie setzen sich sofort hin und holen Ihre Mappe heraus.",5,"Erst begrüßen, dann auf das Angebot zum Platznehmen warten."])},
+  {lv:3,scene:"Sie warten seit 20 Minuten im Flur. Endlich kommt {A} aus dem Büro, sichtlich gestresst.",say:"Entschuldigen Sie bitte die Wartezeit. Es ist kurzfristig etwas dazwischengekommen.",tip:"Bleib freundlich und gelassen. Vorwürfe oder Ungeduld hinterlassen einen schlechten Eindruck.",
+   opts:O(["Sie stehen auf, geben die Hand und sagen freundlich: „Kein Problem, das passiert. Ich freue mich, dass es jetzt klappt.“",100,"Souverän: höflich, gelassen und mit Händedruck."],
+    ["Sie sagen genervt: „Ich warte schon ewig. Das nächste Mal bitte pünktlich.“",0,"Vorwürfe sind tabu. Du bist Bewerber, nicht Kritiker."],
+    ["Sie nicken nur und schauen weiter auf Ihr Handy.",20,"Handy weg und aktiv begrüßen, auch nach dem Warten."],
+    ["Sie sagen: „Macht nichts“ und fragen, ob das Gespräch kürzer sein kann, weil Sie noch einen Termin haben.",15,"Das wirkt, als hättest du wenig Interesse."])}]},
+ sit:{cat:"Auftreten",kind:"choice",vs:[
+  {lv:1,scene:"Sie setzen sich. Ihre Bewerbungsmappe liegt in Ihrer Tasche.",say:"Nehmen Sie bitte Platz. Haben Sie gut hergefunden?",tip:"Sitz aufrecht, antworte freundlich in ganzen Sätzen und leg die Mappe griffbereit auf den Tisch.",
+   opts:O(["„Ja, danke. Ich bin mit dem Bus gekommen und war schon etwas früher da.“ Sie sitzen aufrecht und legen die Mappe vor sich.",100,"Freundliche Antwort, gute Haltung."],
+    ["„Joa, ging so.“ Sie lehnen sich zurück und verschränken die Arme.",15,"Haltung und Antwort wirken desinteressiert und abwehrend."],
+    ["„Ja, super! Tolles Büro. Gibt es hier auch Kaffee?“",30,"Zu vertraut und fordernd. Warte, bis dir etwas angeboten wird."],
+    ["Sie nicken nur und sagen nichts.",45,"Eine kurze, freundliche Antwort ist besser als Schweigen."])}]},
+ intro:{cat:"Antwort",kind:"text",vs:[
+  {lv:1,say:"Dann erzählen Sie doch bitte etwas über sich.",starters:["Mein Name ist … und ich bin … Jahre alt.","Ich besuche zurzeit die … Klasse der …","In meiner Freizeit …","Ich interessiere mich für den Beruf {B}, weil …"],tip:"Name, Schule, Hobbys, ein Bezug zum Beruf. Zwei bis fünf Sätze reichen.",crit:CR_INTRO(false),fuIfLow:{id:"fu_praktikum",below:50}},
+  {lv:3,say:"Stellen Sie sich bitte in höchstens drei Sätzen vor.",starters:["Mein Name ist … und ich besuche die …","Mich interessiert {B}, weil …"],tip:"Drei Sätze: Wer bin ich, was kann ich, warum dieser Beruf?",crit:CR_INTRO(true),fuIfLow:{id:"fu_praktikum",below:50}}]},
+ motiv:{cat:"Antwort",vs:[
+  {lv:1,kind:"choice",say:"Warum möchten Sie ausgerechnet bei {F} eine Ausbildung zum Beruf {B} machen?",tip:"Gute Antworten nennen den Beruf, den Betrieb und eine eigene Erfahrung oder Eigenschaft.",fuIfLow:{id:"fu_motiv",below:60},
+   opts:O(["Ich habe mich über {F} informiert. Der Beruf {B} passt gut zu mir, weil {Q}.",100,"Stark: Betriebsbezug, Begründung und persönliches Beispiel."],
+    ["Weil ich einen Ausbildungsplatz brauche und {F} in der Nähe ist.",30,"Das ist ehrlich, aber zeigt kein Interesse am Beruf."],
+    ["Meine Eltern meinten, das wäre etwas für mich.",15,"Du solltest eigene Gründe nennen."],
+    ["Weil man da gut verdient und früh Feierabend hat.",5,"Geld und Freizeit als einziger Grund wirken unmotiviert."])},
+  {lv:2,kind:"text",say:"Warum möchten Sie ausgerechnet bei {F} eine Ausbildung zum Beruf {B} machen?",starters:["Ich habe mich über {F} informiert und …","Der Beruf {B} passt zu mir, weil …","In der Ausbildung möchte ich lernen, …"],tip:"Nenne: Beruf, Betrieb, Begründung, Beispiel, Ziel.",crit:CR_MOTIV,fuIfLow:{id:"fu_motiv",below:60}}]},
+ staerke:{cat:"Antwort",kind:"choice",vs:[
+  {lv:1,say:"Was sind Ihre Stärken?",tip:"Nenne ein bis zwei Stärken und belege sie mit einem kurzen Beispiel.",
+   opts:O(["Ich bin zuverlässig und teamfähig. Im Schulprojekt habe ich zum Beispiel immer pünktlich meinen Teil geliefert.",100,"Zwei Stärken mit Beispiel: überzeugend."],
+    ["Ich bin perfekt. Mir fällt nichts schwer.",10,"Wirkt arrogant und unglaubwürdig."],
+    ["Ich bin gut im Zocken und im Chillen.",15,"Nicht passend für ein Vorstellungsgespräch."],
+    ["Ich bin zuverlässig.",55,"Richtig, aber ohne Beispiel wenig überzeugend."])},
+  {lv:2,say:"Nennen Sie mir zwei Stärken, die für den Beruf {B} wichtig sind, und belegen Sie diese.",tip:"Wähle Stärken, die zum Beruf passen, und belege sie mit einem Beispiel.",
+   opts:O(["{E1} und {E2}. Das habe ich zum Beispiel gezeigt, als {BSP}.",100,"Die Stärken passen zum Beruf und sind belegt."],
+    ["Ich bin sehr kreativ und mag keine festen Regeln.",30,"Passt kaum zu einer Ausbildung mit klaren Abläufen."],
+    ["Ich kann alles, auch ohne Einarbeitung.",15,"Das wirkt überheblich."],
+    ["Ich bin immer der Beste und lasse mir von niemandem etwas sagen.",20,"In der Ausbildung musst du Kritik annehmen können."])}]},
+ schwaeche:{cat:"Antwort",kind:"choice",vs:[
+  {lv:2,say:"Und was würden Sie als Ihre Schwäche bezeichnen?",tip:"Nenne eine echte, kleine Schwäche und sage, was du dagegen tust. Auswendig gelernte Floskeln durchschaut jeder Chef.",
+   opts:O(["Ich bin manchmal ungeduldig. Deshalb mache ich mir vorher einen Plan, damit ich nichts überstürze.",100,"Ehrlich, harmlos und mit Gegenmaßnahme."],
+    ["Ich habe keine Schwächen.",10,"Unglaubwürdig. Jeder hat Schwächen."],
+    ["Ich komme morgens schlecht aus dem Bett und bin oft zu spät.",0,"Diese Schwäche ist für jeden Betrieb ein Ausschlusskriterium."],
+    ["Ich bin manchmal Perfektionist.",50,"Ein Klassiker, der oft einstudiert wirkt. Besser eine echte Schwäche mit Gegenmaßnahme.","fu_schwaeche"])}]},
+ situation:{cat:"Antwort",kind:"choice",vs:[
+  {lv:1,scene:"Im Betrieb ist viel los. Ein Kunde beschwert sich laut über die lange Wartezeit. {A} ist gerade nicht da.",say:"Was würden Sie in dieser Situation tun?",tip:"Ruhig bleiben, zuhören, sich für die Wartezeit entschuldigen und eine Lösung oder Hilfe anbieten.",
+   opts:O(["Ich höre ruhig zu, entschuldige mich für die Wartezeit und hole eine Kollegin oder einen Kollegen zur Hilfe.",100,"Ruhig, höflich und lösungsorientiert."],
+    ["Ich sage ihm, dass ich dafür nicht zuständig bin.",20,"Wegschicken verärgert Kunden noch mehr."],
+    ["Ich diskutiere mit ihm. Er hat keinen Grund zu schreien.",5,"Diskussionen eskalieren den Streit."],
+    ["Ich verstecke mich im Lager, bis er weg ist.",0,"Verantwortung zu übernehmen gehört zum Beruf."])},
+  {lv:2,scene:"Sie bemerken, dass Sie gestern bei einer Arbeit einen Fehler gemacht haben. {A} hat es noch nicht gemerkt.",say:"Wie gehen Sie damit um?",tip:"Fehler passieren. Wichtig ist, ehrlich zu sein und einen Lösungsvorschlag zu haben.",
+   opts:O(["Ich melde den Fehler sofort, erkläre, was passiert ist, und schlage vor, wie ich ihn behebe.",100,"Ehrlich und lösungsorientiert."],
+    ["Ich warte ab, vielleicht fällt es niemandem auf.",15,"Vertuschen kann später viel teurer werden.","fu_ehrlich"],
+    ["Ich sage, dass die Kollegen den Fehler verursacht haben.",0,"Anderen die Schuld geben zerstört Vertrauen."],
+    ["Ich korrigiere es heimlich und sage nichts.",45,"Lösung gut, aber ohne Ehrlichkeit fehlt Vertrauen.","fu_ehrlich"])},
+  {lv:3,scene:"Zwei Kollegen streiten sich im Team. Einer bittet Sie, auf seiner Seite zu stehen.",say:"Wie verhalten Sie sich?",tip:"Neutral bleiben, beide anhören und bei Bedarf Vorgesetzte einbeziehen.",
+   opts:O(["Ich höre beide an, bleibe neutral und schlage ein Gespräch zu dritt oder mit {A} vor.",100,"Reif und konstruktiv."],
+    ["Ich stelle mich auf die Seite des Kollegen, der mich gefragt hat.",25,"Parteiergreifen verschärft den Konflikt."],
+    ["Ich halte mich raus und tue so, als bekäme ich nichts mit.",40,"Besser: freundlich vermitteln oder Hilfe holen."],
+    ["Ich erzähle es allen anderen im Team.",0,"Tratsch schadet dem Teamklima."])}]},
+ phone:{cat:"Auftreten",kind:"choice",vs:[
+  {lv:1,scene:"Mitten im Gespräch vibriert Ihr Handy laut in der Jackentasche.",say:"Ihr Handy klingelt gerade.",tip:"Handy vor dem Termin komplett lautlos stellen. Passiert es doch: kurz entschuldigen und ausschalten.",
+   opts:O(["Ich schalte es kurz aus und sage: „Entschuldigung, das ist mein Fehler.“",100,"Richtig: schnell, höflich, ohne Drama."],
+    ["Ich gehe ran und sage: „Moment, ich muss kurz telefonieren.“",0,"Absolutes No-Go im Vorstellungsgespräch."],
+    ["Ich ignoriere es, obwohl es weiter vibriert.",40,"Besser aktiv ausschalten und entschuldigen."],
+    ["Ich schaue aufs Display und antworte kurz auf die Nachricht.",5,"Das zeigt Desinteresse."])},
+  {lv:3,scene:"{A} bekommt einen Anruf, nimmt ihn an und bittet Sie mit einer Geste um etwas Geduld.",say:"(hält die Hand auf den Hörer) Einen Moment bitte.",tip:"Ruhig bleiben, nicht mithören, nichts anfassen, Handy bleibt in der Tasche.",
+   opts:O(["Ich warte ruhig, sitze aufrecht und höre nicht auf das Gespräch.",100,"Souverän."],
+    ["Ich hole mein Handy heraus, bis es weitergeht.",10,"Handy bleibt in der Tasche."],
+    ["Ich schaue auf die Unterlagen auf dem Schreibtisch.",5,"Das ist indiskret."],
+    ["Ich stehe auf und gehe vor die Tür, ohne etwas zu sagen.",20,"Besser kurz fragen, ob du draußen warten sollst."])}]},
+ ask:{cat:"Fragen",kind:"ask",vs:[{lv:1,say:"Das waren meine Fragen. Haben Sie noch Fragen an uns?",tip:"Wähle bis zu drei Fragen. Gute Fragen betreffen Aufgaben, Einarbeitung, Team oder Weiterbildung. Gehalt und Urlaub besser erst später."}]},
+ abschied:{cat:"Auftreten",kind:"choice",vs:[
+  {lv:1,scene:"Das Gespräch ist zu Ende. {A} steht auf.",say:"Das waren alle meine Fragen. Wir melden uns in den nächsten Tagen bei Ihnen.",tip:"Bedanke dich, gib noch einmal die Hand und verabschiede dich freundlich.",
+   opts:O(["„Vielen Dank für das Gespräch und Ihre Zeit. Ich würde mich freuen, von Ihnen zu hören. Auf Wiedersehen!“ Dazu ein Händedruck.",100,"Perfekter Abschluss."],
+    ["„Ok, cool, tschüss.“",20,"Zu lässig für den Abschluss."],
+    ["„Und? Habe ich den Job?“",25,"Zu fordernd. Warte die Rückmeldung ab."],
+    ["Sie gehen wortlos hinaus.",10,"Ohne Dank und Gruß bleibt ein schlechter letzter Eindruck."])},
+  {lv:3,scene:"Zum Abschied lehnt sich {A} zurück.",say:"Wir haben noch zwei weitere Bewerber im Gespräch. Wie schätzen Sie Ihre Chancen ein?",tip:"Bleib sympathisch und selbstbewusst, aber nicht überheblich.",
+   opts:O(["„Das verstehe ich. Ich würde mich über die Chance sehr freuen, weil mir der Beruf wichtig ist. Danke für das Gespräch.“",100,"Selbstbewusst und freundlich."],
+    ["„Dann bin ich bestimmt nicht dran.“",10,"Das wirkt mutlos."],
+    ["„Ich bin besser als die anderen. Nehmen Sie mich.“",25,"Überheblich und ohne Begründung."],
+    ["„Kann ich noch etwas nachreichen, zum Beispiel mein letztes Zeugnis?“",85,"Zeigt Engagement. Bedanke dich zusätzlich."])}]}
+};
+/* Nachfragen (Entscheidungsbaum) */
+const FU={
+ fu_motiv:{cat:"Antwort",kind:"choice",lv:2,say:"Das war mir noch zu allgemein. Was genau interessiert Sie am Beruf {B}? Wie stellen Sie sich einen typischen Arbeitstag vor?",tip:"Nenne konkrete Aufgaben aus dem Beruf und was dir daran gefällt.",
+  opts:O(["Typische Aufgaben sind für mich: {AUF}. Das reizt mich, weil {Q}.",100,"Konkret und glaubwürdig."],["Keine Ahnung, ich lasse mich überraschen.",5,"So wirkt es, als hättest du dich nicht informiert."],["Ich glaube, man bekommt viel Anweisungen und sitzt oft herum.",20,"Ein falsches Bild vom Beruf."],["Genau weiß ich es nicht. Ich dachte, ein Praktikum zeigt mir das.",45,"Ehrlich, aber informiere dich vorher."])},
+ fu_schwaeche:{cat:"Antwort",kind:"choice",lv:2,say:"Das hört man oft. Nennen Sie mir bitte eine echte Schwäche, und was Sie dagegen tun.",tip:"Eine kleine, echte Schwäche mit konkretem Gegenmittel.",
+  opts:O(["Ich bin manchmal zu schüchtern, Fragen zu stellen. Deshalb nehme ich mir vor, bei Unklarheiten sofort nachzufragen.",100,"Ehrlich und mit Lösung."],["Ich habe wirklich keine.",5,"Das Gegenteil von glaubwürdig."],["Ich bin manchmal faul, aber das wird schon.",20,"Ohne Gegenmaßnahme."],["Ich habe Probleme mit Autoritäten.",0,"Für eine Ausbildung ein Alarmsignal."])},
+ fu_praktikum:{cat:"Antwort",kind:"choice",lv:1,say:"Haben Sie schon Erfahrungen gesammelt, die zum Beruf {B} passen? Ein Praktikum, einen Nebenjob?",tip:"Auch Hobbys, Schulprojekte oder Hilfe zu Hause zählen als Erfahrung.",
+  opts:O(["Noch nicht im Betrieb. Aber es hat mir viel Spaß gemacht, als {BSP}. Gern würde ich bei Ihnen auch ein Praktikum machen.",100,"Ehrlich, konkret und motiviert."],["Nein, nichts.",25,"Besser etwas Passendes aus Hobby oder Schule erwähnen."],["Ich habe mal in den Ferien gejobbt, aber nichts Besonderes.",50,"Mache klar, was du dort gelernt hast."],["Ich lerne schnell. Erfahrung brauche ich nicht.",15,"Wirkt überheblich."])},
+ fu_ehrlich:{cat:"Antwort",kind:"choice",lv:2,say:"Angenommen, ich hätte den Fehler selbst entdeckt. Wie hätte das auf mich gewirkt?",tip:"Ehrlichkeit und Verantwortung sind wichtiger als Fehlerfreiheit.",
+  opts:O(["Nicht gut. Ich hätte ihn sofort melden sollen. Das mache ich künftig so.",100,"Einsicht und Lernbereitschaft."],["Dann wäre es halt nicht so schlimm gewesen.",10,"Verharmlosen wirkt unreif."],["Wahrscheinlich wären Sie sauer, aber so ist das eben.",30,"Zeige mehr Einsicht."])}
+};
+const ORDER_SHORT=["entry","sit","intro","motiv","test1","staerke","situation","phone","ask","abschied"];
+const ORDER_FULL=["entry","sit","intro","motiv","test1","staerke","schwaeche","situation","phone","test2","ask","abschied"];
+
+/* ===== Platzhalter ===== */
+function fmt(s,job){if(typeof s!=="string")return s;const c=job.chef;
+ const m={F:job.firma,B:job.beruf,A:c.anr+" "+c.name,Q:job.warum,E1:job.e[0],E2:job.e[1],BSP:job.bsp,AUF:job.aufg,FQ:job.fq,GREET:STYLES[c.style].greet};
+ const f=x=>x.replace(/\{(\w+)\}/g,(a,k)=>m[k]!==undefined?m[k]:a);return f(f(s))}
+function pickV(vs,L){const ok=vs.filter(v=>v.lv<=L);return ok.length?ok.reduce((a,b)=>b.lv>=a.lv?b:a):vs.reduce((a,b)=>b.lv<a.lv?b:a)}
+function finish(n,job){["scene","say","q","tip","explain"].forEach(k=>{if(n[k])n[k]=fmt(n[k],job)});
+ if(n.starters)n.starters=n.starters.map(s=>fmt(s,job));
+ if(n.opts)n.opts=n.opts.map(o=>Object.assign({},o,{t:fmt(o.t,job),fb:fmt(o.fb,job)}));
+ if(n.crit&&typeof n.crit==="function")n.crit=n.crit(job);return n}
+function testNode(src,job,tag){const opts=src.o.map((t,i)=>({t,s:i===src.c?100:0,fb:i===src.c?"Richtig! "+src.ex:"Leider falsch. "+src.ex}));
+ return finish({id:tag,cat:"Test",kind:"test",lv:src.lv,say:"Wir machen einen kleinen Einstellungstest. Bitte lösen Sie diese Aufgabe.",q:src.q,tip:"Rechne oder denke Schritt für Schritt und schließe falsche Antworten aus.",opts},job)}
+let usedPool=new Set();
+function buildNode(id,job,L){
+ if(FU[id])return finish(Object.assign({id},FU[id]),job);
+ if(id==="test1"){const fs=job.fach&&job.fach.length?job.fach:[POOL[0]];const src=fs.length>1?(L>=3?fs[fs.length-1]:fs[0]):fs[0];return testNode(src,job,id)}
+ if(id==="test2"){let c=POOL.filter(p=>p.lv===L&&!usedPool.has(p.q));if(!c.length)c=POOL.filter(p=>!usedPool.has(p.q));if(!c.length){usedPool.clear();c=POOL}const src=rnd(c);usedPool.add(src.q);return testNode(src,job,id)}
+ if(id.charAt(0)==="x"){const e=job.extra[+id.slice(1)];return finish({id,cat:"Antwort",kind:"text",lv:2,say:e.q,starters:[],tip:"Antworte in ganzen Sätzen, begründe und nenne ein Beispiel.",
+  crit:()=>[{fn:t=>e.kw.length?e.kw.some(k=>t.toLowerCase().includes(k.toLowerCase())):t.length>60,w:45,ok:"Du triffst den Kern der Frage.",no:"Gehe konkreter auf das Thema der Frage ein."},
+  {re:/(weil|\bda\b|denn|deshalb|zum beispiel|z\. b\.)/i,w:20,ok:"Du begründest oder nennst ein Beispiel.",no:"Begründe mit „weil“ oder gib ein Beispiel."},
+  {fn:t=>t.length>=70,w:20,ok:"Ausreichend ausführlich.",no:"Antworte ausführlicher."}]},job)}
+ const d=SL[id];const v=pickV(d.vs,L);const n=Object.assign({id,cat:d.cat,kind:d.kind},JSON.parse(JSON.stringify(v,(k,x)=>typeof x==="function"?undefined:x)));
+ if(typeof v.crit==="function")n.crit=v.crit;return finish(n,job)}
+/* ===== 3D-Büro ===== */
+let scene,cam,ren,personG=null,F={},R={},ok3d=false,lookX=0,moodT=0,mood=0,speakUntil=0,nodT=0,shakeT=0,nextBlink=0,blinkT=0,lastT=0,curStyle=STYLES.freundlich,voiceOn=false;
+const M=(c,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c},o||{}));
+function Bx(w,h,d,mat,x,y,z,par){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;(par||scene).add(m);return m}
+function Sp(r,mat,x,y,z,par,sx,sy,sz){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),mat);m.position.set(x,y,z);if(sx)m.scale.set(sx,sy,sz);m.castShadow=true;(par||scene).add(m);return m}
+function Cy(rt,rb,hh,mat,x,y,z,par,seg){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,hh,seg||20),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;(par||scene).add(m);return m}
+function txtTex(lines,w,hh,bg,fg){const c=document.createElement("canvas");c.width=w;c.height=hh;const g=c.getContext("2d");g.fillStyle=bg;g.fillRect(0,0,w,hh);g.fillStyle=fg;g.textAlign="center";g.textBaseline="middle";
+ lines.forEach((l,i)=>{g.font=l.f;g.fillText(l.t,w/2,l.y)});const t=new THREE.CanvasTexture(c);return t}
+function fitText(t,max,size,wt){const c=document.createElement("canvas").getContext("2d");let s=size;do{c.font=wt+" "+s+"px sans-serif";if(c.measureText(t).width<=max)break;s-=2}while(s>14);return wt+" "+s+"px sans-serif"}
+
+function init3d(){
+ try{
+  if(typeof THREE==="undefined")throw new Error("no three");
+  const el=$("#stage");ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;el.prepend(ren.domElement);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0xdfe6ec);
+  cam=new THREE.PerspectiveCamera(40,1.2,.1,60);cam.position.set(0,1.38,1.75);cam.lookAt(0,1.15,-1.6);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x9a8a77,.78));
+  const sun=new THREE.DirectionalLight(0xfff3e0,.75);sun.position.set(-3,4.5,2.5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  Object.assign(sun.shadow.camera,{left:-4,right:4,top:4,bottom:-4,near:.5,far:14});scene.add(sun);
+  const pl=new THREE.PointLight(0xffe8c0,.35,8);pl.position.set(.6,2.2,-.4);scene.add(pl);
+  buildRoom();buildPerson(JOBS[0].chef);
+  new ResizeObserver(rs).observe(el);rs();
+  el.addEventListener("pointermove",e=>{const r=el.getBoundingClientRect();lookX=clamp(((e.clientX-r.left)/r.width-.5)*2,-1,1)});
+  ok3d=true;requestAnimationFrame(tick);
+ }catch(e){ok3d=false;try{if(ren&&ren.domElement)ren.domElement.remove()}catch(_){}$("#fallback").style.display="flex"}}
+function rs(){const el=$("#stage");const w=el.clientWidth,hh=el.clientHeight;if(!w||!hh||!ren)return;ren.setSize(w,hh,false);cam.aspect=w/hh;
+ cam.fov=w/hh<1.1?48:40;cam.updateProjectionMatrix()}
+function buildRoom(){
+ R.wall=M(0xc9d3dd);
+ const fl=new THREE.Mesh(new THREE.PlaneGeometry(12,12),M(0xa67c52));fl.rotation.x=-Math.PI/2;fl.receiveShadow=true;scene.add(fl);
+ const rug=new THREE.Mesh(new THREE.PlaneGeometry(3.2,2.6),M(0x3d5a80));rug.rotation.x=-Math.PI/2;rug.position.set(0,.005,-.6);rug.receiveShadow=true;scene.add(rug);
+ const bw=new THREE.Mesh(new THREE.PlaneGeometry(12,3.6),R.wall);bw.position.set(0,1.8,-3.3);bw.receiveShadow=true;scene.add(bw);
+ const lw=new THREE.Mesh(new THREE.PlaneGeometry(12,3.6),R.wall);lw.position.set(-4.4,1.8,0);lw.rotation.y=Math.PI/2;scene.add(lw);
+ const rw=new THREE.Mesh(new THREE.PlaneGeometry(12,3.6),R.wall);rw.position.set(4.4,1.8,0);rw.rotation.y=-Math.PI/2;scene.add(rw);
+ const ce=new THREE.Mesh(new THREE.PlaneGeometry(12,12),M(0xf4f4f2));ce.position.y=3.6;ce.rotation.x=Math.PI/2;scene.add(ce);
+ Bx(12,.12,.05,M(0xf2f2f0),0,.06,-3.27);
+ // Fenster
+ const gl=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.35),new THREE.MeshBasicMaterial({color:0xcfe9ff}));gl.position.set(-1.5,1.95,-3.28);scene.add(gl);
+ Bx(1.22,.06,.06,M(0xffffff),-1.5,2.65,-3.26);Bx(1.22,.06,.06,M(0xffffff),-1.5,1.27,-3.26);Bx(.06,1.44,.06,M(0xffffff),-2.08,1.96,-3.26);Bx(.06,1.44,.06,M(0xffffff),-.92,1.96,-3.26);Bx(.04,1.35,.04,M(0xffffff),-1.5,1.95,-3.25);Bx(1.1,.04,.04,M(0xffffff),-1.5,1.95,-3.25);
+ // Regal
+ Bx(1.1,2.0,.32,M(0x7a5a3a),1.6,1,-3.1);
+ for(let r=0;r<4;r++){Bx(1.02,.03,.3,M(0x5d442b),1.6,.35+r*.5,-3.08);let x=1.12;while(x<2.05){const bw2=.04+Math.random()*.05,bh=.24+Math.random()*.14;Bx(bw2,bh,.2,M([0x2a5d9f,0xb23a48,0x2f8f5b,0xd9a441,0x5b4a8a,0x3b3b3b][Math.floor(Math.random()*6)]),x+bw2/2,.38+r*.5+bh/2,-3.08);x+=bw2+.008}}
+ // Pflanze
+ Cy(.17,.13,.3,M(0xb5651d),-2.15,.15,-2.7);for(let i=0;i<7;i++)Sp(.13,M(0x3f8f4a),-2.15+(Math.random()-.5)*.28,.5+Math.random()*.55,-2.7+(Math.random()-.5)*.25);
+ // Uhr
+ const clk=new THREE.Mesh(new THREE.CircleGeometry(.2,28),new THREE.MeshBasicMaterial({color:0xffffff}));clk.position.set(.8,2.55,-3.28);scene.add(clk);
+ const ring=new THREE.Mesh(new THREE.RingGeometry(.2,.225,28),new THREE.MeshBasicMaterial({color:0x2b2b2b}));ring.position.set(.8,2.55,-3.275);scene.add(ring);
+ R.hh=new THREE.Mesh(new THREE.PlaneGeometry(.012,.11),new THREE.MeshBasicMaterial({color:0x222222}));R.hh.geometry.translate(0,.055,0);R.hh.position.set(.8,2.55,-3.27);scene.add(R.hh);
+ R.mh=new THREE.Mesh(new THREE.PlaneGeometry(.008,.16),new THREE.MeshBasicMaterial({color:0x222222}));R.mh.geometry.translate(0,.08,0);R.mh.position.set(.8,2.55,-3.265);scene.add(R.mh);
+ // Firmenschild + Urkunden
+ R.sign=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.4),new THREE.MeshBasicMaterial({color:0xffffff}));R.sign.position.set(0,2.75,-3.28);scene.add(R.sign);
+ Bx(.34,.44,.02,M(0xf8f4e8),-.75,2.1,-3.27);Bx(.34,.44,.02,M(0xf8f4e8),.75,2.1,-3.27);
+ // Stuhl
+ Bx(.62,.95,.08,M(0x30343a),0,.95,-2.0);Bx(.6,.08,.55,M(0x30343a),0,.5,-1.75);Cy(.04,.04,.45,M(0x555555),0,.25,-1.75,null,8);
+ // Schreibtisch
+ const wood=M(0x8b6b4a);Bx(2.4,.06,1.0,wood,0,.76,-.8);Bx(2.4,.7,.04,wood,0,.4,-.32);Bx(.04,.72,.96,wood,-1.18,.38,-.8);Bx(.04,.72,.96,wood,1.18,.38,-.8);
+ // Laptop
+ Bx(.4,.015,.28,M(0xb8bcc2),-.6,.8,-1.0);const sc=Bx(.4,.26,.012,M(0xb8bcc2),-.6,.94,-1.14);sc.rotation.x=-.22;
+ // Tasse, Stifte
+ Cy(.04,.035,.09,M(0xffffff),.75,.84,-1.0);Cy(.04,.04,.1,M(0x2f8f5b),1.0,.84,-.95);
+ // Namensschild
+ R.nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.34,.09),new THREE.MeshBasicMaterial({color:0xffffff}));R.nameplate.position.set(.4,.82,-.45);R.nameplate.rotation.x=-.5;scene.add(R.nameplate);
+ // Mappe + Glas
+ Bx(.34,.012,.25,M(0x2a5d9f),0,.795,-.52).rotation.y=.08;Bx(.31,.012,.22,M(0xfbfbfb),0,.805,-.52).rotation.y=.08;
+ const glass=new THREE.Mesh(new THREE.CylinderGeometry(.035,.03,.1,16),new THREE.MeshLambertMaterial({color:0xbfe3ff,transparent:true,opacity:.55}));glass.position.set(-.5,.84,-.45);scene.add(glass)}
+function setRoom(job){if(!ok3d)return;R.wall.color.set(job.wall||"#c9d3dd");
+ const t1=new THREE.CanvasTexture((()=>{const c=document.createElement("canvas");c.width=640;c.height=160;const g=c.getContext("2d");g.fillStyle="#fbfbfa";g.fillRect(0,0,640,160);g.fillStyle=job.wall||"#c9d3dd";g.fillRect(0,0,640,12);g.fillStyle="#1d2733";g.textAlign="center";g.textBaseline="middle";g.font=fitText(job.firma,580,64,"bold");g.fillText(job.firma,320,70);g.font="26px sans-serif";g.fillStyle="#5b6876";g.fillText(job.branche||"",320,126);return c})());
+ R.sign.material.map=t1;R.sign.material.needsUpdate=true;
+ const c2=document.createElement("canvas");c2.width=340;c2.height=90;const g2=c2.getContext("2d");g2.fillStyle="#222b34";g2.fillRect(0,0,340,90);g2.fillStyle="#fff";g2.textAlign="center";g2.textBaseline="middle";const nm=job.chef.anr+" "+job.chef.name;g2.font=fitText(nm,310,40,"bold");g2.fillText(nm,170,45);
+ R.nameplate.material.map=new THREE.CanvasTexture(c2);R.nameplate.material.needsUpdate=true}
+
+function buildPerson(c){
+ if(!ok3d)return;if(personG)scene.remove(personG);
+ const fem=c.g==="f";const skin=M(c.skin),cloth=M(c.cloth),hair=M(c.hair);
+ const g=new THREE.Group();g.position.set(0,0,-1.62);scene.add(g);personG=g;
+ const sw=fem?.22:.26;
+ const torso=Cy(fem?.2:.23,fem?.24:.27,.62,cloth,0,.78,0,g,24);torso.scale.z=.72;F.torso=torso;
+ Sp(.1,cloth,-sw,1.03,0,g);Sp(.1,cloth,sw,1.03,0,g);
+ Cy(.055,.06,.12,skin,0,1.13,0,g,12);
+ if(c.tie){if(fem){const sc=Cy(.085,.09,.05,M(c.tie),0,1.11,0,g,16)}else Bx(.05,.26,.012,M(c.tie),0,.9,.178,g)}
+ else if(!fem){Bx(.16,.04,.1,M(0xffffff),0,1.1,.1,g)}
+ // Arme
+ F.arms=[];for(const s of[-1,1]){const sh=new THREE.Group();sh.position.set(s*sw,1.03,0);sh.rotation.x=-.6;g.add(sh);
+  const ua=Cy(.05,.045,.3,cloth,0,-.15,0,sh,12);const el=new THREE.Group();el.position.set(0,-.3,0);el.rotation.x=-.95;sh.add(el);
+  Cy(.045,.04,.28,cloth,0,-.14,0,el,12);Sp(.045,skin,0,-.3,0,el);F.arms.push({sh,el})}
+ // Kopf
+ const hg=new THREE.Group();hg.position.set(0,1.12,0);g.add(hg);F.head=hg;
+ const face=new THREE.Group();face.position.set(0,.21,0);hg.add(face);
+ Sp(.17,skin,0,0,0,face,1,1.12,1);
+ for(const s of[-1,1])Sp(.03,skin,s*.17,0,0,face,.5,1,.7);
+ Sp(.026,skin,0,-.012,.172,face,1,1.2,1);
+ const wh=new THREE.MeshBasicMaterial({color:0xffffff}),pu=new THREE.MeshBasicMaterial({color:0x1b1b1b});F.eyes=[];F.brows=[];
+ for(const s of[-1,1]){const w=new THREE.Mesh(new THREE.SphereGeometry(.03,14,10),wh);w.position.set(s*.06,.035,.15);w.scale.set(1.1,.8,.6);face.add(w);
+  const p=new THREE.Mesh(new THREE.SphereGeometry(.015,10,8),pu);p.position.set(s*.06,.035,.165);face.add(p);F.eyes.push(w,p);
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.065,.014,.016),M(c.hair==="#cfc8bd"||c.hair==="#8a8d91"?0x7a7a7a:c.hair));b.position.set(s*.06,.09,.155);face.add(b);F.brows.push(b)}
+ F.mouth=new THREE.Mesh(new THREE.TorusGeometry(.04,.008,6,16,Math.PI),new THREE.MeshBasicMaterial({color:0x8a3b3b}));F.mouth.position.set(0,-.07,.158);face.add(F.mouth);
+ F.mo=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshBasicMaterial({color:0x4b1a1f}));F.mo.position.set(0,-.075,.153);F.mo.scale.set(.03,.003,.02);F.mo.visible=false;face.add(F.mo);
+ if(c.gl){const gm=new THREE.MeshBasicMaterial({color:0x222222});for(const s of[-1,1]){const r=new THREE.Mesh(new THREE.TorusGeometry(.04,.005,6,18),gm);r.position.set(s*.06,.035,.163);face.add(r)}const br=new THREE.Mesh(new THREE.BoxGeometry(.04,.005,.005),gm);br.position.set(0,.04,.165);face.add(br)}
+ // Haare
+ const hm=hair;
+ if(c.hs!=="bald"){const cap=new THREE.Mesh(new THREE.SphereGeometry(.18,24,14,0,Math.PI*2,0,1.15),hm);cap.scale.set(1,1.12,1.04);cap.position.set(0,.012,-.008);face.add(cap);
+  const back=new THREE.Mesh(new THREE.SphereGeometry(.18,24,14,Math.PI,Math.PI,0,c.hs==="long"?2.55:1.9),hm);back.scale.set(1,1.12,1.04);back.position.set(0,.012,-.008);face.add(back);
+  if(c.hs==="long"){for(const s of[-1,1]){const l=new THREE.Mesh(new THREE.BoxGeometry(.045,.24,.07),hm);l.position.set(s*.168,-.1,-.01);face.add(l)}}
+  if(c.hs==="bun")Sp(.065,hm,0,.17,-.11,face)}
+ else{const rim=new THREE.Mesh(new THREE.SphereGeometry(.178,24,10,Math.PI,Math.PI,1.3,.5),hm);rim.scale.set(1,1.12,1.04);face.add(rim)}
+ if(c.beard){const bd=new THREE.Mesh(new THREE.SphereGeometry(.176,24,12,0,Math.PI*2,2.1,.9),hm);bd.scale.set(1,1.12,1.06);face.add(bd);
+  Bx(.08,.014,.02,hm,0,-.045,.167,face)}
+ F.cls=c;F.baseY=1.12}
+function setPerson(c,job){curStyle=STYLES[c.style]||STYLES.freundlich;if(ok3d){buildPerson(c);if(job)setRoom(job)}
+ moodT=curStyle.base;mood=moodT;$("#nameTag").textContent=c.anr+" "+c.name+(job?" · "+job.firma:"")}
+
+function say3d(text){speakUntil=performance.now()+clamp(text.length*52,900,9000);speak(text)}
+function speak(text){if(!voiceOn||!window.speechSynthesis)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text.replace(/\(.*?\)/g,""));u.lang="de-DE";u.rate=curStyle.rate;const v=speechSynthesis.getVoices().find(x=>/^de/i.test(x.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+function react(kind){if(kind==="nod")nodT=.9;else if(kind==="shake")shakeT=1.0}
+function tick(now){requestAnimationFrame(tick);if(!ok3d||document.hidden||!personG)return;
+ const t=now/1000,dt=Math.min(.05,t-lastT||.016);lastT=t;
+ mood+=(moodT-mood)*Math.min(1,dt*3);
+ const m=clamp(mood,-1,1);let sy=-m*1.1;if(Math.abs(sy)<.08)sy=.08;F.mouth.scale.y=sy;F.mouth.scale.x=1+Math.max(0,m)*.25;
+ const tension=clamp(-m,0,1)*.8+(curStyle.ten||0)*.6,raise=clamp(m,0,1)*.014;
+ F.brows[0].rotation.z=-.35*tension+raise*6;F.brows[1].rotation.z=.35*tension-raise*6;F.brows[0].position.y=F.brows[1].position.y=.09+raise-.006*tension;
+ const talking=performance.now()<speakUntil;const open=talking?(.3+.7*Math.abs(Math.sin(t*12+Math.sin(t*3)*2))):0;
+ F.mo.visible=open>.06;F.mo.scale.set(.03,.003+.022*open,.02);
+ if(performance.now()>nextBlink){blinkT=performance.now()+120;nextBlink=performance.now()+2500+Math.random()*3000}
+ const bl=performance.now()<blinkT?.1:1;F.eyes.forEach(e=>e.scale.y=(e.geometry.parameters.radius>.02?.8:1)*bl);
+ let rx=Math.sin(t*.9)*.015,ry=Math.sin(t*.5)*.05+lookX*-.22;
+ if(nodT>0){nodT-=dt;rx+=Math.sin((1-nodT/.9)*Math.PI*3)*.17}
+ if(shakeT>0){shakeT-=dt;ry+=Math.sin((1-shakeT)*Math.PI*4)*.25}
+ if(talking)rx+=Math.sin(t*6)*.015;
+ F.head.rotation.x=rx;F.head.rotation.y=ry;F.torso.scale.y=1+Math.sin(t*1.6)*.008;
+ F.arms[1].el.rotation.x=-.95+(talking?Math.sin(t*3.1)*.28:0)+Math.sin(t*.7)*.02;F.arms[1].sh.rotation.z=talking?-.12-Math.abs(Math.sin(t*1.6))*.18:0;
+ F.arms[0].el.rotation.x=-.95+(talking?Math.sin(t*2.3+1)*.1:0);
+ cam.position.x+=((lookX*.28)-cam.position.x)*Math.min(1,dt*2);cam.lookAt(0,1.15,-1.6);
+ const d=new Date();R.mh.rotation.z=-d.getMinutes()/60*Math.PI*2;R.hh.rotation.z=-((d.getHours()%12)+d.getMinutes()/60)/12*Math.PI*2;
+ ren.render(scene,cam)}
+/* ===== UI-Grundlagen ===== */
+const panel=()=>$("#panel");
+function setPanel(...n){const p=panel();p.replaceChildren(h("div",{class:"wrap"},...n));p.scrollTop=0}
+let G=null,SEL={job:JOBS[0],lvl:"2",name:""},typer=null,tmr=null,customs=[];
+const LVL=[["1","Leicht","Mehr Hilfen, kürzere Runde"],["2","Mittel","Voller Ablauf, Fließtext"],["3","Schwer","Knifflige Fragen, Zeitdruck im Test"],["a","Adaptiv","Passt sich deinen Antworten an"]];
+const LVN={1:"Leicht",2:"Mittel",3:"Schwer"};
+function tone(s){return s>=75?"g":s>=45?"m":"b"}
+function pill(s){return h("span",{class:"pill "+tone(s)},Math.round(s)+" / 100")}
+function stopTimers(){if(typer){clearInterval(typer);typer=null}if(tmr){clearInterval(tmr);tmr=null}}
+function typeInto(el,text,after){if(typer)clearInterval(typer);let i=0;el.textContent="";typer=setInterval(()=>{i+=2;el.textContent=text.slice(0,i);if(i>=text.length){clearInterval(typer);typer=null;el.textContent=text;after&&after()}},18);
+ el.parentNode.onclick=()=>{if(typer){clearInterval(typer);typer=null;el.textContent=text;after&&after()}}}
+function bubble(who,text,cls){const p=h("span",{class:"txt"});const b=h("div",{class:"bubble "+(cls||"")},h("span",{class:"who"},who),p);typeInto(p,text);say3d(text);return b}
+function loadCustoms(){try{customs=JSON.parse(localStorage.getItem("bg_custom")||"[]").map(c=>{try{return decodeCode(c)}catch(e){return null}}).filter(Boolean)}catch(e){customs=[]}}
+function saveCustom(code){try{const l=JSON.parse(localStorage.getItem("bg_custom")||"[]");if(l.indexOf(code)<0)l.unshift(code);localStorage.setItem("bg_custom",JSON.stringify(l.slice(0,12)))}catch(e){}}
+
+/* ===== Menü ===== */
+function showMenu(){
+ stopTimers();G=null;loadCustoms();
+ const mm=customs.find(c=>SEL.job.id==="custom"&&c.firma===SEL.job.firma&&c.beruf===SEL.job.beruf);if(mm)SEL.job=mm;const list=JOBS.concat(customs);if(!list.includes(SEL.job))SEL.job=list[0];
+ const codeIn=h("input",{type:"text",placeholder:"Code deiner Lehrkraft",autocapitalize:"off",autocomplete:"off","aria-label":"Szenario-Code"});const codeMsg=h("div",{class:"msg"});
+ const codeBox=h("div",{class:"card",style:"display:none"},h("label",{style:"margin-top:0"},"Code eingeben"),codeIn,h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn",onclick:async()=>{codeMsg.className="msg";codeMsg.textContent="Lade …";try{const j=await resolveCode(codeIn.value);saveCustom(encodeCode(j));SEL.job=j;codeMsg.className="msg ok";codeMsg.textContent="Szenario geladen: "+j.beruf+" bei "+j.firma;showMenu()}catch(e){codeMsg.className="msg err";codeMsg.textContent=e.message||"Der Code ist ungültig."}}},"Szenario laden")),codeMsg);
+ const nameIn=h("input",{type:"text",placeholder:"Dein Name (für das PDF, optional)",value:SEL.name,maxlength:"40","aria-label":"Dein Name",oninput:()=>{SEL.name=nameIn.value}});
+ const jobBtns=[];
+ const jobGrid=h("div",{class:"jobs"},list.map(j=>{const cust=j.id==="custom";const b=h("button",{class:"job","aria-pressed":String(j===SEL.job),onclick:()=>{SEL.job=j;jobBtns.forEach(x=>x.b.setAttribute("aria-pressed",String(x.j===j)));setPerson(j.chef,j);say3d(fmt(STYLES[j.chef.style].greet.split(".")[0]+".",j))}},
+  h("span",{class:"ic"},j.icon||"⭐"),h("span",null,h("b",null,j.beruf),h("span",{class:"small mute"},j.firma+(j.ort?" · "+j.ort:"")),h("br"),h("span",{class:"tagc"},"Chef: "+STYLES[j.chef.style].lab+(cust?" · eigenes Szenario":""))));jobBtns.push({b,j});return b}));
+ const lvlBtns=[];
+ const lvlGrid=h("div",{class:"lvls"},LVL.map(l=>{const b=h("button",{class:"lvl","aria-pressed":String(SEL.lvl===l[0]),onclick:()=>{SEL.lvl=l[0];lvlBtns.forEach(x=>x.b.setAttribute("aria-pressed",String(x.k===l[0])))}},h("b",null,l[1]),h("span",{class:"small mute"},l[2]));lvlBtns.push({b,k:l[0]});return b}));
+ setPanel(h("h1",null,"Vorstellungsgespräch"),h("p",{class:"mute"},"Wähle eine Stelle und ein Niveau. Dann sitzt du dem Chef gegenüber: mit Fragen, Einstellungstest und Rückmeldung."),
+  h("div",{class:"row"},h("button",{class:"btn soft",onclick:()=>showEditor()},"Eigenes Szenario erstellen"),h("button",{class:"btn soft",onclick:()=>{codeBox.style.display=codeBox.style.display==="none"?"block":"none";codeIn.focus()}},"Code eingeben")),
+  h("div",{style:"margin-top:10px"},codeBox),h("label",null,"Dein Name"),nameIn,h("h2",null,"Stelle wählen"),jobGrid,h("h2",null,"Niveau"),lvlGrid,
+  h("div",{class:"sticky"},h("button",{class:"btn full",onclick:()=>startGame(SEL.job,SEL.lvl,SEL.name.trim())},"Gespräch beginnen")));
+ setPerson(SEL.job.chef,SEL.job)}
+
+/* ===== Spielstart & Ablauf ===== */
+function startGame(job,mode,name){
+ usedPool=new Set();
+ let q=(mode==="1"?ORDER_SHORT:ORDER_FULL).slice();
+ if(job.extra&&job.extra.length){const i=q.indexOf("motiv")+1;q.splice(i,0,...job.extra.map((e,k)=>"x"+k))}
+ G={job,mode,name,shift:0,answers:[],queue:q,planned:q.length,imp:null,tip:false,node:null,done:false};
+ setPerson(job.chef,job);next()}
+function curL(){return G.mode==="a"?clamp(2+G.shift,1,3):+G.mode}
+function next(){stopTimers();if(!G.queue.length)return results();const id=G.queue.shift();G.node=buildNode(id,G.job,curL());G.tip=false;renderNode()}
+function impLabel(){const v=G.imp==null?60:G.imp;return[v,v>=75?"😊":v>=55?"🙂":v>=40?"😐":"😟"]}
+function head(){const [v,em]=impLabel();const total=G.answers.length+G.queue.length+1;
+ return h("div",null,h("div",{class:"topbar"},h("span",{class:"badge"},G.job.icon+" "+G.job.beruf),h("div",{class:"grow prog","aria-label":"Fortschritt"},h("i",{style:"width:"+Math.round(G.answers.length/total*100)+"%"})),h("span",{class:"badge"},(G.mode==="a"?"Adaptiv: ":"")+LVN[curL()]),h("button",{class:"btn soft",style:"min-height:34px;padding:4px 10px",onclick:()=>{if(confirm("Gespräch abbrechen?"))showMenu()},"aria-label":"Abbrechen"},"✕")),
+  h("div",{class:"meter"},h("span",null,em+" Eindruck"),h("div",{class:"prog"},h("i",{style:"width:"+v+"%"})),h("span",null,"Frage "+(G.answers.length+1)+" von "+total)))}
+function renderNode(){
+ const n=G.node,job=G.job,who=job.chef.anr+" "+job.chef.name;const area=h("div");const fbArea=h("div");
+ const parts=[head()];
+ if(n.scene)parts.push(h("p",{class:"scene"},n.scene));
+ parts.push(bubble(who,n.say));
+ if(n.q)parts.push(h("div",{class:"task"},n.q));
+ // Tipp
+ const tipBox=h("div");const tipBtn=h("button",{class:"btn soft",style:"min-height:38px;margin:0 0 10px",onclick:()=>{if(G.tip)return;G.tip=true;tipBox.replaceChildren(h("div",{class:"tipbox"},"💡 "+n.tip+" ("+(-TIP_PEN)+" Punkte)"));tipBtn.disabled=true}},"💡 Tipp anzeigen (−"+TIP_PEN+")");
+ parts.push(tipBtn,tipBox);
+ if(n.kind==="choice"||n.kind==="test"){
+  const opts=shuffle(n.opts);const btns=[];
+  if(n.kind==="test"&&curL()===3){const bar=h("i");parts.push(h("div",{class:"timer","aria-label":"Zeit"},bar));let left=25;bar.style.width="100%";tmr=setInterval(()=>{left-=.25;bar.style.width=Math.max(0,left/25*100)+"%";if(left<=0){clearInterval(tmr);tmr=null;if(!n.done){n.done=1;btns.forEach(b=>b.disabled=true);submit({text:"(keine Antwort, Zeit abgelaufen)",s:0,fb:"Die Zeit ist abgelaufen. "+n.opts.find(o=>o.s===100).fb.replace(/^Richtig! /,"Lösung: "),notes:[],best:n.opts.find(o=>o.s===100).t},fbArea)}}},250)}
+  opts.forEach(o=>{const b=h("button",{class:"opt",onclick:()=>{if(n.done)return;n.done=1;if(tmr){clearInterval(tmr);tmr=null}btns.forEach(x=>x.disabled=true);b.classList.add("sel");submit({text:o.t,s:o.s,fb:o.fb,notes:[],fu:o.fu,best:o.s<75?n.opts.slice().sort((a,c)=>c.s-a.s)[0].t:null,btns,opts,pick:b},fbArea)}},o.t);btns.push(b)});
+  parts.push(h("div",null,btns))}
+ else if(n.kind==="text"){
+  const ta=h("textarea",{placeholder:"Deine Antwort in ganzen Sätzen …","aria-label":"Deine Antwort",maxlength:"700"});const cnt=h("div",{class:"small mute"},"0 Zeichen");ta.oninput=()=>{cnt.textContent=ta.value.length+" Zeichen"};
+  if(n.starters&&n.starters.length&&curL()<3)parts.push(h("div",{class:"small mute"},"Formulierungshilfen (antippen):"),h("div",{class:"chips"},n.starters.map(s=>h("button",{class:"chip",onclick:()=>{ta.value=(ta.value?ta.value+" ":"")+s;ta.focus();ta.oninput()}},s))));
+  const go=h("button",{class:"btn full",style:"margin-top:8px",onclick:()=>{if(n.done)return;if(ta.value.trim().length<3){cnt.textContent="Bitte schreibe eine Antwort.";return}n.done=1;go.disabled=true;ta.disabled=true;const r=evalText(ta.value,n.crit,job);submit({text:ta.value.trim(),s:r.s,fb:r.s>=75?"Überzeugende Antwort.":r.s>=45?"Ordentlich, aber ausbaufähig.":"Hier fehlt noch einiges.",notes:r.notes,fu:null},fbArea)}},"Antwort abgeben");
+  parts.push(ta,cnt,go)}
+ else if(n.kind==="ask"){
+  const pool=shuffle(GOODQ.filter(q=>q[0]!==job.fq)).slice(0,3).concat([[job.fq,100,"Sehr gute, auf den Betrieb zugeschnittene Frage."]],shuffle(BADQ).slice(0,3),[["Ich habe keine Fragen.",15,"Keine Fragen zu haben wirkt desinteressiert."]]);
+  const sel=new Set();const ta=h("textarea",{placeholder:"Oder formuliere eine eigene Frage …","aria-label":"Eigene Frage",style:"min-height:70px",maxlength:"300"});
+  const chips=shuffle(pool).map(q=>h("button",{class:"chip","aria-pressed":"false",onclick:e=>{const b=e.currentTarget;if(sel.has(q)){sel.delete(q);b.setAttribute("aria-pressed","false")}else if(sel.size<3){sel.add(q);b.setAttribute("aria-pressed","true")}}},q[0]));
+  const go=h("button",{class:"btn full",style:"margin-top:8px",onclick:()=>{const txt=ta.value.trim();if(!sel.size&&txt.length<5){return}n.done=1;go.disabled=true;ta.disabled=true;chips.forEach(c=>c.disabled=true);
+   const items=[...sel].map(q=>({q:q[0],s:q[1],fb:q[2]}));if(txt.length>=5){const r=evalText(txt,CR_ASK(job),job);const bad=r.notes.filter(x=>!x.ok).map(x=>x.msg)[0];items.push({q:txt,s:Math.min(100,r.s+8),fb:r.s>=75?"Gute eigene Frage.":(bad||"Formuliere präziser.")})}
+   const s=Math.round(items.reduce((a,b)=>a+b.s,0)/items.length);submit({text:items.map(i=>"„"+i.q+"“").join("\n"),s,fb:s>=75?"Deine Fragen zeigen Interesse.":s>=45?"Teils gute Fragen.":"Die Fragen wirken wenig vorbereitet.",notes:items.map(i=>({ok:i.s>=70?1:0,msg:"„"+i.q+"“: "+i.fb}))},fbArea)}},"Fragen stellen");
+  parts.push(h("div",{class:"small mute"},"Wähle bis zu drei Fragen:"),h("div",{class:"chips"},chips),ta,go)}
+ parts.push(fbArea);setPanel(...parts)}
+
+function submit(a,fbArea){
+ const n=G.node;const pen=G.tip?TIP_PEN:0;const s=clamp(a.s-pen,0,100);
+ const rec={n:G.answers.length+1,cat:n.cat,lv:curL(),q:(n.q||n.say),scene:n.scene||"",a:a.text,s,raw:a.s,tip:G.tip,fb:a.fb,notes:a.notes||[],best:a.best||null};
+ G.answers.push(rec);
+ if(n.cat!=="Fragen"||true){const rs=G.answers.map(x=>x.s);G.imp=Math.round(rs.reduce((x,y)=>x+y,0)/rs.length)}
+ if(G.mode==="a"&&n.kind!=="ask"){const l=G.answers.slice(-2).map(x=>x.s);const av=l.reduce((x,y)=>x+y,0)/l.length;if(av>=80)G.shift=Math.min(1,G.shift+1);else if(av<45)G.shift=Math.max(-1,G.shift-1)}
+ // Nachfragen
+ let fu=a.fu||null;if(!fu&&n.fuIfLow&&s<n.fuIfLow.below)fu=n.fuIfLow.id;if(fu&&!G.answers.some(x=>x.id===fu)&&!G.queue.includes(fu)&&!G.usedFu?.has(fu)){G.queue.unshift(fu);(G.usedFu=G.usedFu||new Set()).add(fu)}
+ rec.id=n.id;
+ // Chef-Reaktion
+ const st=STYLES[G.job.chef.style];const bk=s>=75?"g":s>=45?"o":"b";const line=rnd(st[bk]);rec.boss=line;
+ const mag=s>=75?.8:s>=45?0:-.7;moodT=clamp(st.base+mag*(G.job.chef.style==="streng"?.55:.9),-1,1);react(s>=75?"nod":s<45?"shake":"");
+ if(a.btns){a.btns.forEach((b,i)=>{const o=a.opts[i];if(o.s===100)b.classList.add("best")});if(a.pick&&a.s<100)a.pick.classList.add(a.s>=45?"sel":"wrong")}
+ const notes=a.notes&&a.notes.length?h("ul",{class:"notes"},a.notes.map(x=>h("li",{class:x.ok?"":"no"},x.msg))):null;
+ const nextBtn=h("button",{class:"btn full",style:"margin-top:6px",onclick:()=>next()},G.queue.length?"Weiter":"Zur Auswertung");
+ const who=G.job.chef.anr+" "+G.job.chef.name;
+ fbArea.append(bubble(who,line,"react"),h("div",{class:"card"},h("div",{class:"row"},pill(s),h("b",null,s>=75?"Sehr gut":s>=45?"Okay, ausbaufähig":"Verbesserungswürdig"),G.tip?h("span",{class:"small mute"},"(Tipp genutzt: −"+TIP_PEN+")"):null),
+  h("p",{style:"margin:8px 0 0"},a.fb),notes,a.best?h("p",{class:"small",style:"margin:8px 0 0"},h("b",null,"Besser wäre: "),a.best):null),nextBtn);
+ fbArea.scrollIntoView({behavior:"smooth",block:"start"});
+ const meter=panel().querySelector(".meter");if(meter){const[v,em]=impLabel();meter.firstChild.textContent=em+" Eindruck";meter.querySelector(".prog i").style.width=v+"%"}}
+
+/* ===== Auswertung ===== */
+function calc(){const by={};G.answers.forEach(a=>{(by[a.cat]=by[a.cat]||[]).push(a.s)});const cats={};let ws=0,tot=0;
+ for(const k in by){cats[k]=Math.round(by[k].reduce((x,y)=>x+y,0)/by[k].length);ws+=WEIGHT[k];tot+=cats[k]*WEIGHT[k]}
+ return{cats,total:ws?Math.round(tot/ws):0}}
+function results(){
+ stopTimers();const r=calc();G.res=r;const st=STYLES[G.job.chef.style];const v=r.total>=75?"z":r.total>=50?"v":"a";
+ const verdict={z:"Zusage 🎉",v:"Vielleicht: Die Entscheidung steht noch aus",a:"Absage diesmal"}[v];
+ moodT=clamp(st.base+(v==="z"?.8:v==="a"?-.7:0),-1,1);react(v==="z"?"nod":v==="a"?"shake":"");
+ const col=v==="z"?"var(--good)":v==="v"?"var(--mid)":"var(--bad)";
+ const strengths=[],improve=[];for(const k in r.cats){if(r.cats[k]>=80)strengths.push(PRAISE[k]);else{improve.push([k,r.cats[k]])}}
+ improve.sort((a,b)=>a[1]-b[1]);
+ const low=G.answers.filter(a=>a.s<60).slice(0,4);
+ setPanel(h("h1",null,"Auswertung"),h("p",{class:"mute"},G.job.beruf+" bei "+G.job.firma+(G.name?" · "+G.name:"")),
+  bubble(G.job.chef.anr+" "+G.job.chef.name,st.end[v]),
+  h("div",{class:"card"},h("div",{class:"big"},h("div",{class:"ring",style:"background:conic-gradient("+col+" "+r.total*3.6+"deg,var(--soft) 0)"},h("div",null,String(r.total))),h("div",null,h("h3",null,verdict),h("p",{class:"small mute"},"Gesamtpunktzahl von 100. Gewichtung: Antworten 35 %, Auftreten 25 %, Test 20 %, Fragen 20 %."))),
+   Object.keys(r.cats).map(k=>h("div",{class:"cat"},h("span",null,k),h("div",{class:"prog"},h("i",{style:"width:"+r.cats[k]+"%;background:"+(r.cats[k]>=75?"var(--good)":r.cats[k]>=45?"var(--mid)":"var(--bad)")})),h("b",null,String(r.cats[k]))))),
+  h("div",{class:"row",style:"margin-bottom:10px"},h("button",{class:"btn",onclick:e=>makePDF(e.currentTarget)},"📄 PDF herunterladen"),h("button",{class:"btn ghost",onclick:()=>startGame(G.job,G.mode,G.name)},"Nochmal"),h("button",{class:"btn ghost",onclick:()=>showMenu()},"Andere Stelle")),h("div",{class:"msg",id:"pdfMsg"}),
+  strengths.length?h("div",{class:"card"},h("h3",null,"Das hat gut geklappt"),h("ul",{class:"notes"},strengths.map(s=>h("li",null,s)))):null,
+  h("div",{class:"card"},h("h3",null,"Verbesserungsvorschläge"),improve.length?h("ul",{class:"notes"},improve.flatMap(([k])=>IMPROVE[k].slice(0,2).map(t=>h("li",null,h("b",null,k+": "),t)))):h("p",null,"Alle Bereiche sind stark. Probiere ein höheres Niveau oder eine andere Stelle!")),
+  low.length?h("div",{class:"card"},h("h3",null,"Gezielt nachbessern"),low.map(a=>h("p",{class:"small"},h("b",null,"Frage "+a.n+": "),a.best?"Besser wäre: "+a.best:a.fb))):null,
+  h("h2",null,"Alle Antworten im Detail"),
+  G.answers.map(a=>h("details",{class:"card"},h("summary",null,"Frage "+a.n+" · "+a.cat+" · "+Math.round(a.s)+" Punkte"),h("p",{class:"small mute",style:"margin:8px 0 2px"},(a.scene?a.scene+" ":"")+a.q),h("p",{style:"margin:4px 0"},h("b",null,"Deine Antwort: "),a.a),h("p",{class:"small",style:"margin:4px 0"},a.fb+(a.tip?" (Tipp genutzt)":"")),a.best?h("p",{class:"small",style:"margin:4px 0"},h("b",null,"Besser wäre: "),a.best):null,a.notes.length?h("ul",{class:"notes"},a.notes.map(x=>h("li",{class:x.ok?"":"no"},x.msg))):null,h("p",{class:"small mute",style:"margin:4px 0"},"Chef: „"+a.boss+"“"))));
+ const t=st.end[v];}
+
+/* ===== PDF ===== */
+const pt=s=>String(s==null?"":s).replace(/[„“”]/g,'"').replace(/[‚‘’]/g,"'").replace(/[–—−]/g,"-").replace(/…/g,"...").replace(/[•·]/g,"-").replace(/[→➜]/g,"->").replace(/✓/g,"+").replace(/✗/g,"-").replace(/[^\n\x20-\x7E\u00A0-\u00FF]/g,"").replace(/ +/g," ");
+async function makePDF(btn){
+ const msg=$("#pdfMsg");msg.className="msg";msg.textContent="PDF wird erstellt …";btn.disabled=true;
+ try{
+  if(!window.jspdf)throw new Error("PDF-Bibliothek konnte nicht geladen werden.");
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"});const W=210,L=16,TW=W-2*L;let y=0;const r=G.res;
+  const st=STYLES[G.job.chef.style];const v=r.total>=75?"z":r.total>=50?"v":"a";
+  const ensure=hh=>{if(y+hh>284){doc.addPage();y=18}};
+  const para=(txt,size,style,col,ind)=>{doc.setFont("helvetica",style||"normal");doc.setFontSize(size||10);doc.setTextColor.apply(doc,col||[29,39,51]);const lines=doc.splitTextToSize(pt(txt),TW-(ind||0));const lh=(size||10)*.45;lines.forEach(l=>{ensure(lh+1);doc.text(l,L+(ind||0),y);y+=lh});y+=1.5};
+  doc.setFillColor(42,93,159);doc.rect(0,0,W,30,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("Auswertung Vorstellungsgespraech".replace("ae","ä"),L,14);
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.text(pt(G.job.beruf+" bei "+G.job.firma+(G.job.ort?" ("+G.job.ort+")":"")),L,21);doc.text(pt((G.name?G.name+" - ":"")+new Date().toLocaleDateString("de-DE")+" - Niveau: "+(G.mode==="a"?"Adaptiv":LVN[G.mode])+" - Chef: "+G.job.chef.anr+" "+G.job.chef.name+" ("+st.lab+")"),L,26);
+  y=42;const col=v==="z"?[27,138,90]:v==="v"?[184,111,12]:[196,54,74];
+  doc.setFont("helvetica","bold");doc.setFontSize(32);doc.setTextColor.apply(doc,col);doc.text(String(r.total)+" / 100",L,y);doc.setFontSize(13);doc.text(pt({z:"Zusage",v:"Vielleicht (Entscheidung offen)",a:"Absage diesmal"}[v]),L+52,y-2);
+  y+=8;para('Chef: "'+st.end[v]+'"',10,"italic",[91,104,118]);y+=2;
+  doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(29,39,51);doc.text("Bereiche",L,y);y+=6;
+  for(const k in r.cats){const sc=r.cats[k];doc.setFont("helvetica","normal");doc.setFontSize(10);doc.text(k,L,y);doc.setDrawColor(200,208,216);doc.setFillColor(228,235,243);doc.rect(L+32,y-3.2,100,4,"F");const c=sc>=75?[27,138,90]:sc>=45?[184,111,12]:[196,54,74];doc.setFillColor.apply(doc,c);doc.rect(L+32,y-3.2,sc,4,"F");doc.text(String(sc),L+136,y);y+=7}
+  y+=3;doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(29,39,51);ensure(10);doc.text("Verbesserungsvorschlaege".replace("ae","ä"),L,y);y+=6;
+  const imp=Object.keys(r.cats).filter(k=>r.cats[k]<80).sort((a,b)=>r.cats[a]-r.cats[b]);
+  if(!imp.length)para("Alle Bereiche sind stark. Probiere ein hoeheres Niveau oder eine andere Stelle.".replace("hoeheres","höheres"),10);
+  imp.forEach(k=>IMPROVE[k].forEach((t,i)=>{if(i<2)para("- "+k+": "+t,10,"normal",null,2)}));
+  y+=3;ensure(14);doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(29,39,51);doc.text("Antworten im Detail",L,y);y+=6;
+  G.answers.forEach(a=>{ensure(30);doc.setDrawColor(210,217,225);doc.line(L,y-2,W-L,y-2);y+=2;
+   para("Frage "+a.n+" - "+a.cat+" - "+Math.round(a.s)+" Punkte"+(a.tip?" (Tipp genutzt)":""),10.5,"bold",a.s>=75?[27,138,90]:a.s>=45?[184,111,12]:[196,54,74]);
+   para((a.scene?a.scene+" ":"")+a.q,9,"italic",[91,104,118]);para("Deine Antwort: "+a.a,10);para("Rueckmeldung: ".replace("ue","ü")+a.fb,10);
+   a.notes.forEach(x=>para((x.ok?"+ ":"- ")+x.msg,9,"normal",x.ok?[27,138,90]:[196,54,74],3));
+   if(a.best)para("Besser waere: ".replace("ae","ä")+a.best,9.5,"normal",[42,93,159]);y+=1});
+  const pages=doc.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(140,150,160);doc.text("Vorstellungsgespraech-Simulator - Seite "+i+" von "+pages,L,292)}
+  const fn="Vorstellungsgespraech_"+pt(G.job.firma).replace(/[^A-Za-z0-9]+/g,"_")+".pdf";const blob=doc.output("blob");
+  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use("downloads")}catch(e){}
+  if(dl){await dl.save({filename:fn,data:blob});msg.className="msg ok";msg.textContent="PDF gespeichert."}else{doc.save(fn);msg.className="msg ok";msg.textContent="PDF wurde erstellt. Falls kein Download startet, öffne die Seite im Browser."}
+ }catch(e){msg.className="msg err";msg.textContent=(e&&e.code==="declined")?"Download abgebrochen.":"PDF konnte nicht erstellt werden: "+((e&&e.message)||"Fehler")}
+ btn.disabled=false}
+/* ===== Szenario-Codes ===== */
+const col=(v,d)=>/^#[0-9a-f]{6}$/i.test(String(v))?String(v):d;
+const S=(v,n)=>String(v==null?"":v).replace(/[\u0000-\u001f]/g," ").trim().slice(0,n);
+function sanitize(o){o=o||{};const c=o.chef||{};const st=STYLES[c.style]?c.style:"freundlich";
+ const sc={firma:S(o.firma,40),branche:S(o.branche,40),ort:S(o.ort,30),beruf:S(o.beruf,50),aufg:S(o.aufg,160),kw:S(o.kw,160),fq:S(o.fq,160),icon:S(o.icon,4)||"⭐",wall:col(o.wall,"#d5dcf0"),
+  chef:{name:S(c.name,30)||"Müller",anr:c.anr==="Herr"?"Herr":"Frau",style:st,g:c.anr==="Herr"?"m":"f",skin:col(c.skin,"#e3b58f"),hair:col(c.hair,"#4a3426"),hs:["short","long","bun","bald"].includes(c.hs)?c.hs:"short",gl:!!c.gl,beard:!!c.beard,cloth:col(c.cloth,"#2d3b55"),tie:c.tie?col(c.tie,"#2a9d8f"):""}};
+ if(o.fach&&o.fach.q&&Array.isArray(o.fach.o)&&o.fach.o.length===4&&o.fach.o.every(x=>S(x,100))){sc.fach={q:S(o.fach.q,200),o:o.fach.o.map(x=>S(x,100)),c:clamp(parseInt(o.fach.c)||0,0,3),ex:S(o.fach.ex,160)}}
+ sc.extra=(Array.isArray(o.extra)?o.extra:[]).filter(e=>e&&S(e.q,10)).slice(0,2).map(e=>({q:S(e.q,200),kw:S(e.kw,120)}));return sc}
+function toJob(sc0){const sc=sanitize(sc0);if(!sc.firma||!sc.beruf)throw new Error("Der Code enthält kein vollständiges Szenario.");
+ const aufg=sc.aufg||"abwechslungsreiche Aufgaben im Betrieb";const kw=sc.kw?sc.kw.split(/[,;]/).map(x=>x.trim()).filter(Boolean):[];
+ const fach=sc.fach?[{lv:1,q:sc.fach.q,o:sc.fach.o,c:sc.fach.c,ex:sc.fach.ex||"Die richtige Antwort ist: "+sc.fach.o[sc.fach.c]}]:[POOL[0]];
+ return{id:"custom",icon:sc.icon,beruf:sc.beruf,firma:sc.firma,branche:sc.branche,ort:sc.ort,wall:sc.wall,aufg,warum:"mich Aufgaben wie „"+aufg+"“ interessieren",bsp:"ich mich in meiner Freizeit mit dem Thema beschäftigt habe",e:["Zuverlässigkeit","Lernbereitschaft"],kw,fq:sc.fq||"Welche Aufgaben würde ich im ersten Ausbildungsjahr übernehmen?",chef:sc.chef,fach,extra:sc.extra.map(e=>({q:e.q,kw:e.kw?e.kw.split(/[,;]/).map(x=>x.trim()).filter(Boolean):[]})),_sc:sc}}
+function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return decodeURIComponent(escape(atob(s)))}
+function encodeCode(job){return "BG1-"+b64e(JSON.stringify(job._sc))}
+function decodeCode(code){code=String(code).trim();if(code.indexOf("BG1-")!==0)throw new Error("Ungültiger Code.");return toJob(JSON.parse(b64d(code.slice(4))))}
+async function getDb(){try{if(window.claude&&claude.use)return await claude.use("db")}catch(e){}return null}
+async function resolveCode(input){const c=String(input||"").trim();if(!c)throw new Error("Bitte gib einen Code ein.");
+ if(c.indexOf("BG1-")===0)return decodeCode(c);
+ if(/^[A-Za-z0-9]{6}$/.test(c)){const db=await getDb();if(!db)throw new Error("Kurzcodes brauchen eine Anmeldung. Bitte nutze den langen Code (beginnt mit BG1-).");
+  const snap=await db.doc("szenarien/"+c.toUpperCase()).get();if(!snap.exists)throw new Error("Zu diesem Kurzcode gibt es kein Szenario.");return decodeCode(snap.data().code)}
+ throw new Error("Ungültiger Code.")}
+async function shortCode(code){const db=await getDb();if(!db)return null;const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let id="";for(let i=0;i<6;i++)id+=A[Math.floor(Math.random()*A.length)];
+ try{await db.doc("szenarien/"+id).set({code,ts:Date.now()});return id}catch(e){return null}}
+
+/* ===== Szenario-Editor ===== */
+const SKIN=["#f1d0b5","#e3b58f","#c68d63","#8d5a3b","#5c3b28"],HAIR=["#1e1e1e","#4a3426","#8a5a2b","#c9a45c","#8a8d91","#b5472f"],CLOTH=["#2f4858","#2d3b55","#5a8f69","#8a4a5e","#4d6fd1","#f2f5f7","#d68c2f","#3b3b3b"],WALL=["#c9d3dd","#d9e8d2","#d5dcf0","#efe2c9","#f0dfcf","#e6dcea"];
+function sw(list,get,set,label){const wrap=h("div",{class:"sw",role:"group","aria-label":label});const bs=list.map(c=>{const b=h("button",{type:"button",style:"background:"+c,"aria-label":label+" "+c,"aria-pressed":String(get()===c),onclick:()=>{set(c);bs.forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.c===c)))}});b.dataset.c=c;return b});wrap.append(...bs);return wrap}
+function showEditor(){
+ stopTimers();const E={firma:"",branche:"",ort:"",beruf:"",aufg:"",kw:"",fq:"",icon:"⭐",wall:WALL[2],chef:{name:"",anr:"Frau",style:"freundlich",skin:SKIN[1],hair:HAIR[1],hs:"short",gl:false,beard:false,cloth:CLOTH[1],tie:""},fach:{q:"",o:["","","",""],c:0,ex:""},extra:[{q:"",kw:""},{q:"",kw:""}]};
+ const prev=()=>{try{const sc=sanitize(Object.assign({},E,{chef:Object.assign({},E.chef)}));const j={firma:E.firma||"Ihre Firma",branche:E.branche,wall:E.wall,chef:sc.chef};setPerson(sc.chef,j)}catch(e){}};
+ const T=(lab,key,ph,obj,max)=>{const o=obj||E;return[h("label",null,lab),h("input",{type:"text",placeholder:ph||"",value:o[key],maxlength:String(max||60),oninput:e=>{o[key]=e.target.value;if(obj===E.chef||key==="firma")prev()}})]};
+ const sel=(lab,key,opts)=>[h("label",null,lab),h("select",{onchange:e=>{E.chef[key]=e.target.value;prev()}},opts.map(o=>h("option",{value:o[0],selected:E.chef[key]===o[0]},o[1])))];
+ const chk=(lab,key,off)=>h("label",{style:"display:flex;gap:8px;align-items:center;font-weight:400"},h("input",{type:"checkbox",style:"width:20px;height:20px",onchange:e=>{E.chef[key]=e.target.checked?(off?"#2a9d8f":true):(off?"":false);prev()}}),lab);
+ const out=h("div"),msg=h("div",{class:"msg"});
+ const build=()=>{msg.className="msg err";if(!E.firma.trim()||!E.beruf.trim()||!E.chef.name.trim()){msg.textContent="Bitte fülle mindestens Unternehmen, Beruf und Nachname des Chefs aus.";return null}
+  if(E.fach.q.trim()&&!E.fach.o.every(x=>x.trim())){msg.textContent="Für die Testfrage brauchst du vier Antworten.";return null}
+  const o=Object.assign({},E,{fach:E.fach.q.trim()?E.fach:null});try{const j=toJob(o);msg.textContent="";return j}catch(e){msg.textContent=e.message;return null}};
+ const gen=h("button",{class:"btn",onclick:async()=>{const j=build();if(!j)return;const code=encodeCode(j);saveCustom(code);msg.className="msg ok";msg.textContent="Code erzeugt und auf diesem Gerät gespeichert.";
+  const ta=h("textarea",{class:"codebox",readonly:true,"aria-label":"Langer Code"},code);const cp=h("button",{class:"btn soft",onclick:async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Kopiert ✓"}catch(e){ta.select();try{document.execCommand("copy");cp.textContent="Kopiert ✓"}catch(_){cp.textContent="Bitte markieren & kopieren"}}}},"Code kopieren");
+  const sc=h("div",{class:"msg"},"Kurzcode wird erzeugt …");out.replaceChildren(h("div",{class:"card"},h("h3",null,"Code für Schüler/innen"),h("p",{class:"small mute"},"Schüler/innen geben diesen Code auf der Startseite unter „Code eingeben“ ein."),ta,h("div",{class:"row",style:"margin-top:8px"},cp)," ",sc));
+  const s=await shortCode(code);sc.textContent=s?"Kurzcode (nur für angemeldete Personen in dieser Klasse): "+s:"Ein Kurzcode ist hier nicht verfügbar. Nutze den langen Code.";if(s)sc.style.fontWeight="700"}},"Code erzeugen");
+ const test=h("button",{class:"btn ghost",onclick:()=>{const j=build();if(j){SEL.job=j;startGame(j,"2",SEL.name)}}},"Selbst testen");
+ setPanel(h("h1",null,"Eigenes Szenario"),h("p",{class:"mute"},"Lege Betrieb, Beruf, Chef und Testfrage fest. Danach bekommst du einen Code zum Teilen."),
+  h("div",{class:"row"},h("button",{class:"btn soft",onclick:()=>showMenu()},"← Zurück")),
+  h("h2",null,"Betrieb und Beruf"),T("Unternehmen","firma","z. B. Tischlerei Weber"),T("Branche","branche","z. B. Schreinerei"),T("Ort (optional)","ort","z. B. Gießen"),T("Beruf","beruf","z. B. Tischler/in"),
+  T("Typische Aufgaben","aufg","z. B. Möbel entwerfen, Holz bearbeiten und montieren",null,150),T("Stichwörter zum Beruf (mit Komma)","kw","z. B. holz, möbel, handwerk, werkstatt",null,150),T("Gute Frage an den Betrieb (optional)","fq","z. B. Welche Möbel bauen Sie am häufigsten?",null,150),
+  h("label",null,"Raumfarbe"),sw(WALL,()=>E.wall,c=>{E.wall=c;prev()},"Raumfarbe"),
+  h("h2",null,"Chef oder Chefin"),sel("Anrede","anr",[["Frau","Frau"],["Herr","Herr"]]),T("Nachname","name","z. B. Weber",E.chef,30),
+  sel("Charakter","style",Object.keys(STYLES).map(k=>[k,STYLES[k].lab])),
+  sel("Frisur","hs",[["short","kurz"],["long","lang"],["bun","Dutt"],["bald","Glatze"]]),
+  h("label",null,"Hautton"),sw(SKIN,()=>E.chef.skin,c=>{E.chef.skin=c;prev()},"Hautton"),h("label",null,"Haarfarbe"),sw(HAIR,()=>E.chef.hair,c=>{E.chef.hair=c;prev()},"Haarfarbe"),h("label",null,"Kleidung"),sw(CLOTH,()=>E.chef.cloth,c=>{E.chef.cloth=c;prev()},"Kleidung"),
+  h("div",{style:"margin-top:10px"},chk("Brille","gl"),chk("Bart","beard"),chk("Krawatte oder Tuch","tie",true)),
+  h("h2",null,"Einstellungstest-Frage (optional)"),T("Frage","q","z. B. Wie viele Zentimeter sind 2,4 m?",E.fach,200),
+  h("div",{class:"two"},[0,1,2,3].map(i=>h("div",null,h("label",null,"Antwort "+(i+1)),h("input",{type:"text",maxlength:"100",oninput:e=>{E.fach.o[i]=e.target.value}})))),
+  h("label",null,"Richtige Antwort"),h("select",{onchange:e=>{E.fach.c=+e.target.value}},[1,2,3,4].map((n,i)=>h("option",{value:i},"Antwort "+n))),T("Erklärung (optional)","ex","z. B. 1 m = 100 cm",E.fach,160),
+  h("h2",null,"Eigene Fragen des Chefs (optional)"),[0,1].map(i=>[T("Frage "+(i+1),"q","z. B. Haben Sie schon einmal mit Holz gearbeitet?",E.extra[i],200),T("Stichwörter einer guten Antwort","kw","z. B. holz, werkstatt, schule",E.extra[i],120)]),
+  h("div",{class:"row",style:"margin-top:14px"},gen,test),msg,out);
+ setPerson(E.chef,{firma:"Ihre Firma",branche:"",wall:E.wall,chef:E.chef});$("#nameTag").textContent="Vorschau: dein Chef"}
+
+/* ===== Start ===== */
+$("#voiceBtn").onclick=e=>{voiceOn=!voiceOn;e.currentTarget.textContent=voiceOn?"🔊":"🔇";e.currentTarget.setAttribute("aria-pressed",String(voiceOn));if(!voiceOn&&window.speechSynthesis)try{speechSynthesis.cancel()}catch(_){}else say3d("Hallo, ich bin dein Gesprächspartner.")};
+if(!window.speechSynthesis)$("#voiceBtn").style.display="none";
+init3d();showMenu();
+
+</script>
+</body>
+</html>

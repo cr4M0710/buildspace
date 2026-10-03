@@ -610,4 +610,16 @@ const posts = [
     titleEn: "Careers Compass",
     excerptEn: "Find out what suits you and test how well you know different jobs. Several levels for career orientation."
    },
+   {
+    title: "Vorstellungsgespräch-Simulator",
+    excerpt: "Das Vorstellungsgespräch in 3D üben: Auf Fragen antworten, Reaktionen erleben und typische Situationen vor dem echten Gespräch ausprobieren.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "vorstellungsgespraech.html",
+    emoji: "🤝",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Job Interview Simulator",
+    excerptEn: "Practise the job interview in 3D: answer questions, see reactions and try typical situations before the real thing."
+   },
 ];
