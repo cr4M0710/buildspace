@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Werkstatt-Check: Sicherheit und Werkzeuge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A0%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eceff0; --surface:#ffffff; --ink:#1b232a; --muted:#4d5b66; --line:#c5cdd2; --tile:#f2f4f5;
+  --ok:#0e7d44; --ok-bg:#dcf2e4; --bad:#b3261e; --bad-bg:#fbe3e0; --info:#0b5cab; --info-bg:#e6eff8;
+  --yellow:#ffc20e; --sign-red:#d6281f; --sign-blue:#0b5cab; --sign-green:#0f8a4b; --focus:#0b5cab;
+  --head:'Barlow Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;
+  --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12181d; --surface:#1d272e; --ink:#eef2f4; --muted:#a9b6bf; --line:#364550;
+    --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --info:#8cc3f5; --info-bg:#182b3b; --focus:#8cc3f5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12181d; --surface:#1d272e; --ink:#eef2f4; --muted:#a9b6bf; --line:#364550;
+  --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --info:#8cc3f5; --info-bg:#182b3b; --focus:#8cc3f5;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--head);font-weight:700;line-height:1.05;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(46px,8vw,84px)}
+h2{font-size:clamp(30px,5vw,42px)}
+h3{font-size:28px}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+h1:focus,h2:focus{outline:none}
+
+.stripe{height:16px;background:repeating-linear-gradient(-45deg,var(--yellow) 0 18px,#1b232a 18px 36px)}
+.app{max-width:1120px;margin:0 auto;padding:22px 16px 56px}
+.view[hidden]{display:none}
+
+/* Menü */
+.hero{padding:18px 0 26px}
+.hero .lede{margin-top:14px;font-size:21px;color:var(--muted);max-width:34em}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px}
+.mode{display:flex;flex-direction:column;gap:14px;align-items:flex-start;text-align:left;padding:22px;background:var(--surface);
+  border:3px solid var(--line);border-radius:18px;cursor:pointer;transition:border-color .15s,transform .15s}
+.mode:hover{transform:translateY(-3px)}
+.mode[data-c="y"]:hover,.mode[data-c="y"]:focus-visible{border-color:var(--yellow)}
+.mode[data-c="b"]:hover,.mode[data-c="b"]:focus-visible{border-color:var(--sign-blue)}
+.mode[data-c="g"]:hover,.mode[data-c="g"]:focus-visible{border-color:var(--sign-green)}
+.mode .m-title{font-family:var(--head);font-weight:700;font-size:34px;line-height:1.05}
+.mode .m-text{color:var(--muted)}
+.mode .m-best{margin-top:auto;display:flex;align-items:center;gap:8px;font-size:16px;color:var(--muted)}
+.foot{margin-top:26px;color:var(--muted);font-size:16px}
+
+/* Kopfleiste im Spiel */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-bottom:14px}
+.bar h2{flex:1 1 220px}
+.back{display:inline-flex;align-items:center;gap:6px;padding:9px 14px 9px 10px;border:2px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font-weight:700}
+.back:hover{border-color:var(--ink)}
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.hud-item{font-size:17px;color:var(--muted)}
+.hud-item b{color:var(--ink);font-size:22px;font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border:2px solid var(--ink);border-radius:10px;background:var(--surface);cursor:pointer;font-weight:700}
+.btn:hover:not(:disabled){background:var(--yellow);color:#1b232a;border-color:#1b232a}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--yellow);color:#1b232a;border-color:#1b232a}
+.btn.primary:hover:not(:disabled){background:#ffd24d}
+.lead{color:var(--muted);margin-bottom:12px;max-width:46em}
+.progress{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.progress>div{height:100%;width:0;background:var(--ok);transition:width .35s}
+
+/* Karten / Rückmeldung */
+.card{background:var(--surface);border:3px solid var(--line);border-radius:16px;padding:16px 20px;margin-top:16px}
+.card.find{border-color:var(--ok);background:var(--ok-bg)}
+.card.safe{border-color:var(--info);background:var(--info-bg)}
+.card.miss{border-color:var(--bad);background:var(--bad-bg)}
+.card h3{margin-bottom:6px}
+.card .row{margin-top:6px}
+.card .row b{font-weight:700}
+.card .tag{display:inline-block;font-weight:700;margin-right:4px}
+
+/* Spiel 1 */
+.scene-wrap{overflow-x:auto;border:3px solid var(--ink);border-radius:16px;background:#d9e0e4;-webkit-overflow-scrolling:touch}
+#scene{display:block;width:100%;min-width:700px;height:auto;cursor:crosshair;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+.mark circle.ring{fill:rgba(14,125,68,.14);stroke:#0e7d44;stroke-width:5;animation:pop .35s ease-out}
+.mark circle.badge{fill:#0e7d44;stroke:#fff;stroke-width:3}
+.mark path{fill:none;stroke:#fff;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.hintring{animation:pulse .9s ease-in-out infinite}
+.xflash{animation:fadeout .9s ease-out forwards}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.mark circle.ring{transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes fadeout{from{opacity:1}to{opacity:0}}
+.chips{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 14px;border-radius:99px;border:2px dashed var(--line);background:transparent;color:var(--muted);font-weight:700;min-width:46px;cursor:default}
+.chip.on{border:2px solid var(--ok);background:var(--ok-bg);color:var(--ink);cursor:pointer}
+.chip.on:hover{background:var(--ok);color:#fff}
+
+/* Spiel 2 */
+.match{display:grid;grid-template-columns:minmax(250px,.9fr) 1.5fr;gap:22px;align-items:start}
+.match>div{min-width:0}
+.col-title{font-family:var(--head);font-size:24px;font-weight:700;margin-bottom:10px}
+.tools{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 12px;border:3px solid var(--line);border-radius:14px;background:var(--surface);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.tool .tile{display:block;background:var(--tile);border-radius:10px;padding:4px;line-height:0}
+.tool .tname{font-weight:700;font-size:17px;text-align:center;max-width:100%;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+.tool:hover{border-color:var(--ink)}
+.tool.sel{border-color:var(--yellow);box-shadow:0 0 0 4px var(--yellow)}
+.tool.used{opacity:.18;pointer-events:none}
+.tool.shake,.slot.bad{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.slots{display:grid;gap:10px}
+.slot{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:10px 14px;min-height:76px;border:3px dashed var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+.slot:hover{border-color:var(--ink)}
+.slot.over{border-color:var(--yellow);background:var(--tile);border-style:solid}
+.slot.bad{border-color:var(--bad);background:var(--bad-bg)}
+.slot.done{border-style:solid;border-color:var(--ok);background:var(--ok-bg);cursor:default}
+.slot-icon{flex:none;width:60px;height:60px;border-radius:10px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;line-height:0}
+.slot-icon.filled{border:none;background:var(--tile)}
+.slot-text{display:block;min-width:0}
+.slot-use{display:block;font-weight:700}
+.slot-tip{display:block;font-size:16px;color:var(--muted);margin-top:2px}
+.slot.done .slot-tip{color:var(--ink)}
+.ghost{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-50%) rotate(-6deg);background:var(--tile);border:3px solid var(--yellow);border-radius:12px;padding:4px;line-height:0;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+
+/* Spiel 3 */
+.q{display:grid;grid-template-columns:210px 1fr;gap:24px;align-items:center;margin-top:0}
+.q.wide{grid-template-columns:1fr}
+.q-sign{line-height:0;justify-self:center}
+.q-text{font-size:32px;margin-bottom:14px}
+.q-word{background:var(--yellow);color:#1b232a;padding:0 10px;border-radius:6px;white-space:normal}
+.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.opt{padding:14px 16px;border:3px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;text-align:left;cursor:pointer;min-height:64px}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.signopt{display:flex;align-items:center;justify-content:center;padding:10px;line-height:0}
+.opt.right{border-color:var(--ok);background:var(--ok-bg);opacity:1}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg);opacity:1}
+.opt:disabled{cursor:default;opacity:.65}
+.opt.right:disabled,.opt.wrong:disabled{opacity:1}
+.nextrow{margin-top:12px}
+
+/* Ergebnis */
+.result{text-align:center;padding:26px 20px;border-color:var(--ink);background:var(--surface)}
+.result[hidden]{display:none}
+.stars{display:flex;justify-content:center;gap:6px;margin:10px 0 8px}
+.res-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:12px 22px;justify-content:center;margin-top:16px;text-align:left}
+.legend div{display:flex;align-items:center;gap:10px;max-width:300px;font-size:16px}
+.legend svg{flex:none}
+
+@media (max-width:760px){
+  body{font-size:17px}
+  .match{grid-template-columns:1fr}
+  .tools{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .tool .tname{font-size:15px;line-height:1.15}
+  .tool .tile svg{width:60px;height:60px}
+  .q{grid-template-columns:1fr}
+  .opts{grid-template-columns:1fr}
+  .opts.signs{grid-template-columns:repeat(2,1fr)}
+  .q-text{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="stripe" aria-hidden="true"></div>
+<main class="app">
+
+<!-- ============ MENÜ ============ -->
+<section id="hub" class="view" aria-labelledby="hub-title">
+  <header class="hero">
+    <h1 id="hub-title" tabindex="-1">Werkstatt-Check</h1>
+    <p class="lede">Finde versteckte Gefahren, ordne Werkzeuge ihrem Einsatz zu und teste, ob du die Sicherheitszeichen kennst. Wähle ein Spiel.</p>
+  </header>
+  <div class="modes">
+    <button class="mode" data-c="y" data-go="g1" type="button">
+      <span id="ic1" aria-hidden="true"></span>
+      <span class="m-title">Gefahren finden</span>
+      <span class="m-text">In einer Werkstatt ist einiges schiefgelaufen. Klicke alle 11 Gefahren im Bild an.</span>
+      <span class="m-best" id="best-g1"></span>
+    </button>
+    <button class="mode" data-c="b" data-go="g2" type="button">
+      <span id="ic2" aria-hidden="true"></span>
+      <span class="m-title">Werkzeuge zuordnen</span>
+      <span class="m-text">Welches Werkzeug passt zu welcher Arbeit? Ziehe es an die richtige Stelle oder tippe es an.</span>
+      <span class="m-best" id="best-g2"></span>
+    </button>
+    <button class="mode" data-c="g" data-go="g3" type="button">
+      <span id="ic3" aria-hidden="true"></span>
+      <span class="m-title">Zeichen-Check</span>
+      <span class="m-text">Erkennst du Verbots-, Warn-, Gebots- und Rettungszeichen? 9 Fragen warten auf dich.</span>
+      <span class="m-best" id="best-g3"></span>
+    </button>
+  </div>
+  <p class="foot">Dein bester Versuch pro Spiel wird in diesem Browser gespeichert.</p>
+</section>
+
+<!-- ============ SPIEL 1: GEFAHREN FINDEN ============ -->
+<section id="g1" class="view" hidden aria-labelledby="g1-title">
+  <div class="bar">
+    <button class="back" data-go="hub" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Zurück zum Menü</button>
+    <h2 id="g1-title" tabindex="-1">Gefahren finden</h2>
+    <div class="hud">
+      <div class="hud-item"><b id="g1-count">0</b> von 11 gefunden</div>
+      <div class="hud-item"><b id="g1-miss">0</b> Fehlklicks</div>
+      <button class="btn" id="g1-hint" type="button">Tipp (3)</button>
+    </div>
+  </div>
+  <p class="lead">Klicke auf alles, was in dieser Werkstatt gefährlich ist. Aber Vorsicht: Manches sieht nur seltsam aus und ist genau richtig so.</p>
+  <div class="progress" aria-hidden="true"><div id="g1-bar"></div></div>
+
+  <div class="scene-wrap">
+  <svg id="scene" viewBox="0 0 1000 620" role="img" aria-label="Bild einer Schulwerkstatt mit versteckten Gefahren. Klicke auf die Stellen im Bild.">
+    <defs>
+      <pattern id="peg" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#cfa86f"/><circle cx="7" cy="7" r="1.7" fill="#9c7a49"/></pattern>
+      <linearGradient id="floorg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3acb1"/><stop offset="1" stop-color="#808a90"/></linearGradient>
+    </defs>
+
+    <!-- Wand und Boden -->
+    <rect width="1000" height="405" fill="#d9e0e4"/>
+    <rect y="327" width="1000" height="78" fill="#bcc7cd"/>
+    <rect y="324" width="1000" height="4" fill="#9fadb5"/>
+    <rect y="405" width="1000" height="215" fill="url(#floorg)"/>
+    <rect y="405" width="1000" height="5" fill="#6c777d"/>
+    <g stroke="#6f7a80" stroke-opacity=".3" stroke-width="2"><line x1="0" y1="468" x2="1000" y2="468"/><line x1="0" y1="540" x2="1000" y2="540"/></g>
+
+    <!-- Tür mit Rettungszeichen -->
+    <rect x="24" y="144" width="132" height="262" fill="#55646d"/>
+    <rect x="32" y="152" width="116" height="254" fill="#7d8f99"/>
+    <rect x="52" y="170" width="76" height="56" fill="#b8dcef"/>
+    <rect x="40" y="300" width="100" height="8" rx="3" fill="#c7ced2"/>
+    <rect x="38" y="98" width="104" height="38" rx="5" fill="#0f8a4b"/>
+    <g stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="58" y1="110" x2="54" y2="121"/><line x1="58" y1="112" x2="66" y2="116"/><line x1="58" y1="112" x2="50" y2="113"/><polyline points="54,121 61,127 59,132"/><polyline points="54,121 47,126 44,131"/></g>
+    <circle cx="61" cy="105" r="4" fill="#fff"/>
+    <text x="72" y="121" font-family="Arial,sans-serif" font-weight="700" font-size="9" fill="#fff">NOTAUSGANG</text>
+
+    <!-- Kisten vor der Tür -->
+    <rect x="36" y="290" width="72" height="62" fill="#c8975a" stroke="#8e6a3c" stroke-width="3"/>
+    <rect x="62" y="290" width="20" height="62" fill="#e0c28f" opacity=".7"/>
+    <rect x="22" y="350" width="92" height="72" fill="#d3a367" stroke="#8e6a3c" stroke-width="3"/>
+    <rect x="58" y="350" width="20" height="72" fill="#e0c28f" opacity=".7"/>
+    <rect x="114" y="372" width="76" height="50" fill="#c8975a" stroke="#8e6a3c" stroke-width="3"/>
+    <rect x="140" y="372" width="18" height="50" fill="#e0c28f" opacity=".7"/>
+
+    <!-- Werkzeugwand -->
+    <rect x="190" y="40" width="330" height="190" fill="url(#peg)" stroke="#8b6a3e" stroke-width="4"/>
+    <rect x="190" y="230" width="330" height="9" fill="#8b6a3e"/>
+    <rect x="221" y="74" width="9" height="70" rx="2" fill="#8d5a2b"/><rect x="206" y="62" width="40" height="16" rx="3" fill="#49535a"/>
+    <polygon points="262,72 352,64 352,100 262,88" fill="#b8c4cb" stroke="#6b7882" stroke-width="2"/><rect x="352" y="62" width="30" height="40" rx="7" fill="#8d5a2b"/>
+    <g stroke-width="9" stroke-linecap="round"><line x1="408" y1="70" x2="424" y2="140" stroke="#d6281f"/><line x1="430" y1="70" x2="414" y2="140" stroke="#d6281f"/></g>
+    <rect x="404" y="58" width="30" height="22" rx="4" fill="#7b8790"/>
+    <rect x="456" y="72" width="14" height="34" rx="6" fill="#f08a1e"/><rect x="461" y="106" width="4" height="46" fill="#9aa5ad"/>
+    <rect x="484" y="72" width="14" height="34" rx="6" fill="#0b5cab"/><rect x="489" y="106" width="4" height="46" fill="#9aa5ad"/>
+    <rect x="212" y="170" width="120" height="14" rx="3" fill="#ffc20e" stroke="#1b232a" stroke-width="2"/><rect x="224" y="170" width="3" height="14" fill="#1b232a"/><rect x="244" y="170" width="3" height="14" fill="#1b232a"/><rect x="264" y="170" width="3" height="14" fill="#1b232a"/><rect x="284" y="170" width="3" height="14" fill="#1b232a"/><rect x="304" y="170" width="3" height="14" fill="#1b232a"/>
+
+    <!-- Schutzbrille am Haken, Erste-Hilfe-Kasten -->
+    <circle cx="548" cy="116" r="3.5" fill="#55646d"/>
+    <path d="M532 132 Q548 110 566 132" fill="none" stroke="#1b232a" stroke-width="3"/>
+    <ellipse cx="541" cy="132" rx="9" ry="7" fill="#bfe6f5" stroke="#1b232a" stroke-width="2.5"/><ellipse cx="559" cy="132" rx="9" ry="7" fill="#bfe6f5" stroke="#1b232a" stroke-width="2.5"/>
+    <rect x="532" y="168" width="40" height="34" rx="5" fill="#0f8a4b"/><rect x="549" y="174" width="6" height="22" fill="#fff"/><rect x="541" y="182" width="22" height="6" fill="#fff"/>
+
+    <!-- Fenster -->
+    <rect x="600" y="40" width="100" height="130" fill="#8f9ea7"/>
+    <rect x="608" y="48" width="38" height="114" fill="#d9eefa"/><rect x="654" y="48" width="38" height="114" fill="#d9eefa"/>
+    <path d="M608 130 L646 70 M654 150 L692 90" stroke="#fff" stroke-opacity=".6" stroke-width="5"/>
+
+    <!-- Feuerlöscher -->
+    <rect x="720" y="168" width="26" height="68" rx="9" fill="#d6281f"/><rect x="727" y="156" width="12" height="14" fill="#2b3640"/><rect x="722" y="150" width="30" height="7" rx="3" fill="#2b3640"/><path d="M745 154 q14 0 12 26" fill="none" stroke="#2b3640" stroke-width="4"/>
+    <rect x="722" y="196" width="22" height="12" fill="#fff" opacity=".85"/>
+
+    <!-- Regal rechts -->
+    <rect x="768" y="100" width="182" height="8" fill="#8b6a3e"/><rect x="768" y="190" width="200" height="8" fill="#8b6a3e"/>
+    <rect x="780" y="108" width="6" height="40" fill="#8b6a3e"/><rect x="860" y="198" width="6" height="40" fill="#8b6a3e"/>
+    <rect x="782" y="60" width="52" height="40" fill="#c8975a" stroke="#8e6a3c" stroke-width="2"/><rect x="842" y="70" width="44" height="30" fill="#7aa6c2" stroke="#4d7a96" stroke-width="2"/>
+    <rect x="782" y="144" width="60" height="46" fill="#7aa6c2" stroke="#4d7a96" stroke-width="2"/><rect x="850" y="152" width="52" height="38" fill="#c8975a" stroke="#8e6a3c" stroke-width="2"/><rect x="908" y="140" width="48" height="50" fill="#d3a367" stroke="#8e6a3c" stroke-width="2"/>
+    <g transform="rotate(7 945 100)"><rect x="912" y="48" width="74" height="52" fill="#b98342" stroke="#7d5628" stroke-width="3"/><rect x="940" y="48" width="18" height="52" fill="#e0c28f" opacity=".7"/><text x="926" y="80" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="13" fill="#2b2f33">25 kg</text></g>
+
+    <!-- Werkbank -->
+    <rect x="214" y="372" width="16" height="112" fill="#8b6a3e"/><rect x="670" y="372" width="16" height="112" fill="#8b6a3e"/>
+    <rect x="230" y="440" width="440" height="9" fill="#a47c47"/>
+    <rect x="250" y="410" width="72" height="30" fill="#7aa6c2" stroke="#4d7a96" stroke-width="2"/>
+    <rect x="566" y="412" width="76" height="28" rx="4" fill="#d6281f"/><rect x="596" y="406" width="16" height="8" rx="3" fill="#2b3640"/>
+    <rect x="208" y="352" width="484" height="20" fill="#b88a52"/>
+    <rect x="200" y="336" width="500" height="16" rx="3" fill="#c79a62" stroke="#8b6a3e" stroke-width="2"/>
+
+    <!-- Dinge auf der Werkbank -->
+    <rect x="200" y="322" width="64" height="8" fill="#8d5a2b"/><rect x="172" y="314" width="32" height="22" rx="3" fill="#49535a"/><rect x="190" y="314" width="14" height="22" rx="3" fill="#2f373d"/>
+    <rect x="300" y="324" width="52" height="12" rx="3" fill="#ffc20e" stroke="#1b232a" stroke-width="2"/><rect x="324" y="324" width="4" height="12" fill="#1b232a"/><polygon points="352,325 398,333 352,336" fill="#d6dde2" stroke="#6c7a83" stroke-width="1.5"/>
+    <rect x="412" y="304" width="44" height="32" fill="#5a6670"/><rect x="456" y="310" width="12" height="24" fill="#3f4a52"/><rect x="420" y="296" width="30" height="8" fill="#3f4a52"/><line x1="468" y1="322" x2="482" y2="322" stroke="#3f4a52" stroke-width="4" stroke-linecap="round"/>
+    <rect x="498" y="298" width="22" height="38" rx="6" fill="#4fa3d1" opacity=".9"/><rect x="503" y="289" width="12" height="11" rx="2" fill="#f2f4f5"/><rect x="498" y="310" width="22" height="12" fill="#fff" opacity=".7"/>
+    <rect x="560" y="322" width="112" height="14" rx="4" fill="#eceff1" stroke="#7b8790" stroke-width="2"/>
+    <g fill="#23282c"><rect x="572" y="306" width="14" height="18" rx="2"/><rect x="598" y="306" width="14" height="18" rx="2"/><rect x="624" y="306" width="14" height="18" rx="2"/><rect x="650" y="306" width="14" height="18" rx="2"/></g>
+    <rect x="612" y="250" width="30" height="30" rx="4" fill="#fff" stroke="#9fadb5" stroke-width="2"/><circle cx="622" cy="265" r="2.5" fill="#55646d"/><circle cx="632" cy="265" r="2.5" fill="#55646d"/>
+    <g fill="none" stroke-width="3.5" stroke-linecap="round"><path d="M579 306 C579 280 560 272 548 256" stroke="#23282c"/><path d="M605 306 C605 288 620 288 624 282" stroke="#d6281f"/><path d="M631 306 C640 290 652 272 662 252" stroke="#0b5cab"/><path d="M657 306 C672 300 690 290 702 272" stroke="#23282c"/></g>
+
+    <!-- Bohrständer und Schüler -->
+    <ellipse cx="885" cy="478" rx="80" ry="9" fill="#000" opacity=".15"/>
+    <rect x="826" y="458" width="118" height="16" rx="3" fill="#3f6b8a"/>
+    <rect x="878" y="292" width="14" height="168" fill="#aeb8bf"/>
+    <rect x="832" y="398" width="106" height="10" rx="2" fill="#7e8c96"/><rect x="872" y="408" width="26" height="14" fill="#6f7d87"/>
+    <rect x="838" y="236" width="100" height="58" rx="8" fill="#3f6b8a"/><rect x="846" y="224" width="50" height="14" rx="3" fill="#2f526b"/>
+    <line x1="938" y1="268" x2="970" y2="296" stroke="#2b2f33" stroke-width="5" stroke-linecap="round"/><circle cx="972" cy="298" r="6" fill="#2b2f33"/>
+    <rect x="880" y="294" width="10" height="14" fill="#8a949b"/><rect x="884" y="308" width="3" height="86" fill="#c1c9ce"/>
+    <rect x="858" y="383" width="56" height="15" fill="#d6a96a" stroke="#8b6a3e" stroke-width="2"/>
+    <!-- beschädigtes Kabel -->
+    <path d="M938 252 C976 252 982 296 976 322" fill="none" stroke="#23282c" stroke-width="5" stroke-linecap="round"/>
+    <path d="M976 340 L976 378" fill="none" stroke="#23282c" stroke-width="5" stroke-linecap="round"/>
+    <path d="M974 320 q-5 8 1 12 q5 4 0 10 M979 320 q5 8 -1 12 q-5 4 1 10" fill="none" stroke="#e08a1e" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="986,326 990,331 996,329 992,335 996,341 989,339 985,344 984,337 978,334 984,332" fill="#ffc20e"/>
+    <rect x="962" y="376" width="28" height="22" rx="3" fill="#dfe4e7" stroke="#9fadb5" stroke-width="2"/>
+    <!-- Schüler -->
+    <rect x="770" y="420" width="14" height="52" fill="#2c3e50"/><rect x="790" y="420" width="14" height="52" fill="#2c3e50"/>
+    <rect x="765" y="468" width="22" height="9" rx="3" fill="#161a1d"/><rect x="788" y="468" width="22" height="9" rx="3" fill="#161a1d"/>
+    <rect x="764" y="335" width="50" height="90" rx="14" fill="#4a7fb5"/>
+    <circle cx="793" cy="308" r="22" fill="#e8b48c"/>
+    <path d="M771 308 C766 280 800 270 815 296 C819 306 813 318 807 322 L813 382 C801 390 781 390 773 380 C765 362 771 330 771 308 Z" fill="#6b3f1d"/>
+    <circle cx="807" cy="309" r="2.4" fill="#2b2f33"/><path d="M804 320 q4 3 8 0" fill="none" stroke="#9a5b3a" stroke-width="2" stroke-linecap="round"/>
+    <line x1="806" y1="350" x2="830" y2="370" stroke="#4a7fb5" stroke-width="14" stroke-linecap="round"/>
+    <line x1="830" y1="370" x2="852" y2="388" stroke="#e8b48c" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="857" cy="390" r="9" fill="#e8b48c"/>
+
+    <!-- Kabel auf dem Boden, Ölpfütze -->
+    <path d="M236 494 C330 566 470 492 600 548 S 760 530 900 566" fill="none" stroke="#2b2f33" stroke-width="7" stroke-linecap="round"/>
+    <path d="M236 494 C330 566 470 492 600 548 S 760 530 900 566" fill="none" stroke="#5b6670" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 14"/>
+    <rect x="224" y="486" width="20" height="13" rx="3" fill="#161a1d"/>
+    <ellipse cx="440" cy="592" rx="80" ry="15" fill="#5e4f26" opacity=".92"/><ellipse cx="418" cy="588" rx="30" ry="5" fill="#a18d4f" opacity=".7"/>
+
+    <!-- Klickflächen -->
+    <g id="hits" fill="rgba(0,0,0,0)" stroke="none">
+      <rect data-hz="fluchtweg" x="15" y="280" width="180" height="150"/>
+      <rect data-hz="karton" x="900" y="36" width="94" height="76"/>
+      <rect data-hz="hammer" x="160" y="305" width="110" height="36"/>
+      <rect data-hz="cutter" x="292" y="312" width="115" height="28"/>
+      <rect data-hz="flasche" x="490" y="282" width="38" height="58"/>
+      <rect data-hz="steckdose" x="545" y="245" width="175" height="95"/>
+      <rect data-hz="haare" x="758" y="280" width="66" height="108"/>
+      <rect data-hz="werkstueck" x="835" y="372" width="90" height="36"/>
+      <rect data-hz="kabel_defekt" x="955" y="315" width="45" height="48"/>
+      <path data-hz="kabel_boden" d="M236 494 C330 566 470 492 600 548 S 760 530 900 566" fill="none" stroke="rgba(0,0,0,0)" stroke-width="38" pointer-events="stroke"/>
+      <rect data-hz="pfuetze" x="350" y="570" width="180" height="40"/>
+      <rect data-safe="wand" x="190" y="40" width="330" height="200"/>
+      <rect data-safe="brille" x="525" y="108" width="48" height="36"/>
+      <rect data-safe="erstehilfe" x="528" y="164" width="48" height="42"/>
+      <rect data-safe="feuerloescher" x="715" y="146" width="44" height="94"/>
+      <rect data-safe="notausgang" x="34" y="94" width="112" height="46"/>
+      <rect data-safe="schraubstock" x="408" y="292" width="64" height="48"/>
+    </g>
+    <g id="marks" pointer-events="none"></g>
+    <g id="flash" pointer-events="none"></g>
+  </svg>
+  </div>
+
+  <div class="card" id="g1-card" aria-live="polite"></div>
+  <ul class="chips" id="g1-chips" aria-label="Gefundene Gefahren"></ul>
+  <div class="result card" id="g1-result" hidden></div>
+</section>
+
+<!-- ============ SPIEL 2: WERKZEUGE ZUORDNEN ============ -->
+<section id="g2" class="view" hidden aria-labelledby="g2-title">
+  <div class="bar">
+    <button class="back" data-go="hub" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Zurück zum Menü</button>
+    <h2 id="g2-title" tabindex="-1">Werkzeuge zuordnen</h2>
+    <div class="hud">
+      <div class="hud-item"><b id="g2-count">0</b> von 8 passend</div>
+      <div class="hud-item"><b id="g2-miss">0</b> Fehlversuche</div>
+    </div>
+  </div>
+  <p class="lead">Ziehe jedes Werkzeug zu der Arbeit, für die man es braucht. Oder tippe erst das Werkzeug und dann die Arbeit an.</p>
+  <div class="progress" aria-hidden="true"><div id="g2-bar"></div></div>
+  <div class="match">
+    <div>
+      <div class="col-title">Werkzeuge</div>
+      <div class="tools" id="g2-tools"></div>
+    </div>
+    <div>
+      <div class="col-title">Arbeiten</div>
+      <div class="slots" id="g2-slots"></div>
+    </div>
+  </div>
+  <div class="card" id="g2-card" aria-live="polite"></div>
+  <div class="result card" id="g2-result" hidden></div>
+</section>
+
+<!-- ============ SPIEL 3: ZEICHEN-CHECK ============ -->
+<section id="g3" class="view" hidden aria-labelledby="g3-title">
+  <div class="bar">
+    <button class="back" data-go="hub" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Zurück zum Menü</button>
+    <h2 id="g3-title" tabindex="-1">Zeichen-Check</h2>
+    <div class="hud">
+      <div class="hud-item">Frage <b id="g3-n">1</b> von 9</div>
+      <div class="hud-item"><b id="g3-right">0</b> richtig</div>
+    </div>
+  </div>
+  <div class="progress" aria-hidden="true"><div id="g3-bar"></div></div>
+  <div class="card q" id="g3-q"></div>
+  <div class="card" id="g3-card" hidden aria-live="polite"></div>
+  <div class="result card" id="g3-result" hidden></div>
+</section>
+
+</main>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Hilfsfunktionen ---------- */
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+var SVGNS='http://www.w3.org/2000/svg';
+
+var BEST_KEY='werkstattcheck.best.v1';
+function loadBest(){try{return JSON.parse(localStorage.getItem(BEST_KEY))||{}}catch(e){return {}}}
+function saveBest(g,s){var b=loadBest();if(!b[g]||s>b[g]){b[g]=s;try{localStorage.setItem(BEST_KEY,JSON.stringify(b))}catch(e){}}}
+
+function starsSvg(n,size){
+  size=size||44;var out='';
+  for(var i=1;i<=3;i++){
+    var on=i<=n;
+    out+='<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 15,9 22,9.3 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9.3 9,9" fill="'+(on?'#ffc20e':'none')+'" stroke="'+(on?'#1b232a':'#8a98a3')+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  }
+  return '<span role="img" aria-label="'+n+' von 3 Sternen" style="display:inline-flex;gap:4px">'+out+'</span>';
+}
+
+/* ---------- Sicherheitszeichen ---------- */
+function frame(cat,inner){
+  switch(cat){
+    case 'gebot': return '<circle cx="60" cy="60" r="57" fill="#0b5cab"/>'+inner;
+    case 'verbot': return '<circle cx="60" cy="60" r="52" fill="#fff" stroke="#d6281f" stroke-width="10"/>'+inner+'<line x1="24" y1="24" x2="96" y2="96" stroke="#d6281f" stroke-width="10"/>';
+    case 'warnung': return '<polygon points="60,9 113,103 7,103" fill="#ffc20e" stroke="#1b232a" stroke-width="7" stroke-linejoin="round"/>'+inner;
+    case 'rettung': return '<rect x="6" y="6" width="108" height="108" rx="10" fill="#0f8a4b"/>'+inner;
+    case 'brand': return '<rect x="6" y="6" width="108" height="108" rx="10" fill="#d6281f"/>'+inner;
+  }
+  return inner;
+}
+var RULES={
+  gebot:'Blau und rund heißt Gebot: Das musst du tun.',
+  verbot:'Rot, rund und durchgestrichen heißt Verbot: Das darfst du nicht tun.',
+  warnung:'Gelb und dreieckig heißt Warnung: Hier ist Vorsicht nötig.',
+  rettung:'Grün und eckig heißt Rettung: Hier findest du den Weg nach draußen oder Hilfe.',
+  brand:'Rot und eckig heißt Brandschutz: Hier findest du Ausrüstung zum Löschen.'
+};
+var SIGNS=[
+  {id:'augen',name:'Augenschutz benutzen',cat:'gebot',where:'Du findest es an Bohr-, Schleif- und Sägemaschinen.',
+   sym:'<g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"><circle cx="43" cy="62" r="15" fill="rgba(255,255,255,.35)"/><circle cx="77" cy="62" r="15" fill="rgba(255,255,255,.35)"/><line x1="57" y1="60" x2="63" y2="60"/><line x1="29" y1="58" x2="18" y2="52"/><line x1="91" y1="58" x2="102" y2="52"/></g>'},
+  {id:'gehoer',name:'Gehörschutz benutzen',cat:'gebot',where:'Du findest es dort, wo Maschinen sehr laut sind.',
+   sym:'<rect x="24" y="58" width="18" height="30" rx="7" fill="#fff"/><rect x="78" y="58" width="18" height="30" rx="7" fill="#fff"/><path d="M33 62 C33 34 87 34 87 62" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'},
+  {id:'rauchen',name:'Rauchen verboten',cat:'verbot',where:'Staub und Späne können leicht Feuer fangen.',
+   sym:'<rect x="26" y="56" width="50" height="10" rx="2" fill="#3a3f44"/><rect x="26" y="56" width="16" height="10" rx="2" fill="#e08a1e"/><path d="M84 56 c-6 -7 0 -12 -2 -18 M92 56 c-6 -7 0 -12 -2 -18" fill="none" stroke="#3a3f44" stroke-width="4" stroke-linecap="round"/>'},
+  {id:'strom',name:'Warnung vor elektrischer Spannung',cat:'warnung',where:'Du findest es an Schaltschränken und Steckdosenverteilern.',
+   sym:'<polygon points="66,38 48,68 60,68 52,94 76,60 63,60 72,38" fill="#1b232a"/>'},
+  {id:'gefahr',name:'Allgemeine Warnung',cat:'warnung',where:'Es macht auf eine Gefahr aufmerksam, die kein eigenes Zeichen hat.',
+   sym:'<rect x="54" y="38" width="12" height="34" rx="4" fill="#1b232a"/><circle cx="60" cy="86" r="7" fill="#1b232a"/>'},
+  {id:'feuer',name:'Warnung vor feuergefährlichen Stoffen',cat:'warnung',where:'Du findest es an Schränken mit Farben, Lacken und Lösungsmitteln.',
+   sym:'<path d="M60 36 C62 50 78 58 76 76 C75 88 68 94 60 94 C52 94 45 88 44 76 C43 64 52 60 54 48 C56 54 60 54 60 36 Z" fill="#1b232a"/><path d="M60 70 C66 76 68 82 64 88 C62 91 58 91 56 88 C52 82 56 76 60 70Z" fill="#ffc20e"/>'},
+  {id:'notausgang',name:'Notausgang',cat:'rettung',where:'Es hängt über Türen, die du bei Gefahr benutzen sollst. Der Weg muss immer frei sein.',
+   sym:'<g stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="56" y1="44" x2="48" y2="68"/><line x1="56" y1="48" x2="72" y2="56"/><line x1="56" y1="48" x2="40" y2="50"/><polyline points="48,68 62,80 58,96"/><polyline points="48,68 34,78 28,92"/></g><circle cx="62" cy="31" r="8" fill="#fff"/><rect x="80" y="28" width="20" height="70" fill="none" stroke="#fff" stroke-width="5"/>'},
+  {id:'erstehilfe',name:'Erste Hilfe',cat:'rettung',where:'Hier hängt der Erste-Hilfe-Kasten. Er muss gut erreichbar sein.',
+   sym:'<rect x="50" y="24" width="20" height="72" fill="#fff"/><rect x="24" y="50" width="72" height="20" fill="#fff"/>'},
+  {id:'loescher',name:'Feuerlöscher',cat:'brand',where:'Hier hängt der Feuerlöscher. Stelle nie etwas davor.',
+   sym:'<rect x="46" y="54" width="28" height="44" rx="9" fill="#fff"/><rect x="55" y="42" width="10" height="14" fill="#fff"/><rect x="50" y="36" width="28" height="7" rx="3" fill="#fff"/><path d="M76 40 q16 0 14 26" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'}
+];
+function signSvg(s,size,label){
+  return '<svg viewBox="0 0 120 120" width="'+size+'" height="'+size+'" role="img" aria-label="'+(label||'Sicherheitszeichen')+'">'+frame(s.cat,s.sym)+'</svg>';
+}
+function signById(id){return SIGNS.filter(function(s){return s.id===id})[0]}
+
+/* ---------- Werkzeug-Symbole ---------- */
+function sawTeeth(){
+  var d='M8 52',x=8,y;
+  for(var k=0;k<10;k++){
+    y=52+(x-8)*(6/58);
+    d+=' L'+(x+2.9).toFixed(1)+' '+(y+3.6).toFixed(1)+' L'+(x+5.8).toFixed(1)+' '+(52+(x+5.8-8)*(6/58)).toFixed(1);
+    x+=5.8;
+  }
+  return d+' L66 58 L66 28 L8 40 Z';
+}
+function fileHatch(){var o='';for(var x=14;x<=66;x+=5){o+='<line x1="'+x+'" y1="43" x2="'+(x+4)+'" y2="57" stroke="#6b7882" stroke-width="1.2"/>'}return o}
+var TOOLS=[
+  {id:'hammer',name:'Hammer',use:'Einen Nagel ins Holz schlagen',
+   tip:'Prüfe vor dem Benutzen, ob der Kopf fest auf dem Stiel sitzt.',hint:'Hier brauchst du Wucht.',
+   art:'<g transform="rotate(40 50 50)"><rect x="45" y="26" width="10" height="66" rx="3" fill="#b07a42" stroke="#7a5128" stroke-width="2"/><rect x="20" y="10" width="60" height="22" rx="4" fill="#5b6770"/><rect x="62" y="10" width="18" height="22" rx="4" fill="#3d474f"/></g>'},
+  {id:'saw',name:'Handsäge',use:'Ein Brett auf die richtige Länge sägen',
+   tip:'Spanne das Brett ein und halte die freie Hand weit weg von der Säge.',hint:'Dieses Werkzeug hat viele kleine Zähne.',
+   art:'<path d="'+sawTeeth()+'" fill="#c3ccd2" stroke="#6b7882" stroke-width="2" stroke-linejoin="round"/><path d="M66 24 h22 q6 0 6 6 v28 q0 6 -6 6 h-22 z" fill="#b07a42" stroke="#7a5128" stroke-width="2"/><ellipse cx="80" cy="44" rx="6" ry="9" fill="#f2f4f5" stroke="#7a5128" stroke-width="2"/>'},
+  {id:'screwdriver',name:'Schraubendreher',use:'Eine Schraube eindrehen',
+   tip:'Halte das Werkstück nie in der Hand. Der Schraubendreher kann abrutschen.',hint:'Hier muss sich etwas drehen.',
+   art:'<g transform="rotate(-45 50 50)"><rect x="41" y="52" width="18" height="40" rx="8" fill="#e8721c" stroke="#9a4a0e" stroke-width="2"/><rect x="41" y="60" width="18" height="6" fill="#f6b27a"/><rect x="47" y="14" width="6" height="40" fill="#aab4bb" stroke="#6b7882" stroke-width="1.5"/><polygon points="47,14 53,14 55,6 45,6" fill="#aab4bb" stroke="#6b7882" stroke-width="1.5"/></g>'},
+  {id:'pliers',name:'Kombizange',use:'Draht abzwicken und biegen',
+   tip:'Trage dabei eine Schutzbrille. Die Drahtstücke springen weit weg.',hint:'Mit den Backen kannst du etwas greifen und kneifen.',
+   art:'<g transform="rotate(22 49 52)"><rect x="43" y="6" width="12" height="46" rx="5" fill="#7b8790" stroke="#4d5963" stroke-width="2"/><rect x="43" y="50" width="12" height="46" rx="5" fill="#d6281f" stroke="#8e1a14" stroke-width="2"/></g><g transform="rotate(-22 49 52)"><rect x="43" y="6" width="12" height="46" rx="5" fill="#7b8790" stroke="#4d5963" stroke-width="2"/><rect x="43" y="50" width="12" height="46" rx="5" fill="#d6281f" stroke="#8e1a14" stroke-width="2"/></g><circle cx="49" cy="52" r="6" fill="#4d5963"/>'},
+  {id:'clamp',name:'Schraubzwinge',use:'Ein Werkstück festklemmen',
+   tip:'So hast du beide Hände frei und das Werkstück rutscht nicht weg.',hint:'Hier soll etwas richtig fest sitzen.',
+   art:'<rect x="40" y="54" width="44" height="18" fill="#d6a96a" stroke="#8b6a3e" stroke-width="2"/><path d="M18 12 H82 V28 H34 V72 H82 V88 H18 Z" fill="#3f4a52"/><rect x="58" y="12" width="8" height="38" fill="#aab4bb" stroke="#6b7882" stroke-width="1.5"/><rect x="42" y="4" width="40" height="8" rx="4" fill="#3f4a52"/><rect x="52" y="48" width="20" height="6" fill="#aab4bb" stroke="#6b7882" stroke-width="1.5"/>'},
+  {id:'ruler',name:'Zollstock',use:'Eine Länge ausmessen',
+   tip:'Erst genau messen, dann sägen. Messen geht schneller als Fehler reparieren.',hint:'Dieses Werkzeug hat Zahlen und Striche.',
+   art:'<polyline points="12,72 36,30 62,72 88,30" fill="none" stroke="#a87f00" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/><polyline points="12,72 36,30 62,72 88,30" fill="none" stroke="#ffc20e" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><polyline points="12,72 36,30 62,72 88,30" fill="none" stroke="#1b232a" stroke-width="10" stroke-linejoin="round" stroke-dasharray="1.5 6"/>'},
+  {id:'file',name:'Feile',use:'Scharfe Metallkanten glätten',
+   tip:'Feilen brauchen immer ein Heft. Ohne Heft verletzt du dich an der spitzen Angel.',hint:'Damit trägst du Material in winzigen Spänen ab.',
+   art:'<g transform="rotate(-30 50 50)"><rect x="8" y="42" width="62" height="16" fill="#aab4bb" stroke="#6b7882" stroke-width="2"/>'+fileHatch()+'<rect x="68" y="42" width="6" height="16" fill="#8a949b"/><rect x="72" y="40" width="22" height="20" rx="8" fill="#b07a42" stroke="#7a5128" stroke-width="2"/></g>'},
+  {id:'drill',name:'Bohrmaschine',use:'Ein Loch in ein Brett bohren',
+   tip:'Binde die Haare zusammen, setze die Schutzbrille auf und spanne das Werkstück ein.',hint:'Am Ende dreht sich ein Bohrer.',
+   art:'<rect x="14" y="26" width="52" height="24" rx="8" fill="#0b5cab" stroke="#083f78" stroke-width="2"/><rect x="28" y="20" width="14" height="6" rx="2" fill="#2b3640"/><rect x="66" y="31" width="14" height="14" fill="#8a949b" stroke="#5b6770" stroke-width="2"/><rect x="80" y="36" width="16" height="4" fill="#c3ccd2" stroke="#6b7882"/><path d="M26 50 h20 l-6 34 h-18 z" fill="#2b3640" stroke="#12181d" stroke-width="2"/><rect x="18" y="84" width="34" height="9" rx="3" fill="#ffc20e" stroke="#9a7600" stroke-width="2"/>'}
+];
+function toolSvg(t,size){return '<svg viewBox="0 0 100 100" width="'+size+'" height="'+size+'" aria-hidden="true">'+t.art+'</svg>'}
+function toolById(id){return TOOLS.filter(function(t){return t.id===id})[0]}
+
+/* ---------- Menü-Symbole ---------- */
+$('#ic1').innerHTML=signSvg(signById('gefahr'),84,'');
+$('#ic2').innerHTML='<svg viewBox="0 0 120 120" width="84" height="84" aria-hidden="true"><circle cx="60" cy="60" r="57" fill="#0b5cab"/><g transform="rotate(40 60 60)"><rect x="55" y="34" width="10" height="62" rx="3" fill="#fff"/><rect x="34" y="20" width="52" height="22" rx="4" fill="#fff"/></g></svg>';
+$('#ic3').innerHTML=signSvg(signById('erstehilfe'),84,'');
+function renderHub(){
+  var b=loadBest();
+  ['g1','g2','g3'].forEach(function(g){
+    var el=$('#best-'+g);
+    el.innerHTML=b[g]?('Beste Runde: '+starsSvg(b[g],22)):'Noch nicht gespielt';
+  });
+}
+
+/* ---------- Navigation ---------- */
+var views=$$('.view');
+var starters={g1:function(){g1Start()},g2:function(){g2Start()},g3:function(){g3Start()}};
+function go(id){
+  views.forEach(function(v){v.hidden=(v.id!==id)});
+  if(id==='hub'){renderHub()}else{starters[id]()}
+  window.scrollTo(0,0);
+  var h=$('#'+id+' h1, #'+id+' h2');
+  if(h){try{h.focus({preventScroll:true})}catch(e){}}
+}
+document.addEventListener('click',function(e){
+  var g=e.target.closest('[data-go]');
+  if(g){go(g.getAttribute('data-go'));return}
+  var a=e.target.closest('[data-again]');
+  if(a){go(a.getAttribute('data-again'))}
+});
+function showResult(game,title,stars,text,extra){
+  var box=$('#'+game+'-result');
+  box.innerHTML='<h3>'+title+'</h3><div class="stars">'+starsSvg(stars,52)+'</div><p>'+text+'</p>'+(extra||'')+
+    '<div class="res-actions"><button class="btn primary" type="button" data-again="'+game+'">Nochmal spielen</button><button class="btn" type="button" data-go="hub">Zum Menü</button></div>';
+  box.hidden=false;
+  saveBest(game,stars);
+  try{box.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
+}
+function setCard(id,kind,html){var c=$(id);c.className='card'+(kind?' '+kind:'');c.innerHTML=html;if(c.hidden)c.hidden=false}
+
+/* =====================================================
+   SPIEL 1: GEFAHREN FINDEN
+   ===================================================== */
+var HZ=[
+  {id:'fluchtweg',name:'Versperrter Notausgang',m:[102,360,78],
+   why:'Bei Feuer oder Rauch musst du schnell nach draußen. Kisten vor der Tür blockieren den Fluchtweg.',
+   fix:'Türen und Fluchtwege bleiben immer frei. Kisten gehören ins Regal.'},
+  {id:'karton',name:'Schwerer Karton am Regalrand',m:[945,82,42],
+   why:'Der Karton ragt über die Kante. Er kann dir auf den Kopf oder den Fuß fallen.',
+   fix:'Schwere Sachen kommen nach unten und ganz nach hinten ins Regal.'},
+  {id:'hammer',name:'Hammer an der Tischkante',m:[215,326,36],
+   why:'Stößt jemand gegen die Werkbank, fällt der Hammer herunter und trifft den Fuß.',
+   fix:'Werkzeug legst du weit weg von der Kante ab oder räumst es sofort auf.'},
+  {id:'cutter',name:'Offenes Cuttermesser',m:[350,328,44],
+   why:'Die Klinge ist ausgefahren. Man schneidet sich schnell, wenn man danach greift.',
+   fix:'Nach dem Schneiden Klinge einfahren und das Messer wegräumen.'},
+  {id:'flasche',name:'Trinkflasche an der Werkbank',m:[509,312,34],
+   why:'Staub und Späne landen im Getränk. Man kann auch Flüssigkeiten verwechseln.',
+   fix:'In der Werkstatt wird nicht gegessen und getrunken. Pausen machst du draußen.'},
+  {id:'steckdose',name:'Überlastete Steckdosenleiste',m:[632,292,64],
+   why:'Zu viele Geräte an einer Leiste werden heiß. Das kann einen Kabelbrand auslösen.',
+   fix:'Nur so viele Geräte anschließen, wie erlaubt ist. Im Zweifel fragst du die Lehrkraft.'},
+  {id:'haare',name:'Offene Haare, keine Schutzbrille',m:[792,334,52],
+   why:'Offene Haare können sich im Bohrer aufwickeln. Ohne Schutzbrille fliegen Späne ins Auge.',
+   fix:'Haare zusammenbinden und immer die Schutzbrille aufsetzen.'},
+  {id:'werkstueck',name:'Werkstück in der Hand gehalten',m:[882,392,44],
+   why:'Der Bohrer kann das Werkstück packen und mitreißen. Deine Hand wird verletzt.',
+   fix:'Das Werkstück immer im Maschinenschraubstock oder mit einer Zwinge einspannen.'},
+  {id:'kabel_defekt',name:'Beschädigtes Kabel',m:[970,332,26],
+   why:'Die Drähte liegen frei. Wer sie berührt, bekommt einen Stromschlag.',
+   fix:'Nichts anfassen und sofort die Lehrkraft rufen. Die Maschine wird gesperrt und repariert.'},
+  {id:'kabel_boden',name:'Kabel quer über dem Boden',m:[512,520,40],
+   why:'Man stolpert über das Kabel und stürzt. Auch der Stecker kann aus der Dose gerissen werden.',
+   fix:'Kabel an der Wand entlang oder mit einer Kabelbrücke verlegen.'},
+  {id:'pfuetze',name:'Öllache auf dem Boden',m:[436,586,33],
+   why:'Auf Öl und Wasser rutscht man leicht aus und stürzt.',
+   fix:'Sofort die Lehrkraft informieren und die Stelle aufwischen, bis der Boden trocken ist.'}
+];
+var SAFE={
+  wand:'Die Werkzeugwand ist ordentlich. Jedes Werkzeug hat seinen festen Platz, so findest du es schnell und niemand stolpert darüber.',
+  brille:'Die Schutzbrille hängt bereit. Setze sie auf, wenn du an Maschinen arbeitest.',
+  erstehilfe:'Der Erste-Hilfe-Kasten hängt gut sichtbar an der Wand. Genau so soll es sein.',
+  feuerloescher:'Der Feuerlöscher hängt frei zugänglich an der Wand. Davor steht nichts im Weg.',
+  notausgang:'Das grüne Rettungszeichen zeigt dir den Weg nach draußen. Es darf nie verdeckt werden.',
+  schraubstock:'Im Schraubstock sitzt ein Werkstück fest. Das ist sicher, so soll man es machen.'
+};
+var scene=$('#scene'),marks=$('#marks'),flash=$('#flash');
+var G1;
+function g1Start(){
+  G1={found:{},nFound:0,miss:0,hintsLeft:3,hintsUsed:0,done:false,hintEl:null,hintTimer:0};
+  marks.innerHTML='';flash.innerHTML='';
+  $('#g1-result').hidden=true;
+  var chips=$('#g1-chips');chips.innerHTML='';
+  HZ.forEach(function(h){
+    var li=document.createElement('li'),b=document.createElement('button');
+    b.type='button';b.className='chip';b.setAttribute('data-id',h.id);b.disabled=true;b.textContent='?';
+    b.setAttribute('aria-label','Noch nicht gefunden');
+    li.appendChild(b);chips.appendChild(li);
+  });
+  setCard('#g1-card','safe','<b>So geht es:</b> Suche eine Stelle im Bild und klicke darauf. Hier erscheint dann, was du gefunden hast. Hängst du fest, hilft dir ein Tipp.');
+  g1Hud();
+}
+function g1Hud(){
+  $('#g1-count').textContent=G1.nFound;
+  $('#g1-miss').textContent=G1.miss;
+  $('#g1-bar').style.width=(G1.nFound/HZ.length*100)+'%';
+  var hb=$('#g1-hint');
+  hb.textContent='Tipp ('+G1.hintsLeft+')';
+  hb.disabled=G1.hintsLeft<=0||G1.done;
+}
+function toSvg(ev){
+  var p=scene.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;
+  var q=p.matrixTransform(scene.getScreenCTM().inverse());return {x:q.x,y:q.y};
+}
+function mk(tag,attrs){var e=document.createElementNS(SVGNS,tag);for(var k in attrs){e.setAttribute(k,attrs[k])}return e}
+function g1ShowFound(h){
+  setCard('#g1-card','find','<h3>'+h.name+'</h3><div class="row"><span class="tag">Das ist gefährlich:</span>'+h.why+'</div><div class="row"><span class="tag">So machst du es richtig:</span>'+h.fix+'</div>');
+}
+function g1ClearHint(){
+  if(G1.hintEl&&G1.hintEl.parentNode){G1.hintEl.parentNode.removeChild(G1.hintEl)}
+  G1.hintEl=null;clearTimeout(G1.hintTimer);
+}
+function g1Found(id){
+  var h=HZ.filter(function(x){return x.id===id})[0];
+  if(!G1.found[id]){
+    G1.found[id]=true;G1.nFound++;
+    var g=mk('g',{'class':'mark','data-id':id});
+    var x=h.m[0],y=h.m[1],r=h.m[2];
+    g.appendChild(mk('circle',{'class':'ring',cx:x,cy:y,r:r}));
+    g.appendChild(mk('circle',{'class':'badge',cx:x,cy:Math.max(16,y-r),r:13}));
+    g.appendChild(mk('path',{d:'M'+(x-6)+' '+Math.max(16,y-r)+' l4.5 4.5 l8 -9'}));
+    marks.appendChild(g);
+    var chip=$('.chip[data-id="'+id+'"]');
+    chip.disabled=false;chip.className='chip on';chip.textContent=h.name;chip.removeAttribute('aria-label');
+    if(G1.hintEl&&G1.hintEl.getAttribute('data-id')===id){g1ClearHint()}
+    g1ShowFound(h);g1Hud();
+    if(G1.nFound===HZ.length){G1.done=true;g1Hud();setTimeout(g1Finish,900)}
+  }else{
+    g1ShowFound(h);
+  }
+}
+function g1Miss(ev,safeId){
+  if(G1.done)return;
+  G1.miss++;g1Hud();
+  var p=toSvg(ev);
+  var g=mk('g',{'class':'xflash',transform:'translate('+p.x+','+p.y+')'});
+  g.appendChild(mk('circle',{r:16,fill:'#d6281f'}));
+  g.appendChild(mk('path',{d:'M-6 -6 L6 6 M6 -6 L-6 6',stroke:'#fff','stroke-width':4,'stroke-linecap':'round'}));
+  flash.appendChild(g);
+  setTimeout(function(){if(g.parentNode)g.parentNode.removeChild(g)},950);
+  if(safeId){setCard('#g1-card','safe','<h3>Das ist in Ordnung</h3><div class="row">'+SAFE[safeId]+'</div>')}
+  else{setCard('#g1-card','miss','<b>Hier ist keine Gefahr.</b> Such weiter!')}
+}
+scene.addEventListener('click',function(ev){
+  if(!G1)return;
+  var hz=ev.target.closest('[data-hz]');
+  if(hz){g1Found(hz.getAttribute('data-hz'));return}
+  var sf=ev.target.closest('[data-safe]');
+  g1Miss(ev,sf?sf.getAttribute('data-safe'):null);
+});
+$('#g1-chips').addEventListener('click',function(ev){
+  var c=ev.target.closest('.chip.on');if(!c)return;
+  g1ShowFound(HZ.filter(function(x){return x.id===c.getAttribute('data-id')})[0]);
+});
+$('#g1-hint').addEventListener('click',function(){
+  if(!G1||G1.done||G1.hintsLeft<=0)return;
+  var open=HZ.filter(function(h){return !G1.found[h.id]});
+  if(!open.length)return;
+  g1ClearHint();
+  var h=open[Math.floor(Math.random()*open.length)];
+  G1.hintsLeft--;G1.hintsUsed++;
+  var g=mk('g',{'class':'hintring','data-id':h.id});
+  g.appendChild(mk('circle',{cx:h.m[0],cy:h.m[1],r:h.m[2]+6,fill:'none',stroke:'#1b232a','stroke-width':9}));
+  g.appendChild(mk('circle',{cx:h.m[0],cy:h.m[1],r:h.m[2]+6,fill:'none',stroke:'#ffc20e','stroke-width':5,'stroke-dasharray':'12 8'}));
+  marks.appendChild(g);G1.hintEl=g;
+  G1.hintTimer=setTimeout(g1ClearHint,3500);
+  setCard('#g1-card','safe','<b>Tipp:</b> Schau in den gelb markierten Kreis. Dort ist noch eine Gefahr versteckt.');
+  g1Hud();
+});
+function g1Finish(){
+  var pen=G1.miss+G1.hintsUsed*2;
+  var stars=pen<=3?3:(pen<=8?2:1);
+  setCard('#g1-card','find','<b>Alle '+HZ.length+' Gefahren gefunden!</b> Klicke unten auf ein Feld, wenn du etwas noch einmal nachlesen willst.');
+  showResult('g1','Stark beobachtet!',stars,
+    'Du hast alle '+HZ.length+' Gefahren gefunden, mit '+G1.miss+' Fehlklicks und '+G1.hintsUsed+' Tipps. Merke: Wer Gefahren früh erkennt, kann sie beseitigen, bevor etwas passiert.');
+}
+
+/* =====================================================
+   SPIEL 2: WERKZEUGE ZUORDNEN
+   ===================================================== */
+var G2,drag=null,suppressClick=false;
+var toolsEl=$('#g2-tools'),slotsEl=$('#g2-slots');
+function g2Start(){
+  G2={sel:null,matched:0,miss:0,wrong:{},done:false};
+  $('#g2-result').hidden=true;
+  toolsEl.innerHTML='';slotsEl.innerHTML='';
+  shuffle(TOOLS).forEach(function(t){
+    var b=document.createElement('button');
+    b.type='button';b.className='tool';b.setAttribute('data-tool',t.id);
+    b.innerHTML='<span class="tile">'+toolSvg(t,72)+'</span><span class="tname">'+t.name+'</span>';
+    toolsEl.appendChild(b);
+  });
+  shuffle(TOOLS).forEach(function(t){
+    var s=document.createElement('button');
+    s.type='button';s.className='slot';s.setAttribute('data-use',t.id);
+    s.innerHTML='<span class="slot-icon" aria-hidden="true"></span><span class="slot-text"><span class="slot-use">'+t.use+'</span><span class="slot-tip" hidden></span></span>';
+    slotsEl.appendChild(s);
+  });
+  setCard('#g2-card','safe','<b>So geht es:</b> Ziehe ein Werkzeug auf die passende Arbeit. Auf dem Tablet oder Handy kannst du auch erst das Werkzeug und dann die Arbeit antippen.');
+  g2Hud();
+}
+function g2Hud(){
+  $('#g2-count').textContent=G2.matched;
+  $('#g2-miss').textContent=G2.miss;
+  $('#g2-bar').style.width=(G2.matched/TOOLS.length*100)+'%';
+}
+function g2Select(id){
+  G2.sel=(G2.sel===id)?null:id;
+  $$('.tool',toolsEl).forEach(function(b){b.classList.toggle('sel',b.getAttribute('data-tool')===G2.sel)});
+  if(G2.sel){
+    setCard('#g2-card','safe','<b>'+toolById(G2.sel).name+'</b> ist ausgewählt. Tippe jetzt auf die Arbeit, zu der es passt.');
+  }
+}
+function g2Attempt(toolId,useId){
+  if(G2.done)return;
+  var slot=$('.slot[data-use="'+useId+'"]',slotsEl),tool=toolById(toolId),toolBtn=$('.tool[data-tool="'+toolId+'"]',toolsEl);
+  if(slot.classList.contains('done'))return;
+  if(toolId===useId){
+    G2.matched++;G2.sel=null;
+    toolBtn.classList.remove('sel');toolBtn.classList.add('used');toolBtn.disabled=true;
+    slot.classList.add('done');slot.setAttribute('aria-disabled','true');
+    var ic=$('.slot-icon',slot);ic.innerHTML=toolSvg(tool,56);ic.classList.add('filled');
+    var tip=$('.slot-tip',slot);tip.textContent=tool.name+': '+tool.tip;tip.hidden=false;
+    setCard('#g2-card','find','<h3>Richtig!</h3><div class="row">'+tool.name+' brauchst du, um: '+tool.use.charAt(0).toLowerCase()+tool.use.slice(1)+'.</div><div class="row"><span class="tag">Sicherheitstipp:</span>'+tool.tip+'</div>');
+    g2Hud();
+    if(G2.matched===TOOLS.length){G2.done=true;setTimeout(g2Finish,900)}
+  }else{
+    G2.miss++;G2.wrong[toolId]=(G2.wrong[toolId]||0)+1;
+    [slot,toolBtn].forEach(function(el){el.classList.remove('bad','shake');void el.offsetWidth});
+    slot.classList.add('bad');toolBtn.classList.add('shake');
+    setTimeout(function(){slot.classList.remove('bad');toolBtn.classList.remove('shake')},500);
+    var extra=G2.wrong[toolId]>=2?'<div class="row"><span class="tag">Tipp:</span>'+tool.hint+'</div>':'';
+    setCard('#g2-card','miss','<b>Das passt nicht.</b> '+tool.name+' wird für eine andere Arbeit gebraucht. Versuche es noch einmal.'+extra);
+    g2Hud();
+  }
+}
+toolsEl.addEventListener('click',function(ev){
+  if(suppressClick)return;
+  var b=ev.target.closest('.tool');if(!b||b.classList.contains('used'))return;
+  g2Select(b.getAttribute('data-tool'));
+});
+slotsEl.addEventListener('click',function(ev){
+  var s=ev.target.closest('.slot');if(!s||!G2||G2.done)return;
+  if(s.classList.contains('done'))return;
+  if(!G2.sel){setCard('#g2-card','miss','<b>Wähle zuerst ein Werkzeug aus.</b> Tippe links ein Werkzeug an.');return}
+  g2Attempt(G2.sel,s.getAttribute('data-use'));
+});
+toolsEl.addEventListener('pointerdown',function(ev){
+  var b=ev.target.closest('.tool');
+  if(!b||b.classList.contains('used')||(ev.pointerType==='mouse'&&ev.button!==0))return;
+  drag={btn:b,id:b.getAttribute('data-tool'),x:ev.clientX,y:ev.clientY,active:false,ghost:null,pid:ev.pointerId,over:null};
+});
+window.addEventListener('pointermove',function(ev){
+  if(!drag||ev.pointerId!==drag.pid)return;
+  if(!drag.active){
+    if(Math.hypot(ev.clientX-drag.x,ev.clientY-drag.y)<8)return;
+    drag.active=true;
+    if(G2.sel!==drag.id)g2Select(drag.id);
+    var gh=document.createElement('div');gh.className='ghost';gh.innerHTML=toolSvg(toolById(drag.id),72);
+    document.body.appendChild(gh);drag.ghost=gh;
+    drag.scrollTimer=setInterval(dragAutoScroll,16);
+  }
+  drag.px=ev.clientX;drag.py=ev.clientY;
+  drag.ghost.style.left=ev.clientX+'px';drag.ghost.style.top=ev.clientY+'px';
+  dragHighlight();
+});
+function dragHighlight(){
+  if(!drag||!drag.active)return;
+  var el=document.elementFromPoint(drag.px,drag.py),slot=el&&el.closest?el.closest('.slot'):null;
+  if(slot&&slot.classList.contains('done'))slot=null;
+  if(drag.over&&drag.over!==slot)drag.over.classList.remove('over');
+  if(slot)slot.classList.add('over');
+  drag.over=slot;
+}
+function dragAutoScroll(){
+  if(!drag||!drag.active)return;
+  var edge=70,dy=0;
+  if(drag.py<edge)dy=-Math.ceil((edge-drag.py)/6);
+  else if(drag.py>window.innerHeight-edge)dy=Math.ceil((drag.py-(window.innerHeight-edge))/6);
+  if(dy){window.scrollBy(0,dy);dragHighlight()}
+}
+function endDrag(ev,cancel){
+  if(!drag||ev.pointerId!==drag.pid)return;
+  var d=drag;drag=null;
+  if(d.scrollTimer)clearInterval(d.scrollTimer);
+  if(!d.active)return;
+  if(d.ghost&&d.ghost.parentNode)d.ghost.parentNode.removeChild(d.ghost);
+  if(d.over)d.over.classList.remove('over');
+  suppressClick=true;setTimeout(function(){suppressClick=false},80);
+  if(cancel)return;
+  var el=document.elementFromPoint(ev.clientX,ev.clientY),slot=el&&el.closest?el.closest('.slot'):null;
+  if(slot&&!slot.classList.contains('done')){g2Attempt(d.id,slot.getAttribute('data-use'))}
+}
+window.addEventListener('pointerup',function(ev){endDrag(ev,false)});
+window.addEventListener('pointercancel',function(ev){endDrag(ev,true)});
+function g2Finish(){
+  var stars=G2.miss<=2?3:(G2.miss<=5?2:1);
+  setCard('#g2-card','find','<b>Alles zugeordnet!</b> Die Sicherheitstipps stehen jetzt bei den Arbeiten. Lies sie noch einmal durch.');
+  showResult('g2','Werkzeug-Profi!',stars,'Du hast alle 8 Werkzeuge richtig zugeordnet, mit '+G2.miss+' Fehlversuchen. Wichtig bleibt: Das richtige Werkzeug und die Schutzausrüstung gehören immer zusammen.');
+}
+
+/* =====================================================
+   SPIEL 3: ZEICHEN-CHECK
+   ===================================================== */
+var G3;
+function g3Start(){
+  var order=shuffle(SIGNS);
+  G3={q:order.map(function(s,i){return {s:s,type:(i%2===0)?'A':'B'}}),i:0,right:0,answered:false};
+  G3.q=shuffle(G3.q);
+  $('#g3-result').hidden=true;
+  g3Render();
+}
+function g3Render(){
+  var q=G3.q[G3.i],opts=shuffle([q.s].concat(shuffle(SIGNS.filter(function(s){return s.id!==q.s.id})).slice(0,3)));
+  G3.answered=false;G3.cur=q;
+  $('#g3-card').hidden=true;
+  $('#g3-n').textContent=G3.i+1;$('#g3-right').textContent=G3.right;
+  $('#g3-bar').style.width=(G3.i/G3.q.length*100)+'%';
+  var box=$('#g3-q'),html;
+  if(q.type==='A'){
+    box.className='card q';
+    html='<div class="q-sign">'+signSvg(q.s,190)+'</div><div><h3 class="q-text">Was bedeutet dieses Zeichen?</h3><div class="opts">'+
+      opts.map(function(o){return '<button type="button" class="opt" data-id="'+o.id+'">'+o.name+'</button>'}).join('')+'</div></div>';
+  }else{
+    box.className='card q wide';
+    html='<div><h3 class="q-text">Welches Zeichen bedeutet <span class="q-word">'+q.s.name+'</span>?</h3><div class="opts signs">'+
+      opts.map(function(o,i){return '<button type="button" class="opt signopt" data-id="'+o.id+'" aria-label="Zeichen '+(i+1)+'">'+signSvg(o,120,'Zeichen '+(i+1))+'</button>'}).join('')+'</div></div>';
+  }
+  box.innerHTML=html;
+}
+$('#g3-q').addEventListener('click',function(ev){
+  var b=ev.target.closest('.opt');if(!b||!G3||G3.answered)return;
+  G3.answered=true;
+  var q=G3.cur,ok=b.getAttribute('data-id')===q.s.id;
+  $$('.opt',$('#g3-q')).forEach(function(o){
+    o.disabled=true;
+    if(o.getAttribute('data-id')===q.s.id)o.classList.add('right');
+    else if(o===b)o.classList.add('wrong');
+  });
+  if(ok)G3.right++;
+  $('#g3-right').textContent=G3.right;
+  var last=G3.i===G3.q.length-1;
+  var head=ok?'<h3>Richtig!</h3>':'<h3>Nicht ganz.</h3><div class="row">Richtig ist: <b>'+q.s.name+'</b>.</div>';
+  if(ok)head+='<div class="row"><b>'+q.s.name+'</b></div>';
+  setCard('#g3-card',ok?'find':'miss',head+'<div class="row"><span class="tag">Merkhilfe:</span>'+RULES[q.s.cat]+'</div><div class="row">'+q.s.where+'</div>'+
+    '<div class="nextrow"><button type="button" class="btn primary" id="g3-next">'+(last?'Ergebnis ansehen':'Weiter')+'</button></div>');
+  $('#g3-next').focus({preventScroll:true});
+});
+$('#g3-card').addEventListener('click',function(ev){
+  if(!ev.target.closest('#g3-next'))return;
+  if(G3.i===G3.q.length-1){g3Finish()}else{G3.i++;g3Render();window.scrollTo(0,0)}
+});
+function g3Finish(){
+  $('#g3-bar').style.width='100%';
+  $('#g3-card').hidden=true;
+  var n=G3.q.length,stars=G3.right>=8?3:(G3.right>=6?2:1);
+  var leg=[['augen','gebot'],['rauchen','verbot'],['gefahr','warnung'],['erstehilfe','rettung'],['loescher','brand']].map(function(p){
+    return '<div>'+signSvg(signById(p[0]),48,'')+'<span>'+RULES[p[1]]+'</span></div>';
+  }).join('');
+  showResult('g3','Zeichen-Check geschafft!',stars,'Du hast '+G3.right+' von '+n+' Fragen richtig beantwortet. Mit Form und Farbe erkennst du sofort, welche Art von Zeichen vor dir hängt:',
+    '<div class="legend">'+leg+'</div>');
+}
+
+/* ---------- Start ---------- */
+renderHub();
+window.__werkstatt={go:go,HZ:HZ,TOOLS:TOOLS,SIGNS:SIGNS,state:function(){return {G1:G1,G2:G2,G3:G3}}};
+})();
+</script>
+</body>
+</html>

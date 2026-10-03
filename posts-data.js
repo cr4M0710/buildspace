@@ -574,4 +574,16 @@ const posts = [
     titleEn: "Puzzle of the Day",
     excerptEn: "A new brain teaser every day, with hints, stars and streaks. For different grade levels."
    },
+   {
+    title: "Werkstatt-Check: Sicherheit und Werkzeuge",
+    excerpt: "Gefahren in der Werkstatt finden, Werkzeuge ihrem Einsatz zuordnen und Sicherheitszeichen testen. Drei Spiele in einem.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "werkstatt-check.html",
+    emoji: "🛠️",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Workshop Check: Safety and Tools",
+    excerptEn: "Find hazards in the workshop, match tools to their use and test safety signs. Three games in one."
+   },
 ];
