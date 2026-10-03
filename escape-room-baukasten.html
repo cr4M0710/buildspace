@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escape-Room-Baukasten</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f4efe6; --bg2:#ebe4d6; --card:#fffdf8; --ink:#2a2433; --muted:#6b6478; --line:#d9d0c0;
+  --accent:#7b4fd1; --accent-ink:#ffffff; --ok:#1f7a4a; --okbg:#e3f4ea; --bad:#b83232; --badbg:#fbe6e6;
+  --warn:#9a6208; --warnbg:#fdf1d8; --shadow:0 2px 10px rgba(40,30,60,.12);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15131c; --bg2:#1d1a27; --card:#211e2b; --ink:#efeaf7; --muted:#a79fb8; --line:#3a3548;
+    --ok:#5fd08e; --okbg:#173325; --bad:#ff8b8b; --badbg:#3a1b1b; --warn:#f0b64d; --warnbg:#3a2d12; --shadow:0 2px 12px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15131c; --bg2:#1d1a27; --card:#211e2b; --ink:#efeaf7; --muted:#a79fb8; --line:#3a3548;
+  --ok:#5fd08e; --okbg:#173325; --bad:#ff8b8b; --badbg:#3a1b1b; --warn:#f0b64d; --warnbg:#3a2d12; --shadow:0 2px 12px rgba(0,0,0,.45);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+body.noscroll{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+h1,h2,h3{line-height:1.2;margin:0 0 .4em}
+h1{font-size:1.8rem} h2{font-size:1.3rem;margin-top:1.2em} h3{font-size:1.1rem}
+p{margin:.4em 0}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4em;min-height:44px;padding:8px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-weight:600;margin:2px 4px 2px 0}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.small{min-height:36px;padding:4px 10px;font-size:.9rem;border-radius:10px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin:12px 0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.hero{display:flex;gap:14px;align-items:center;padding:8px 0}
+.logo{font-size:3rem}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);font-size:.85rem;font-weight:600;white-space:nowrap}
+.room{display:flex;flex-direction:column;gap:6px;border-left:8px solid var(--rc,var(--accent));margin:0}
+.room .em{font-size:2.2rem}
+.room .row{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:8px}
+.badge{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+.hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hud-title{font-weight:800;font-size:1.1rem;flex:1;min-width:140px}
+.hud-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.strip{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.slot{width:54px;height:66px;border:2px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem;background:var(--bg2)}
+.slot small{font-size:.9rem;font-weight:400}
+.slot.on{border-style:solid;border-color:var(--accent);background:var(--card)}
+.objs{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.obj{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;min-height:140px;border-radius:16px;border:2px solid var(--line);background:var(--card);text-align:center;box-shadow:var(--shadow)}
+.obj:hover{border-color:var(--accent)}
+.obj .ico{font-size:2.5rem;line-height:1.1}
+.obj .tt{font-weight:700;font-size:.95rem}
+.obj .st{font-size:.8rem;color:var(--muted)}
+.obj.done{border-color:var(--ok);background:var(--okbg)}
+.obj.done .st{color:var(--ok);font-weight:700}
+.door{display:flex;justify-content:center;margin:18px 0 8px}
+.door .btn{font-size:1.15rem;min-height:56px;padding:10px 26px}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(123,79,209,.5)}50%{box-shadow:0 0 0 12px rgba(123,79,209,0)}}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@media (prefers-reduced-motion: reduce){.pulse,.shake{animation:none}}
+.backdrop{position:fixed;inset:0;background:rgba(10,8,18,.6);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);overflow-y:auto;z-index:50}
+.modal{background:var(--card);border-radius:18px;max-width:640px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.4);outline:none;margin:auto}
+.modal.wide{max-width:820px}
+.mh{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.mh .ico{font-size:2.2rem}
+.story{background:var(--bg2);border-radius:12px;padding:10px 14px;margin:8px 0}
+.fb{min-height:1.4em;margin:8px 0;font-weight:600}
+.fb.bad{color:var(--bad)} .fb.warn{color:var(--warn)} .fb.ok{color:var(--ok)}
+.hintsbox .hint{background:var(--warnbg);color:var(--ink);border-left:5px solid var(--warn);border-radius:8px;padding:6px 10px;margin:6px 0}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.opts{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.opt{display:flex;gap:10px;align-items:center;text-align:left;padding:10px 12px;min-height:48px;border:2px solid var(--line);border-radius:12px;background:var(--card)}
+.opt .mark{flex:none;width:22px;height:22px;border:2px solid var(--muted);border-radius:50%}
+.opt.multi .mark{border-radius:6px}
+.opt.sel{border-color:var(--accent);background:var(--bg2)}
+.opt.sel .mark{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--card)}
+input[type=text],input[type=number],textarea,select{width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--card);min-height:44px}
+input:focus,textarea:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
+.ans{font-size:1.2rem;font-weight:700}
+ol.ord{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:6px}
+.ordrow{display:flex;gap:8px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:6px 8px;background:var(--card)}
+.ordrow .num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem}
+.ordrow .txt{flex:1}
+.ordrow .mv{display:flex;gap:4px;flex:none}
+.ordrow .mv .btn{margin:0;min-width:40px}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin:8px 0}
+.mcol{display:flex;flex-direction:column;gap:8px}
+.mbtn{min-height:48px;padding:8px 10px;border:2px solid var(--line);border-radius:12px;background:var(--card);text-align:left;position:relative}
+.mbtn.selL{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent)}
+.mbtn.paired{border-color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
+.mbtn .pn{display:inline-flex;width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--c);color:#fff;font-size:.8rem;font-weight:800;align-items:center;justify-content:center}
+.wheels{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
+.wheel{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wheel .btn{margin:0;min-width:48px}
+.wheel .d{width:48px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;border:2px solid var(--line);border-radius:10px;background:var(--bg2);font-variant-numeric:tabular-nums}
+.cipher{font:700 1.5rem/1.4 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.15em;word-break:break-all;background:var(--bg2);border-radius:12px;padding:8px 12px;margin:6px 0}
+.cipher.out{color:var(--accent)}
+.abc{overflow-x:auto;margin:6px 0}
+.abc table{border-collapse:collapse;font:600 .85rem ui-monospace,Menlo,Consolas,monospace}
+.abc td{border:1px solid var(--line);padding:2px 5px;text-align:center}
+.abc tr:last-child td{background:var(--bg2);color:var(--accent);font-weight:800}
+.reward{font-size:2.6rem;font-weight:900;text-align:center;color:var(--ok);background:var(--okbg);border-radius:14px;padding:6px;margin:8px 0}
+.stars{font-size:2.4rem;letter-spacing:.1em}
+.center{text-align:center}
+.pickrow{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.lvbtn{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--card)}
+.lvbtn.sel{border-color:var(--accent);background:var(--bg2)}
+.lvbtn .li{font-size:1.4rem}
+details{margin:6px 0} summary{cursor:pointer;font-weight:700;min-height:32px}
+.field{display:block;margin:10px 0}
+.field .lbl{display:block;font-weight:700;margin-bottom:3px}
+.field .hint{display:block;font-size:.82rem;color:var(--muted);margin-top:3px}
+.cols{display:grid;grid-template-columns:290px 1fr;gap:14px;align-items:start}
+@media (max-width:780px){.cols{grid-template-columns:1fr}.match{gap:8px}}
+.tli{display:flex;gap:4px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:4px;margin:6px 0;background:var(--card)}
+.tli.sel{border-color:var(--accent);background:var(--bg2)}
+.tli .pick{flex:1;text-align:left;background:none;border:0;padding:6px;min-height:40px;font-weight:600}
+.tli .btn{margin:0}
+.typebtns{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:40px;height:40px;border-radius:50%;border:3px solid transparent}
+.sw.sel{border-color:var(--ink)}
+.emo{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px}
+.emo button{border:0;background:none;font-size:1.4rem;min-width:40px;min-height:40px;border-radius:8px}
+.emo button:hover{background:var(--bg2)}
+.errbox{border-radius:12px;padding:8px 12px;margin:8px 0}
+.errbox.e{background:var(--badbg);border-left:5px solid var(--bad)}
+.errbox.w{background:var(--warnbg);border-left:5px solid var(--warn)}
+.errbox.s{background:var(--okbg);border-left:5px solid var(--ok)}
+.errbox ul{margin:4px 0;padding-left:20px}
+.sticky{position:sticky;bottom:0;background:var(--bg);padding:8px 0;border-top:1px solid var(--line);margin-top:12px}
+.sol{border-top:1px solid var(--line);padding:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chips .btn{margin:0}
+.chips .btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+
+<script>
+/* =====================================================================
+   ESCAPE-ROOM-BAUKASTEN
+   ---------------------------------------------------------------------
+   Grundgerüst: Räume bestehen aus Aufgaben (Rätseln). Jede gelöste
+   Aufgabe liefert einen Code-Teil (eine Ziffer). Alle Code-Teile
+   zusammen öffnen die Tür.
+
+   Eigenen Raum bauen:  Startseite -> "Neuen Raum bauen" (kein Code nötig)
+   oder direkt unten im Array BUILTIN eintragen.
+
+   Aufgabentypen: code | choice | multi | order | match | lock | caesar
+   ===================================================================== */
+(function(){
+'use strict';
+
+var TEACHER_PIN = 'lehrkraft';          // Passwort für "Lösungen" und "Als Vorlage kopieren"
+var STORE_KEY   = 'ebk_custom_rooms_v1';
+
+var LEVELS = [
+  {id:1, name:'Einsteiger',      icon:'🟢', maxLv:2, hintBudget:Infinity, timer:false, hintCost:0,   wrongCost:0,
+   desc:'Leichte & mittlere Rätsel · beliebig viele Hinweise · keine Zeitvorgabe · Tür-Code einfach der Reihe nach'},
+  {id:2, name:'Fortgeschritten', icon:'🟡', maxLv:3, hintBudget:5,        timer:false, hintCost:0,   wrongCost:0,
+   desc:'Alle Rätsel (auch die schweren) · 5 Hinweise · die Tür hat eine Code-Regel'},
+  {id:3, name:'Profi',           icon:'🔴', maxLv:3, hintBudget:3,        timer:true,  hintCost:120, wrongCost:30,
+   desc:'Alle Rätsel · Zeitlimit · nur 3 Hinweise (je −2 Min.) · jeder Fehlversuch −30 s'}
+];
+var LV_LABEL = {1:'leicht', 2:'mittel', 3:'schwer'};
+var TYPES = {
+  code:   {icon:'🔢', name:'Antwort eintippen'},
+  choice: {icon:'☑️', name:'Auswahl (eine richtig)'},
+  multi:  {icon:'✅', name:'Mehrfachauswahl'},
+  order:  {icon:'↕️', name:'Reihenfolge'},
+  match:  {icon:'🔗', name:'Zuordnen'},
+  lock:   {icon:'🔐', name:'Zahlenschloss'},
+  caesar: {icon:'🕵️', name:'Geheimschrift'}
+};
+var GENERIC_HINT = {
+  code:'Lies die Aufgabe noch einmal. Unterstreiche, was gegeben ist und was gesucht wird. Schreibe dir eine Rechnung auf.',
+  choice:'Streiche zuerst die Antworten durch, die sicher falsch sind. Prüfe dann die übrigen mit einem Beispiel.',
+  multi:'Prüfe jede Möglichkeit einzeln: Passt sie – ja oder nein?',
+  order:'Überlege: Was muss zuerst passieren? Was kommt ganz zum Schluss? Ordne von außen nach innen.',
+  match:'Beginne mit den Paaren, die du sicher weißt. Was übrig bleibt, passt zusammen.',
+  lock:'Löse jede Ziffer einzeln. Schreibe die Ziffern nebeneinander auf.',
+  caesar:'Probiere am Regler verschiedene Verschiebungen aus, bis ein sinnvolles Wort entsteht.'
+};
+var RULES = {
+  order:  'Gib die Code-Teile in der Reihenfolge der Gegenstände ein (von links nach rechts, von oben nach unten).',
+  asc:    'Ordne die Code-Teile der Größe nach – die kleinste Ziffer kommt zuerst.',
+  desc:   'Ordne die Code-Teile der Größe nach – die größte Ziffer kommt zuerst.',
+  reverse:'Gib die Code-Teile rückwärts ein – vom letzten Gegenstand bis zum ersten.'
+};
+var RULE_NAMES = {order:'der Reihe nach', asc:'aufsteigend sortiert', desc:'absteigend sortiert', reverse:'rückwärts'};
+var PALETTE = ['#7b4fd1','#0e8a7d','#c4571e','#2f6fd0','#2b8a3e','#c2255c'];
+var MATCHPAL = ['#e03131','#1c7ed6','#2f9e44','#e67700','#9c36b5','#0c8599'];
+var EMOJIS = ['📦','🔑','🧩','📜','🧪','🔬','💡','🎮','🏀','⚽','🎒','📚','🧮','📐','🛠️','🧾','🏷️','🕹️','🔍','📱','🍕','🚲'];
+var STRATEGIES = ['✍️ Aufschreiben / Skizzieren','🧩 In Teilschritte zerlegen','🔁 Rückwärts denken','🧪 Ausprobieren & prüfen','🗣️ Im Team besprechen','💡 Hinweise nutzen'];
+
+/* ===================== Eingebaute Räume ===================== */
+var BUILTIN = [
+{ id:'b-mall', builtin:true, title:'Black-Friday-Falle', emoji:'🛍️', color:'#c2255c', minutes:25, finalRule:'asc',
+  topic:'Mathematik · Prozentrechnung · ab Jg. 7',
+  intro:'Du hast dich nach Ladenschluss im Einkaufszentrum „CityMall“ versteckt – und jetzt ist die Ausgangstür verriegelt! Der Sicherheitsdienst hat den Türcode auf Preisschilder, Kassenbons und Rabattaktionen verteilt. Löse die Rätsel, sammle die Code-Teile und komm raus, bevor die Alarmanlage wieder anspringt.',
+  tasks:[
+  {id:'m1',type:'code',icon:'👟',title:'Das Sneaker-Regal',lv:1,reward:'4',
+   story:'Die Sneaker kosten **80 €**. Auf dem roten Schild steht: **−25 %**.\nWie viel Euro sparst du?',
+   answers:['20'],
+   hints:['Gesucht ist der Prozentwert: 25 % von 80 €.','25 % sind ein Viertel. Teile 80 € durch 4.','80 € : 4 = ?'],
+   explain:'25 % sind ein Viertel. 80 € : 4 = 20 €. Du sparst 20 €.'},
+  {id:'m2',type:'choice',icon:'🧥',title:'Der Hoodie-Ständer',lv:1,reward:'7',
+   story:'Ein Hoodie kostete **40 €** und kostet jetzt **30 €**.\nWie viel Prozent Rabatt sind das?',
+   options:['10 %','20 %','25 %','30 %'],correct:2,
+   hints:['Wie viel Euro wurden gespart? Vergleiche die Ersparnis mit dem alten Preis (100 % = 40 €).','Die Ersparnis beträgt 10 €. Teile 10 € durch 40 €.','10 : 40 = 0,25'],
+   explain:'Ersparnis: 40 € − 30 € = 10 €. Anteil: 10 € : 40 € = 0,25 = 25 %.'},
+  {id:'m3',type:'match',icon:'🏷️',title:'Die Preisschilder-Wand',lv:2,reward:'1',
+   story:'Die Schilder sind durcheinandergeraten. Verbinde jede **Prozentzahl** mit dem passenden **Bruch** bzw. der passenden **Dezimalzahl**.',
+   pairs:[['50 %','½'],['25 %','¼'],['10 %','0,1'],['75 %','¾'],['20 %','⅕']],
+   hints:['Fange mit den einfachen an: 50 % ist die Hälfte.','25 % ist ein Viertel, 75 % sind drei Viertel.','10 % = 10 : 100 = 0,1 und 20 % = 20 : 100 = 1 : 5.'],
+   explain:'50 % = ½ · 25 % = ¼ · 75 % = ¾ · 10 % = 0,1 · 20 % = ⅕.'},
+  {id:'m4',type:'order',icon:'🧾',title:'Der Kassenbon',lv:2,reward:'9',
+   story:'Auf dem Kassenbon steht die Rechnung für eine Jacke (60 €, −15 %). Die Zeilen sind verrutscht.\nBringe die Rechenschritte in die richtige Reihenfolge.',
+   items:['Gegeben: Preis 60 €, Rabatt 15 %','Rabatt in Euro: 15 % von 60 € = 0,15 · 60 € = 9 €','Neuer Preis: 60 € − 9 €','Ergebnis: Die Jacke kostet 51 €'],
+   hints:['Was ist am Anfang bekannt? Das steht ganz oben.','Erst muss der Rabatt in Euro ausgerechnet werden, dann wird er abgezogen.'],
+   explain:'Erst steht fest, was gegeben ist, dann wird der Rabatt in Euro berechnet, vom Preis abgezogen und zum Schluss das Ergebnis notiert.'},
+  {id:'m5',type:'code',icon:'📺',title:'Das Streaming-Terminal',lv:2,reward:'2',
+   story:'Ein Streaming-Abo kostet **12 € pro Monat**. Bei Jahreszahlung gibt es **10 % Rabatt** auf den Jahrespreis.\nWie viel Euro zahlst du im Jahr? (Schreibe mit Komma, z. B. 12,5)',
+   answers:['129,6'],
+   hints:['Berechne erst den Preis für 12 Monate ohne Rabatt.','12 € · 12 = 144 €. Davon sind 10 % der Rabatt.','10 % von 144 € = 14,40 €. Was musst du jetzt tun?'],
+   explain:'12 € · 12 = 144 € (Jahrespreis). 10 % von 144 € = 14,40 €. 144 € − 14,40 € = 129,60 €.'},
+  {id:'m6',type:'code',icon:'🎮',title:'Das Spieleregal',lv:3,reward:'6',
+   story:'Ein Spiel wurde um **20 %** teurer und kostet jetzt **60 €**.\nWie viel Euro hat es vorher gekostet?',
+   answers:['50'],
+   hints:['Gesucht ist der alte Preis (Grundwert = 100 %). Der neue Preis entspricht 120 %.','Rechne erst auf 1 % herunter: 60 € : 120.','1 % sind 0,50 €. Wie viel sind dann 100 %?'],
+   explain:'120 % ≙ 60 €  →  1 % ≙ 0,50 €  →  100 % ≙ 50 €.'},
+  {id:'m7',type:'choice',icon:'🛒',title:'Die Doppel-Rabatt-Aktion',lv:3,reward:'3',
+   story:'Ein Schild verspricht: „Erst **−20 %**, an der Kasse nochmal **−10 %** auf den reduzierten Preis!“\nDeine Freundin sagt: „Das sind doch zusammen −30 %!“\nWas stimmt?',
+   options:['Ja, 20 % + 10 % = 30 % Rabatt','Nein, es sind insgesamt nur 28 % Rabatt','Nein, es sind insgesamt 32 % Rabatt','Nein, es sind insgesamt 25 % Rabatt'],correct:1,
+   hints:['Probiere es mit einem Beispielpreis, z. B. 100 €.','Nach −20 % bleiben 80 €. Nun −10 % von 80 €.','80 € − 8 € = 72 €. Vergleiche mit den ursprünglichen 100 €.'],
+   explain:'Beispiel 100 €: −20 % → 80 €; −10 % von 80 € = 8 € → 72 €. Insgesamt wurden 28 € gespart = 28 %. Die zweite Prozentzahl bezieht sich auf einen kleineren Grundwert.'}
+  ]},
+
+{ id:'b-halle', builtin:true, title:'Der verschwundene Pokal', emoji:'🏆', color:'#2f6fd0', minutes:20, finalRule:'desc',
+  topic:'Mathematik & Logik · Sport · ab Jg. 5',
+  intro:'Morgen ist das Finale – aber der Pokal ist weg! Der Hausmeister hat die Turnhalle abgeschlossen, und die Tür öffnet sich nur mit dem Code des Trainers. Er hat ihn in Rätseln rund um Handball versteckt. Findet den Pokal-Dieb und den Türcode!',
+  tasks:[
+  {id:'h1',type:'caesar',icon:'✉️',title:'Der Zettel in der Kabine',lv:1,reward:'8',plain:'BANK',shift:3,
+   story:'In der Umkleide klebt ein Zettel in Geheimschrift. Der Trainer schreibt: „Ich habe jeden Buchstaben um **3 Stellen im Alphabet nach hinten** verschoben.“\nWo ist das Versteck? Entschlüssele das Wort mit der Schlüsselscheibe.',
+   hints:['Stelle den Regler auf 3: Dann wird jeder Buchstabe um 3 Stellen zurückgeschoben.','Aus E wird B (E → D → C → B).','Das Wort hat 4 Buchstaben und beginnt mit B.'],
+   explain:'Verschiebung 3 zurück: E→B, D→A, Q→N, N→K. Das Versteck ist die BANK.'},
+  {id:'h2',type:'code',icon:'⏱️',title:'Die Stoppuhr',lv:1,reward:'2',
+   story:'Ein Handballspiel dauert bei den Erwachsenen **2 × 30 Minuten**. Die Stoppuhr zeigt die gesamte Spielzeit in **Sekunden**.\nWelche Zahl steht auf dem Display?',
+   answers:['3600'],
+   hints:['Rechne zuerst die gesamte Spielzeit in Minuten aus.','2 · 30 min = 60 min. Wie viele Sekunden hat eine Minute?','60 · 60 = ?'],
+   explain:'2 · 30 min = 60 min. 60 · 60 s = 3600 s.'},
+  {id:'h3',type:'order',icon:'📋',title:'Die Tabellen-Tafel',lv:2,reward:'5',
+   story:'Die Tabelle der Jugendliga ist von der Wand gefallen. Sortiere die Mannschaften nach ihren Punkten – **die meisten Punkte zuerst**.',
+   items:['Löwen – 12 Punkte','Bären – 10 Punkte','Falken – 9 Punkte','Adler – 7 Punkte'],
+   hints:['Vergleiche die Punktzahlen. Welche ist am größten?','Die Löwen haben die meisten Punkte.'],
+   explain:'12 > 10 > 9 > 7, also Löwen, Bären, Falken, Adler.'},
+  {id:'h4',type:'code',icon:'🔢',title:'Die Anzeigetafel',lv:2,reward:'0',
+   story:'Die Löwen gewinnen **27 : 22**. Zur Halbzeit stand es **14 : 12**.\nWie viele Tore haben die Löwen in der **zweiten Halbzeit mehr** geworfen als der Gegner?',
+   answers:['3'],
+   hints:['Rechne getrennt: Tore der Löwen in der 2. Halbzeit und Tore des Gegners in der 2. Halbzeit.','Löwen: 27 − 14. Gegner: 22 − 12.','Es sind 13 und 10 Tore. Was ist der Unterschied?'],
+   explain:'Löwen 2. Halbzeit: 27 − 14 = 13. Gegner 2. Halbzeit: 22 − 12 = 10. Unterschied: 13 − 10 = 3.'},
+  {id:'h5',type:'lock',icon:'🔐',title:'Der Spind des Trainers',lv:2,reward:'9',combo:'673',
+   story:'Das Zahlenschloss hat **3 Ziffern**:\n**1. Ziffer:** Wie viele Feldspieler (ohne Torwart) hat ein Handballteam gleichzeitig auf dem Spielfeld?\n**2. Ziffer:** Aus wie vielen Metern wirft man einen Siebenmeter?\n**3. Ziffer:** Wie viele Spieler (mit Torwart) hat ein Team gleichzeitig auf dem Feld – minus 4?',
+   hints:['Ein Team hat 7 Spieler auf dem Feld, einer davon ist der Torwart.','Der Name „Siebenmeter“ verrät die Entfernung.','Ziffern: 6 · 7 · (7 − 4)'],
+   explain:'Feldspieler: 7 − 1 = 6. Siebenmeter: 7 m. Spieler insgesamt: 7, und 7 − 4 = 3. Code: 673.'},
+  {id:'h6',type:'choice',icon:'🕵️',title:'Die Zeugenaussagen',lv:3,reward:'1',
+   story:'Der Pokal ist verschwunden! Es war **genau eine** Person. Vier Verdächtige machen Aussagen – aber **nur eine Aussage ist wahr**.\n• **Mia:** „Ich war es nicht – es war Ben.“\n• **Ben:** „Ich war es nicht – es war Tom.“\n• **Lena:** „Ich war es nicht.“\n• **Tom:** „Ben lügt.“\nWer hat den Pokal versteckt?',
+   options:['Mia','Ben','Lena','Tom'],correct:2,
+   hints:['Probiere jeden Verdächtigen als Täter aus: Welche Aussagen wären dann wahr?','Zähle bei jedem möglichen Täter die wahren Aussagen. Es darf genau eine sein.','Angenommen, Lena war es: Mia ✗, Ben ✗, Lena ✗, Tom ✓ – genau eine wahre Aussage.'],
+   explain:'Täter Mia: Lena und Tom sagen die Wahrheit (2 wahre). Täter Ben: Mia, Lena, Tom wahr (3). Täter Tom: Ben und Lena wahr (2). Täter Lena: nur Toms Aussage ist wahr – das passt. Lena war es.'},
+  {id:'h7',type:'code',icon:'👕',title:'Der Trikotschrank',lv:3,reward:'6',
+   story:'Auf den Trikots der Reservespieler stehen diese Nummern:\n**2 – 5 – 11 – 23 – 47 – ?**\nWelche Nummer gehört auf das letzte Trikot?',
+   answers:['95'],
+   hints:['Wie kommst du von 2 zu 5? Und von 5 zu 11? Probiere erst „+ Zahl“, dann „· Zahl“.','Verdopple und addiere 1: 2 · 2 + 1 = 5. Gilt das auch für 5 → 11?','47 · 2 + 1 = ?'],
+   explain:'Regel: verdoppeln und 1 addieren. 2·2+1=5, 5·2+1=11, 11·2+1=23, 23·2+1=47, 47·2+1=95.'}
+  ]},
+
+{ id:'b-werkstatt', builtin:true, title:'Ausbruch aus der Werkstatt', emoji:'🛠️', color:'#c4571e', minutes:20, finalRule:'reverse',
+  topic:'Arbeitslehre · Werkstatt & Berufe · ab Jg. 7',
+  intro:'Der Werkstattleiter hat dich aus Versehen eingeschlossen! Das Rolltor öffnet sich nur mit dem Sicherheitscode. Er steckt in Rätseln zu Werkzeugen, Arbeitssicherheit, Materialkosten und Berufen. Wer die Werkstatt kennt, kommt raus.',
+  tasks:[
+  {id:'w1',type:'multi',icon:'🛠️',title:'Die Standbohrmaschine',lv:1,reward:'3',
+   story:'Du willst an der Standbohrmaschine arbeiten. Was gehört zum **sicheren Arbeiten**?',
+   options:['Schutzbrille tragen','Lange Haare zusammenbinden','Stoffhandschuhe anziehen','Werkstück einspannen statt festhalten','Ärmel locker flattern lassen'],correct:[0,1,3],
+   hints:['Überlege bei jeder Antwort: Kann sich etwas an der drehenden Maschine verfangen?','Handschuhe und lockere Ärmel sind an drehenden Maschinen gefährlich.'],
+   explain:'Schutzbrille, Haare zusammenbinden und Werkstück einspannen schützen dich. Handschuhe und lockere Ärmel können sich an drehenden Teilen verfangen.'},
+  {id:'w2',type:'match',icon:'🔧',title:'Die Werkzeugwand',lv:1,reward:'7',
+   story:'Die Werkzeuge sind von der Wand gefallen. Ordne jedem Werkzeug seine Aufgabe zu.',
+   pairs:[['Schraubzwinge','Werkstück festhalten'],['Zollstock','Längen messen'],['Winkel','Rechte Winkel anreißen'],['Feile','Kanten glätten']],
+   hints:['Beginne mit dem Werkzeug, dessen Namen du sofort verstehst.','Eine Zwinge „zwingt“ ein Werkstück an seinen Platz.'],
+   explain:'Schraubzwinge = festhalten, Zollstock = messen, Winkel = rechte Winkel anreißen, Feile = Kanten glätten.'},
+  {id:'w3',type:'code',icon:'📏',title:'Das Holzlager',lv:2,reward:'1',
+   story:'Ein Brett ist **2,40 m** lang. Du sägst daraus **6 gleich lange Stücke** (den Sägeverlust vernachlässigst du).\nWie lang ist ein Stück in **Zentimetern**?',
+   answers:['40'],
+   hints:['Rechne zuerst die Länge in Zentimeter um.','2,40 m = 240 cm.','240 cm : 6 = ?'],
+   explain:'2,40 m = 240 cm. 240 cm : 6 = 40 cm.'},
+  {id:'w4',type:'order',icon:'📋',title:'Der Arbeitsplan',lv:2,reward:'8',
+   story:'Beim Bau eines Vogelhauses ist der Arbeitsplan durcheinandergeraten. Bringe die Arbeitsschritte in eine sinnvolle Reihenfolge.',
+   items:['Skizze zeichnen und Maße festlegen','Maße auf dem Holz anreißen','Teile aussägen','Kanten schleifen','Teile zusammenleimen oder -schrauben','Oberfläche ölen oder lackieren'],
+   hints:['Was braucht man, bevor man überhaupt Holz anfasst?','Erst messen und anzeichnen, dann sägen. Die Oberflächenbehandlung kommt ganz zum Schluss.'],
+   explain:'Planen → Anreißen → Sägen → Schleifen → Zusammenbauen → Oberfläche behandeln. Geschliffen wird vor dem Zusammenbau, weil man dann besser an alle Kanten kommt.'},
+  {id:'w5',type:'code',icon:'🧾',title:'Die Materialliste',lv:2,reward:'5',
+   story:'Für ein Regal brauchst du **3 Bretter zu je 8,50 €** und **20 Schrauben zu je 0,05 €**.\nWie viel Euro kostet das Material insgesamt?',
+   answers:['26,5'],
+   hints:['Berechne die Kosten für die Bretter und für die Schrauben getrennt.','3 · 8,50 € = 25,50 €','20 · 0,05 € = 1 €. Was musst du noch tun?'],
+   explain:'Bretter: 3 · 8,50 € = 25,50 €. Schrauben: 20 · 0,05 € = 1,00 €. Zusammen: 26,50 €.'},
+  {id:'w6',type:'choice',icon:'🎓',title:'Das Ausbildungs-Plakat',lv:3,reward:'0',
+   story:'Vier Auszubildende lernen vier verschiedene Berufe: **Tischler/in, Elektroniker/in, Kfz-Mechatroniker/in, Friseur/in**. Jede Person hat einen anderen Beruf.\n• Jonas arbeitet weder mit Holz noch mit Strom.\n• Deniz und Aylin schneiden keine Haare.\n• Aylin arbeitet weder mit Strom noch an Autos.\n• Sophie hat noch nie mit einer Schere gearbeitet und ist keine Tischlerin.\n• Deniz repariert keine Autos.\nWer lernt **Kfz-Mechatroniker/in**?',
+   options:['Aylin','Jonas','Sophie','Deniz'],correct:2,
+   hints:['Lege dir eine Tabelle an: 4 Personen × 4 Berufe. Streiche alles durch, was ausgeschlossen ist.','Beginne mit Aylin: Welche Berufe bleiben für sie übrig?','Aylin ist Tischlerin. Wer kann dann noch Friseur/in sein?'],
+   explain:'Aylin: weder Friseurin noch Elektro noch Kfz → Tischlerin. Friseur/in kann nur Jonas sein (Deniz, Aylin und Sophie schneiden keine Haare). Deniz repariert keine Autos und ist weder Tischler noch Friseur → Elektroniker. Für Sophie bleibt Kfz-Mechatronikerin.'}
+  ]},
+
+{ id:'b-game', builtin:true, title:'Game Over? Das Level-Escape', emoji:'🕹️', color:'#0e8a7d', minutes:20, finalRule:'order',
+  topic:'Mathematik · Zahlen, Logik & Informatik · Jg. 5–7',
+  intro:'Du bist in deinem eigenen Computerspiel gefangen! Der Endgegner hat den Ausgang gesperrt. Nur wer alle sieben Level-Rätsel löst, bekommt den Code für das Exit-Portal. Los, Spieler – dein Highscore wartet!',
+  tasks:[
+  {id:'g1',type:'code',icon:'🕹️',title:'Der Highscore',lv:1,reward:'5',
+   story:'Du hast in drei Levels Punkte gesammelt: **250**, **375** und **125**.\nWie viele Punkte hast du insgesamt?',
+   answers:['750'],
+   hints:['Du musst alle drei Punktzahlen zusammenzählen.','250 + 375 = ?','Zu dem Zwischenergebnis kommen noch 125 dazu.'],
+   explain:'250 + 375 = 625; 625 + 125 = 750.'},
+  {id:'g2',type:'match',icon:'🔢',title:'Das Rechen-Portal',lv:1,reward:'2',
+   story:'Das Portal öffnet sich nur, wenn jede Rechenaufgabe mit ihrem **Ergebnis** verbunden ist.',
+   pairs:[['6 · 4','24'],['56 : 8','7'],['9 + 9','18'],['20 − 7','13']],
+   hints:['Rechne zuerst die Aufgaben aus, bei denen du das Ergebnis sofort weißt.','Die Umkehrung hilft: 7 · 8 = 56.'],
+   explain:'6 · 4 = 24 · 56 : 8 = 7 · 9 + 9 = 18 · 20 − 7 = 13.'},
+  {id:'g3',type:'order',icon:'📊',title:'Die Bruch-Leiter',lv:2,reward:'8',
+   story:'Die Leiter zum nächsten Level hat vier Sprossen. Ordne die Brüche **von klein nach groß** (der kleinste Bruch zuerst).',
+   items:['⅛','¼','½','¾'],
+   hints:['Mache die Brüche gleichnamig. Welcher Nenner passt für alle?','Mit dem Nenner 8: ¼ = 2/8, ½ = 4/8, ¾ = 6/8.'],
+   explain:'Auf den Nenner 8: 1/8 < 2/8 < 4/8 < 6/8, also ⅛ < ¼ < ½ < ¾.'},
+  {id:'g4',type:'lock',icon:'🔐',title:'Der Würfel-Tresor',lv:2,reward:'4',combo:'863',
+   story:'Der Tresor hat **3 Ziffern**:\n**1. Ziffer:** Wie viele Ecken hat ein Würfel?\n**2. Ziffer:** Wie viele Flächen hat ein Würfel?\n**3. Ziffer:** Wie viele Ecken hat ein Dreieck?',
+   hints:['Stelle dir einen Spielwürfel vor – oder nimm einen in die Hand.','Ecken zählst du oben (4) und unten (4).'],
+   explain:'Würfel: 8 Ecken, 6 Flächen. Dreieck: 3 Ecken. Code: 863.'},
+  {id:'g5',type:'code',icon:'🧠',title:'Die Gedanken-Zahl',lv:2,reward:'9',
+   story:'Der Endgegner denkt sich eine Zahl: „Wenn ich sie **verdopple** und dann **7 addiere**, erhalte ich **51**.“\nWelche Zahl hat er sich gedacht?',
+   answers:['22'],
+   hints:['Arbeite rückwärts: Mache die letzte Rechnung zuerst rückgängig.','Rückgängig machen: 51 − 7.','44 muss noch halbiert werden.'],
+   explain:'51 − 7 = 44; 44 : 2 = 22. Probe: 22 · 2 + 7 = 51.'},
+  {id:'g6',type:'code',icon:'💾',title:'Das Binär-Terminal',lv:3,reward:'1',
+   story:'Computer zählen nur mit **0 und 1**. Im Terminal blinkt die Binärzahl **1011**.\nJede Stelle hat einen Wert (von rechts nach links): **1, 2, 4, 8**. Wo eine 1 steht, zählt der Wert mit.\nWelche Dezimalzahl ist das?',
+   answers:['11'],
+   hints:['Schreibe die Stellenwerte unter die Ziffern: 8 – 4 – 2 – 1.','1011: Unter der 8 steht 1, unter der 4 steht 0, unter der 2 steht 1, unter der 1 steht 1.','Addiere nur die Werte, bei denen eine 1 steht.'],
+   explain:'1011 = 1·8 + 0·4 + 1·2 + 1·1 = 8 + 2 + 1 = 11.'},
+  {id:'g7',type:'choice',icon:'🏝️',title:'Die Ritter-Insel',lv:3,reward:'6',
+   story:'Auf der Insel gibt es **Ritter** (sagen immer die Wahrheit) und **Schurken** (lügen immer). Du triffst Anna und Ben.\nAnna sagt: „Wir sind **beide** Schurken.“\nWas sind Anna und Ben?',
+   options:['Beide sind Ritter','Beide sind Schurken','Anna ist Schurkin, Ben ist Ritter','Anna ist Ritterin, Ben ist Schurke'],correct:2,
+   hints:['Teste: Was passiert, wenn Anna eine Ritterin ist?','Eine Ritterin sagt die Wahrheit – dann wäre sie selbst eine Schurkin. Geht das?','Anna lügt also. Was bedeutet das für ihren Satz „Wir sind beide Schurken“?'],
+   explain:'Wäre Anna Ritterin, müsste ihr Satz wahr sein – dann wäre sie selbst Schurkin: Widerspruch. Also ist Anna Schurkin und lügt. Ihr Satz ist falsch, also sind nicht beide Schurken – Ben ist Ritter.'}
+  ]}
+];
+
+/* ===================== Hilfsfunktionen ===================== */
+function h(tag, props){
+  var e = document.createElement(tag);
+  if(props){ Object.keys(props).forEach(function(k){
+    var v = props[k];
+    if(v==null || v===false) return;
+    if(k==='class') e.className = v;
+    else if(k==='style') e.style.cssText = v;
+    else if(k.indexOf('on')===0) e.addEventListener(k.slice(2), v);
+    else if(k in e && typeof v!=='object') e[k] = v;
+    else e.setAttribute(k, v===true ? '' : v);
+  });}
+  for(var i=2;i<arguments.length;i++) add(e, arguments[i]);
+  return e;
+}
+function add(parent, c){
+  if(c==null || c===false) return;
+  if(Array.isArray(c)){ c.forEach(function(x){ add(parent,x); }); return; }
+  parent.appendChild(c.nodeType ? c : document.createTextNode(String(c)));
+}
+function fmt(text){
+  var frag = document.createDocumentFragment();
+  String(text||'').split('\n').forEach(function(line,i){
+    if(i) frag.appendChild(document.createElement('br'));
+    line.split(/(\*\*[^*]+\*\*)/).forEach(function(p){
+      if(/^\*\*[^*]+\*\*$/.test(p)) frag.appendChild(h('strong',null,p.slice(2,-2)));
+      else if(p) frag.appendChild(document.createTextNode(p));
+    });
+  });
+  return frag;
+}
+function shuffle(a){ var r=a.slice(); for(var i=r.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=r[i]; r[i]=r[j]; r[j]=t; } return r; }
+function shuffleNotIdentity(n){
+  var idx=[]; for(var i=0;i<n;i++) idx.push(i);
+  if(n<2) return idx;
+  var r, tries=0;
+  do{ r=shuffle(idx); tries++; } while(r.every(function(v,i){return v===i;}) && tries<60);
+  return r;
+}
+function uid(){ return 't'+Math.random().toString(36).slice(2,9); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function fmtTime(sec){ sec=Math.max(0,Math.floor(sec)); var m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
+
+/* ===== Antworten prüfen ===== */
+function normText(s){
+  return String(s==null?'':s).toLowerCase().replace(/ß/g,'ss').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[^a-z0-9]+/g,'');
+}
+function parseNum(s){
+  var t = String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,'');
+  t = t.replace(/[a-zäöüß€$%²³°]+$/g,'');
+  if(/^[-+]?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g,'').replace(',','.');
+  else t = t.replace(',','.');
+  if(!/^[-+]?\d+(\.\d+)?$/.test(t)) return NaN;
+  return parseFloat(t);
+}
+function checkCode(task, input){
+  return (task.answers||[]).some(function(a){
+    var n = parseNum(a);
+    if(!isNaN(n)){ var m=parseNum(input); return !isNaN(m) && Math.abs(m-n)<1e-9; }
+    return normText(a)!=='' && normText(a)===normText(input);
+  });
+}
+function caesar(text, shift){
+  var s=((shift%26)+26)%26;
+  return String(text).replace(/[A-Za-z]/g,function(c){
+    var base = c<='Z' ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0)-base+s)%26+base);
+  });
+}
+
+/* ===== Lösungen & Code ===== */
+function solutionOf(t){
+  switch(t.type){
+    case 'code':   return (t.answers||[]).join('  oder  ');
+    case 'choice': return t.options[t.correct];
+    case 'multi':  return (t.correct||[]).map(function(i){return t.options[i];}).join(' · ');
+    case 'order':  return t.items.join('  →  ');
+    case 'match':  return t.pairs.map(function(p){return p[0]+' ↔ '+p[1];}).join(' · ');
+    case 'lock':   return t.combo;
+    case 'caesar': return t.plain;
+  }
+  return '';
+}
+function computeCode(tasks, rule){
+  var d = tasks.map(function(t){return String(t.reward);});
+  if(rule==='asc') d.sort();
+  else if(rule==='desc'){ d.sort(); d.reverse(); }
+  else if(rule==='reverse') d.reverse();
+  return d.join('');
+}
+
+/* ===== Prüfen & Bereinigen von Räumen ===== */
+function sanitizeTask(t){
+  if(!t || !TYPES[t.type]) return null;
+  var s=function(x){return typeof x==='string'?x:'';};
+  var arr=function(a){return Array.isArray(a)?a.map(String):[];};
+  var o={id:s(t.id)||uid(), type:t.type, title:s(t.title), icon:s(t.icon)||'📦', story:s(t.story),
+    lv:[1,2,3].indexOf(+t.lv)>=0?+t.lv:1, reward:/^\d$/.test(String(t.reward))?String(t.reward):'0',
+    hints:arr(t.hints).filter(Boolean), explain:s(t.explain)};
+  switch(t.type){
+    case 'code': o.answers=arr(t.answers).filter(Boolean); break;
+    case 'choice': o.options=arr(t.options); o.correct=Math.max(0,parseInt(t.correct,10)||0); break;
+    case 'multi': o.options=arr(t.options); o.correct=Array.isArray(t.correct)?t.correct.map(Number).filter(function(n){return isFinite(n);}):[]; break;
+    case 'order': o.items=arr(t.items); break;
+    case 'match': o.pairs=Array.isArray(t.pairs)?t.pairs.filter(function(p){return Array.isArray(p)&&p.length>=2;}).map(function(p){return [String(p[0]),String(p[1])];}):[]; break;
+    case 'lock': o.combo=String(t.combo==null?'':t.combo).replace(/\D/g,''); break;
+    case 'caesar': o.plain=s(t.plain).toUpperCase().replace(/[^A-Z ]/g,''); o.shift=Math.min(25,Math.max(1,parseInt(t.shift,10)||3)); break;
+  }
+  return o;
+}
+function sanitizeRoom(r){
+  var s=function(x){return typeof x==='string'?x:'';};
+  r = r||{};
+  return {id:s(r.id)||uid(), title:s(r.title)||'Escape Room', topic:s(r.topic), emoji:s(r.emoji)||'🚪',
+    color:PALETTE.indexOf(r.color)>=0?r.color:PALETTE[0], intro:s(r.intro),
+    minutes:Math.min(90,Math.max(5,parseInt(r.minutes,10)||20)),
+    finalRule:RULES[r.finalRule]?r.finalRule:'order',
+    tasks:(Array.isArray(r.tasks)?r.tasks:[]).map(sanitizeTask).filter(Boolean).slice(0,10)};
+}
+function validateRoom(room){
+  var errors=[], warns=[];
+  if(!room.title.trim()) errors.push('Der Raum braucht einen Titel.');
+  if(!room.intro.trim()) warns.push('Die Rahmengeschichte (Einleitung) ist leer.');
+  if(room.tasks.length<3) errors.push('Ein Raum braucht mindestens 3 Aufgaben (aktuell '+room.tasks.length+').');
+  if(room.tasks.length>10) errors.push('Mehr als 10 Aufgaben gehen nicht (pro Aufgabe gibt es eine Ziffer).');
+  var easy = room.tasks.filter(function(t){return t.lv<=2;}).length;
+  if(room.tasks.length>=3 && easy<3) warns.push('Für „Einsteiger“ gibt es nur '+easy+' Aufgabe(n) mit Stufe leicht/mittel (mindestens 3 empfohlen).');
+  var seen={};
+  room.tasks.forEach(function(t,i){
+    var p='Aufgabe '+(i+1)+(t.title?' („'+t.title+'“)':'')+': ';
+    if(!t.title.trim()) errors.push(p+'Titel fehlt.');
+    if(!t.story.trim()) errors.push(p+'Aufgabentext fehlt.');
+    if(!/^\d$/.test(String(t.reward))) errors.push(p+'Der Code-Teil muss eine Ziffer 0–9 sein.');
+    if(seen[t.reward]) warns.push(p+'Die Ziffer '+t.reward+' kommt mehrfach vor (Sortier-Regeln sind dann weniger eindeutig).');
+    seen[t.reward]=true;
+    switch(t.type){
+      case 'code': if(!t.answers.length) errors.push(p+'Keine richtige Antwort eingetragen.'); break;
+      case 'choice':
+        if(t.options.length<2) errors.push(p+'Mindestens 2 Antwortmöglichkeiten nötig.');
+        else if(t.correct>=t.options.length || t._stars===0) errors.push(p+'Markiere die richtige Antwort mit * am Zeilenanfang.');
+        else if(t._stars>1) errors.push(p+'Bei „Auswahl“ darf nur eine Antwort mit * markiert sein (für mehrere: Mehrfachauswahl).');
+        break;
+      case 'multi':
+        if(t.options.length<3) errors.push(p+'Mindestens 3 Antwortmöglichkeiten nötig.');
+        if(!t.correct.length || t.correct.some(function(i){return i>=t.options.length;})) errors.push(p+'Markiere die richtigen Antworten mit * am Zeilenanfang.');
+        break;
+      case 'order':
+        if(t.items.length<3||t.items.length>7) errors.push(p+'Reihenfolge braucht 3 bis 7 Einträge.');
+        if(new Set(t.items).size!==t.items.length) errors.push(p+'Die Einträge müssen sich unterscheiden.');
+        break;
+      case 'match':
+        if(t.pairs.length<3||t.pairs.length>6) errors.push(p+'Zuordnen braucht 3 bis 6 Paare (Format: links | rechts).');
+        if(new Set(t.pairs.map(function(x){return x[1];})).size!==t.pairs.length || new Set(t.pairs.map(function(x){return x[0];})).size!==t.pairs.length) errors.push(p+'Alle linken und alle rechten Einträge müssen verschieden sein.');
+        break;
+      case 'lock': if(t.combo.length<2||t.combo.length>6) errors.push(p+'Das Zahlenschloss braucht 2 bis 6 Ziffern.'); break;
+      case 'caesar':
+        if(t.plain.replace(/ /g,'').length<3) errors.push(p+'Das Lösungswort braucht mindestens 3 Buchstaben (A–Z, ohne Umlaute).');
+        break;
+    }
+    if(!t.hints.length) warns.push(p+'Keine Hinweise eingetragen (es wird ein allgemeiner Hinweis angezeigt).');
+    if(!t.explain.trim()) warns.push(p+'Der Lösungsweg fehlt (wird am Ende zur Besprechung angezeigt).');
+  });
+  return {errors:errors, warns:warns};
+}
+
+/* ===== Speicher ===== */
+var mem = [];
+function loadCustom(){
+  try{
+    var j = window.localStorage.getItem(STORE_KEY);
+    if(j){ var a=JSON.parse(j); if(Array.isArray(a)) return a.map(sanitizeRoom); }
+  }catch(e){}
+  return mem.map(sanitizeRoom);
+}
+function saveCustom(){
+  mem = clone(customRooms);
+  try{ window.localStorage.setItem(STORE_KEY, JSON.stringify(customRooms)); }catch(e){}
+}
+
+/* ===================== Zustand ===================== */
+var app = document.getElementById('app');
+var modalRoot = document.getElementById('modal');
+var S = {screen:'home'};
+var E = null;
+var customRooms = loadCustom();
+
+function setScreen(name, state){
+  stopTimer(); closeModal();
+  S = state || {screen:name};
+  S.screen = name;
+  render(); window.scrollTo(0,0);
+}
+function render(){
+  var accent = PALETTE[0];
+  if(S.room) accent = S.room.color;
+  else if(S.screen==='editor' && E) accent = E.room.color;
+  document.documentElement.style.setProperty('--accent', accent);
+  if(S.screen==='home') renderHome();
+  else if(S.screen==='play') renderPlay();
+  else if(S.screen==='win') renderWin();
+  else if(S.screen==='lose') renderLose();
+  else if(S.screen==='editor') renderEditor();
+}
+
+/* ===================== Modals ===================== */
+function showModal(node, opts){
+  opts = opts||{};
+  closeModal();
+  var box = h('div',{class:'modal'+(opts.wide?' wide':''),role:'dialog','aria-modal':'true','aria-label':opts.label||'Dialog',tabindex:'-1'}, node);
+  var back = h('div',{class:'backdrop',onclick:function(e){ if(e.target===back && !opts.sticky) closeModal(); }}, box);
+  modalRoot.appendChild(back);
+  document.body.classList.add('noscroll');
+  try{ box.focus({preventScroll:true}); }catch(e){ box.focus(); }
+  return box;
+}
+function closeModal(){
+  modalRoot.replaceChildren();
+  document.body.classList.remove('noscroll');
+  if(S) S.open = null;
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modalRoot.firstChild) closeModal(); });
+
+function confirmBox(msg, yesLabel, onYes){
+  showModal(h('div',null,
+    h('p',null,msg),
+    h('div',{class:'actions'},
+      h('button',{class:'btn danger',type:'button',onclick:function(){ closeModal(); onYes(); }},yesLabel),
+      h('button',{class:'btn',type:'button',onclick:closeModal},'Abbrechen'))), {label:'Bestätigen'});
+}
+function askPin(onOk){
+  var fb = h('div',{class:'fb bad',role:'status'});
+  var inp = h('input',{type:'text',placeholder:'Passwort',autocomplete:'off',onkeydown:function(e){ if(e.key==='Enter') go(); }});
+  function go(){ if(inp.value.trim().toLowerCase()===TEACHER_PIN){ closeModal(); onOk(); } else { fb.textContent='Das Passwort stimmt nicht.'; } }
+  showModal(h('div',null,h('h3',null,'🔒 Nur für Lehrkräfte'),h('p',{class:'muted'},'Bitte das Lehrkraft-Passwort eingeben.'),inp,fb,
+    h('div',{class:'actions'},h('button',{class:'btn primary',type:'button',onclick:go},'Weiter'),h('button',{class:'btn',type:'button',onclick:closeModal},'Abbrechen'))),{label:'Passwort'});
+  inp.focus();
+}
+function infoModal(title, body){
+  showModal(h('div',null,h('h3',null,title),body,h('div',{class:'actions'},h('button',{class:'btn primary',type:'button',onclick:closeModal},'OK'))),{label:title});
+}
+
+/* ===================== Aufgaben-Widgets ===================== */
+function makeWheels(n){
+  var vals=[], digs=[];
+  var node = h('div',{class:'wheels'});
+  function bump(i,dx){ vals[i]=(vals[i]+dx+10)%10; digs[i].textContent=String(vals[i]); }
+  for(var i=0;i<n;i++){ (function(i){
+    vals[i]=0; digs[i]=h('div',{class:'d','aria-live':'polite'},'0');
+    node.appendChild(h('div',{class:'wheel'},
+      h('button',{type:'button',class:'btn small up','aria-label':'Ziffer '+(i+1)+' erhöhen',onclick:function(){bump(i,1);}},'▲'),
+      digs[i],
+      h('button',{type:'button',class:'btn small down','aria-label':'Ziffer '+(i+1)+' verringern',onclick:function(){bump(i,-1);}},'▼')));
+  })(i); }
+  return {node:node, value:function(){return vals.join('');}};
+}
+
+function wCode(t){
+  var numeric = (t.answers||[]).every(function(a){return !isNaN(parseNum(a));});
+  var w = {};
+  var inp = h('input',{type:'text',class:'ans',placeholder:'Deine Antwort',autocomplete:'off',autocapitalize:'off',inputmode:numeric?'decimal':'text',
+    onkeydown:function(e){ if(e.key==='Enter' && w.onSubmit) w.onSubmit(); }});
+  w.node = h('div',null,inp);
+  w.check = function(){ return checkCode(t, inp.value); };
+  w.empty = function(){ return inp.value.trim()===''; };
+  return w;
+}
+
+function wChoice(t, multi){
+  var w={}, sel=new Set(), btns=[];
+  var order = shuffle(t.options.map(function(_,i){return i;}));
+  var list = h('div',{class:'opts',role:multi?'group':'radiogroup'});
+  function paint(){ btns.forEach(function(o){ var on=sel.has(o.i); o.b.classList.toggle('sel',on); o.b.setAttribute('aria-pressed',on?'true':'false'); }); }
+  order.forEach(function(i){
+    var b = h('button',{type:'button',class:'opt'+(multi?' multi':''),'aria-pressed':'false',onclick:function(){
+      if(multi){ if(sel.has(i)) sel.delete(i); else sel.add(i); } else { sel.clear(); sel.add(i); }
+      paint();
+    }}, h('span',{class:'mark'}), h('span',null,t.options[i]));
+    btns.push({i:i,b:b}); list.appendChild(b);
+  });
+  w.node = h('div',null, multi?h('div',{class:'small muted'},'Mehrere Antworten können richtig sein.'):null, list);
+  w.check = function(){
+    if(multi){ var c=t.correct||[]; return sel.size===c.length && c.every(function(i){return sel.has(i);}); }
+    return sel.size===1 && sel.has(t.correct);
+  };
+  w.empty = function(){ return sel.size===0; };
+  return w;
+}
+
+function wOrder(t){
+  var w={}, n=t.items.length, idx=shuffleNotIdentity(n);
+  var list = h('ol',{class:'ord'});
+  function move(pos,d){ var q=pos+d; if(q<0||q>=n) return; var tmp=idx[pos]; idx[pos]=idx[q]; idx[q]=tmp; paint(); }
+  function paint(){
+    list.replaceChildren();
+    idx.forEach(function(v,pos){
+      list.appendChild(h('li',{class:'ordrow'},
+        h('span',{class:'num'},pos+1), h('span',{class:'txt'},t.items[v]),
+        h('span',{class:'mv'},
+          h('button',{type:'button',class:'btn small up','aria-label':'nach oben',disabled:pos===0,onclick:function(){move(pos,-1);}},'▲'),
+          h('button',{type:'button',class:'btn small down','aria-label':'nach unten',disabled:pos===n-1,onclick:function(){move(pos,1);}},'▼'))));
+    });
+  }
+  paint();
+  w.node = h('div',null,h('div',{class:'small muted'},'Verschiebe die Einträge mit ▲ und ▼.'),list);
+  w.check = function(){ return idx.every(function(v,i){return t.items[v]===t.items[i];}); };
+  w.empty = function(){ return false; };
+  return w;
+}
+
+function wMatch(t){
+  var w={}, n=t.pairs.length, assign={}, selL=null;
+  var rightOrder = shuffleNotIdentity(n);
+  var left=h('div',{class:'mcol'}), right=h('div',{class:'mcol'});
+  var info=h('div',{class:'small muted'},'Tippe links einen Eintrag an, dann rechts den passenden.');
+  function leftOf(j){ for(var i=0;i<n;i++) if(assign[i]===j) return i; return -1; }
+  function paint(){
+    left.replaceChildren(); right.replaceChildren();
+    for(var i=0;i<n;i++){ (function(i){
+      var a=assign[i];
+      var b=h('button',{type:'button',class:'mbtn mleft'+(selL===i?' selL':'')+(a!==undefined?' paired':''),style:a!==undefined?'--c:'+MATCHPAL[i%MATCHPAL.length]:null,onclick:function(){
+        if(assign[i]!==undefined){ delete assign[i]; selL=null; }
+        else selL = (selL===i ? null : i);
+        paint();
+      }}, a!==undefined?h('span',{class:'pn'},i+1):null, t.pairs[i][0]);
+      left.appendChild(b);
+    })(i); }
+    rightOrder.forEach(function(j){
+      var li=leftOf(j);
+      var b=h('button',{type:'button',class:'mbtn mright'+(li>=0?' paired':''),style:li>=0?'--c:'+MATCHPAL[li%MATCHPAL.length]:null,onclick:function(){
+        var cur=leftOf(j);
+        if(cur>=0){ delete assign[cur]; }
+        else if(selL!==null){ assign[selL]=j; selL=null; }
+        paint();
+      }}, li>=0?h('span',{class:'pn'},li+1):null, t.pairs[j][1]);
+      right.appendChild(b);
+    });
+  }
+  paint();
+  w.node = h('div',null,info,h('div',{class:'match'},left,right));
+  w.check = function(){ for(var i=0;i<n;i++) if(assign[i]!==i) return false; return true; };
+  w.empty = function(){ return Object.keys(assign).length===0; };
+  return w;
+}
+
+function wLock(t){
+  var w={}, wh=makeWheels(t.combo.length);
+  w.node = h('div',null,h('div',{class:'small muted center'},'Stelle die Ziffern mit ▲ und ▼ ein.'),wh.node);
+  w.check = function(){ return wh.value()===t.combo; };
+  w.empty = function(){ return false; };
+  return w;
+}
+
+function wCaesar(t){
+  var w={}, plain=t.plain.toUpperCase();
+  var ct = caesar(plain, t.shift);
+  var out = h('div',{class:'cipher out'});
+  var lab = h('div',{class:'small'});
+  var slider = h('input',{type:'range',min:0,max:25,value:0,'aria-label':'Verschiebung zurück'});
+  var abc = h('div',{class:'abc'});
+  var inp = h('input',{type:'text',class:'ans',placeholder:'Gesuchtes Wort',autocomplete:'off',autocapitalize:'characters',
+    onkeydown:function(e){ if(e.key==='Enter' && w.onSubmit) w.onSubmit(); }});
+  function paint(){
+    var k=parseInt(slider.value,10)||0;
+    out.textContent = caesar(ct, 26-k);
+    lab.textContent = 'Schlüsselscheibe: Jeder Buchstabe wird um '+k+' Stelle'+(k===1?'':'n')+' zurückgeschoben.';
+    var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ', r1=h('tr'), r2=h('tr');
+    for(var i=0;i<26;i++){ r1.appendChild(h('td',null,A[i])); r2.appendChild(h('td',null,caesar(A[i],26-k))); }
+    abc.replaceChildren(h('table',null,r1,r2));
+  }
+  slider.addEventListener('input',paint);
+  paint();
+  w.node = h('div',null,
+    h('div',{class:'small muted'},'Geheimtext:'), h('div',{class:'cipher'},ct),
+    lab, slider, h('div',{class:'small muted'},'Entschlüsselt (Vorschau):'), out, abc, inp);
+  w.check = function(){ return normText(inp.value)===normText(plain); };
+  w.empty = function(){ return inp.value.trim()===''; };
+  return w;
+}
+
+function makeWidget(t){
+  switch(t.type){
+    case 'code': return wCode(t);
+    case 'choice': return wChoice(t,false);
+    case 'multi': return wChoice(t,true);
+    case 'order': return wOrder(t);
+    case 'match': return wMatch(t);
+    case 'lock': return wLock(t);
+    case 'caesar': return wCaesar(t);
+  }
+}
+
+/* ===================== Spiel ===================== */
+var timerId = null;
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+function startTimer(){ stopTimer(); timerId=setInterval(tick,500); }
+function elapsed(){ return Math.floor((Date.now()-S.start)/1000); }
+function remaining(){ return S.room.minutes*60 - elapsed() - S.penalty; }
+function timeText(){ return S.level.timer ? '⏳ '+fmtTime(remaining()) : '⏱️ '+fmtTime(elapsed()); }
+function hintsText(){ return S.level.hintBudget===Infinity ? '💡 Hinweise: frei' : '💡 '+Math.max(0,S.level.hintBudget-S.hintsUsed)+' übrig'; }
+function updateHud(){
+  var a=document.getElementById('hud-time'); if(a) a.textContent=timeText();
+  var b=document.getElementById('hud-hints'); if(b) b.textContent=hintsText();
+}
+function tick(){
+  if(S.screen!=='play') return;
+  updateHud();
+  if(S.level.timer && remaining()<=0) lose();
+}
+
+function startGame(room, levelId, team, fromEditor){
+  var L = LEVELS.filter(function(l){return l.id===levelId;})[0];
+  var tasks = room.tasks.filter(function(t){return t.lv<=L.maxLv;});
+  var st = {room:room, level:L, team:team||'', tasks:tasks, solved:{}, hints:{}, widgets:{}, hintsUsed:0, wrong:0, penalty:0,
+    start:Date.now(), notes:'', rule:(L.id===1?'order':room.finalRule), reflect:{}, fromEditor:!!fromEditor, open:null};
+  setScreen('play', st);
+  startTimer();
+}
+function solvedCount(){ return S.tasks.filter(function(t){return S.solved[t.id];}).length; }
+function allSolved(){ return solvedCount()===S.tasks.length; }
+
+function leaveGame(){
+  confirmBox('Escape Room wirklich verlassen? Der Spielstand geht verloren.','Ja, verlassen',function(){ backToStart(); });
+}
+function backToStart(){
+  if(S.fromEditor && E) setScreen('editor'); else setScreen('home');
+}
+
+function renderPlay(){
+  var strip = h('div',{class:'strip','aria-label':'Code-Teile'});
+  S.tasks.forEach(function(t){
+    var on = !!S.solved[t.id];
+    strip.appendChild(h('div',{class:'slot'+(on?' on':''),title:t.title},h('small',null,t.icon),on?t.reward:'?'));
+  });
+  var tiles = S.tasks.map(function(t){
+    var on=!!S.solved[t.id];
+    return h('button',{type:'button',class:'obj'+(on?' done':''),onclick:function(){openTask(t);}},
+      h('span',{class:'ico'},t.icon), h('span',{class:'tt'},t.title),
+      h('span',{class:'st'},'★'.repeat(t.lv)+'  '+LV_LABEL[t.lv]),
+      h('span',{class:'st'},on?'✔ Code-Teil: '+t.reward:'Rätsel öffnen'));
+  });
+  var left = S.tasks.length-solvedCount();
+  var door = allSolved()
+    ? h('button',{type:'button',class:'btn primary pulse',id:'door-btn',onclick:openDoor},'🚪 Zur Ausgangstür')
+    : h('button',{type:'button',class:'btn',id:'door-btn',disabled:true},'🔒 Tür verschlossen – noch '+left+' Code-Teil'+(left===1?'':'e')+' fehlen');
+  app.replaceChildren(h('div',{class:'wrap'},
+    h('div',{class:'hud'},
+      h('button',{type:'button',class:'btn small',onclick:leaveGame},'⌂ Beenden'),
+      h('div',{class:'hud-title'},S.room.emoji+' '+S.room.title),
+      h('div',{class:'hud-right'},
+        h('span',{class:'chip',id:'hud-time'},timeText()),
+        h('span',{class:'chip',id:'hud-hints'},hintsText()),
+        h('button',{type:'button',class:'btn small',onclick:openNotes},'📓 Notizbuch'))),
+    h('div',{class:'card'},
+      h('div',{class:'small muted'},S.room.topic+' · '+S.level.icon+' '+S.level.name+(S.team?' · '+S.team:'')),
+      h('p',null,fmt(S.room.intro))),
+    h('h2',null,'Eure Code-Teile ('+solvedCount()+' / '+S.tasks.length+')'),
+    strip,
+    h('div',{class:'small muted'},'🚪 Tür-Regel: '+RULES[S.rule]),
+    h('h2',null,'Durchsucht den Raum'),
+    h('div',{class:'grid objs'},tiles),
+    h('div',{class:'door'},door)));
+}
+
+function openNotes(){
+  var ta = h('textarea',{rows:6,placeholder:'Eure Notizen: Rechnungen, Ideen, Zwischenergebnisse …',oninput:function(e){S.notes=e.target.value;}});
+  ta.value = S.notes||'';
+  showModal(h('div',null,h('h3',null,'📓 Notizbuch & Werkzeugkasten'),ta,
+    h('div',{class:'story'},
+      h('strong',null,'So knackt ihr jedes Rätsel:'),h('br'),
+      '1️⃣ Verstehen: Was ist gegeben? Was ist gesucht?',h('br'),
+      '2️⃣ Plan: Skizze, Tabelle, Rückwärts-Denken, Ausprobieren?',h('br'),
+      '3️⃣ Durchführen: Rechnet und schreibt Schritt für Schritt.',h('br'),
+      '4️⃣ Prüfen: Passt das Ergebnis zur Aufgabe? Macht eine Probe.'),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:closeModal},'Schließen'))),{label:'Notizbuch'});
+}
+
+function hintList(t){ return (t.hints&&t.hints.length) ? t.hints : [GENERIC_HINT[t.type]]; }
+
+function openTask(task){
+  S.open = task.id;
+  var done = !!S.solved[task.id];
+  var w = S.widgets[task.id] || (S.widgets[task.id] = makeWidget(task));
+  var fb = h('div',{class:'fb',role:'status','aria-live':'polite'});
+  var hintsBox = h('div',{class:'hintsbox'});
+  var hintBtn = h('button',{type:'button',class:'btn',onclick:reveal});
+  var box;
+  function setFb(msg,cls){ fb.textContent=msg||''; fb.className='fb'+(cls?' '+cls:''); }
+  function paintHints(){
+    var list = hintList(task), used = S.hints[task.id]||0;
+    hintsBox.replaceChildren();
+    for(var i=0;i<used;i++) hintsBox.appendChild(h('div',{class:'hint'},'💡 Hinweis '+(i+1)+': '+list[i]));
+    var budgetLeft = S.level.hintBudget===Infinity ? Infinity : S.level.hintBudget-S.hintsUsed;
+    var label = '💡 Hinweis'+(budgetLeft===Infinity?'':' ('+Math.max(0,budgetLeft)+' übrig)')+(S.level.hintCost?' · −'+(S.level.hintCost/60)+' Min.':'');
+    hintBtn.textContent = label;
+    hintBtn.disabled = used>=list.length || budgetLeft<=0;
+  }
+  function reveal(){
+    var list=hintList(task), used=S.hints[task.id]||0;
+    var budgetLeft = S.level.hintBudget===Infinity ? Infinity : S.level.hintBudget-S.hintsUsed;
+    if(used>=list.length){ setFb('Für diese Aufgabe gibt es keine weiteren Hinweise.','warn'); return; }
+    if(budgetLeft<=0){ setFb('Ihr habt keine Hinweise mehr übrig.','warn'); return; }
+    S.hints[task.id]=used+1; S.hintsUsed++;
+    if(S.level.hintCost) S.penalty += S.level.hintCost;
+    updateHud(); paintHints(); setFb('');
+  }
+  function submit(){
+    if(w.empty && w.empty()){ setFb('Gib zuerst eine Antwort ein.','warn'); return; }
+    if(w.check()){
+      S.solved[task.id]=true;
+      renderPlay();
+      openTask(task);
+    } else {
+      S.wrong++;
+      var msg='Das stimmt noch nicht. Prüft euren Lösungsweg und versucht es nochmal.';
+      if(S.level.wrongCost){ S.penalty+=S.level.wrongCost; msg+=' (−'+S.level.wrongCost+' s)'; }
+      updateHud(); setFb(msg,'bad');
+      if(box){ box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+    }
+  }
+  w.onSubmit = submit;
+
+  var head = h('div',{class:'mh'},h('span',{class:'ico'},task.icon),
+    h('div',null,h('h3',{style:'margin:0'},task.title),h('div',{class:'small muted'},'★'.repeat(task.lv)+' '+LV_LABEL[task.lv]+' · '+TYPES[task.type].name)));
+  var content;
+  if(done){
+    content = h('div',null,head,h('div',{class:'story'},fmt(task.story)),
+      h('div',{class:'reward','aria-label':'Code-Teil'},'🔓 Code-Teil: '+task.reward),
+      h('div',{class:'story'},h('strong',null,'Lösung: '),solutionOf(task),task.explain?h('div',{style:'margin-top:4px'},fmt(task.explain)):null),
+      allSolved()?h('p',{class:'fb ok'},'🎉 Alle Code-Teile gefunden! Geht zur Ausgangstür.'):null,
+      h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:closeModal},'Weiter')));
+  } else {
+    content = h('div',null,head,h('div',{class:'story'},fmt(task.story)),w.node,fb,hintsBox,
+      h('div',{class:'actions'},
+        h('button',{type:'button',class:'btn primary',id:'check-btn',onclick:submit},'✔ Prüfen'),
+        hintBtn,
+        h('button',{type:'button',class:'btn',onclick:closeModal},'Schließen')));
+    paintHints();
+  }
+  box = showModal(content,{label:task.title});
+  S.open = task.id;
+}
+
+function openDoor(){
+  var wh = makeWheels(S.tasks.length);
+  var fb = h('div',{class:'fb',role:'status','aria-live':'polite'});
+  var box;
+  function tryOpen(){
+    if(wh.value()===computeCode(S.tasks,S.rule)){ win(); return; }
+    S.wrong++;
+    var msg='Die Tür bleibt zu. Prüft die Tür-Regel: '+RULE_NAMES[S.rule]+'.';
+    if(S.level.wrongCost){ S.penalty+=S.level.wrongCost; msg+=' (−'+S.level.wrongCost+' s)'; }
+    updateHud(); fb.textContent=msg; fb.className='fb bad';
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  }
+  var strip = h('div',{class:'strip',style:'justify-content:center'});
+  S.tasks.forEach(function(t){ strip.appendChild(h('div',{class:'slot on'},h('small',null,t.icon),t.reward)); });
+  box = showModal(h('div',null,h('h3',null,'🚪 Die Ausgangstür'),
+    h('p',null,'Eure Code-Teile:'),strip,
+    h('div',{class:'story'},h('strong',null,'Tür-Regel: '),RULES[S.rule]),
+    wh.node,fb,
+    h('div',{class:'actions'},
+      h('button',{type:'button',class:'btn primary',id:'open-btn',onclick:tryOpen},'🔑 Tür öffnen'),
+      h('button',{type:'button',class:'btn',onclick:closeModal},'Zurück zum Raum'))),{label:'Ausgangstür'});
+}
+
+function win(){
+  var st=S; stopTimer(); closeModal();
+  st.finalSec = elapsed()+(st.level.timer?st.penalty:0);
+  setScreen('win', st);
+}
+function lose(){
+  var st=S; stopTimer(); closeModal();
+  setScreen('lose', st);
+}
+function starCount(){
+  var n=S.tasks.length, s=3;
+  if(S.hintsUsed>Math.ceil(n/2)) s--;
+  if(S.wrong>n) s--;
+  return Math.max(1,s);
+}
+function replay(levelId){ startGame(S.room, levelId||S.level.id, S.team, S.fromEditor); }
+
+function renderWin(){
+  var stars = starCount();
+  var chips = h('div',{class:'chips'});
+  STRATEGIES.forEach(function(s){
+    var b = h('button',{type:'button',class:'btn small'+(S.reflect[s]?' on':''),'aria-pressed':S.reflect[s]?'true':'false',onclick:function(){ S.reflect[s]=!S.reflect[s]; b.classList.toggle('on',!!S.reflect[s]); b.setAttribute('aria-pressed',S.reflect[s]?'true':'false'); }},s);
+    chips.appendChild(b);
+  });
+  var sol = S.tasks.map(function(t,i){
+    return h('details',null,h('summary',null,(i+1)+'. '+t.icon+' '+t.title),
+      h('div',{class:'story'},fmt(t.story)),
+      h('div',null,h('strong',null,'Lösung: '),solutionOf(t)),
+      t.explain?h('div',{class:'small',style:'margin-top:4px'},fmt(t.explain)):null);
+  });
+  var next = S.level.id<3 ? S.level.id+1 : null;
+  app.replaceChildren(h('div',{class:'wrap'},
+    h('div',{class:'card center'},
+      h('div',{style:'font-size:3.5rem'},'🎉'),
+      h('h1',null,S.team?S.team+', ihr seid draußen!':'Ausbruch geschafft!'),
+      h('div',{class:'stars','aria-label':stars+' von 3 Sternen'},'⭐'.repeat(stars)+'☆'.repeat(3-stars)),
+      h('p',null,S.room.emoji+' '+S.room.title+' · '+S.level.icon+' '+S.level.name),
+      h('p',null,h('span',{class:'chip'},'⏱️ '+fmtTime(S.finalSec)),' ',h('span',{class:'chip'},'💡 '+S.hintsUsed+' Hinweis'+(S.hintsUsed===1?'':'e')),' ',h('span',{class:'chip'},'❌ '+S.wrong+' Fehlversuch'+(S.wrong===1?'':'e'))),
+      h('div',{class:'actions',style:'justify-content:center'},
+        h('button',{type:'button',class:'btn primary',onclick:function(){replay();}},'🔁 Nochmal spielen'),
+        next?h('button',{type:'button',class:'btn',onclick:function(){replay(next);}},'⬆️ Nächste Stufe: '+LEVELS[next-1].name):null,
+        h('button',{type:'button',class:'btn',onclick:backToStart},S.fromEditor?'← Zurück zum Baukasten':'🏠 Zur Auswahl'))),
+    h('div',{class:'card'},
+      h('h3',null,'🧠 Reflexion: Was hat euch beim Lösen geholfen?'),
+      h('p',{class:'muted small'},'Tippt die Strategien an, die ihr benutzt habt – und sprecht darüber in der Klasse.'),chips),
+    h('div',{class:'card'},h('h3',null,'📋 Lösungswege zum Nachlesen'),sol)));
+}
+function renderLose(){
+  app.replaceChildren(h('div',{class:'wrap'},
+    h('div',{class:'card center'},
+      h('div',{style:'font-size:3.5rem'},'⏰'),
+      h('h1',null,'Die Zeit ist abgelaufen!'),
+      h('p',null,'Ihr habt '+solvedCount()+' von '+S.tasks.length+' Code-Teilen gefunden. Aus Fehlern lernt man – versucht es nochmal!'),
+      h('div',{class:'actions',style:'justify-content:center'},
+        h('button',{type:'button',class:'btn primary',onclick:function(){replay();}},'🔁 Nochmal versuchen'),
+        S.level.id>1?h('button',{type:'button',class:'btn',onclick:function(){replay(S.level.id-1);}},'⬇️ Leichtere Stufe'):null,
+        h('button',{type:'button',class:'btn',onclick:backToStart},S.fromEditor?'← Zurück zum Baukasten':'🏠 Zur Auswahl')))));
+}
+
+/* ===================== Startseite ===================== */
+function openStart(room, fromEditor){
+  var v = validateRoom(room);
+  if(v.errors.length){ infoModal('Dieser Raum ist noch nicht spielbar', h('ul',null,v.errors.map(function(e){return h('li',null,e);}))); return; }
+  var level = 1;
+  var nameIn = h('input',{type:'text',placeholder:'z. B. Team Falke',autocomplete:'off'});
+  var list = h('div',{class:'pickrow',role:'radiogroup'});
+  function paint(){
+    list.replaceChildren();
+    LEVELS.forEach(function(L){
+      var n = room.tasks.filter(function(t){return t.lv<=L.maxLv;}).length;
+      list.appendChild(h('button',{type:'button',role:'radio','aria-checked':level===L.id?'true':'false',class:'lvbtn'+(level===L.id?' sel':''),onclick:function(){level=L.id;paint();}},
+        h('span',{class:'li'},L.icon),
+        h('span',null,h('strong',null,L.name+' · '+n+' Rätsel'),h('br'),h('span',{class:'small muted'},L.desc))));
+    });
+  }
+  paint();
+  showModal(h('div',null,
+    h('h3',null,room.emoji+' '+room.title),
+    h('p',{class:'muted'},room.topic),
+    h('label',{class:'field'},h('span',{class:'lbl'},'Teamname (optional)'),nameIn),
+    h('div',{class:'lbl',style:'font-weight:700'},'Schwierigkeitsstufe'),list,
+    h('div',{class:'actions'},
+      h('button',{type:'button',class:'btn primary',id:'start-btn',onclick:function(){ startGame(room,level,nameIn.value.trim().slice(0,30),fromEditor); }},'▶ Spiel starten'),
+      h('button',{type:'button',class:'btn',onclick:closeModal},'Abbrechen'))),{label:'Spiel starten'});
+}
+
+function showSolutions(room){
+  var easy = room.tasks.filter(function(t){return t.lv<=2;});
+  var items = room.tasks.map(function(t,i){
+    return h('div',{class:'sol'},
+      h('strong',null,(i+1)+'. '+t.icon+' '+t.title),
+      h('span',{class:'small muted'},'  ·  '+LV_LABEL[t.lv]+'  ·  Code-Teil '+t.reward+'  ·  '+TYPES[t.type].name),
+      h('div',{class:'small',style:'margin:4px 0'},fmt(t.story)),
+      h('div',null,h('strong',null,'Lösung: '),solutionOf(t)),
+      t.explain?h('div',{class:'small muted'},fmt(t.explain)):null);
+  });
+  showModal(h('div',null,h('h3',null,'📋 Lösungen: '+room.title),
+    h('div',{class:'story'},
+      h('div',null,h('strong',null,'Türcode Einsteiger ('+easy.length+' Rätsel, der Reihe nach): '),computeCode(easy,'order')),
+      h('div',null,h('strong',null,'Türcode Fortgeschritten/Profi ('+room.tasks.length+' Rätsel, '+RULE_NAMES[room.finalRule]+'): '),computeCode(room.tasks,room.finalRule))),
+    items,
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:closeModal},'Schließen'))),{wide:true,label:'Lösungen'});
+}
+
+function roomCard(room){
+  var custom = !room.builtin;
+  var actions = [
+    h('button',{type:'button',class:'btn primary small play',onclick:function(){openStart(room,false);}},'▶ Spielen'),
+    h('button',{type:'button',class:'btn small sols',onclick:function(){askPin(function(){showSolutions(room);});}},'📋 Lösungen')
+  ];
+  if(custom){
+    actions.push(h('button',{type:'button',class:'btn small edit',onclick:function(){openEditor(room);}},'✏️ Bearbeiten'));
+    actions.push(h('button',{type:'button',class:'btn small danger del',onclick:function(){
+      confirmBox('„'+room.title+'“ wirklich löschen?','Löschen',function(){ customRooms=customRooms.filter(function(r){return r.id!==room.id;}); saveCustom(); render(); });
+    }},'🗑️'));
+  } else {
+    actions.push(h('button',{type:'button',class:'btn small tpl',onclick:function(){askPin(function(){var c=clone(room); c.id=uid(); c.builtin=false; c.title=room.title+' (Kopie)'; openEditor(c,true);});}},'✏️ Als Vorlage'));
+  }
+  return h('div',{class:'card room',style:'--rc:'+room.color},
+    h('div',null,h('span',{class:'em'},room.emoji),custom?h('span',{class:'badge',style:'margin-left:8px'},'Eigener Raum'):null),
+    h('h3',null,room.title),
+    h('div',{class:'small muted'},room.topic||'Eigenes Thema'),
+    h('div',{class:'small'},room.tasks.length+' Rätsel · '+room.tasks.filter(function(t){return t.lv===3;}).length+' davon schwer'),
+    h('div',{class:'row'},actions));
+}
+
+function renderHome(){
+  var all = BUILTIN.concat(customRooms);
+  app.replaceChildren(h('div',{class:'wrap'},
+    h('header',{class:'hero'},h('div',{class:'logo'},'🔐'),
+      h('div',null,h('h1',null,'Escape-Room-Baukasten'),h('p',{class:'muted'},'Knackt gemeinsam den Code: Rätsel lösen, Code-Teile sammeln, Tür öffnen!'))),
+    h('div',{class:'card'},
+      h('strong',null,'So funktioniert’s'),
+      h('ol',{style:'margin:6px 0;padding-left:20px'},
+        h('li',null,'Raum und Schwierigkeitsstufe wählen.'),
+        h('li',null,'Gegenstände im Raum antippen und die Rätsel lösen – jedes Rätsel verrät einen Code-Teil.'),
+        h('li',null,'Wenn alle Code-Teile gefunden sind, öffnet ihr mit der richtigen Regel die Tür.'))),
+    h('h2',null,'Wähle deinen Escape Room'),
+    h('div',{class:'grid rooms'},all.map(roomCard)),
+    h('div',{class:'card'},
+      h('h3',null,'🛠️ Baukasten: eigenen Raum bauen'),
+      h('p',null,'Eigenes Thema? Du trägst nur Aufgaben und Code-Teile ein. Tür, Zahlenschloss, Hinweise, Stufen, Zeitlimit und Auswertung übernimmt das Grundgerüst. Auch Schülerinnen und Schüler können Räume füreinander bauen!'),
+      h('button',{type:'button',class:'btn primary',id:'new-room',onclick:function(){openEditor();}},'+ Neuen Raum bauen'),
+      h('button',{type:'button',class:'btn',id:'import-room',onclick:openImport},'📥 Raum importieren'))));
+}
+
+/* ===================== Baukasten (Editor) ===================== */
+function newTask(type){
+  var used = {}; (E?E.room.tasks:[]).forEach(function(t){used[t.reward]=true;});
+  var reward='0'; for(var d=0;d<10;d++){ if(!used[String(d)]){ reward=String(d); break; } }
+  var t = {id:uid(), type:type, title:'', icon:'📦', story:'', lv:1, reward:reward, hints:[], explain:''};
+  if(type==='code') t.answers=[];
+  if(type==='choice'){ t.options=['Antwort A','Antwort B','Antwort C']; t.correct=0; t._stars=1; }
+  if(type==='multi'){ t.options=['Antwort A','Antwort B','Antwort C','Antwort D']; t.correct=[0]; }
+  if(type==='order') t.items=['Erster Schritt','Zweiter Schritt','Dritter Schritt'];
+  if(type==='match') t.pairs=[['Links 1','Rechts 1'],['Links 2','Rechts 2'],['Links 3','Rechts 3']];
+  if(type==='lock') t.combo='123';
+  if(type==='caesar'){ t.plain='WORT'; t.shift=3; }
+  return t;
+}
+function openEditor(room, isTemplate){
+  var r = room ? sanitizeRoom(clone(room)) : {id:uid(), title:'Mein Escape Room', topic:'', emoji:'🚪', color:PALETTE[0], intro:'', minutes:20, finalRule:'order', tasks:[]};
+  if(isTemplate) r.id = uid();
+  E = {room:r, sel:0, msg:null};
+  if(!r.tasks.length){ r.tasks.push(newTask('code')); }
+  setScreen('editor');
+}
+function cleanRoom(r){
+  var c = clone(r);
+  c.tasks.forEach(function(t){ Object.keys(t).forEach(function(k){ if(k.charAt(0)==='_') delete t[k]; }); });
+  delete c.builtin;
+  return c;
+}
+function field(label, input, hint){
+  return h('label',{class:'field'},h('span',{class:'lbl'},label),input,hint?h('span',{class:'hint'},hint):null);
+}
+function optionsRaw(t){
+  return t.options.map(function(o,i){
+    var ok = t.type==='choice' ? i===t.correct : (t.correct||[]).indexOf(i)>=0;
+    return (ok?'* ':'')+o;
+  }).join('\n');
+}
+function parseOptions(t, raw){
+  var opts=[], ok=[];
+  raw.split('\n').map(function(s){return s.trim();}).filter(Boolean).forEach(function(l){
+    var m=l.match(/^\*\s*(.*)$/);
+    if(m){ ok.push(opts.length); opts.push(m[1]); } else opts.push(l);
+  });
+  t.options=opts; t._stars=ok.length;
+  if(t.type==='choice') t.correct = ok.length ? ok[0] : 0; else t.correct = ok;
+}
+function typeFields(t){
+  var f=[];
+  if(t.type==='code'){
+    f.push(field('Richtige Antwort(en)',h('input',{type:'text',value:(t.answers||[]).join('; '),oninput:function(e){t.answers=e.target.value.split(';').map(function(s){return s.trim();}).filter(Boolean);}}),'Mehrere erlaubte Schreibweisen mit Semikolon trennen. Zahlen werden tolerant geprüft (Komma/Punkt, „€“, „cm“ …).'));
+  } else if(t.type==='choice' || t.type==='multi'){
+    f.push(field('Antwortmöglichkeiten',h('textarea',{rows:5,value:optionsRaw(t),oninput:function(e){parseOptions(t,e.target.value);}}),'Eine Antwort pro Zeile. Richtige Antwort mit * am Zeilenanfang markieren'+(t.type==='choice'?' (genau eine).':' (mindestens eine).')));
+  } else if(t.type==='order'){
+    f.push(field('Einträge in der RICHTIGEN Reihenfolge',h('textarea',{rows:5,value:t.items.join('\n'),oninput:function(e){t.items=e.target.value.split('\n').map(function(s){return s.trim();}).filter(Boolean);}}),'Eine Zeile pro Eintrag (3 bis 7). Beim Spielen werden sie automatisch gemischt.'));
+  } else if(t.type==='match'){
+    f.push(field('Paare (links | rechts)',h('textarea',{rows:5,value:t.pairs.map(function(p){return p[0]+' | '+p[1];}).join('\n'),oninput:function(e){
+      t.pairs=e.target.value.split('\n').map(function(l){var i=l.indexOf('|'); return i<0?null:[l.slice(0,i).trim(),l.slice(i+1).trim()];}).filter(function(p){return p&&p[0]&&p[1];});
+    }}),'Eine Zeile pro Paar, getrennt mit | (senkrechter Strich). 3 bis 6 Paare.'));
+  } else if(t.type==='lock'){
+    f.push(field('Zahlencode',h('input',{type:'text',inputmode:'numeric',value:t.combo,oninput:function(e){t.combo=e.target.value.replace(/\D/g,'').slice(0,6); e.target.value=t.combo;}}),'2 bis 6 Ziffern. Schreibe im Aufgabentext Hinweise, wie man jede Ziffer findet.'));
+  } else if(t.type==='caesar'){
+    var prev = h('div',{class:'cipher'},caesar(t.plain,t.shift));
+    var plainIn = h('input',{type:'text',value:t.plain,oninput:function(e){t.plain=e.target.value.toUpperCase().replace(/[^A-Z ]/g,''); prev.textContent=caesar(t.plain,t.shift);}});
+    var shiftSel = h('select',{onchange:function(e){t.shift=parseInt(e.target.value,10); prev.textContent=caesar(t.plain,t.shift);}});
+    for(var s=1;s<=25;s++) shiftSel.appendChild(h('option',{value:String(s),selected:s===t.shift},String(s)));
+    f.push(field('Lösungswort (A–Z, ohne Umlaute)',plainIn));
+    f.push(field('Verschiebung (so viele Stellen wird verschlüsselt)',shiftSel,'Erwähne im Aufgabentext, um wie viele Stellen verschoben wurde – oder lass die Klasse es herausfinden.'));
+    f.push(h('div',{class:'small muted'},'Geheimtext, den die Spielenden sehen:'),prev);
+  }
+  return f;
+}
+
+function renderEditor(){
+  var r = E.room;
+  if(E.sel>=r.tasks.length) E.sel=r.tasks.length-1;
+  var t = r.tasks[E.sel];
+  var labels=[];
+
+  var meta = h('div',{class:'card'},
+    h('h3',null,'1 · Raum'),
+    field('Titel',h('input',{type:'text',id:'room-title',value:r.title,oninput:function(e){r.title=e.target.value;}})),
+    field('Thema / Fach (optional)',h('input',{type:'text',value:r.topic,oninput:function(e){r.topic=e.target.value;}})),
+    field('Rahmengeschichte',h('textarea',{rows:3,id:'room-intro',value:r.intro,oninput:function(e){r.intro=e.target.value;}}),'Warum sind die Spielenden eingeschlossen? **fett** geht mit Sternchen.'),
+    h('div',{class:'field'},h('span',{class:'lbl'},'Symbol'),
+      h('input',{type:'text',value:r.emoji,maxLength:4,style:'max-width:100px',oninput:function(e){r.emoji=e.target.value||'🚪';}}),
+      h('div',{class:'emo'},EMOJIS.map(function(em){return h('button',{type:'button','aria-label':em,onclick:function(){r.emoji=em;renderEditor();}},em);}))),
+    h('div',{class:'field'},h('span',{class:'lbl'},'Farbe'),
+      h('div',{class:'swatches'},PALETTE.map(function(c){return h('button',{type:'button',class:'sw'+(r.color===c?' sel':''),'aria-label':'Farbe '+c,style:'background:'+c,onclick:function(){r.color=c;renderEditor();}});}))),
+    field('Zeitlimit für die Stufe „Profi“ (Minuten)',h('input',{type:'number',min:5,max:90,value:r.minutes,oninput:function(e){r.minutes=Math.min(90,Math.max(5,parseInt(e.target.value,10)||20));}})),
+    field('Regel für den Tür-Code (ab „Fortgeschritten“)',(function(){
+      var s=h('select',{id:'room-rule',onchange:function(e){r.finalRule=e.target.value;}});
+      Object.keys(RULES).forEach(function(k){ s.appendChild(h('option',{value:k,selected:r.finalRule===k},RULES[k])); });
+      return s;
+    })(),'In „Einsteiger“ gilt immer die Reihenfolge der Gegenstände.'));
+
+  var list = h('div',null);
+  r.tasks.forEach(function(x,i){
+    var lab = h('span',null,(i+1)+'. '+x.icon+' '+(x.title||'(ohne Titel)'));
+    labels[i]=lab;
+    list.appendChild(h('div',{class:'tli'+(i===E.sel?' sel':'')},
+      h('button',{type:'button',class:'pick',onclick:function(){E.sel=i;renderEditor();}},lab),
+      h('button',{type:'button',class:'btn small','aria-label':'nach oben',disabled:i===0,onclick:function(){var a=r.tasks;var tmp=a[i];a[i]=a[i-1];a[i-1]=tmp;E.sel=i-1;renderEditor();}},'▲'),
+      h('button',{type:'button',class:'btn small','aria-label':'nach unten',disabled:i===r.tasks.length-1,onclick:function(){var a=r.tasks;var tmp=a[i];a[i]=a[i+1];a[i+1]=tmp;E.sel=i+1;renderEditor();}},'▼'),
+      h('button',{type:'button',class:'btn small','aria-label':'duplizieren',disabled:r.tasks.length>=10,onclick:function(){var c=clone(x);c.id=uid();r.tasks.splice(i+1,0,c);E.sel=i+1;renderEditor();}},'⧉'),
+      h('button',{type:'button',class:'btn small danger del-task','aria-label':'löschen',disabled:r.tasks.length<=1,onclick:function(){r.tasks.splice(i,1);E.sel=Math.max(0,i-1);renderEditor();}},'🗑️')));
+  });
+  var typeBtns = h('div',{class:'typebtns'});
+  Object.keys(TYPES).forEach(function(k){
+    typeBtns.appendChild(h('button',{type:'button',class:'btn small addtype','data-type':k,disabled:r.tasks.length>=10,onclick:function(){
+      r.tasks.push(newTask(k)); E.sel=r.tasks.length-1; renderEditor();
+    }},'+ '+TYPES[k].icon+' '+TYPES[k].name));
+  });
+
+  var form = null;
+  if(t){
+    var updLabel=function(){ labels[E.sel].textContent=(E.sel+1)+'. '+t.icon+' '+(t.title||'(ohne Titel)'); };
+    var lvSel = h('select',{id:'task-lv',onchange:function(e){t.lv=parseInt(e.target.value,10);}});
+    [1,2,3].forEach(function(l){ lvSel.appendChild(h('option',{value:String(l),selected:t.lv===l},'★'.repeat(l)+' '+LV_LABEL[l]+(l<=2?'':' (nur ab „Fortgeschritten“)'))); });
+    var rwSel = h('select',{id:'task-reward',onchange:function(e){t.reward=e.target.value;}});
+    for(var d=0;d<10;d++) rwSel.appendChild(h('option',{value:String(d),selected:t.reward===String(d)},String(d)));
+    var iconIn = h('input',{type:'text',value:t.icon,maxLength:4,style:'max-width:100px',oninput:function(e){t.icon=e.target.value||'📦';updLabel();}});
+    form = h('div',{class:'card'},
+      h('h3',null,'2 · Aufgabe '+(E.sel+1)+': '+TYPES[t.type].icon+' '+TYPES[t.type].name),
+      field('Titel (Name des Gegenstands im Raum)',h('input',{type:'text',id:'task-title',value:t.title,oninput:function(e){t.title=e.target.value;updLabel();}})),
+      h('div',{class:'field'},h('span',{class:'lbl'},'Symbol'),iconIn,
+        h('div',{class:'emo'},EMOJIS.map(function(em){return h('button',{type:'button','aria-label':em,onclick:function(){t.icon=em;iconIn.value=em;updLabel();}},em);}))),
+      field('Schwierigkeit',lvSel,'Einsteiger spielen nur leichte und mittlere Aufgaben.'),
+      field('Code-Teil (Ziffer, die man für diese Aufgabe bekommt)',rwSel),
+      field('Aufgabentext',h('textarea',{rows:5,id:'task-story',value:t.story,oninput:function(e){t.story=e.target.value;}}),'Zeilenumbrüche werden übernommen, **fett** mit zwei Sternchen. Bleibt nah an der Lebenswelt eurer Klasse!'),
+      typeFields(t),
+      field('Hinweise (einer pro Zeile, vom Tipp zur fast-Lösung)',h('textarea',{rows:3,id:'task-hints',value:t.hints.join('\n'),oninput:function(e){t.hints=e.target.value.split('\n').map(function(s){return s.trim();}).filter(Boolean);}}),'Hinweis 1 = Strategie-Tipp, Hinweis 2 = konkreter, Hinweis 3 = fast die Lösung.'),
+      field('Lösungsweg / Erklärung (wird nach dem Lösen gezeigt)',h('textarea',{rows:3,id:'task-explain',value:t.explain,oninput:function(e){t.explain=e.target.value;}})));
+  }
+
+  var msgBox = h('div',{id:'ed-msg'});
+  function showMsg(v, okText){
+    msgBox.replaceChildren();
+    if(v&&v.errors&&v.errors.length) msgBox.appendChild(h('div',{class:'errbox e',role:'alert'},h('strong',null,'Bitte korrigieren:'),h('ul',null,v.errors.map(function(e){return h('li',null,e);}))));
+    if(v&&v.warns&&v.warns.length) msgBox.appendChild(h('div',{class:'errbox w'},h('strong',null,'Tipps:'),h('ul',null,v.warns.map(function(e){return h('li',null,e);}))));
+    if(okText) msgBox.appendChild(h('div',{class:'errbox s',role:'status'},okText));
+  }
+  function check(){ var v=validateRoom(r); showMsg(v); return v; }
+
+  var bar = h('div',{class:'sticky'},
+    h('button',{type:'button',class:'btn primary',id:'ed-test',onclick:function(){
+      var v=check(); if(v.errors.length) return;
+      openStart(sanitizeRoom(cleanRoom(r)),true);
+    }},'▶ Testspielen'),
+    h('button',{type:'button',class:'btn',id:'ed-save',onclick:function(){
+      var v=check(); if(v.errors.length) return;
+      var c=sanitizeRoom(cleanRoom(r)); var i=customRooms.map(function(x){return x.id;}).indexOf(c.id);
+      if(i>=0) customRooms[i]=c; else customRooms.push(c);
+      saveCustom(); showMsg(v,'✔ Gespeichert. Du findest den Raum jetzt auf der Startseite.');
+    }},'💾 Speichern'),
+    h('button',{type:'button',class:'btn',id:'ed-export',onclick:function(){
+      var v=check(); if(v.errors.length) return;
+      openExport(sanitizeRoom(cleanRoom(r)));
+    }},'📤 Exportieren'),
+    h('button',{type:'button',class:'btn',id:'ed-back',onclick:function(){ setScreen('home'); }},'← Zur Startseite'));
+
+  app.replaceChildren(h('div',{class:'wrap'},
+    h('div',{class:'hud'},h('h1',{style:'margin:0'},'🛠️ Baukasten')),
+    h('p',{class:'muted'},'Raum festlegen, Aufgaben hinzufügen, Code-Teile vergeben – fertig. Speichern legt den Raum auf der Startseite ab (in diesem Browser). Mit „Exportieren“ kannst du ihn weitergeben.'),
+    meta,
+    h('div',{class:'cols'},
+      h('div',{class:'card'},h('h3',null,'Aufgaben ('+r.tasks.length+' / 10)'),list,h('div',{class:'small muted'},'Neue Aufgabe:'),typeBtns),
+      form),
+    msgBox, bar));
+}
+
+function openExport(room){
+  var json = JSON.stringify(room,null,1);
+  var ta = h('textarea',{rows:12,readOnly:true,'aria-label':'Raum als JSON',style:'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem'});
+  ta.value = json;
+  var fb = h('div',{class:'fb ok',role:'status'});
+  showModal(h('div',null,h('h3',null,'📤 Raum exportieren'),
+    h('p',{class:'muted'},'Kopiere den Text und schicke ihn weiter (E-Mail, Messenger, Notiz). Andere fügen ihn über „Raum importieren“ ein.'),ta,fb,
+    h('div',{class:'actions'},
+      h('button',{type:'button',class:'btn primary',onclick:function(){
+        ta.focus(); ta.select();
+        var done=function(){ fb.textContent='✔ In die Zwischenablage kopiert.'; };
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(json).then(done,function(){ try{document.execCommand('copy');done();}catch(e){fb.textContent='Bitte den markierten Text manuell kopieren.';} }); }
+        else { try{document.execCommand('copy');done();}catch(e){fb.textContent='Bitte den markierten Text manuell kopieren.';} }
+      }},'📋 Kopieren'),
+      h('button',{type:'button',class:'btn',onclick:closeModal},'Schließen'))),{wide:true,label:'Exportieren'});
+}
+function openImport(){
+  var ta = h('textarea',{rows:10,id:'import-text',placeholder:'Exportierten Raum hier einfügen …',style:'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem'});
+  var fb = h('div',{class:'fb bad',role:'status'});
+  showModal(h('div',null,h('h3',null,'📥 Raum importieren'),ta,fb,
+    h('div',{class:'actions'},
+      h('button',{type:'button',class:'btn primary',id:'import-go',onclick:function(){
+        try{
+          var o=JSON.parse(ta.value);
+          if(!o || !Array.isArray(o.tasks)) throw new Error('Kein gültiger Raum.');
+          var r=sanitizeRoom(o); r.id=uid();
+          if(!r.tasks.length) throw new Error('Der Raum enthält keine gültigen Aufgaben.');
+          closeModal(); openEditor(r);
+        }catch(e){ fb.textContent='Das konnte nicht gelesen werden: '+e.message; }
+      }},'Importieren'),
+      h('button',{type:'button',class:'btn',onclick:closeModal},'Abbrechen'))),{wide:true,label:'Importieren'});
+}
+
+/* Test-Hook (harmlos) */
+window.__EBK = {BUILTIN:BUILTIN, validateRoom:validateRoom, computeCode:computeCode, solutionOf:solutionOf, sanitizeRoom:sanitizeRoom,
+  state:function(){return S;}, editor:function(){return E;}, customRooms:function(){return customRooms;}, caesar:caesar, checkCode:checkCode, parseNum:parseNum};
+
+render();
+})();
+</script>
+</body>
+</html>
