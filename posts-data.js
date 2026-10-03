@@ -562,4 +562,16 @@ const posts = [
     titleEn: "Escape Room Kit",
     excerptEn: "Crack the code together: solve puzzles, collect code parts and escape the room. With different scenarios and difficulty levels."
    },
+   {
+    title: "Rätsel des Tages",
+    excerpt: "Jeden Tag ein neues Rätsel zum Knobeln, mit Hinweisen, Sternen und Serie. Für verschiedene Klassenstufen.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "raetsel-des-tages.html",
+    emoji: "🧩",
+    tags: ["tool", "einzelarbeit", "vertretung"],
+    titleEn: "Puzzle of the Day",
+    excerptEn: "A new brain teaser every day, with hints, stars and streaks. For different grade levels."
+   },
 ];

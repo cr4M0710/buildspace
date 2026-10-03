@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rätsel des Tages</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#2A44C9; --on-page:#FFFFFF;
+  --sheet:#FFFFFF; --sheet-2:#EEF1FF; --line:#CBD3F3;
+  --ink:#101B3D; --muted:#46517A;
+  --band:#D62839; --on-band:#FFFFFF;
+  --accent:#2A44C9; --on-accent:#FFFFFF;
+  --hint:#FFD23F; --on-hint:#101B3D;
+  --ok:#0B7A40; --ok-bg:#E1F4E8;
+  --warn:#9A4A06; --warn-bg:#FFEFD9;
+  --star:#E39B00; --focus:#0B57D0;
+  --shadow:0 18px 40px rgba(8,16,70,.38);
+  --display:"Bricolage Grotesque","Avenir Next","Trebuchet MS",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --page:#0D1540; --sheet:#18214F; --sheet-2:#222D68; --line:#3A4787;
+    --ink:#EEF1FF; --muted:#B3BCE6;
+    --band:#C42A3C; --accent:#4C63EA; --on-accent:#FFFFFF;
+    --ok:#4CCB8A; --ok-bg:#12372D; --warn:#FFB56B; --warn-bg:#40290F;
+    --star:#FFC83D; --focus:#9DB0FF; --shadow:0 18px 40px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0D1540; --sheet:#18214F; --sheet-2:#222D68; --line:#3A4787;
+  --ink:#EEF1FF; --muted:#B3BCE6;
+  --band:#C42A3C; --accent:#4C63EA; --on-accent:#FFFFFF;
+  --ok:#4CCB8A; --ok-bg:#12372D; --warn:#FFB56B; --warn-bg:#40290F;
+  --star:#FFC83D; --focus:#9DB0FF; --shadow:0 18px 40px rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--page);font-size:17px;}
+html.beamer{font-size:22px;}
+*,*::before,*::after{box-sizing:inherit;}
+[hidden]{display:none!important;}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);line-height:1.45;min-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));}
+button,input{font:inherit;color:inherit;}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+.topbar :focus-visible,.band :focus-visible,.stats :focus-visible,.howto :focus-visible{outline-color:#FFFFFF;}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px;}
+.beamer .wrap{max-width:1120px;}
+.beamer .dnum{font-size:4.4rem;}
+.beamer .band{padding-top:22px;padding-bottom:12px;}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--on-page);margin:0 0 22px;}
+.topbar h1{font:800 1.4rem/1.1 var(--display);margin:0;letter-spacing:-.01em;}
+.tools{display:flex;gap:8px;align-items:center;}
+.badge{font-size:.85rem;padding:4px 10px;border-radius:999px;background:var(--hint);color:var(--on-hint);font-weight:700;}
+.chip{min-height:44px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.14);color:var(--on-page);border:2px solid rgba(255,255,255,.55);font-weight:700;cursor:pointer;}
+.chip[aria-pressed="true"]{background:#FFFFFF;color:#101B3D;border-color:#FFFFFF;}
+
+/* Abreißblock */
+.sheet-wrap{position:relative;perspective:1400px;}
+.sheet-wrap::before,.sheet-wrap::after{content:"";position:absolute;left:0;right:0;top:0;bottom:0;border-radius:10px;background:var(--sheet-2);}
+.sheet-wrap::before{transform:translate(7px,9px);opacity:.55;}
+.sheet-wrap::after{transform:translate(3px,4px);opacity:.85;}
+.sheet{position:relative;z-index:1;background:var(--sheet);border-radius:10px;box-shadow:var(--shadow);transform-origin:top center;}
+.sheet.flip{animation:tear .5s cubic-bezier(.2,.8,.2,1);}
+@keyframes tear{from{transform:rotateX(-72deg) translateY(-14px);opacity:0;}to{transform:none;opacity:1;}}
+.ring{position:absolute;top:-13px;width:14px;height:34px;border-radius:8px;background:#DDE3FF;border:2px solid #7F8CD1;z-index:3;}
+.ring.r1{left:22%;}.ring.r2{right:22%;}
+
+.band{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;padding:26px 12px 16px;background:var(--band);color:var(--on-band);border-radius:10px 10px 0 0;text-align:center;}
+.datebox{display:flex;flex-direction:column;align-items:center;}
+.wd{font-weight:700;font-size:1.1rem;}
+.dnum{font:800 clamp(4.4rem,17vw,6.8rem)/.92 var(--display);letter-spacing:-.045em;}
+.my{font-size:1.05rem;}
+.todaylink{margin-top:6px;background:none;border:0;color:var(--on-band);text-decoration:underline;font-weight:700;cursor:pointer;min-height:36px;padding:0 8px;}
+.navbtn{width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.8);background:transparent;color:var(--on-band);display:grid;place-items:center;cursor:pointer;}
+.navbtn:hover:not(:disabled){background:rgba(255,255,255,.18);}
+.navbtn:disabled{opacity:.35;cursor:not-allowed;}
+.navbtn svg{width:22px;height:22px;}
+
+.body{padding:0 0 26px;}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--sheet-2);}
+.tab{min-height:64px;padding:8px 4px;border:0;border-bottom:4px solid transparent;background:transparent;color:var(--muted);font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.2;}
+.tab .lab{display:inline-flex;align-items:center;gap:4px;}
+.tab.on{background:var(--sheet);color:var(--ink);border-bottom-color:var(--band);}
+.tab .tick{color:var(--ok);}
+.inner{padding:18px 22px 0;}
+.levels{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:0 0 18px;}
+.lvl{flex:1 1 0;min-width:0;min-height:52px;padding:6px 8px;border-radius:8px;border:2px solid var(--line);background:var(--sheet);cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:center;}
+.lvl b{font-size:1rem;}
+.lvl small{color:var(--muted);font-size:.8rem;white-space:nowrap;}
+.lvl[aria-pressed="true"]{border-color:var(--ink);background:var(--sheet-2);box-shadow:inset 0 -4px 0 var(--ink);}
+
+.timerbox{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 18px;padding:10px 14px;border-radius:8px;background:var(--sheet-2);}
+.tnum{font:800 2.2rem/1 var(--display);min-width:5.2ch;font-variant-numeric:tabular-nums;}
+.tbtns{display:flex;flex-wrap:wrap;gap:8px;}
+.tbtns button{min-height:44px;padding:6px 14px;border-radius:8px;border:2px solid var(--ink);background:transparent;font-weight:700;cursor:pointer;}
+.timerbox.low .tnum{color:var(--warn);}
+.timerbox.over{background:var(--band);color:var(--on-band);}
+.timerbox.over .tbtns button{border-color:#FFFFFF;color:#FFFFFF;}
+@media (prefers-reduced-motion:no-preference){.timerbox.over{animation:blink .8s ease-in-out 3;}}
+@keyframes blink{50%{opacity:.55;}}
+
+.note{margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--sheet-2);color:var(--muted);font-size:.92rem;}
+.kind{display:flex;align-items:center;gap:8px;margin:0 0 6px;color:var(--muted);font-weight:700;font-size:.95rem;}
+.kind::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--band);}
+.q{font-size:1.32rem;line-height:1.5;margin:0 0 16px;max-width:60ch;white-space:pre-line;}
+.beamer .q{font-size:1.7rem;max-width:none;}
+
+.seq{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;}
+.tile{min-width:58px;height:58px;padding:0 12px;display:grid;place-items:center;font:800 1.55rem var(--display);background:var(--sheet-2);border:2px solid var(--line);border-radius:8px;}
+.tile.unknown{background:var(--hint);color:var(--on-hint);border:2px dashed var(--ink);}
+.tile.solved{background:var(--ok-bg);border-color:var(--ok);}
+.beamer .tile{min-width:76px;height:76px;font-size:2.1rem;}
+
+.opts{margin:0 0 6px;}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;margin:0 0 8px;padding:10px 14px;border:2px solid var(--line);border-radius:8px;background:var(--sheet);text-align:left;font-size:1.1rem;cursor:pointer;}
+.opt:hover:not(:disabled){border-color:var(--accent);}
+.ltr{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:6px;background:var(--sheet-2);font-weight:700;}
+.opt.right{border-color:var(--ok);background:var(--ok-bg);}
+.opt.right .ltr{background:var(--ok);color:var(--sheet);}
+.opt.miss{border-color:var(--warn);background:var(--warn-bg);}
+.opt.miss::after{content:"✗";margin-left:auto;color:var(--warn);font-weight:700;}
+.opt.gone{opacity:.35;text-decoration:line-through;}
+.opt:disabled{cursor:default;}
+.beamer .opt{font-size:1.4rem;min-height:68px;}
+
+.ans{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px;}
+.ans input{flex:1 1 100px;min-width:0;min-height:52px;padding:8px 14px;border-radius:8px;border:2px solid var(--ink);background:var(--sheet);font-size:1.25rem;}
+.btn{min-height:50px;padding:10px 20px;border-radius:8px;border:2px solid transparent;font-weight:700;cursor:pointer;}
+.btn.primary{background:var(--accent);color:var(--on-accent);}
+.btn.ghost{background:transparent;border-color:var(--ink);}
+.btn.hint{background:var(--hint);color:var(--on-hint);}
+.btn.quiet{background:none;color:var(--muted);text-decoration:underline;padding-left:8px;padding-right:8px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn.sign{min-width:52px;padding:10px;}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px;}
+.hintbox{margin:0 0 10px;padding:10px 14px;border-radius:8px;background:var(--hint);color:var(--on-hint);font-weight:700;}
+.fb{min-height:0;margin:0 0 12px;}
+.fb:not(:empty){padding:10px 14px;border-radius:8px;}
+.fb.bad{background:var(--warn-bg);border-left:5px solid var(--warn);}
+.fb.info{background:var(--sheet-2);border-left:5px solid var(--muted);}
+.fb.good{background:var(--ok-bg);border-left:5px solid var(--ok);}
+
+.result{margin:6px 0 0;}
+.stamp{display:inline-flex;flex-direction:column;align-items:center;gap:2px;padding:6px 20px;margin:0 0 14px;border:4px double currentColor;border-radius:10px;font:800 1.7rem/1.1 var(--display);transform:rotate(-4deg);}
+.stamp.ok{color:var(--ok);}
+.stamp.meh{color:var(--warn);}
+.stamp.seen{color:var(--muted);}
+@media (prefers-reduced-motion:no-preference){.stamp{animation:stamp .45s cubic-bezier(.2,1.4,.4,1);}}
+@keyframes stamp{from{transform:rotate(-14deg) scale(1.8);opacity:0;}to{transform:rotate(-4deg) scale(1);opacity:1;}}
+.stars{font-size:1.4rem;color:var(--star);letter-spacing:.1em;}
+.expl{margin:0 0 14px;max-width:62ch;}
+.answerline{font-weight:700;font-size:1.15rem;margin:0 0 8px;}
+
+.progtxt{font-weight:700;color:var(--muted);margin:0 0 6px;}
+.prog{display:flex;gap:6px;margin:0 0 12px;}
+.prog i{flex:1;height:10px;border-radius:5px;background:var(--line);}
+.prog i.cur{background:var(--accent);}
+.prog i.ok{background:var(--ok);}
+.prog i.no{background:var(--warn);}
+.bigtask{font:800 clamp(2.5rem,10vw,3.6rem)/1.1 var(--display);text-align:center;padding:14px 0 18px;letter-spacing:-.01em;}
+.bigtask.long{font:700 1.5rem/1.4 var(--body);text-align:left;letter-spacing:0;}
+.review{list-style:none;margin:0 0 14px;padding:0;}
+.review li{padding:8px 0;border-bottom:1px solid var(--line);}
+.review .yes{color:var(--ok);font-weight:700;}
+.review .no{color:var(--warn);font-weight:700;}
+.review small{display:block;color:var(--muted);}
+
+.bsr{margin:0 0 14px;}
+.brow{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;width:100%;padding:12px 0;border:0;border-bottom:2px solid var(--line);background:none;text-align:left;cursor:pointer;}
+.bn{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--sheet-2);font:800 1.3rem var(--display);}
+.btxt{font:800 2.1rem/1.15 var(--display);}
+.btxt.long{font:700 1.4rem/1.35 var(--body);}
+.bans{font:800 2.1rem var(--display);color:var(--muted);min-width:3ch;text-align:right;}
+.bans.show{color:var(--ok);}
+
+.stats{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;margin:34px 4px 0;color:var(--on-page);}
+.stat{display:flex;align-items:baseline;gap:8px;}
+.stat .num{font:800 2.2rem/1 var(--display);}
+.week{display:flex;gap:6px;}
+.dot{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.5);font-size:.78rem;font-weight:700;}
+.dot.on{background:var(--hint);border-color:var(--hint);color:#101B3D;}
+.linkbtn{background:none;border:0;color:var(--on-page);text-decoration:underline;cursor:pointer;min-height:44px;padding:0 4px;opacity:.9;}
+.howto{margin:22px 4px 0;color:var(--on-page);}
+.howto summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center;}
+.howto ul{margin:6px 0 0;padding-left:1.2em;max-width:62ch;}
+.beamer .stats,.beamer .howto{display:none;}
+
+@media (max-width:520px){
+  .band{grid-template-columns:48px 1fr 48px;padding-left:8px;padding-right:8px;}
+  .inner{padding:16px 16px 0;}
+  .tab{font-size:.92rem;}
+  .lvl{padding:6px 6px;}.lvl small{font-size:.76rem;}
+  .levels{gap:6px;}
+  .btxt{font-size:1.6rem;}.bans{font-size:1.6rem;}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <h1>Rätsel des Tages</h1>
+    <div class="tools">
+      <span class="badge" id="teacherBadge" hidden>Lehrkraft-Ansicht</span>
+      <button type="button" class="chip" id="btnBeamer" data-act="beamer" aria-pressed="false">Beamer</button>
+    </div>
+  </header>
+
+  <div class="sheet-wrap">
+    <article class="sheet" id="sheet" aria-label="Tagesblatt">
+      <span class="ring r1" aria-hidden="true"></span><span class="ring r2" aria-hidden="true"></span>
+      <div class="band">
+        <button type="button" class="navbtn" id="btnPrev" data-act="prev" aria-label="Vorheriger Tag" title="Vorheriger Tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="datebox">
+          <div class="wd" id="wd"></div>
+          <div class="dnum" id="dnum"></div>
+          <div class="my" id="my"></div>
+          <button type="button" class="todaylink" id="btnToday" data-act="today" hidden>Zurück zu heute</button>
+        </div>
+        <button type="button" class="navbtn" id="btnNext" data-act="next" aria-label="Nächster Tag" title="Nächster Tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div class="body">
+        <div class="tabs" id="tabs" role="tablist" aria-label="Format"></div>
+        <div class="inner">
+          <div class="levels" id="levels" role="group" aria-label="Stufe"></div>
+          <div class="timerbox" id="timerBox" hidden>
+            <div class="tnum" id="timerNum" aria-hidden="true">–:––</div>
+            <div class="tbtns" role="group" aria-label="Timer">
+              <button type="button" data-act="timer" data-min="1">1 Min</button>
+              <button type="button" data-act="timer" data-min="2">2 Min</button>
+              <button type="button" data-act="timer" data-min="3">3 Min</button>
+              <button type="button" data-act="timer" data-min="5">5 Min</button>
+              <button type="button" data-act="timerStop">Stopp</button>
+            </div>
+          </div>
+          <div id="stage"></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <section class="stats" id="stats" aria-label="Dein Fortschritt auf diesem Gerät"></section>
+
+  <details class="howto">
+    <summary>So funktioniert es</summary>
+    <ul>
+      <li>Jeden Tag gibt es für jede Stufe ein neues Knobelrätsel, eine neue Wissensfrage und eine neue Kopfrechen-Serie. Auf allen Geräten ist es dasselbe Rätsel.</li>
+      <li>Drei Sterne bekommst du ohne Tipp und ohne Fehlversuch. Tipps und Fehler kosten Sterne, aber ein gelöstes Rätsel zählt immer für deine Serie.</li>
+      <li>Mit »Noch ein Rätsel« bekommst du Zusatzaufgaben, wenn du schnell fertig bist. Sie zählen nicht für Sterne und Serie.</li>
+      <li>Im Beamer-Modus erscheint alles groß, mit Timer und Lösungen zum Aufdecken.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+'use strict';
+/* ---------- Hilfsfunktionen ---------- */
+const $=(s,c)=>(c||document).querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mod=(a,n)=>((a%n)+n)%n;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function shuffled(arr,rnd){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function fn(n){n=Math.round(n*1e6)/1e6;return String(n).replace('.',',').replace('-','−');}
+function sup(n){return String(n).replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);}
+const ri=(r,a,b)=>a+Math.floor(r()*(b-a+1));
+const pick=(r,arr)=>arr[Math.floor(r()*arr.length)];
+
+/* ---------- Datum ---------- */
+const WD=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const MON=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const TEACHER=/lehrkraft/i.test((typeof location!=='undefined'&&location.hash)||'');
+function localDn(d){return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000);}
+function todayDn(){return localDn(new Date());}
+function dnDate(dn){return new Date(dn*86400000);}
+function keyOf(dn){const d=dnDate(dn);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
+
+/* ---------- Tagesauswahl: jede Aufgabe kommt pro Durchlauf genau einmal, in festgelegter Mischung ---------- */
+function rawOrder(n,cycle,salt){return shuffled([...Array(n).keys()],mulberry32(cycle*7919+salt*104729+13));}
+function dailyIndex(n,dn,salt){
+  const cycle=Math.floor(dn/n),pos=mod(dn,n);
+  const order=rawOrder(n,cycle,salt);
+  if(n>2&&cycle>0){const prev=rawOrder(n,cycle-1,salt);if(prev[n-1]===order[0]){const t=order[0];order[0]=order[1];order[1]=t;}}
+  return order[pos];
+}
+
+/* ---------- Aufgaben ---------- */
+/* type: mc (answer = Index in options), num (answer = Zahl), text (answer = Liste erlaubter Schreibweisen) */
+const PUZ={
+knobel:[
+[ /* Einstieg, Klasse 5/6 */
+ {id:'k0-1',kind:'Zahlenfolge',q:'Welche Zahl kommt als Nächstes?',seq:[1,4,9,16,25],type:'num',answer:36,
+  hint:'Schau dir an, um wie viel die Zahlen jeweils wachsen.',hint2:'Die Abstände sind 3, 5, 7, 9 … Sie werden immer um 2 größer.',
+  explain:'Das sind die Quadratzahlen: 1·1, 2·2, 3·3, 4·4, 5·5. Als Nächstes kommt 6·6 = 36.'},
+ {id:'k0-2',kind:'Logik',q:'Anna ist größer als Ben. Ben ist größer als Clara. David ist kleiner als Clara.\nWer ist der Zweitgrößte?',type:'mc',options:['Anna','Ben','Clara','David'],answer:1,
+  hint:'Schreib die Namen nach Größe untereinander auf, ganz oben der Größte.',
+  explain:'Reihenfolge: Anna > Ben > Clara > David. Der Zweitgrößte ist Ben.'},
+ {id:'k0-3',kind:'Alltag',q:'Ein Bauer hat 17 Schafe. Alle bis auf 9 laufen weg.\nWie viele Schafe hat er noch?',type:'num',answer:9,
+  hint:'Lies genau: Was bedeutet »alle bis auf 9«?',hint2:'Hier musst du nicht rechnen, sondern genau lesen.',
+  explain:'»Alle bis auf 9« heißt: 9 Schafe bleiben da. Er hat also noch 9 Schafe.'},
+ {id:'k0-4',kind:'Wortspiel',q:'Buchstabensalat! Bring die Buchstaben in die richtige Reihenfolge. Es ist ein Tier.',seq:['C','U','H','F','S'],noUnknown:true,type:'text',answer:['Fuchs'],
+  hint:'Das Tier hat rotbraunes Fell und gilt als schlau.',hint2:'Das Wort beginnt mit F und hat 5 Buchstaben.',
+  explain:'Richtig sortiert: F-U-C-H-S, ein Fuchs.'},
+ {id:'k0-5',kind:'Rätsel',q:'Ich habe Zähne, aber ich beiße nicht.\nMit mir ordnest du deine Haare.\nWas bin ich?',type:'mc',options:['Säge','Zahnrad','Kamm','Gabel'],answer:2,
+  hint:'Du benutzt mich morgens im Bad.',
+  explain:'Ein Kamm hat Zinken (»Zähne«), mit denen man die Haare ordnet.'},
+ {id:'k0-6',kind:'Zahlenrätsel',q:'Welche Zahl bin ich?\nIch liege zwischen 50 und 70.\nMeine Quersumme ist 10.\nIch bin durch 4 teilbar.',type:'num',answer:64,
+  hint:'Finde zuerst alle Zahlen zwischen 50 und 70 mit Quersumme 10.',hint2:'Das sind 55 und 64. Welche davon lässt sich durch 4 teilen?',
+  explain:'Quersumme 10 haben nur 55 und 64. Durch 4 teilbar ist nur 64 (4 · 16 = 64).'},
+ {id:'k0-7',kind:'Alter',q:'Lena ist doppelt so alt wie ihr Bruder Tim.\nZusammen sind sie 18 Jahre alt.\nWie alt ist Lena?',type:'num',answer:12,
+  hint:'Tim ist ein Teil, Lena sind zwei gleiche Teile. Wie viele Teile sind es zusammen?',hint2:'3 gleiche Teile ergeben 18. Wie groß ist ein Teil?',
+  explain:'Tim und Lena sind zusammen 3 gleiche Teile, also 18 : 3 = 6. Tim ist 6, Lena ist 12.'},
+ {id:'k0-8',kind:'Alltag',q:'Ein Heft und ein Stift kosten zusammen 5 €.\nDas Heft kostet 3 € mehr als der Stift.\nWie viel kostet der Stift? (Antwort in Euro)',type:'num',answer:1,unit:'€',
+  hint:'Wenn der Stift x € kostet, was kostet dann das Heft?',hint2:'x + (x + 3) = 5. Löse nach x auf.',
+  explain:'Stift + Heft = x + (x + 3) = 5, also 2x = 2 und x = 1. Der Stift kostet 1 €, das Heft 4 €.'},
+ {id:'k0-9',kind:'Kombinieren',q:'Du hast 3 T-Shirts (rot, blau, grün) und 2 Hosen (schwarz, grau).\nWie viele verschiedene Outfits kannst du anziehen?',type:'num',answer:6,
+  hint:'Jedes T-Shirt kann mit jeder Hose kombiniert werden. Eine Skizze hilft.',hint2:'Zu jedem der 3 T-Shirts gibt es 2 Hosen.',
+  explain:'3 T-Shirts mal 2 Hosen ergibt 6 Outfits.'},
+ {id:'k0-10',kind:'Logik',q:'Jemand hat die Fensterscheibe zerbrochen: Mia, Noah oder Lea.\nMia sagt: »Ich war es nicht.«\nNoah sagt: »Mia war es.«\nLea sagt: »Ich war es nicht.«\nNur eine der drei Aussagen ist wahr. Wer war es?',type:'mc',options:['Mia','Noah','Lea'],answer:2,
+  hint:'Probiere jeden Täter einzeln aus und zähle, wie viele Aussagen dann wahr wären.',
+  explain:'Wäre es Mia, wären Noahs und Leas Aussage wahr, also zwei. Wäre es Noah, wären Mias und Leas Aussage wahr, wieder zwei. War es Lea, ist nur Mias Aussage wahr. Es war Lea.'}
+],
+[ /* Standard, Klasse 7/8 */
+ {id:'k1-1',kind:'Zahlenfolge',q:'Welche Zahl kommt als Nächstes?',seq:[2,3,5,8,13,21],type:'num',answer:34,
+  hint:'Schau, wie jede Zahl aus den beiden davor entsteht.',hint2:'2 + 3 = 5, 3 + 5 = 8, 5 + 8 = 13 …',
+  explain:'Jede Zahl ist die Summe der zwei Zahlen davor (Fibonacci-Folge): 13 + 21 = 34.'},
+ {id:'k1-2',kind:'Denkfalle',q:'Ein Schläger und ein Ball kosten zusammen 1,10 €.\nDer Schläger kostet 1 € mehr als der Ball.\nWie viel kostet der Ball? (Antwort in Cent)',type:'num',answer:5,unit:'Cent',
+  hint:'Die schnelle Antwort 10 Cent ist leider falsch. Probiere sie aus!',hint2:'Ball = x, Schläger = x + 100 Cent. Zusammen 110 Cent.',
+  explain:'x + (x + 100) = 110, also 2x = 10 und x = 5. Der Ball kostet 5 Cent, der Schläger 105 Cent. Der Unterschied beträgt genau 1 €.'},
+ {id:'k1-3',kind:'Zahlenfolge',q:'Welche Zahl kommt als Nächstes?',seq:[1,2,4,7,11,16],type:'num',answer:22,
+  hint:'Berechne die Unterschiede zwischen den Zahlen.',hint2:'Die Unterschiede sind 1, 2, 3, 4, 5 …',
+  explain:'Die Abstände wachsen jedes Mal um 1: +1, +2, +3, +4, +5, dann +6. Also 16 + 6 = 22.'},
+ {id:'k1-4',kind:'Klassiker',q:'Ein Bauer will Wolf, Ziege und Kohlkopf mit einem Boot über einen Fluss bringen. Im Boot ist neben ihm nur Platz für eines davon.\nOhne den Bauern frisst der Wolf die Ziege und die Ziege den Kohl.\nWas nimmt er bei der ersten Überfahrt mit?',type:'mc',options:['Den Wolf','Die Ziege','Den Kohlkopf','Nichts'],answer:1,
+  hint:'Was darf auf keinen Fall allein zurückbleiben?',
+  explain:'Mit dem Wolf würde die Ziege den Kohl fressen, mit dem Kohl der Wolf die Ziege. Nur wenn die Ziege mitfährt, bleiben Wolf und Kohl friedlich zurück. Insgesamt braucht er 7 Überfahrten.'},
+ {id:'k1-5',kind:'Kombinieren',q:'6 Kinder begrüßen sich. Jedes Kind gibt jedem anderen genau einmal die Hand.\nWie viele Handschläge sind das insgesamt?',type:'num',answer:15,
+  hint:'Jedes Kind schüttelt 5 Hände. Aber Vorsicht: Wird dabei etwas doppelt gezählt?',hint2:'6 · 5 = 30 zählt jeden Handschlag zweimal.',
+  explain:'6 · 5 = 30, aber jeder Handschlag wurde doppelt gezählt. 30 : 2 = 15.'},
+ {id:'k1-6',kind:'Rechengeschichte',q:'Ein 200 m langer Zug fährt mit 72 km/h durch einen 400 m langen Tunnel.\nWie viele Sekunden dauert es von der Einfahrt der Lok, bis der Zug den Tunnel ganz verlassen hat?',type:'num',answer:30,unit:'Sekunden',
+  hint:'Welche Strecke legt die Lok zurück, bis auch das Zugende draußen ist?',hint2:'72 km/h sind 20 m/s. Die Strecke beträgt 600 m.',
+  explain:'Strecke: 400 m + 200 m = 600 m. Tempo: 72 km/h = 20 m/s. Zeit: 600 m : 20 m/s = 30 s.'},
+ {id:'k1-7',kind:'Kalender',q:'Heute ist Mittwoch.\nWelcher Wochentag ist in 100 Tagen?',type:'mc',options:['Donnerstag','Freitag','Samstag','Sonntag'],answer:1,
+  hint:'Eine Woche hat 7 Tage. Wie oft passt 7 in 100, und was bleibt übrig?',
+  explain:'100 : 7 = 14 Rest 2. Nach 14 vollen Wochen ist wieder Mittwoch, dann geht es noch 2 Tage weiter: Freitag.'},
+ {id:'k1-8',kind:'Zahlenrätsel',q:'Wie viele Nullen stehen am Ende, wenn du 10 · 20 · 30 · 40 · 50 ausrechnest?',type:'num',answer:6,
+  hint:'Schreibe jede Zahl als »Zahl mal 10«: 10 = 1 · 10, 20 = 2 · 10 …',hint2:'Dann bleibt (1 · 2 · 3 · 4 · 5) mal 10⁵ übrig.',
+  explain:'Das Produkt ist (1·2·3·4·5) · 10⁵ = 120 · 100 000 = 12 000 000. Das sind 6 Nullen.'},
+ {id:'k1-9',kind:'Logik',q:'Auf einer Insel sagen Ritter immer die Wahrheit und Schurken lügen immer.\nAli sagt: »Wir sind beide Schurken, Bo und ich.«\nWas sind Ali und Bo?',type:'mc',options:['Beide sind Ritter','Ali ist Ritter, Bo ist Schurke','Ali ist Schurke, Bo ist Ritter','Beide sind Schurken'],answer:2,
+  hint:'Könnte Ali ein Ritter sein? Dann müsste seine Aussage wahr sein.',
+  explain:'Wäre Ali ein Ritter, müsste seine Aussage stimmen, dann wäre er selbst ein Schurke. Das ist ein Widerspruch. Also ist Ali ein Schurke und lügt: Es stimmt nicht, dass beide Schurken sind. Weil Ali einer ist, muss Bo ein Ritter sein.'},
+ {id:'k1-10',kind:'Waage',q:'8 Kugeln sehen gleich aus, aber eine ist etwas schwerer. Du hast eine Balkenwaage ohne Gewichte.\nWie oft musst du mindestens wiegen, um die schwere Kugel sicher zu finden?',type:'num',answer:2,
+  hint:'Du musst die Kugeln nicht paarweise wiegen. Wie wäre es mit Gruppen?',hint2:'Teile die Kugeln in 3 + 3 + 2 auf.',
+  explain:'1. Wiegung: 3 gegen 3. Sinkt eine Seite, steckt die schwere Kugel dort, sonst unter den übrigen 2. 2. Wiegung: Aus 3 Kugeln wiegst du 1 gegen 1 (bleibt die Waage im Gleichgewicht, ist es die dritte), aus 2 Kugeln wiegst du beide gegeneinander. Zwei Wiegungen reichen.'},
+ {id:'k1-11',kind:'Denkfalle',q:'Eine Seerose verdoppelt ihre Fläche jeden Tag. Nach 30 Tagen bedeckt sie den ganzen See.\nNach wie vielen Tagen war erst die Hälfte des Sees bedeckt?',type:'num',answer:29,
+  hint:'Was passiert an dem Tag, bevor der See ganz voll ist?',hint2:'Wenn sich die Fläche täglich verdoppelt, war sie am Tag davor nur halb so groß.',
+  explain:'Weil sich die Fläche jeden Tag verdoppelt, war sie einen Tag vorher halb so groß: nach 29 Tagen.'}
+],
+[ /* Knobler, Klasse 9/10 */
+ {id:'k2-1',kind:'Uhr',q:'Wie oft liegen Stunden- und Minutenzeiger einer Uhr an einem ganzen Tag (24 Stunden) genau übereinander?',type:'num',answer:22,
+  hint:'In 12 Stunden überholt der Minutenzeiger den Stundenzeiger mehrmals. Wie oft?',hint2:'Der Minutenzeiger dreht sich 12-mal, der Stundenzeiger nur 1-mal. Wie oft überholt der schnellere den langsameren?',
+  explain:'In 12 Stunden überlappen sich die Zeiger 11-mal (das 12. Treffen fällt mit dem nächsten Zwölf-Uhr-Treffen zusammen). In 24 Stunden sind das 2 · 11 = 22-mal.'},
+ {id:'k2-2',kind:'Zahlenfolge',q:'Welche Zahl kommt als Nächstes?',seq:[1,1,2,6,24,120],type:'num',answer:720,
+  hint:'Vergleiche jede Zahl mit der davor: Womit wurde sie malgenommen?',hint2:'Die Faktoren sind 1, 2, 3, 4, 5 …',
+  explain:'Jede Zahl entsteht aus der vorherigen mal 1, 2, 3, 4, 5 … Als Nächstes kommt mal 6: 120 · 6 = 720. (Das sind die Fakultäten.)'},
+ {id:'k2-3',kind:'Zahlenfolge',q:'Welche Zahl kommt als Nächstes?',seq:[2,6,12,20,30],type:'num',answer:42,
+  hint:'Berechne die Abstände: 4, 6, 8 …',hint2:'Die Abstände wachsen immer um 2.',
+  explain:'Die Abstände wachsen um 2: +4, +6, +8, +10, dann +12. Also 30 + 12 = 42. (Es sind die Produkte 1·2, 2·3, 3·4, 4·5, 5·6, dann 6·7.)'},
+ {id:'k2-4',kind:'Geometrie',q:'Ein Quadrat hat einen Flächeninhalt von 144 cm².\nWie lang ist seine Diagonale, gerundet auf ganze Zentimeter?',type:'num',answer:17,unit:'cm',
+  hint:'Wie lang ist eine Seite? Danach hilft dir der Satz des Pythagoras.',hint2:'d² = 12² + 12²',
+  explain:'Seitenlänge: √144 = 12 cm. Diagonale: d = √(12² + 12²) = √288 ≈ 16,97 cm. Gerundet sind das 17 cm.'},
+ {id:'k2-5',kind:'Wahrscheinlichkeit',q:'Du wirfst zwei normale Würfel.\nWie wahrscheinlich ist es, dass die Augensumme genau 7 beträgt?',type:'mc',options:['1/12','1/6','1/36','1/3'],answer:1,
+  hint:'Wie viele verschiedene Würfe gibt es insgesamt, und bei wie vielen ist die Summe 7?',
+  explain:'Es gibt 6 · 6 = 36 Würfe. Die Summe 7 entsteht bei 1+6, 2+5, 3+4, 4+3, 5+2 und 6+1. Das sind 6 Würfe: 6/36 = 1/6.'},
+ {id:'k2-6',kind:'Wahrscheinlichkeit',q:'In einer Quizshow gibt es 3 Türen. Hinter einer steht ein Auto, hinter den beiden anderen je eine Ziege. Du wählst Tür 1. Der Moderator weiß, wo das Auto steht, und öffnet immer eine Ziegentür, die du nicht gewählt hast. Er öffnet Tür 3: Ziege.\nWas ist jetzt klug?',type:'mc',
+  options:['Bei Tür 1 bleiben: 2/3 Gewinnchance','Zu Tür 2 wechseln: 2/3 Gewinnchance','Egal: beide Türen haben 1/2 Chance','Man kann nichts sagen'],answer:1,
+  hint:'Wie wahrscheinlich war es, dass dein erster Tipp stimmt? Ändert sich das, wenn der Moderator eine Tür öffnet?',
+  explain:'Tür 1 hatte von Anfang an nur 1/3 Chance und behält sie. Die übrigen 2/3 liegen jetzt komplett auf Tür 2, weil der Moderator bewusst eine Ziegentür öffnet. Wechseln verdoppelt deine Chance auf 2/3.'},
+ {id:'k2-7',kind:'Alter',q:'Vor 5 Jahren war ein Vater 4-mal so alt wie sein Sohn.\nIn 15 Jahren ist er nur noch doppelt so alt wie sein Sohn.\nWie alt ist der Sohn heute?',type:'num',answer:15,
+  hint:'Nenne das heutige Alter des Sohnes s und das des Vaters v. Stelle zwei Gleichungen auf.',hint2:'v − 5 = 4 · (s − 5) und v + 15 = 2 · (s + 15)',
+  explain:'Aus den Gleichungen folgt v = 4s − 15 und v = 2s + 15. Gleichsetzen: 4s − 15 = 2s + 15, also s = 15 (der Vater ist 45). Probe: Vor 5 Jahren waren sie 40 und 10, in 15 Jahren 60 und 30.'},
+ {id:'k2-8',kind:'Knobelei',q:'Du hast einen 5-Liter-Krug und einen 3-Liter-Krug ohne Markierungen und genug Wasser. Du willst genau 4 Liter im großen Krug haben.\nWie viele Schritte brauchst du mindestens? (Füllen, Leeren und Umgießen zählt jeweils als 1 Schritt)',type:'num',answer:6,
+  hint:'Fülle zuerst den großen Krug und gieße in den kleinen um.',hint2:'Dann bleiben 2 Liter im großen Krug. Was machst du mit denen?',
+  explain:'1) Großen Krug füllen. 2) In den kleinen umgießen (2 Liter bleiben). 3) Kleinen Krug leeren. 4) Die 2 Liter hinüber gießen. 5) Großen Krug neu füllen. 6) In den kleinen umgießen, bis er voll ist: Dabei fließt 1 Liter hinüber, im großen bleiben 4 Liter.'},
+ {id:'k2-9',kind:'Kombinieren',q:'Wie viele verschiedene 4-stellige PINs (0000 bis 9999) gibt es, in denen keine Ziffer doppelt vorkommt?',type:'num',answer:5040,
+  hint:'Für die erste Ziffer hast du 10 Möglichkeiten. Wie viele bleiben für die zweite?',hint2:'Jede Ziffer, die schon benutzt wurde, fällt für die folgenden Stellen weg.',
+  explain:'10 · 9 · 8 · 7 = 5040.'},
+ {id:'k2-10',kind:'Zahlentrick',q:'Denk dir eine beliebige Zahl.\nVerdopple sie, addiere 6, teile durch 2 und ziehe deine Anfangszahl wieder ab.\nWelche Zahl kommt heraus?',type:'num',answer:3,
+  hint:'Teste mit einer Zahl deiner Wahl, zum Beispiel 10. Dann mit einer zweiten.',hint2:'Mit x gerechnet: (2x + 6) : 2 − x',
+  explain:'(2x + 6) : 2 − x = x + 3 − x = 3. Egal, welche Zahl du dir denkst: Es kommt immer 3 heraus.'}
+]],
+wissen:[
+[ /* Einstieg */
+ {id:'w0-1',kind:'Geografie',q:'Wie viele Bundesländer hat Deutschland?',type:'mc',options:['14','15','16','17'],answer:2,
+  hint:'Drei davon sind Stadtstaaten: Berlin, Hamburg und Bremen.',explain:'Deutschland hat 16 Bundesländer: 13 Flächenländer und 3 Stadtstaaten.'},
+ {id:'w0-2',kind:'Geografie',q:'Welcher Fluss hat in Deutschland die längste Strecke?',type:'mc',options:['Elbe','Rhein','Donau','Main'],answer:1,
+  hint:'Er fließt unter anderem durch Köln und Düsseldorf.',explain:'Der Rhein ist in Deutschland rund 865 km lang und damit länger als die Elbe (rund 727 km).'},
+ {id:'w0-3',kind:'Geografie',q:'Wie viele Kontinente gibt es (nach der in Deutschland üblichen Einteilung)?',type:'mc',options:['5','6','7','8'],answer:2,
+  hint:'Europa, Asien, Afrika, Nordamerika, Südamerika, Australien/Ozeanien und …?',explain:'Der siebte Kontinent ist die Antarktis. In anderen Ländern wird teils anders gezählt, bei uns sind es 7.'},
+ {id:'w0-4',kind:'Tiere',q:'Welches ist das größte Landtier der Erde?',type:'mc',options:['Giraffe','Nashorn','Flusspferd','Afrikanischer Elefant'],answer:3,
+  hint:'Die Giraffe ist das höchste Landtier, aber nicht das schwerste.',explain:'Der Afrikanische Elefant wiegt bis zu etwa 6 Tonnen und ist damit das schwerste Landtier.'},
+ {id:'w0-5',kind:'Weltall',q:'Welcher Planet ist der Sonne am nächsten?',type:'mc',options:['Venus','Mars','Merkur','Erde'],answer:2,
+  hint:'Er ist auch der kleinste Planet unseres Sonnensystems.',explain:'Merkur umrundet die Sonne in nur 88 Tagen. Sein Jahr ist also viel kürzer als unseres.'},
+ {id:'w0-6',kind:'Natur',q:'Welches Gas macht den größten Teil der Luft aus?',type:'mc',options:['Sauerstoff','Stickstoff','Kohlenstoffdioxid','Wasserstoff'],answer:1,
+  hint:'Es ist nicht das Gas, das wir zum Atmen brauchen.',explain:'Luft besteht zu etwa 78 % aus Stickstoff und nur zu etwa 21 % aus Sauerstoff.'},
+ {id:'w0-7',kind:'Hessen',q:'Wie heißt die Hauptstadt von Hessen?',type:'mc',options:['Frankfurt','Kassel','Darmstadt','Wiesbaden'],answer:3,
+  hint:'Die Stadt liegt am Rhein und ist für ihre heißen Quellen bekannt.',explain:'Wiesbaden ist die Landeshauptstadt. Frankfurt ist zwar größer, aber nicht die Hauptstadt.'},
+ {id:'w0-8',kind:'Sport',q:'Wie viele Spieler einer Handballmannschaft stehen gleichzeitig auf dem Feld (mit Torwart)?',type:'mc',options:['5','6','7','11'],answer:2,
+  hint:'Beim Fußball sind es 11, beim Basketball 5.',explain:'Beim Handball spielen 6 Feldspieler und 1 Torwart gleichzeitig, zusammen also 7.'},
+ {id:'w0-9',kind:'Physik',q:'Welches dieser Materialien leitet Strom am besten?',type:'mc',options:['Holz','Gummi','Kupfer','Glas'],answer:2,
+  hint:'Das Metall ist rötlich und steckt in vielen Kabeln.',explain:'Metalle wie Kupfer leiten Strom sehr gut. Holz, Gummi und Glas sind Isolatoren.'},
+ {id:'w0-10',kind:'Körper',q:'Wie viele Knochen hat ein erwachsener Mensch ungefähr?',type:'mc',options:['106','206','306','406'],answer:1,
+  hint:'Babys haben mehr Knochen als Erwachsene.',explain:'Erwachsene haben 206 Knochen. Babys haben deutlich mehr, weil viele Knochen erst später zusammenwachsen.'}
+],
+[ /* Standard */
+ {id:'w1-1',kind:'Wissenschaft',q:'Wer entwickelte die Relativitätstheorie?',type:'mc',options:['Isaac Newton','Albert Einstein','Galileo Galilei','Stephen Hawking'],answer:1,
+  hint:'Er wurde in Ulm geboren und bekam den Nobelpreis für Physik.',explain:'Albert Einstein veröffentlichte die spezielle Relativitätstheorie 1905 und die allgemeine um 1915.'},
+ {id:'w1-2',kind:'Geschichte',q:'In welchem Jahr fiel die Berliner Mauer?',type:'mc',options:['1961','1979','1989','1990'],answer:2,
+  hint:'Die Mauer wurde 1961 gebaut. Die Wiedervereinigung kam ein Jahr nach dem Fall.',explain:'Am 9. November 1989 öffnete sich die Grenze. Die Wiedervereinigung folgte am 3. Oktober 1990.'},
+ {id:'w1-3',kind:'Geografie',q:'Wie heißt die Hauptstadt von Kanada?',type:'mc',options:['Toronto','Vancouver','Ottawa','Montreal'],answer:2,
+  hint:'Sie liegt in der Provinz Ontario, ist aber nicht die größte Stadt des Landes.',explain:'Ottawa ist die Hauptstadt. Die größte Stadt Kanadas ist Toronto.'},
+ {id:'w1-4',kind:'Chemie',q:'Welches chemische Symbol hat Gold?',type:'mc',options:['Ag','Au','Go','Gd'],answer:1,
+  hint:'Es kommt vom lateinischen Wort »aurum«.',explain:'Au steht für das lateinische »aurum«. Ag ist das Symbol für Silber (»argentum«).'},
+ {id:'w1-5',kind:'Geografie',q:'Welches Land ist flächenmäßig das größte der Erde?',type:'mc',options:['Kanada','China','Russland','USA'],answer:2,
+  hint:'Das Land erstreckt sich über elf Zeitzonen.',explain:'Russland ist mit rund 17 Millionen km² deutlich größer als Kanada (rund 10 Millionen km²).'},
+ {id:'w1-6',kind:'Welt',q:'Wie heißt die Währung in Japan?',type:'mc',options:['Yuan','Yen','Won','Rupie'],answer:1,
+  hint:'Der Yuan gehört zu China, der Won zu Korea.',explain:'In Japan bezahlt man mit dem Yen.'},
+ {id:'w1-7',kind:'Erde',q:'Welche Schicht der Erde liegt direkt unter der Erdkruste?',type:'mc',options:['Innerer Kern','Äußerer Kern','Erdmantel','Atmosphäre'],answer:2,
+  hint:'Sie ist die dickste Schicht der Erde.',explain:'Der Erdmantel ist rund 2900 km dick und macht den größten Teil des Erdvolumens aus.'},
+ {id:'w1-8',kind:'Biologie',q:'Wie nennt man Tiere, die sowohl Pflanzen als auch Fleisch fressen?',type:'mc',options:['Pflanzenfresser','Fleischfresser','Allesfresser','Aasfresser'],answer:2,
+  hint:'Auch der Mensch gehört dazu.',explain:'Allesfresser wie Schweine, Bären oder Menschen nehmen pflanzliche und tierische Nahrung zu sich.'},
+ {id:'w1-9',kind:'Literatur',q:'Wer schrieb das Drama »Faust«?',type:'mc',options:['Friedrich Schiller','Gotthold Ephraim Lessing','Johann Wolfgang von Goethe','Heinrich Heine'],answer:2,
+  hint:'Er wurde 1749 in Frankfurt am Main geboren.',explain:'Goethe arbeitete fast sein ganzes Leben an »Faust«. Er wurde in Frankfurt geboren, also in Hessen.'},
+ {id:'w1-10',kind:'Erde',q:'Wie viel Prozent der Erdoberfläche sind von Wasser bedeckt?',type:'mc',options:['etwa 51 %','etwa 61 %','etwa 71 %','etwa 81 %'],answer:2,
+  hint:'Es ist etwas mehr als zwei Drittel.',explain:'Rund 71 % der Erdoberfläche sind von Ozeanen und anderen Gewässern bedeckt.'}
+],
+[ /* Knobler */
+ {id:'w2-1',kind:'Politik',q:'Welches Gericht wacht in Deutschland über die Einhaltung des Grundgesetzes?',type:'mc',options:['Bundesgerichtshof','Bundesverfassungsgericht','Bundesverwaltungsgericht','Bundessozialgericht'],answer:1,
+  hint:'Der Name verrät es: Es geht um die Verfassung.',explain:'Das Bundesverfassungsgericht in Karlsruhe prüft, ob Gesetze und staatliches Handeln mit dem Grundgesetz vereinbar sind.'},
+ {id:'w2-2',kind:'Geschichte',q:'In welchem Jahr begann der Erste Weltkrieg?',type:'mc',options:['1905','1914','1918','1939'],answer:1,
+  hint:'Das Kriegsende war 1918.',explain:'Der Erste Weltkrieg begann 1914 und endete 1918. Der Zweite Weltkrieg begann 1939.'},
+ {id:'w2-3',kind:'Chemie',q:'Welches chemische Element hat die Ordnungszahl 1?',type:'mc',options:['Helium','Wasserstoff','Sauerstoff','Lithium'],answer:1,
+  hint:'Es ist das leichteste Element und das häufigste im Universum.',explain:'Wasserstoff (H) hat ein Proton im Kern. Helium hat die Ordnungszahl 2.'},
+ {id:'w2-4',kind:'Biologie',q:'Welches Hormon senkt den Blutzuckerspiegel?',type:'mc',options:['Adrenalin','Insulin','Cortisol','Östrogen'],answer:1,
+  hint:'Es wird in der Bauchspeicheldrüse gebildet.',explain:'Insulin bringt Zucker aus dem Blut in die Körperzellen. Bei Diabetes funktioniert dieser Vorgang nicht richtig.'},
+ {id:'w2-5',kind:'Politik',q:'In welcher Stadt befindet sich der Hauptsitz der Vereinten Nationen?',type:'mc',options:['Genf','New York','Brüssel','Den Haag'],answer:1,
+  hint:'Das Gebäude steht am East River.',explain:'Der UN-Hauptsitz ist in New York. Genf ist ein wichtiger zweiter Standort.'},
+ {id:'w2-6',kind:'Physik',q:'Was misst man in der Einheit Pascal?',type:'mc',options:['Kraft','Druck','Energie','Spannung'],answer:1,
+  hint:'Auf Wetterkarten steht sie als hPa.',explain:'Ein Pascal ist ein Newton pro Quadratmeter (1 Pa = 1 N/m²) und misst Druck.'},
+ {id:'w2-7',kind:'Geschichte',q:'Wer gilt als Erfinder des Buchdrucks mit beweglichen Metalllettern in Europa?',type:'mc',options:['Martin Luther','Johannes Gutenberg','Gottlieb Daimler','Albrecht Dürer'],answer:1,
+  hint:'Er stammt aus Mainz, der Nachbarstadt von Wiesbaden.',explain:'Johannes Gutenberg entwickelte um 1450 in Mainz den Buchdruck mit beweglichen Lettern.'},
+ {id:'w2-8',kind:'Geografie',q:'Wie heißt der höchste Berg Deutschlands?',type:'mc',options:['Feldberg','Brocken','Watzmann','Zugspitze'],answer:3,
+  hint:'Er steht in den Alpen an der Grenze zu Österreich.',explain:'Die Zugspitze ist 2962 m hoch.'},
+ {id:'w2-9',kind:'Biologie',q:'Wie viele Chromosomen hat eine normale menschliche Körperzelle?',type:'mc',options:['23','46','48','92'],answer:1,
+  hint:'Jeweils ein Satz kommt von der Mutter und einer vom Vater.',explain:'Der Mensch hat 23 Chromosomenpaare, also 46 Chromosomen. Eizelle und Spermium haben nur je 23.'},
+ {id:'w2-10',kind:'Politik',q:'Wie nennt man die Aufteilung der Staatsgewalt in Gesetzgebung, Regierung und Rechtsprechung?',type:'mc',options:['Föderalismus','Gewaltenteilung','Subsidiarität','Gewaltmonopol'],answer:1,
+  hint:'Sie soll verhindern, dass eine Person oder Gruppe zu viel Macht bekommt.',explain:'Legislative (Parlament), Exekutive (Regierung) und Judikative (Gerichte) kontrollieren sich gegenseitig.'}
+]]};
+
+/* ---------- Kopfrechen-Generatoren (pro Stufe) ---------- */
+const GENS=[[
+ r=>{const a=ri(r,23,89),b=ri(r,12,48),t=Math.floor(b/10)*10,o=b%10;return{text:`${a} + ${b}`,answer:a+b,explain:o?`Erst die Zehner, dann die Einer: ${a} + ${t} = ${a+t}, dann + ${o} = ${a+b}.`:`${a} + ${t} = ${a+b}.`};},
+ r=>{const a=ri(r,60,160),b=ri(r,17,Math.min(59,a-10)),t=Math.floor(b/10)*10,o=b%10;return{text:`${a} − ${b}`,answer:a-b,explain:o?`Erst die Zehner, dann die Einer: ${a} − ${t} = ${a-t}, dann − ${o} = ${a-b}.`:`${a} − ${t} = ${a-b}.`};},
+ r=>{const a=ri(r,3,12),b=ri(r,4,12);return{text:`${a} · ${b}`,answer:a*b,explain:`${a} · ${b-1} = ${a*(b-1)}, dazu noch einmal ${a}: ${a*b}.`};},
+ r=>{const b=ri(r,3,9),q=ri(r,4,12);return{text:`${b*q} : ${b}`,answer:q,explain:`Welche Zahl mal ${b} ergibt ${b*q}? ${q} · ${b} = ${b*q}.`};},
+ r=>{const a=ri(r,12,48),b=pick(r,[20,30,40,50]);return{text:`${a} · ${b}`,answer:a*b,explain:`Erst ${a} · ${b/10} = ${a*b/10}, dann mal 10: ${a*b}.`};},
+ r=>{const a=ri(r,2,9),b=ri(r,3,9),c=ri(r,5,40);return{text:`${a} · ${b} + ${c}`,answer:a*b+c,explain:`Punkt vor Strich: ${a} · ${b} = ${a*b}, dann + ${c} = ${a*b+c}.`};},
+ r=>{if(r()<0.5){const n=2*ri(r,30,150);return{text:`Die Hälfte von ${n}`,answer:n/2,explain:`${n} : 2 = ${n/2}.`};}const n=ri(r,35,98);return{text:`Das Doppelte von ${n}`,answer:2*n,explain:`${n} · 2 = ${2*n}.`};}
+],[
+ r=>{const p=pick(r,[5,10,15,20,25,30,50,75]),base=20*ri(r,2,15),ans=base*p/100;return{text:`${p} % von ${base}`,answer:ans,explain:`10 % von ${base} sind ${base/10}. Daraus ergeben sich ${p} %: ${ans}.`};},
+ r=>{const d=pick(r,[3,4,5,6,8,10]),n=ri(r,1,d-1),q=ri(r,3,12);return{text:`${n}/${d} von ${d*q}`,answer:n*q,explain:`Erst durch ${d} teilen: ${d*q} : ${d} = ${q}. Dann mal ${n}: ${q} · ${n} = ${n*q}.`};},
+ r=>{const n=ri(r,11,20);return{text:`${n}²`,answer:n*n,explain:`${n} · ${n} = ${n*n}.`};},
+ r=>{const a=ri(r,3,15),b=ri(r,3,15),c=ri(r,2,9);return{text:`(${a} + ${b}) · ${c}`,answer:(a+b)*c,explain:`Klammer zuerst: ${a} + ${b} = ${a+b}, dann · ${c} = ${(a+b)*c}.`};},
+ r=>{const t=ri(r,0,2),a=ri(r,3,20),b=ri(r,3,25);
+   if(t===0)return{text:`−${a} + ${b}`,answer:b-a,explain:`Vom Startpunkt −${a} gehst du ${b} Schritte nach rechts: ${fn(b-a)}.`};
+   if(t===1){const x=ri(r,3,15),y=x+ri(r,3,20);return{text:`${x} − ${y}`,answer:x-y,explain:`${y} ist größer als ${x}, das Ergebnis ist negativ: ${y} − ${x} = ${y-x}, also −${y-x}.`};}
+   return{text:`−${a} − ${b}`,answer:-(a+b),explain:`Beide Schritte gehen nach links: ${a} + ${b} = ${a+b}, also −${a+b}.`};},
+ r=>{const a=pick(r,[0.5,1.5,2.5,3.5]),b=ri(r,3,14);return{text:`${fn(a)} · ${b}`,answer:Math.round(a*b*100)/100,explain:`Erst ${a*2} · ${b} = ${a*2*b}, dann halbieren: ${fn(a*b)}.`};},
+ r=>{const m=4*ri(r,3,10);return{text:`25 · ${m}`,answer:25*m,explain:`25 · 4 = 100. Hier hast du ${m/4} Vierer: ${m/4} · 100 = ${25*m}.`};},
+ r=>{const p=pick(r,[10,20,25,50,75]),base=20*ri(r,3,12);return{text:`${p} % von ${base}`,answer:base*p/100,explain:`10 % von ${base} sind ${base/10}. Daraus ergeben sich ${p} %: ${base*p/100}.`};}
+],[
+ r=>{const o=pick(r,[[2,5,10],[3,3,6],[4,3,5],[5,2,4],[6,2,4]]),b=o[0],e=ri(r,o[1],o[2]);return{text:`${b}${sup(e)}`,answer:Math.pow(b,e),explain:`${Array(e).fill(b).join(' · ')} = ${Math.pow(b,e)}.`};},
+ r=>{const n=ri(r,12,25);return{text:`√${n*n}`,answer:n,explain:`${n} · ${n} = ${n*n}, also ist √${n*n} = ${n}.`};},
+ r=>{const base=20*ri(r,3,15),up=r()<0.5,p=up?pick(r,[5,10,15,20,25,30,50]):pick(r,[10,20,25,30,50]),part=base*p/100;
+   return up?{text:`Ein Preis von ${base} € steigt um ${p} %. Wie hoch ist der neue Preis in Euro?`,answer:base+part,explain:`${p} % von ${base} € sind ${part} €. Neuer Preis: ${base} + ${part} = ${base+part} €.`}
+            :{text:`Ein Preis von ${base} € sinkt um ${p} %. Wie hoch ist der neue Preis in Euro?`,answer:base-part,explain:`${p} % von ${base} € sind ${part} €. Neuer Preis: ${base} − ${part} = ${base-part} €.`};},
+ r=>{const a=ri(r,3,12),b=ri(r,3,9),t=ri(r,0,3);
+   if(t===0)return{text:`(−${a}) · ${b}`,answer:-a*b,explain:`Minus mal Plus ergibt Minus: ${a} · ${b} = ${a*b}, also −${a*b}.`};
+   if(t===1)return{text:`(−${a}) · (−${b})`,answer:a*b,explain:`Minus mal Minus ergibt Plus: ${a} · ${b} = ${a*b}.`};
+   if(t===2)return{text:`−${a*b} : ${b}`,answer:-a,explain:`Minus geteilt durch Plus ergibt Minus: ${a*b} : ${b} = ${a}, also −${a}.`};
+   return{text:`${a*b} : (−${b})`,answer:-a,explain:`Plus geteilt durch Minus ergibt Minus: ${a*b} : ${b} = ${a}, also −${a}.`};},
+ r=>{const n=pick(r,[19,21,29,31,39,41,49,51,59,61,99,101]),m=n>90?100:Math.round(n/10)*10,s=n>m?'+':'−';return{text:`${n}²`,answer:n*n,explain:`Trick: ${n}² = (${m} ${s} 1)² = ${m*m} ${s} ${2*m} + 1 = ${n*n}.`};},
+ r=>{const x=ri(r,2,12),b=ri(r,1,3),k=ri(r,1,4),a=b+k,c=ri(r,1,20),d=c+k*x,bx=b===1?'x':b+'x',kx=k===1?'x':k+'x';
+   return{text:`Löse nach x auf: ${a}x + ${c} = ${bx} + ${d}`,answer:x,explain:`Rechne auf beiden Seiten − ${bx} und − ${c}: ${kx} = ${d-c}. Also x = ${x}.`};},
+ r=>{const n=pick(r,[4,5]),v=[];for(let i=0;i<n-1;i++)v.push(ri(r,5,30));const s=v.reduce((p,q)=>p+q,0),c=[];for(let x=5;x<=30;x++)if((s+x)%n===0)c.push(x);v.push(pick(r,c));const sum=v.reduce((p,q)=>p+q,0);
+   return{text:`Wie groß ist der Mittelwert von ${v.join(', ')}?`,answer:sum/n,explain:`Summe: ${v.join(' + ')} = ${sum}. Dann : ${n} = ${sum/n}.`};},
+ r=>{const w=ri(r,2,6),d=2*ri(r,2,10);return{text:`${w} Maschinen brauchen ${d} Stunden für einen Auftrag. Wie viele Stunden brauchen ${2*w} gleiche Maschinen?`,answer:d/2,explain:`Doppelt so viele Maschinen brauchen nur halb so lange: ${d} : 2 = ${d/2}.`};},
+ r=>{const p=pick(r,[5,10,15,20,25,30,40,50,60,75]),base=20*ri(r,2,10),part=base*p/100;return{text:`Wie viel Prozent sind ${part} von ${base}?`,answer:p,explain:`${part} : ${base} = ${fn(part/base)}, das sind ${p} %.`};}
+]];
+
+/* ---------- Prüfen von Antworten ---------- */
+function parseNum(s){
+  s=String(s).trim().replace(/[−–—]/g,'-').replace(/-\s+/,'-');
+  const m=s.match(/-?\d[\d.,]*/);if(!m)return null;
+  let t=m[0];
+  if(/^-?\d{1,3}(\.\d{3})+$/.test(t))t=t.replace(/\./g,'');else t=t.replace(',','.');
+  const v=Number(t);return Number.isFinite(v)?v:null;
+}
+function norm(s){return String(s).toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+function checkAnswer(p,input){
+  if(p.type==='num'){const v=parseNum(input);return v!==null&&Math.abs(v-p.answer)<1e-9;}
+  if(p.type==='text'){const n=norm(input);return p.answer.some(a=>norm(a)===n);}
+  return false;
+}
+function answerText(p){
+  if(p.type==='mc')return p.options[p.answer];
+  if(p.type==='num')return fn(p.answer)+(p.unit?' '+p.unit:'');
+  return p.answer[0];
+}
+
+/* ---------- Zustand ---------- */
+const STORE_KEY='raetsel-des-tages:v1';
+function loadSave(){try{const raw=localStorage.getItem(STORE_KEY);if(raw){const o=JSON.parse(raw);if(o&&typeof o==='object'&&o.done&&typeof o.done==='object')return o;}}catch(e){}return{done:{},level:0};}
+function persist(){try{localStorage.setItem(STORE_KEY,JSON.stringify(save));}catch(e){}}
+let save=loadSave();
+const FORMATS=[{id:'knobel',label:'Knobeln',icon:'🧩',long:'Knobelrätsel'},{id:'wissen',label:'Wissen',icon:'🌍',long:'Wissensfrage'},{id:'rechnen',label:'Kopfrechnen',icon:'🔢',long:'Kopfrechen-Serie'}];
+const LEVELS=[{name:'Einstieg',cls:'Klasse 5/6'},{name:'Standard',cls:'Klasse 7/8'},{name:'Knobler',cls:'Klasse 9/10'}];
+const S={dn:todayDn(),fmt:FORMATS[mod(todayDn(),3)].id,level:(save.level===1||save.level===2)?save.level:0,extra:false,beamer:false,confirmReset:false};
+let sess=null,focusInp=false,focusNext=false;
+const recKey=()=>keyOf(S.dn)+'|'+S.fmt+'|'+S.level;
+const canRecord=()=>!S.extra&&!S.beamer&&S.dn===todayDn();
+function prevStars(){return(S.extra||S.beamer)?0:(save.done[recKey()]||0);}
+function record(st){if(!canRecord())return;const k=recKey();if((save.done[k]||0)<st){save.done[k]=st;persist();}}
+const starsFor=pen=>pen===0?3:(pen<=2?2:1);
+function starsHtml(n){return`<span class="stars" role="img" aria-label="${n} von 3 Sternen">${'★'.repeat(n)}${'☆'.repeat(3-n)}</span>`;}
+
+function newSession(){
+  if(S.fmt==='rechnen')return newSeries();
+  const pool=PUZ[S.fmt][S.level],salt=(S.fmt==='knobel'?11:23)+S.level;
+  const daily=dailyIndex(pool.length,S.dn,salt);
+  let idx=daily;
+  if(S.extra){do{idx=Math.floor(Math.random()*pool.length);}while(idx===daily&&pool.length>1);}
+  const p=pool[idx];
+  const seed=S.extra?Math.floor(Math.random()*1e9):S.dn*131+S.level*17+hashStr(p.id);
+  const order=p.type==='mc'?shuffled(p.options.map((_,i)=>i),mulberry32(seed)):null;
+  const prev=prevStars();
+  return{kind:'single',p,order,hints:0,hintShown:[],elim:[],wrong:0,wrongOpts:[],status:prev>0?'solved':'open',stars:prev,input:'',msg:null,prev,fresh:false,reveal:false};
+}
+function newSeries(){
+  const seed=S.extra?Math.floor(Math.random()*1e9):S.dn*977+S.level*31+5;
+  const rnd=mulberry32(seed),gens=GENS[S.level];
+  const picks=shuffled(gens.map((_,i)=>i),rnd).slice(0,5);
+  const tasks=picks.map(i=>gens[i](rnd));
+  const prev=prevStars();
+  return{kind:'series',tasks,idx:0,res:[],given:[],started:Date.now(),ended:null,status:prev>0?'before':'run',prev,stars:prev,input:'',fb:null,revealed:[false,false,false,false,false],msg:null};
+}
+function resetSession(){sess=newSession();}
+
+/* ---------- Aktionen: Einzelrätsel ---------- */
+const BAD=['Noch nicht ganz. Versuch es noch einmal.','Das stimmt leider noch nicht. Lies die Aufgabe noch einmal genau.','Knapp daneben? Nimm dir einen Tipp, wenn du magst.'];
+function solveSingle(){const s=sess;s.status='solved';s.msg=null;s.fresh=true;s.stars=starsFor(s.hints+s.wrong);record(s.stars);render();}
+function submitSingle(val){
+  const s=sess;if(s.status!=='open')return;
+  s.input=val;
+  if(!String(val).trim()){s.msg={t:'info',x:'Gib zuerst eine Antwort ein.'};focusInp=true;render();return;}
+  if(checkAnswer(s.p,val)){solveSingle();return;}
+  s.wrong++;s.msg={t:'bad',x:BAD[(s.wrong-1)%BAD.length]};focusInp=true;render();
+}
+function chooseOpt(di){
+  const s=sess;if(s.status!=='open'||s.p.type!=='mc')return;
+  const oi=s.order[di];if(s.elim.includes(oi)||s.wrongOpts.includes(oi))return;
+  if(oi===s.p.answer){solveSingle();return;}
+  s.wrong++;s.wrongOpts.push(oi);s.msg={t:'bad',x:BAD[(s.wrong-1)%BAD.length]};render();
+}
+function useHint(){
+  const s=sess;if(!s||s.kind!=='single'||s.status!=='open'||s.hints>=2)return;
+  s.hints++;
+  if(s.hints===1){s.hintShown.push(s.p.hint);}
+  else if(s.p.type==='mc'){
+    const cand=s.p.options.map((_,i)=>i).filter(i=>i!==s.p.answer&&!s.wrongOpts.includes(i)&&!s.elim.includes(i));
+    const n=Math.min(2,cand.length-1);
+    if(n>0){shuffled(cand,Math.random).slice(0,n).forEach(i=>s.elim.push(i));s.hintShown.push('50:50 – '+(n===1?'eine falsche Antwort ist':'zwei falsche Antworten sind')+' weg.');}
+    else s.hintShown.push('Es sind nur noch zwei Antworten übrig. Entscheide dich!');
+  } else s.hintShown.push(s.p.hint2||'Lies die Aufgabe noch einmal Wort für Wort.');
+  focusInp=!!$('#inp');render();
+}
+function revealSingle(){const s=sess;if(s.status!=='open')return;s.status='revealed';s.msg=null;render();}
+
+/* ---------- Aktionen: Kopfrechen-Serie ---------- */
+function submitSeries(val){
+  const s=sess;if(s.status!=='run'||s.fb)return;
+  s.input=val;
+  if(!String(val).trim()){s.msg={t:'info',x:'Gib zuerst eine Antwort ein.'};focusInp=true;render();return;}
+  const t=s.tasks[s.idx],v=parseNum(val),ok=v!==null&&Math.abs(v-t.answer)<1e-9;
+  s.res[s.idx]=ok;s.given[s.idx]=String(val).trim();s.fb={ok};s.msg=null;focusNext=true;render();
+}
+function nextTask(){
+  const s=sess;if(s.status!=='run'||!s.fb)return;
+  s.fb=null;s.input='';
+  if(s.idx<s.tasks.length-1){s.idx++;focusInp=true;}
+  else{s.status='done';s.ended=Date.now();const c=s.res.filter(Boolean).length;s.stars=c===5?3:c>=3?2:c>=1?1:0;if(s.stars>0)record(s.stars);}
+  render();
+}
+
+/* ---------- Timer (Beamer) ---------- */
+const TM={end:0,iv:null};
+function updateTimer(){
+  const el=$('#timerNum'),box=$('#timerBox');if(!el||!box)return;
+  if(!TM.end){el.textContent='–:––';box.classList.remove('low','over');return;}
+  const left=Math.max(0,TM.end-Date.now()),sec=Math.ceil(left/1000);
+  if(left<=0){el.textContent='Zeit!';box.classList.remove('low');box.classList.add('over');if(TM.iv){clearInterval(TM.iv);TM.iv=null;}return;}
+  el.textContent=Math.floor(sec/60)+':'+pad(sec%60);box.classList.remove('over');box.classList.toggle('low',sec<=10);
+}
+function stopTimer(){if(TM.iv){clearInterval(TM.iv);TM.iv=null;}TM.end=0;updateTimer();}
+function startTimer(min){stopTimer();TM.end=Date.now()+min*60000;TM.iv=setInterval(updateTimer,250);updateTimer();}
+
+/* ---------- Rendering ---------- */
+function streakNow(){
+  const days=new Set();for(const k in save.done){if(save.done[k]>0)days.add(k.split('|')[0]);}
+  let d=todayDn();if(!days.has(keyOf(d)))d--;let n=0;while(days.has(keyOf(d))){n++;d--;}return{n,days};
+}
+function renderBand(){
+  const d=dnDate(S.dn),t=todayDn();
+  $('#wd').textContent=WD[d.getUTCDay()]+(S.dn>t?' (Vorschau)':'');
+  $('#dnum').textContent=d.getUTCDate();
+  $('#my').textContent=MON[d.getUTCMonth()]+' '+d.getUTCFullYear();
+  $('#btnToday').hidden=S.dn===t;
+  $('#btnNext').disabled=!TEACHER&&S.dn>=t;
+  $('#btnPrev').disabled=S.dn<=t-60;
+}
+function renderTabs(){
+  $('#tabs').innerHTML=FORMATS.map(f=>{
+    const on=f.id===S.fmt,done=(save.done[keyOf(S.dn)+'|'+f.id+'|'+S.level]||0)>0;
+    return`<button type="button" role="tab" class="tab${on?' on':''}" aria-selected="${on}" data-act="tab" data-fmt="${f.id}"><span aria-hidden="true">${f.icon}</span><span class="lab">${f.label}${done?'<span class="tick" role="img" aria-label="gelöst">✓</span>':''}</span></button>`;
+  }).join('');
+}
+function renderLevels(){
+  $('#levels').innerHTML=LEVELS.map((l,i)=>`<button type="button" class="lvl" aria-pressed="${i===S.level}" data-act="level" data-i="${i}"><b>${l.name}</b><small>${l.cls}</small></button>`).join('');
+}
+function noteHtml(){
+  if(S.extra)return'<p class="note">Zusatzaufgabe: Sie zählt nicht für Sterne und Serie.</p>';
+  if(!S.beamer&&S.dn!==todayDn())return'<p class="note">Anderer Tag: Hier gesammelte Sterne zählen nicht für die Serie.</p>';
+  return'';
+}
+function seqHtml(s){
+  const p=s.p,tiles=p.seq.map(v=>`<span class="tile">${esc(v)}</span>`);
+  if(!p.noUnknown){
+    if(s.status==='solved'||s.status==='revealed')tiles.push(`<span class="tile solved">${esc(fn(p.answer))}</span>`);
+    else tiles.push('<span class="tile unknown" aria-label="gesuchte Zahl">?</span>');
+  }
+  return`<div class="seq">${tiles.join('')}</div>`;
+}
+function stageSingle(){
+  const s=sess,p=s.p,open=s.status==='open';
+  let h=noteHtml();
+  h+=`<p class="kind">${esc(p.kind)}</p><p class="q">${esc(p.q)}</p>`;
+  if(p.seq)h+=seqHtml(s);
+  if(p.type==='mc'){
+    h+='<div class="opts">'+s.order.map((oi,di)=>{
+      const cls=['opt'];let dis=!open;
+      if(!open){if(oi===p.answer)cls.push('right');else if(s.wrongOpts.includes(oi))cls.push('miss');}
+      else{if(s.wrongOpts.includes(oi)){cls.push('miss');dis=true;}if(s.elim.includes(oi)){cls.push('gone');dis=true;}}
+      return`<button type="button" class="${cls.join(' ')}" data-act="opt" data-i="${di}"${dis?' disabled':''}><span class="ltr">${'ABCD'[di]}</span><span>${esc(p.options[oi])}</span></button>`;
+    }).join('')+'</div>';
+  } else if(open&&!S.beamer){
+    h+=`<form class="ans" data-form="single" autocomplete="off"><label class="sr" for="inp">Deine Antwort</label><input id="inp" type="text" inputmode="${p.type==='num'?'decimal':'text'}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Deine Antwort" value="${esc(s.input)}"><button type="submit" class="btn primary">Prüfen</button></form>`;
+  }
+  h+=`<div class="fb ${s.msg?s.msg.t:''}" id="fb" role="status" aria-live="polite">${s.msg?esc(s.msg.x):''}</div>`;
+  s.hintShown.forEach(x=>{h+=`<p class="hintbox">${esc(x)}</p>`;});
+  if(open){
+    h+=`<div class="row"><button type="button" class="btn hint" data-act="hint"${s.hints>=2?' disabled':''}>Tipp (${s.hints}/2)</button><button type="button" class="btn ${S.beamer?'primary':'quiet'}" data-act="reveal">${S.beamer?'Lösung aufdecken':'Lösung zeigen'}</button></div>`;
+  } else {
+    const solved=s.status==='solved';
+    h+='<div class="result">';
+    if(solved)h+=`<div class="stamp ok">Richtig!${S.beamer?'':starsHtml(s.stars)}</div>`;
+    else h+='<div class="stamp seen">Lösung</div>';
+    h+=`<p class="answerline">Antwort: ${esc(answerText(p))}</p><p class="expl">${esc(p.explain)}</p>`;
+    h+='<div class="row">';
+    h+=`<button type="button" class="btn primary" data-act="extra">Noch ein Rätsel</button>`;
+    if(solved&&s.prev>0&&!s.fresh)h+='<button type="button" class="btn ghost" data-act="retry">Nochmal lösen</button>';
+    h+=nextFmtBtn()+'</div></div>';
+  }
+  return h;
+}
+function nextFmtBtn(){
+  const i=FORMATS.findIndex(f=>f.id===S.fmt),n=FORMATS[(i+1)%FORMATS.length];
+  return`<button type="button" class="btn ghost" data-act="goto" data-fmt="${n.id}">Weiter mit ${n.long}</button>`;
+}
+function mmss(ms){const t=Math.round(ms/1000);return Math.floor(t/60)+':'+pad(t%60);}
+function stageSeries(){
+  const s=sess;let h=noteHtml();
+  h+='<p class="kind">Kopfrechen-Serie</p>';
+  if(S.beamer){
+    h+='<div class="bsr">'+s.tasks.map((t,i)=>`<button type="button" class="brow" data-act="brev" data-i="${i}" aria-label="Aufgabe ${i+1}: Lösung ${s.revealed[i]?'verbergen':'aufdecken'}"><span class="bn">${i+1}</span><span class="btxt${t.text.length>22?' long':''}">${esc(t.text)}</span><span class="bans${s.revealed[i]?' show':''}">${s.revealed[i]?'= '+esc(fn(t.answer)):'?'}</span></button>`).join('')+'</div>';
+    h+='<div class="row"><button type="button" class="btn primary" data-act="brevAll">Alle Lösungen aufdecken</button><button type="button" class="btn ghost" data-act="extra">Neue Serie</button>'+nextFmtBtn()+'</div>';
+    return h;
+  }
+  if(s.status==='before'){
+    h+=`<div class="result"><div class="stamp ok">Heute geschafft${starsHtml(s.stars)}</div><p class="expl">Du hast diese Kopfrechen-Serie schon gelöst. Rechne sie noch einmal oder probiere eine Zusatzserie.</p><div class="row"><button type="button" class="btn primary" data-act="retry">Nochmal rechnen</button><button type="button" class="btn ghost" data-act="extra">Zusatzserie</button>${nextFmtBtn()}</div></div>`;
+    return h;
+  }
+  if(s.status==='done'){
+    const c=s.res.filter(Boolean).length;
+    h+=`<div class="result"><div class="stamp ${c>=3?'ok':'meh'}">${c} von 5${starsHtml(s.stars)}</div><p class="answerline">Zeit: ${mmss(s.ended-s.started)}</p><ul class="review">`;
+    h+=s.tasks.map((t,i)=>`<li><span class="${s.res[i]?'yes':'no'}">${s.res[i]?'richtig':'falsch'}</span> ${esc(t.text)} = ${esc(fn(t.answer))}${s.res[i]?'':`<small>Deine Antwort: ${esc(s.given[i])}. ${esc(t.explain)}</small>`}</li>`).join('');
+    h+=`</ul><div class="row"><button type="button" class="btn primary" data-act="extra">Zusatzserie</button>${nextFmtBtn()}</div></div>`;
+    return h;
+  }
+  const t=s.tasks[s.idx];
+  h+=`<p class="progtxt">Aufgabe ${s.idx+1} von ${s.tasks.length}</p><div class="prog" aria-hidden="true">${s.tasks.map((_,i)=>`<i class="${i===s.idx&&!s.fb?'cur':(s.res[i]===true?'ok':(s.res[i]===false?'no':''))}"></i>`).join('')}</div>`;
+  h+=`<div class="bigtask${t.text.length>22?' long':''}" id="task">${esc(t.text)}</div>`;
+  if(s.fb){
+    h+=`<div class="fb ${s.fb.ok?'good':'bad'}" id="fb" role="status" aria-live="polite">${s.fb.ok?'Richtig!':`Leider falsch. Richtig ist ${esc(fn(t.answer))}. ${esc(t.explain)}`}</div>`;
+    h+=`<div class="row"><button type="button" class="btn primary" id="btnNext2" data-act="nexttask">${s.idx<s.tasks.length-1?'Weiter':'Ergebnis ansehen'}</button></div>`;
+  } else {
+    h+=`<form class="ans" data-form="series" autocomplete="off"><label class="sr" for="inp">Deine Antwort</label><button type="button" class="btn ghost sign" data-act="sign" aria-label="Vorzeichen wechseln">±</button><input id="inp" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ergebnis" value="${esc(s.input)}"><button type="submit" class="btn primary">Prüfen</button></form>`;
+    h+=`<div class="fb ${s.msg?s.msg.t:''}" id="fb" role="status" aria-live="polite">${s.msg?esc(s.msg.x):''}</div>`;
+  }
+  return h;
+}
+function renderStage(){
+  $('#stage').innerHTML=sess.kind==='series'?stageSeries():stageSingle();
+  if(focusInp){const i=$('#inp');if(i){i.focus();const L=i.value.length;try{i.setSelectionRange(L,L);}catch(e){}}focusInp=false;}
+  if(focusNext){const b=$('#btnNext2');if(b)b.focus();focusNext=false;}
+}
+function renderStats(){
+  const{n,days}=streakNow(),t=todayDn();
+  let total=0;for(const k in save.done)total+=save.done[k]||0;
+  const ini=['S','M','D','M','D','F','S'];let dots='',cnt=0;
+  for(let i=6;i>=0;i--){const d=t-i,on=days.has(keyOf(d)),wd=dnDate(d).getUTCDay();if(on)cnt++;dots+=`<span class="dot${on?' on':''}" title="${WD[wd]}: ${on?'gelöst':'offen'}">${ini[wd]}</span>`;}
+  $('#stats').innerHTML=`<div class="stat"><span class="num">${n}</span><span>${n===1?'Tag':'Tage'} in Folge</span></div><div class="stat"><span class="num">${total}</span><span>Sterne gesamt</span></div><div class="week" role="img" aria-label="Gelöst an ${cnt} der letzten 7 Tage">${dots}</div><button type="button" class="linkbtn" data-act="reset">${S.confirmReset?'Wirklich alles löschen?':'Fortschritt löschen'}</button>`;
+}
+function render(){renderBand();renderTabs();renderLevels();renderStage();renderStats();updateTimer();}
+
+/* ---------- Ereignisse ---------- */
+function flip(){const el=$('#sheet');el.classList.remove('flip');void el.offsetWidth;el.classList.add('flip');}
+function go(fn2){S.extra=false;fn2();resetSession();render();}
+function setBeamer(on){
+  S.beamer=on;document.documentElement.classList.toggle('beamer',on);
+  $('#btnBeamer').setAttribute('aria-pressed',String(on));$('#timerBox').hidden=!on;
+  if(!on)stopTimer();
+  S.extra=false;resetSession();render();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act;
+  if(a!=='reset'&&S.confirmReset){S.confirmReset=false;renderStats();}
+  switch(a){
+    case'prev':go(()=>{S.dn--;});flip();break;
+    case'next':if(TEACHER||S.dn<todayDn()){go(()=>{S.dn++;});flip();}break;
+    case'today':go(()=>{S.dn=todayDn();});flip();break;
+    case'beamer':setBeamer(!S.beamer);break;
+    case'tab':go(()=>{S.fmt=b.dataset.fmt;});break;
+    case'goto':go(()=>{S.fmt=b.dataset.fmt;});break;
+    case'level':go(()=>{S.level=Number(b.dataset.i);save.level=S.level;persist();});break;
+    case'opt':chooseOpt(Number(b.dataset.i));break;
+    case'hint':useHint();break;
+    case'reveal':revealSingle();break;
+    case'extra':S.extra=true;resetSession();render();break;
+    case'retry':sess=newSession();sess.status='open';sess.prev=0;sess.stars=0;if(sess.kind==='series')sess.started=Date.now();render();break;
+    case'nexttask':nextTask();break;
+    case'brev':sess.revealed[Number(b.dataset.i)]=!sess.revealed[Number(b.dataset.i)];render();break;
+    case'brevAll':sess.revealed=sess.revealed.map(()=>true);render();break;
+    case'sign':{const i=$('#inp');if(i){const v=i.value.trim();i.value=(v[0]==='-'||v[0]==='−')?v.slice(1):'-'+v;sess.input=i.value;i.focus();}break;}
+    case'timer':startTimer(Number(b.dataset.min));break;
+    case'timerStop':stopTimer();break;
+    case'reset':
+      if(!S.confirmReset){S.confirmReset=true;renderStats();}
+      else{save={done:{},level:S.level};persist();S.confirmReset=false;resetSession();render();}
+      break;
+  }
+});
+document.addEventListener('submit',e=>{
+  const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
+  const val=($('#inp')||{value:''}).value;
+  if(f.dataset.form==='single')submitSingle(val);else submitSeries(val);
+});
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='inp'&&sess)sess.input=e.target.value;});
+
+/* ---------- Start ---------- */
+if(TEACHER)$('#teacherBadge').hidden=false;
+resetSession();render();
+</script>
+</body>
+</html>
