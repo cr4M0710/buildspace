@@ -598,4 +598,16 @@ const posts = [
     titleEn: "Escape Room Kit 3D",
     excerptEn: "Crack the code together: solve puzzles, collect code parts and open the door, now in 3D. With your own rooms to create, save and export."
    },
+   {
+    title: "Berufe-Kompass",
+    excerpt: "Finde heraus, was zu dir passt, und teste, wie gut du Berufe kennst. Mehrere Stufen zur Berufsorientierung.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "berufe-kompass.html",
+    emoji: "🧭",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Careers Compass",
+    excerptEn: "Find out what suits you and test how well you know different jobs. Several levels for career orientation."
+   },
 ];
