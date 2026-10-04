@@ -790,4 +790,64 @@ const posts = [
     titleEn: "Fake News Detective",
     excerptEn: "Check news critically: examine source, evidence, language and date, and spot false reports, satire and manipulation."
    },
+   {
+    title: "Zins- & Kreditrechner",
+    excerpt: "Zinseszins beim Sparen und die Rate bei einem Kredit berechnen, mit Diagramm und Tabelle Jahr für Jahr.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "zins-kredit-rechner.html",
+    emoji: "💶",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "Interest & Loan Calculator",
+    excerptEn: "Calculate compound interest on savings and loan repayments, with a chart and a year-by-year table."
+   },
+   {
+    title: "Passwort-Check",
+    excerpt: "Passwörter lokal auf Stärke prüfen, Tipps erhalten und Passphrasen erzeugen – es wird nichts gesendet.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "passwort-check.html",
+    emoji: "🔐",
+    tags: ["tool", "einzelarbeit", "vertretung"],
+    titleEn: "Password Check",
+    excerptEn: "Check password strength locally, get tips and generate passphrases – nothing is sent anywhere."
+   },
+   {
+    title: "Rezept-Rechner",
+    excerpt: "Rezepte auf andere Portionen umrechnen, Zutaten und Preise eintragen und die Kosten pro Portion berechnen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "rezept-rechner.html",
+    emoji: "🍳",
+    tags: ["tool", "einzelarbeit", "partnerarbeit"],
+    titleEn: "Recipe Calculator",
+    excerptEn: "Scale recipes to other portion sizes, enter ingredients and prices and calculate the cost per portion."
+   },
+   {
+    title: "Handyvertrag-Vergleich",
+    excerpt: "Zwei Handytarife vergleichen: Gesamtkosten, echter Monatspreis und Preis pro GB über die Laufzeit.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "handyvertrag-vergleich.html",
+    emoji: "📱",
+    tags: ["tool", "partnerarbeit"],
+    titleEn: "Phone Plan Comparison",
+    excerptEn: "Compare two phone plans: total cost, real monthly price and price per GB over the contract term."
+   },
+   {
+    title: "Bewerbungs-Werkstatt",
+    excerpt: "Lebenslauf mit erfundenen Übungsdaten erstellen und ausdrucken sowie das Anschreiben mit einer Checkliste prüfen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "bewerbungs-werkstatt.html",
+    emoji: "📝",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "Application Workshop",
+    excerptEn: "Create a CV with made-up practice data and print it, and check the cover letter with a checklist."
+   },
 ];

@@ -60,7 +60,8 @@
     "zahlen-detektiv.html",
     "kopfrechen-quiz.html",
     "mathe-fussball.html",
-    "raetsel-des-tages.html"
+    "raetsel-des-tages.html",
+    "passwort-check.html"
   ];
 
   /* Werkzeuge mit optionaler, freiwilliger Bestenliste. */
