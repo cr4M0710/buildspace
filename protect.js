@@ -719,11 +719,61 @@
     if (b) b.remove();
   }
 
+  /* Mehrspieler-Spiele (PeerJS): Mitspielende kommen meist per Link oder
+     Raumcode und haben kein Passwort. Statt Login/Gast (Gast reicht für
+     Freizeit nicht) gibt es hier EINEN Klick „Mitspielen“. Er gilt nur für
+     diese Seite und nur für diesen Tab (sessionStorage) – der übrige
+     Zugriff auf buildspace bleibt geschützt. */
+  const MULTIPLAYER_FILES = [
+    "pummelparty.html",
+    "wizard-kartenspiel.html",
+    "nachtwache.html",
+    "klecks-wache.html",
+    "koordinaten-schiffe.html",
+    "funktionsleiter.html",
+    "gleichungs-waage.html",
+    "minigolf-winkel.html",
+    "escape-room-baukasten-3d.html"
+  ];
+  function isMultiplayerPage_() { return MULTIPLAYER_FILES.indexOf(currentPageFile()) !== -1; }
+  function joinKey_() { return "buildspace_join_" + currentPageFile(); }
+  function joinGranted() {
+    try { return sessionStorage.getItem(joinKey_()) === "1"; } catch (e) { return false; }
+  }
+  function showJoinOverlay(onJoin, onLogin) {
+    ensureStyle();
+    document.documentElement.classList.add("protect-open");
+    const wrap = document.createElement("div");
+    wrap.id = "protect-overlay";
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-labelledby", "protect-join-h");
+    wrap.innerHTML =
+      '<div class="protect-card">' +
+        "<h2 id=\"protect-join-h\">Mehrspieler-Spiel</h2>" +
+        '<p class="protect-sub">Du wurdest zu einem Spiel eingeladen? Tippe auf „Mitspielen“ – ein Passwort brauchst du nicht.</p>' +
+        '<button type="button" class="protect-submit" id="protect-join-btn" style="width:100%;min-height:52px;font-size:17px">Mitspielen</button>' +
+        '<button type="button" class="protect-alt" id="protect-join-login">Mit Passwort anmelden</button>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    const b = wrap.querySelector("#protect-join-btn");
+    setTimeout(function () { b.focus(); }, 30);
+    b.addEventListener("click", function () {
+      try { sessionStorage.setItem(joinKey_(), "1"); } catch (e) {}
+      closeOverlay();
+      onJoin();
+    });
+    wrap.querySelector("#protect-join-login").addEventListener("click", function () {
+      closeOverlay();
+      onLogin();
+    });
+  }
+
   /* cat ist optional: ohne Kategorie (z. B. die Startseite) reicht
      irgendeine Anmeldung (Passwort, Kolleg:innen-Kennwort ODER Gast);
      mit Kategorie muss diese zusätzlich für die aktuelle Zugriffs-Ebene
      erlaubt sein. */
-  function guard(cat, onUnlock) {
+  function guard(cat, onUnlock, skipJoin) {
     ensureStyle();
     clearBanner();
 
@@ -745,6 +795,12 @@
       return;
     }
     document.documentElement.classList.remove("share-mode");
+
+    if (!skipJoin && isMultiplayerPage_() && !(getAccess() && categoryAllowedForAccess(cat, getAccess()))) {
+      if (joinGranted()) { onUnlock(); return; }
+      showJoinOverlay(onUnlock, function () { guard(cat, onUnlock, true); });
+      return;
+    }
 
     const access = getAccess();
     if (access) {

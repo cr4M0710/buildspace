@@ -19,7 +19,7 @@ Reines HTML/CSS/JS, **kein Framework, kein Build-Schritt**. Was im Repo liegt, i
 Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, immer alles erledigen:
 
 1. **HTML-Datei anlegen** im Root, Dateiname = kurzer Slug, Kleinbuchstaben, Bindestriche, keine Umlaute (`bruch-memory.html`).
-2. **Freigabe-Schutz einbauen**: vor `</body>` der neuen Seite `<script defer data-category="schule" src="protect.js"></script>` einfügen (`data-category` = `category` des Eintrags). Nur so gilt die zeitlich begrenzte Freigabe für Lernende („Für Lernende freigeben“, Kursmappe) auch auf der Tool-Seite und läuft automatisch ab. Externe Links sind davon ausgenommen. Trägt der Eintrag das Tag `vertretung`, den Dateinamen zusätzlich in `VERTRETUNG_FILES` in `protect.js` eintragen.
+2. **Freigabe-Schutz einbauen**: vor `</body>` der neuen Seite `<script defer data-category="schule" src="protect.js"></script>` einfügen (`data-category` = `category` des Eintrags). Nur so gilt die zeitlich begrenzte Freigabe für Lernende („Für Lernende freigeben“, Kursmappe) auch auf der Tool-Seite und läuft automatisch ab. Externe Links sind davon ausgenommen. Trägt der Eintrag das Tag `vertretung`, den Dateinamen zusätzlich in `VERTRETUNG_FILES` in `protect.js` eintragen. Ist es ein Mehrspieler-Spiel (PeerJS), den Dateinamen zusätzlich in `MULTIPLAYER_FILES` eintragen – dort erscheint statt Login der Ein-Klick „Mitspielen“ (gilt nur für diese Seite und diesen Tab).
 3. **Eintrag in `posts-data.js` ergänzen** – ans **Ende** des Arrays anhängen, im selben Format wie die bestehenden Einträge (3 Leerzeichen Einrückung, doppelte Anführungszeichen, Komma nach jedem Objekt).
 
 ### Felder eines Eintrags
