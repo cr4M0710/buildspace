@@ -266,6 +266,7 @@ function highlightMatch(text, rawQuery) {
 
 function renderPostList(list, opts) {
   opts = opts || {};
+  const hl = opts.headingLevel === 2 ? 2 : 3;
   if (!list.length) {
     return `<p class="empty-state">${t("emptyState")}</p>`;
   }
@@ -301,7 +302,7 @@ function renderPostList(list, opts) {
           <button type="button" class="post-fav-btn${fav ? " is-active" : ""}" data-url="${escapeHtml(p0.url)}" aria-pressed="${fav}" aria-label="${escapeHtml(favLabel)}" title="${escapeHtml(favLabel)}">${fav ? STAR_GLYPH : STAR_OUTLINE_GLYPH}</button>
           <div class="post-card-body">
             <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderLabel(p.category) : p.category}${isNew ? `<span class="badge-new">${t("newBadge")}</span>` : ""}</span>
-            <h3>${title}${externalBadge}</h3>
+            <h${hl}>${title}${externalBadge}</h${hl}>
             <p class="post-excerpt">${excerpt}</p>
             <span class="post-meta">${formatDate(p.date)}</span>
           </div>
@@ -430,7 +431,7 @@ function renderNeuesteUnlocked() {
   content.innerHTML = `
     <h1 class="section-label">${t("latestTitle")}</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom: 28px;">${t("latestSub")}</p>
-    ${renderPostList(recent)}
+    ${renderPostList(recent, { headingLevel: 2 })}
   `;
 }
 
@@ -456,7 +457,7 @@ function renderFolderUnlocked(id) {
     const list = posts.filter((p) => p.category === id);
     content.innerHTML = `
       <h1 class="section-label">${folderLabel(id)}</h1>
-      ${renderPostList(list)}
+      ${renderPostList(list, { headingLevel: 2 })}
     `;
   } else {
     const subCards = folder.subfolders
@@ -540,7 +541,7 @@ function renderSubfolderContent(id, subId, cmAuthInfo) {
     <h1 class="section-label">${folderLabel(id)} — ${label}</h1>
     ${cmAuthInfo ? '<div id="cm-account-bar" class="cm-account-bar"></div>' : ""}
     ${cmAuthInfo && cmAuthInfo.isAdmin ? '<div id="cm-admin-panel" class="cm-admin-panel"></div>' : ""}
-    ${renderPostList(list)}
+    ${renderPostList(list, { headingLevel: 2 })}
   `;
   if (window.Protect) window.Protect.addShareButton(id);
   if (cmAuthInfo) renderCmAccountBar(cmAuthInfo);
@@ -1402,6 +1403,27 @@ function initSidebar() {
     if (isSearchOpen()) closeSearch(true);
     else if (isSidebarOpen()) closeSidebar(true);
   });
+
+  // Tastatur-Fokus bleibt im geöffneten Menü bzw. in der Suche.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const box = isSearchOpen() ? document.getElementById("search-panel") : isSidebarOpen() ? sidebarEl : null;
+    if (!box) return;
+    const items = Array.from(box.querySelectorAll('a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])')).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === box)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    else if (!box.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  });
+
+  // "Zum Inhalt springen": nicht über den Hash (der würde den Router auslösen).
+  const skip = document.getElementById("skip-link");
+  if (skip) skip.addEventListener("click", (e) => {
+    e.preventDefault();
+    const m = document.getElementById("main");
+    if (m) { m.focus({ preventScroll: false }); m.scrollIntoView(); }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1511,6 +1533,15 @@ function render() {
   } else {
     renderSubfolder(segments[0], segments[1]);
   }
+  updateDocumentTitle();
+  setTimeout(updateDocumentTitle, 400);
+}
+
+/* Seitentitel pro Ansicht (für Screenreader, Tab-Leiste und Verlauf). */
+function updateDocumentTitle() {
+  const h1 = content.querySelector("h1");
+  const name = h1 ? h1.textContent.replace(/\s+/g, " ").trim() : "";
+  document.title = name ? name + " – buildspace" : "buildspace";
 }
 
 window.addEventListener("hashchange", render);
