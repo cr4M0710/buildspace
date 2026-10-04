@@ -168,7 +168,7 @@
   /* Kleiner Mond mit heller Sichel */
   function drawMoon(w, h) {
     var m = Math.min(w, h), R = m * 0.022;
-    var cx = w * 0.14, cy = h * 0.2;
+    var cx = w * 0.06, cy = h * 0.34;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.clip();
     var g = ctx.createRadialGradient(cx + R * 0.55, cy - R * 0.35, R * 0.1, cx + R * 0.2, cy, R * 1.5);
