@@ -59,7 +59,8 @@
     "flaechen-fuchs.html",
     "zahlen-detektiv.html",
     "kopfrechen-quiz.html",
-    "mathe-fussball.html"
+    "mathe-fussball.html",
+    "raetsel-des-tages.html"
   ];
 
   /* Werkzeuge mit optionaler, freiwilliger Bestenliste. */
@@ -102,6 +103,12 @@
   })();
 
   function nowMs() { return Date.now(); }
+
+  /* Läuft protect.js gerade auf der Startseite (app.js)? Daran hängt, ob
+     eine Freigabe hier "gilt" und ob render() neu aufgerufen wird. Nicht
+     an der bloßen Existenz einer Funktion namens render() festmachen —
+     viele Spiele haben selbst eine globale render()-Funktion. */
+  function isHomeApp_() { return global.BUILDSPACE_HOME === true && typeof global.render === "function"; }
 
   function currentPageFile() {
     const path = location.pathname;
@@ -160,7 +167,7 @@
   function shareStatus(cat) {
     const s = getShareParams();
     if (!s.active) return { active: false };
-    const isHomeApp = typeof global.render === "function";
+    const isHomeApp = isHomeApp_();
     if (s.vertretung) {
       const applies = isHomeApp || VERTRETUNG_FILES.indexOf(currentPageFile()) !== -1;
       return { active: true, valid: true, exp: null, mode: "vertretung", applies: applies, title: null };
@@ -1408,7 +1415,7 @@
          zeigen, sobald sich jemand gerade neu angemeldet hat. Auf
          einzelnen Werkzeug-Seiten ohne app.js existiert render()
          schlicht nicht. */
-      if (typeof global.render === "function") global.render();
+      if (isHomeApp_()) global.render();
     }
     function run() { guard(cat || null, reveal); }
     if (document.readyState === "loading") {

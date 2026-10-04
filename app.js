@@ -214,6 +214,9 @@ function localizePost(p) {
   return p;
 }
 
+/* Marker für protect.js: hier läuft die Startseite (nicht ein einzelnes Tool). */
+window.BUILDSPACE_HOME = true;
+
 const content = document.getElementById("content");
 const breadcrumb = document.getElementById("breadcrumb");
 
