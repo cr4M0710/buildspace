@@ -9,7 +9,7 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v2';
+const CACHE = 'buildspace-v3';
 const SHELL = [
   './',
   'index.html',
@@ -18,6 +18,8 @@ const SHELL = [
   'posts-data.js',
   'protect.js',
   'cursor.js',
+  'hero-draw.js',
+  'stars.js',
   'qrcode-generator.js',
   'site.webmanifest',
   'assets/favicon.svg',

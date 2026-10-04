@@ -289,9 +289,6 @@ function renderPostList(list, opts) {
           : "";
         const href = p.url + shareQS;
         const isNew = p0.date === newestDate;
-        const emojiBadge = p.emoji
-          ? `<span class="post-emoji" aria-hidden="true">${p.emoji}</span>`
-          : `<span class="post-emoji post-emoji--plain icon-badge--${p.category}" aria-hidden="true">${MINI_ICONS[p.category] || ""}</span>`;
         const title = opts.highlight ? highlightMatch(p.title, opts.highlight) : escapeHtml(p.title);
         const excerpt = opts.highlight ? highlightMatch(p.excerpt, opts.highlight) : escapeHtml(p.excerpt);
         const fav = isFavorite(p0.url);
@@ -301,7 +298,6 @@ function renderPostList(list, opts) {
         <div class="post-card${opts.featured ? " post-card--featured" : ""}">
           <a class="post-card-link" href="${href}"${linkAttrs} aria-label="${escapeHtml(p.title)}"></a>
           <button type="button" class="post-fav-btn${fav ? " is-active" : ""}" data-url="${escapeHtml(p0.url)}" aria-pressed="${fav}" aria-label="${escapeHtml(favLabel)}" title="${escapeHtml(favLabel)}">${fav ? STAR_GLYPH : STAR_OUTLINE_GLYPH}</button>
-          ${emojiBadge}
           <div class="post-card-body">
             <span class="post-tag"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>${folderStructure[p.category] ? folderLabel(p.category) : p.category}${isNew ? `<span class="badge-new">${t("newBadge")}</span>` : ""}</span>
             <h3>${title}${externalBadge}</h3>
@@ -388,7 +384,7 @@ function renderTopLevel() {
   content.innerHTML = `
     ${
       favoritePosts.length
-        ? `<h2 class="section-label section-label--favorites"><span aria-hidden="true">⭐</span> ${t("favoritesTitle")}</h2>${renderPostList(favoritePosts, { preserveOrder: true })}`
+        ? `<h2 class="section-label section-label--favorites">${t("favoritesTitle")}</h2>${renderPostList(favoritePosts, { preserveOrder: true })}`
         : ""
     }
     <h2 class="section-label">${t("categoriesTitle")}</h2>
@@ -630,15 +626,15 @@ function renderVertretung() {
   const shortLink = location.origin + "/vertretung/";
   content.innerHTML = `
     <div class="section-label-row no-print">
-      <h1 class="section-label">📋 Vertretungsstunde</h1>
-      <button type="button" class="clear-recent-btn" id="vertretung-print-btn">🖨️ Drucken</button>
+      <h1 class="section-label">Vertretungsstunde</h1>
+      <button type="button" class="clear-recent-btn" id="vertretung-print-btn">Drucken</button>
     </div>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;" class="no-print">Selbsterklärende Lernspiele ohne Vorbereitung — ideal, wenn eine Vertretungskraft ohne Vorwissen eine Klasse übernimmt. Einfach den Link teilen, kein Passwort nötig.</p>
     <div class="print-sheet" id="vertretung-print-sheet">
-      <h2>📋 Vertretungsstunde</h2>
+      <h2>Vertretungsstunde</h2>
       <p>Dauerhafter Link ohne Anmeldung: ${escapeHtml(shortLink)}</p>
       <div class="protect-qr-wrap" id="vertretung-print-qr"></div>
-      <ul>${list.map((p) => `<li>${p.emoji ? p.emoji + " " : ""}${escapeHtml(p.title)}</li>`).join("")}</ul>
+      <ul>${list.map((p) => `<li>${escapeHtml(p.title)}</li>`).join("")}</ul>
     </div>
     <div class="no-print">${renderPostList(list, { preserveOrder: true })}</div>
   `;
@@ -650,9 +646,9 @@ function renderVertretung() {
       }
       if (window.Protect && window.Protect.printHandout) {
         window.Protect.printHandout({
-          title: "📋 Vertretungsstunde",
+          title: "Vertretungsstunde",
           meta: "Dauerhafter Link ohne Anmeldung: " + shortLink,
-          items: list.map((p) => (p.emoji ? p.emoji + " " : "") + p.title),
+          items: list.map((p) => p.title),
           qrText: shortLink,
           filename: "vertretungsstunde-handzettel.png"
         });
@@ -678,7 +674,7 @@ function renderKursmappeView() {
   }
   const list = posts.filter((p) => km.urls.indexOf(p.url) !== -1);
   content.innerHTML = `
-    <h1 class="section-label">📚 ${km.title ? escapeHtml(km.title) : "Kursmappe"}</h1>
+    <h1 class="section-label">${km.title ? escapeHtml(km.title) : "Kursmappe"}</h1>
     ${renderPostList(list, { preserveOrder: true })}
   `;
 }
@@ -718,12 +714,12 @@ function renderKursmappeBuilder() {
   document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kursmappe erstellen</span>`;
   content.innerHTML = `
-    <h1 class="section-label">🧩 Kursmappe erstellen</h1>
+    <h1 class="section-label">Kursmappe erstellen</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;" class="no-print">Wähle die Beiträge für diese Stunde aus. Der Link zeigt Lernenden nur genau diese Auswahl — ganz ohne Anmeldung, automatisch zeitlich begrenzt.</p>
     <div class="km-builder">
       <div class="km-form-fields no-print">
         <div class="km-presets">
-          <div class="km-presets-header"><span>💾 Meine Vorlagen</span></div>
+          <div class="km-presets-header"><span>Meine Vorlagen</span></div>
           <div id="km-presets-list"></div>
         </div>
         <label class="km-field">Titel (optional, erscheint im Hinweisbanner)
@@ -744,7 +740,6 @@ function renderKursmappeBuilder() {
               (p, i) => `
             <label class="km-post-item">
               <input type="checkbox" class="km-post-check" value="${escapeHtml(p.url)}" data-idx="${i}">
-              <span class="km-post-emoji">${p.emoji || ""}</span>
               <span class="km-post-title">${escapeHtml(p.title)}</span>
               <span class="km-post-meta">${folderLabel(p.category)}${p.subcategory ? " · " + subfolderLabel(p.subcategory) : ""}</span>
             </label>`
@@ -753,7 +748,7 @@ function renderKursmappeBuilder() {
         </div>
         <div class="km-actions">
           <button type="button" class="protect-submit" id="km-generate" style="max-width:280px;">Link erstellen</button>
-          <button type="button" class="protect-copy-btn" id="km-save-preset">💾 Als Vorlage speichern</button>
+          <button type="button" class="protect-copy-btn" id="km-save-preset">Als Vorlage speichern</button>
         </div>
       </div>
       <div id="km-link-area" style="display:none; margin-top:18px;">
@@ -768,7 +763,7 @@ function renderKursmappeBuilder() {
           <button class="protect-copy-btn" id="km-copy-btn">Kopieren</button>
         </div>
         <div class="protect-error no-print" id="km-copy-msg" style="color:#2F6F4F;"></div>
-        <button type="button" class="protect-copy-btn no-print" id="km-print-btn" style="margin-top:10px;">🖨️ Als Handzettel drucken</button>
+        <button type="button" class="protect-copy-btn no-print" id="km-print-btn" style="margin-top:10px;">Als Handzettel drucken</button>
       </div>
     </div>
   `;
@@ -846,10 +841,10 @@ function renderKursmappeBuilder() {
     const chosenPosts = checked.map((url) => posts.find((p) => p.url === url)).filter(Boolean);
     const expDate = new Date(Date.now() + minutes * 60000);
     const expStr = expDate.toLocaleString(t("dateLocale"), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    document.getElementById("km-print-title").textContent = "📚 " + (title || "Kursmappe");
+    document.getElementById("km-print-title").textContent = "" + (title || "Kursmappe");
     document.getElementById("km-print-meta").textContent = "Gültig bis " + expStr + " Uhr — kein Passwort nötig, einfach den QR-Code scannen.";
     document.getElementById("km-print-list").innerHTML = chosenPosts
-      .map((p) => `<li>${p.emoji ? p.emoji + " " : ""}${escapeHtml(p.title)}</li>`)
+      .map((p) => `<li>${escapeHtml(p.title)}</li>`)
       .join("");
   });
   document.getElementById("km-copy-btn").addEventListener("click", async () => {
@@ -910,7 +905,7 @@ function renderKollegenUnlocked(sub) {
   }
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Kolleg:innen</span>`;
   content.innerHTML = `
-    <h1 class="section-label">🤝 Kolleg:innen-Bereich</h1>
+    <h1 class="section-label">Kolleg:innen-Bereich</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:28px;">Interner Bereich für Kolleg:innen der GGL — Fortbildungsunterlagen, Vorlagen und Tool-Präsentationen aus dem iPad-Team. Noch im Aufbau.</p>
     <div class="folder-grid">
       <div class="folder-card is-placeholder" style="--i:0">
@@ -941,7 +936,7 @@ function renderKollegenFeedback() {
   const isFull = window.Protect && window.Protect.getAccess() === "full";
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/kollegen">Kolleg:innen</a><span class="sep">›</span><span class="current">Feedback-Auswertung</span>`;
   content.innerHTML = `
-    <h1 class="section-label">📊 Feedback-Auswertung</h1>
+    <h1 class="section-label">Feedback-Auswertung</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Rückmeldungen (👍/👎), die Lernende auf den einzelnen Werkzeug-Seiten abgegeben haben. „Letzte 7 Tage" zeigt nur die jüngsten Stimmen.</p>
     <div id="feedback-agg-list"><p class="empty-state">Lade Rückmeldungen …</p></div>
   `;
@@ -1035,13 +1030,13 @@ function renderKollegenBestenlisten() {
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/kollegen">Kolleg:innen</a><span class="sep">›</span><span class="current">Bestenlisten</span>`;
   const files = (window.Protect && window.Protect.HIGHSCORE_FILES) || [];
   content.innerHTML = `
-    <h1 class="section-label">🏆 Bestenlisten</h1>
+    <h1 class="section-label">Bestenlisten</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom:20px;">Höchste Punktzahlen pro Lernspiel.${isFull ? " Einträge lassen sich hier entfernen." : ""}</p>
     <div class="hs-tool-grid">
       ${files
         .map((f) => {
           const post = posts.find((p) => p.url === f);
-          const label = post ? (post.emoji ? post.emoji + " " : "") + post.title : f;
+          const label = post ? post.title : f;
           return `<div class="hs-tool-block">
           <h3>${escapeHtml(label)}</h3>
           <div class="hs-tool-body" data-file="${escapeHtml(f)}"><p class="empty-state">Lade …</p></div>
@@ -1332,9 +1327,8 @@ function renderSidebarResults() {
         const isExternal = /^https?:\/\//i.test(p.url);
         const attrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
         const where = [folderStructure[p.category] ? folderLabel(p.category) : p.category, p.subcategory ? subfolderLabel(p.subcategory) : ""].filter(Boolean).join(" · ");
-        const emoji = p.emoji ? escapeHtml(p.emoji) : "";
         return `<a class="side-result" href="${escapeHtml(p.url)}"${attrs}>
-          <span class="side-result-emoji" aria-hidden="true">${emoji || `<span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>`}</span>
+          <span class="side-result-emoji" aria-hidden="true"><span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span></span>
           <span><b>${highlightMatch(p.title, raw)}</b><small>${escapeHtml(where)}</small></span>
         </a>`;
       })
