@@ -850,4 +850,52 @@ const posts = [
     titleEn: "Application Workshop",
     excerptEn: "Create a CV with made-up practice data and print it, and check the cover letter with a checklist."
    },
+   {
+    title: "Gruppen-Zufall",
+    excerpt: "Lerngruppen per Zufall einteilen (nach Gruppengröße oder Anzahl) oder eine Person ziehen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "gruppen-zufall.html",
+    emoji: "🎲",
+    tags: ["tool"],
+    titleEn: "Random Groups",
+    excerptEn: "Divide learners into random groups (by group size or number) or pick a single person."
+   },
+   {
+    title: "Stunden-Timer",
+    excerpt: "Unterrichtsphasen planen und als großen Countdown für die Klasse anzeigen, mit Vorlagen und optionalem Signalton.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "stunden-timer.html",
+    emoji: "⏱️",
+    tags: ["tool"],
+    titleEn: "Lesson Timer",
+    excerptEn: "Plan lesson phases and show them as a large countdown for the class, with templates and an optional signal sound."
+   },
+   {
+    title: "Sitzplan",
+    excerpt: "Sitzordnung per Zufall erstellen, durch Antippen tauschen und ausdrucken.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "sitzplan.html",
+    emoji: "🪑",
+    tags: ["tool"],
+    titleEn: "Seating Plan",
+    excerptEn: "Create a random seating plan, swap seats by tapping and print it."
+   },
+   {
+    title: "Notenrechner",
+    excerpt: "Punkte in Noten umrechnen: einstellbarer Notenschlüssel, Notenspiegel und Punktetabelle.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "notenrechner.html",
+    emoji: "🧾",
+    tags: ["tool"],
+    titleEn: "Grade Calculator",
+    excerptEn: "Convert points to grades: adjustable grading scale, grade distribution and points table."
+   },
 ];
