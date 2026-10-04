@@ -120,7 +120,7 @@
      (farbiger Schein um die Buchstaben) -> ausblenden -> neu zeichnen. */
   var dash = 0, offset = 0, raf = 0, visible = true;
   var phase = "draw", phaseStart = 0, last = 0;
-  var GLOW_UP = 450, GLOW_DOWN = 1300, FADE = 600;
+  var HOLD = 450, GLOW_UP = 450, GLOW_DOWN = 1300, FADE = 600;
 
   function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
 
@@ -141,10 +141,13 @@
       offset -= (dash / (DURATION * 1000)) * dt;
       if (offset <= 0) {
         offset = 0;
-        phase = "glow";
+        phase = "hold";
         phaseStart = now;
       }
       text.style.strokeDashoffset = String(offset);
+    } else if (phase === "hold") {
+      // Schrift steht komplett — kurz ruhen, dann erst aufleuchten.
+      if (now - phaseStart >= HOLD) { phase = "glow"; phaseStart = now; }
     } else if (phase === "glow") {
       var t = now - phaseStart;
       var g = t < GLOW_UP ? t / GLOW_UP : Math.max(0, 1 - (t - GLOW_UP) / GLOW_DOWN);
@@ -171,7 +174,10 @@
   }
 
   function begin(len) {
-    dash = len;
+    // Sicherheitszuschlag: Je nach Schrift/Rechner (z. B. Laptop mit anderer
+    // Ersatzschrift) liegt die Messung knapp daneben. Mit Zuschlag ist die
+    // Schrift garantiert komplett gezeichnet, bevor das Aufleuchten startet.
+    dash = Math.ceil(len * 1.12) + 6;
     offset = dash;
     text.style.strokeDasharray = dash + " " + dash;
     text.style.strokeDashoffset = String(offset);

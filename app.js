@@ -1183,7 +1183,7 @@ function initSettings() {
       updateSettingsUI();
       initHero();
       renderSidebarNav();
-      renderSidebarResults();
+      renderSearchResults();
       render();
     });
   });
@@ -1210,20 +1210,14 @@ function isSidebarOpen() {
   return document.documentElement.classList.contains("sidebar-open");
 }
 
-function openSidebar(focusSearch) {
+function openSidebar() {
+  closeSearch(false);
   document.documentElement.classList.add("sidebar-open");
   sidebarEl.setAttribute("aria-hidden", "false");
   const toggle = document.getElementById("menu-toggle");
   if (toggle) toggle.setAttribute("aria-expanded", "true");
   renderSidebarNav();
-  // Auf Touch-Geräten würde ein Autofokus sofort die Tastatur einblenden —
-  // deshalb nur, wenn ausdrücklich die Suche gewünscht ist.
-  setTimeout(() => {
-    if (focusSearch && searchInputEl) searchInputEl.focus();
-    else {
-      sidebarEl.focus({ preventScroll: true });
-    }
-  }, 60);
+  setTimeout(() => sidebarEl.focus({ preventScroll: true }), 60);
 }
 
 function closeSidebar(returnFocus) {
@@ -1234,6 +1228,32 @@ function closeSidebar(returnFocus) {
   if (toggle) {
     toggle.setAttribute("aria-expanded", "false");
     if (returnFocus) toggle.focus({ preventScroll: true });
+  }
+}
+
+function isSearchOpen() {
+  return document.documentElement.classList.contains("search-open");
+}
+
+function openSearch() {
+  closeSidebar(false);
+  document.documentElement.classList.add("search-open");
+  const panel = document.getElementById("search-panel");
+  const fab = document.getElementById("search-fab");
+  if (panel) panel.setAttribute("aria-hidden", "false");
+  if (fab) fab.setAttribute("aria-expanded", "true");
+  setTimeout(() => searchInputEl && searchInputEl.focus(), 60);
+}
+
+function closeSearch(returnFocus) {
+  if (!isSearchOpen()) return;
+  document.documentElement.classList.remove("search-open");
+  const panel = document.getElementById("search-panel");
+  const fab = document.getElementById("search-fab");
+  if (panel) panel.setAttribute("aria-hidden", "true");
+  if (fab) {
+    fab.setAttribute("aria-expanded", "false");
+    if (returnFocus) fab.focus({ preventScroll: true });
   }
 }
 
@@ -1288,7 +1308,7 @@ function renderSidebarNav() {
   updateAdminNavLinks();
 }
 
-function renderSidebarResults() {
+function renderSearchResults() {
   if (!sideResultsEl || !searchInputEl) return;
   const raw = searchInputEl.value.trim();
   const q = raw.toLowerCase();
@@ -1296,10 +1316,8 @@ function renderSidebarResults() {
   if (!q) {
     sideResultsEl.hidden = true;
     sideResultsEl.innerHTML = "";
-    sidebarNavEl.hidden = false;
     return;
   }
-  sidebarNavEl.hidden = true;
   sideResultsEl.hidden = false;
   // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
   // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
@@ -1337,8 +1355,9 @@ function initSidebar() {
   const backdrop = document.getElementById("sidebar-backdrop");
   if (!sidebarEl) return;
 
-  toggle.addEventListener("click", () => (isSidebarOpen() ? closeSidebar(true) : openSidebar(false)));
-  searchFab.addEventListener("click", () => openSidebar(true));
+  toggle.addEventListener("click", () => (isSidebarOpen() ? closeSidebar(true) : openSidebar()));
+  searchFab.addEventListener("click", () => (isSearchOpen() ? closeSearch(true) : openSearch()));
+  document.getElementById("search-backdrop").addEventListener("click", () => closeSearch(false));
   closeBtn.addEventListener("click", () => closeSidebar(true));
   backdrop.addEventListener("click", () => closeSidebar(false));
 
@@ -1360,7 +1379,7 @@ function initSidebar() {
     if (link) closeSidebar(false);
   });
 
-  searchInputEl.addEventListener("input", renderSidebarResults);
+  searchInputEl.addEventListener("input", renderSearchResults);
   searchInputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       const first = sideResultsEl.querySelector("a.side-result");
@@ -1369,12 +1388,19 @@ function initSidebar() {
   });
   searchClearEl.addEventListener("click", () => {
     searchInputEl.value = "";
-    renderSidebarResults();
+    renderSearchResults();
     searchInputEl.focus();
   });
 
+  // Klick auf ein Suchergebnis schließt die Suche.
+  sideResultsEl.addEventListener("click", (e) => {
+    if (e.target.closest("a[href]")) closeSearch(false);
+  });
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isSidebarOpen()) closeSidebar(true);
+    if (e.key !== "Escape") return;
+    if (isSearchOpen()) closeSearch(true);
+    else if (isSidebarOpen()) closeSidebar(true);
   });
 }
 
@@ -1562,5 +1588,5 @@ document.addEventListener("keydown", (e) => {
   if (isTyping) return;
   if (document.documentElement.classList.contains("share-mode") || document.documentElement.classList.contains("embed-mode")) return;
   e.preventDefault();
-  openSidebar(true);
+  openSearch();
 });
