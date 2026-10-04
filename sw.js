@@ -9,7 +9,25 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v4';
+const CACHE = 'buildspace-v5';
+/* Bibliotheken von Fremd-Servern (three.js, PeerJS, QR, Schriften) landen in
+   einem eigenen Cache, der Versions-Wechsel überlebt — sie sind fest
+   versioniert und ändern sich nicht. */
+const CDN_CACHE = 'buildspace-cdn-v1';
+const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com', 'unpkg.com'];
+
+/* Alle Tool-Seiten aus posts-data.js werden nach der Installation im
+   Hintergrund mitgecacht — so sind auch neu eingestellte Tools ohne
+   Internet nutzbar, ohne dass hier etwas von Hand ergänzt werden muss. */
+try { importScripts('posts-data.js'); } catch (e) { /* ohne Liste nur Shell + Laufzeit-Cache */ }
+function postFiles() {
+  try {
+    const seen = new Set();
+    return posts
+      .map((p) => String(p.url || '').split('?')[0])
+      .filter((u) => u && !/^https?:/i.test(u) && !seen.has(u) && (seen.add(u), true));
+  } catch (e) { return []; }
+}
 const SHELL = [
   './',
   'index.html',
@@ -76,11 +94,52 @@ self.addEventListener('install', (event) => {
   })());
 });
 
+/* Holt alle Tool-Seiten (3 gleichzeitig, schon vorhandene werden
+   übersprungen) und die dort eingebundenen CDN-Bibliotheken. Einzelne
+   Fehlschläge (schwaches WLAN) sind unkritisch — das Laufzeit-Caching holt
+   Fehlendes beim nächsten Online-Besuch nach. */
+async function precachePosts() {
+  const cache = await caches.open(CACHE);
+  const cdn = await caches.open(CDN_CACHE);
+  const libs = new Set();
+  const files = postFiles().filter((f) => !SHELL.includes(f));
+  let i = 0;
+  async function worker() {
+    while (i < files.length) {
+      const f = files[i++];
+      try {
+        let res = await cache.match(f);
+        if (!res) {
+          res = await fetch(new Request(f, { cache: 'no-store' }));
+          if (res && res.ok) await cache.put(f, res.clone());
+        }
+        if (res && res.ok) {
+          const html = await res.clone().text();
+          const re = /<(?:script|link)[^>]+(?:src|href)=["'](https:\/\/[^"']+)["']/gi;
+          let m;
+          while ((m = re.exec(html))) {
+            try { if (CDN_HOSTS.includes(new URL(m[1]).hostname)) libs.add(m[1]); } catch (e) {}
+          }
+        }
+      } catch (err) { /* ignorieren */ }
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+  for (const url of libs) {
+    try {
+      if (await cdn.match(url)) continue;
+      const r = await fetch(url, { mode: url.includes('fonts.googleapis') ? 'cors' : 'no-cors' });
+      await cdn.put(url, r);
+    } catch (err) { /* ignorieren */ }
+  }
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== CACHE && k !== CDN_CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
+    precachePosts().catch(() => {});
   })());
 });
 
@@ -88,7 +147,21 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return; // externe CDNs -> direkt ins Netz
+  if (url.origin !== location.origin) {
+    // Feste CDN-Bibliotheken: Cache zuerst, im Hintergrund auffrischen.
+    if (CDN_HOSTS.includes(url.hostname)) {
+      event.respondWith((async () => {
+        const cache = await caches.open(CDN_CACHE);
+        const hit = await cache.match(req);
+        const refresh = fetch(req).then((res) => { if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone()); return res; }).catch(() => null);
+        if (hit) { refresh.catch(() => {}); return hit; }
+        const res = await refresh;
+        if (res) return res;
+        return Response.error();
+      })());
+    }
+    return; // alles andere: direkt ins Netz
+  }
 
   event.respondWith((async () => {
     try {
