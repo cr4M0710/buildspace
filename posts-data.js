@@ -898,4 +898,64 @@ const posts = [
     titleEn: "Grade Calculator",
     excerptEn: "Convert points to grades: adjustable grading scale, grade distribution and points table."
    },
+   {
+    title: "Taktiktafel",
+    excerpt: "Aufstellung, Laufwege und Pässe auf dem Handball-Halbfeld per Finger planen und als Bild speichern.",
+    date: "2026-10-04",
+    category: "handball",
+    subcategory: "training",
+    url: "taktiktafel.html",
+    emoji: "🧠",
+    tags: ["tool"],
+    titleEn: "Tactics Board",
+    excerptEn: "Plan formations, running paths and passes on the handball half court with your finger and save it as an image."
+   },
+   {
+    title: "Trainingsplaner",
+    excerpt: "Eine Trainingseinheit aus Übungen zusammenstellen, Zeiten summieren und ausdrucken.",
+    date: "2026-10-04",
+    category: "handball",
+    subcategory: "training",
+    url: "trainingsplaner.html",
+    emoji: "📋",
+    tags: ["tool"],
+    titleEn: "Training Planner",
+    excerptEn: "Build a training session from drills, add up the times and print it."
+   },
+   {
+    title: "Wurfstatistik",
+    excerpt: "Tore, Paraden, Fehlwürfe und Pfostentreffer pro Person per Fingertipp zählen und Wurfquoten berechnen.",
+    date: "2026-10-04",
+    category: "handball",
+    subcategory: "training",
+    url: "wurfstatistik.html",
+    emoji: "🎯",
+    tags: ["tool"],
+    titleEn: "Shot Statistics",
+    excerptEn: "Count goals, saves, misses and post hits per player with a tap and calculate shooting percentages."
+   },
+   {
+    title: "Spielplan & Tabelle",
+    excerpt: "Turnier oder Liga mit Jeder-gegen-jeden: Spielplan erstellen, Ergebnisse eintragen, Tabelle mit Handball-Punkten berechnen.",
+    date: "2026-10-04",
+    category: "handball",
+    subcategory: "jugend",
+    url: "spielplan-tabelle.html",
+    emoji: "🏆",
+    tags: ["tool"],
+    titleEn: "Fixtures & Table",
+    excerptEn: "Round-robin tournament or league: create the schedule, enter results and calculate the table with handball points."
+   },
+   {
+    title: "Hallendienst-Plan",
+    excerpt: "Dienste für Heimspieltage (Kasse, Kuchen, Zeitnehmer) fair auf Eltern verteilen und ausdrucken.",
+    date: "2026-10-04",
+    category: "handball",
+    subcategory: "hallendienst",
+    url: "hallendienst-plan.html",
+    emoji: "🗓️",
+    tags: ["tool"],
+    titleEn: "Hall Duty Planner",
+    excerptEn: "Distribute home match duties (cash desk, cake stand, timekeeper) fairly among parents and print the plan."
+   },
 ];
