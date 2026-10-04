@@ -255,7 +255,7 @@
       "html:not(.protect-ready):not(.protect-open) body { visibility: hidden; }",
       "#protect-overlay { visibility: visible !important; position: fixed; inset: 0; z-index: 999999;",
       "  display: flex; align-items: center; justify-content: center; padding: 24px;",
-      "  background: radial-gradient(ellipse at 50% 30%, rgba(20,22,30,0.22), rgba(0,0,0,0.55));",
+      "  background: radial-gradient(ellipse at 50% 30%, rgba(20,22,30,0.4), rgba(0,0,0,0.72));",
       "  backdrop-filter: blur(8px) saturate(120%); -webkit-backdrop-filter: blur(8px) saturate(120%); }",
       "#protect-overlay .protect-card, #protect-share-modal .protect-card, #protect-highscore-modal .protect-card {",
       "  width: 100%; max-width: 380px; background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04));",
@@ -300,7 +300,7 @@
       "#protect-overlay button.protect-guest-btn:hover { background: rgba(255,255,255,0.14); }",
       "#protect-overlay .protect-guest-hint { margin: 10px 0 0; font-size: 12px; color: #AAABB2; }",
       "#protect-share-btn, .protect-feedback-widget, .protect-highscore-btn {",
-      "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04)); color: #F4F6FB;",
+      "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB;",
       "  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);",
       "  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.28), 0 8px 24px rgba(0,0,0,0.5);",
       "  font-weight: 600; font-family: Arial, Helvetica, sans-serif; }",
@@ -310,7 +310,7 @@
       "#protect-share-btn:hover { transform: translateY(-2px); }",
       "#protect-share-modal, #protect-highscore-modal {",
       "  position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;",
-      "  padding: 24px; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }",
+      "  padding: 24px; background: rgba(0,0,0,0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }",
       "#protect-share-modal select { width: 100%; padding: 10px 12px; font-size: 15px; border-radius: 12px; color: #F4F6FB;",
       "  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); margin-bottom: 10px; box-sizing: border-box; font-family: inherit; }",
       "#protect-share-modal select option { color: #111; }",
@@ -337,6 +337,60 @@
       "#protect-share-modal .protect-qr-hint { font-size: 11.5px; color: #AAABB2; text-align: center; margin: 8px 0 0; }",
       "html.share-mode .site-logo, html.share-mode .nav-brand, html.share-mode .breadcrumb a { pointer-events: none; opacity: 0.45; }",
       "html.share-mode #protect-share-btn { display: none; }",
+      ".protect-back {",
+      "  position: fixed; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 9990; display: inline-flex; align-items: center; gap: 6px;",
+      "  min-height: 40px; padding: 0 14px 0 10px; border-radius: 999px; text-decoration: none; font-size: 13.5px;",
+      "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB;",
+      "  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);",
+      "  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.28), 0 8px 24px rgba(0,0,0,0.5); font-weight: 600; font-family: Arial, Helvetica, sans-serif; }",
+      ".protect-back:hover { background: linear-gradient(160deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08)); }",
+      "html.share-mode .protect-back { top: 44px; }",
+      "@media (max-width: 480px) { .protect-back .protect-back-label { display: none; } .protect-back { padding: 0 12px; } }",
+      "#protect-poster-btn {",
+      "  position: fixed; right: 18px; bottom: 70px; z-index: 9998; display: inline-flex; align-items: center; gap: 8px;",
+      "  padding: 10px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; min-height: 40px;",
+      "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB;",
+      "  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);",
+      "  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.28), 0 8px 24px rgba(0,0,0,0.5); font-weight: 600; font-family: Arial, Helvetica, sans-serif; }",
+      "#protect-poster-btn:hover { background: linear-gradient(160deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08)); }",
+      "#protect-poster-modal { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;",
+      "  padding: 24px; background: rgba(0,0,0,0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }",
+      "#protect-poster-modal .protect-card { width: 100%; max-width: 420px; background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04));",
+      "  border: 1px solid rgba(255,255,255,0.22); border-radius: 28px; padding: 28px 24px; text-align: center; color: #F4F6FB;",
+      "  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.3), 0 20px 60px rgba(0,0,0,0.55); max-height: calc(100vh - 48px); overflow-y: auto; font-family: Arial, Helvetica, sans-serif; }",
+      "#protect-poster-modal h2 { margin: 0 0 6px; font-size: 19px; font-weight: 700; color: #F4F6FB; }",
+      "#protect-poster-modal p.protect-sub { margin: 0 0 16px; font-size: 14px; color: #AAABB2; }",
+      "#protect-poster-modal [hidden] { display: none !important; }",
+      "#protect-poster-modal input[type=number] { flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; font-weight: 600; text-align: center; border-radius: 12px; color: #F4F6FB;",
+      "  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); box-sizing: border-box; font-family: inherit; }",
+      "#protect-poster-modal .protect-minutes-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }",
+      "#protect-poster-modal .protect-minutes-suffix { font-size: 13px; color: #AAABB2; white-space: nowrap; }",
+      "#protect-poster-modal .protect-minutes-presets { display: flex; gap: 6px; margin-bottom: 12px; }",
+      "#protect-poster-modal .protect-preset-btn { flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 600; color: #F4F6FB; cursor: pointer; font-family: inherit;",
+      "  border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; background: rgba(255,255,255,0.06); min-height: 40px; }",
+      "#protect-poster-modal .protect-close { margin-top: 14px; font-size: 12.5px; color: #AAABB2; background: none; border: none; text-decoration: underline; cursor: pointer; font-family: inherit; min-height: 40px; }",
+      ".protect-poster { background: #fff; color: #111; border-radius: 18px; padding: 26px 20px 20px; margin-bottom: 14px; }",
+      ".protect-poster-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #666; }",
+      ".protect-poster-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin: 8px 0 6px; }",
+      ".protect-poster-how { font-size: 14px; color: #444; }",
+      ".protect-poster .protect-qr-wrap { margin: 14px 0 8px; }",
+      ".protect-poster .protect-qr-wrap img { box-shadow: none; padding: 0; width: 200px; height: 200px; }",
+      ".protect-poster-until { font-size: 14px; font-weight: 700; }",
+      ".protect-poster-url { font-size: 10px; color: #777; word-break: break-all; margin-top: 8px; }",
+      ".protect-poster-actions { display: flex; gap: 8px; }",
+      "html.embed-mode #protect-back-link, html.embed-mode #protect-poster-btn { display: none !important; }",
+      "@media print {",
+      "  body > *:not(#protect-poster-modal) { display: none !important; }",
+      "  #protect-poster-modal { position: static !important; background: none !important; padding: 0 !important; backdrop-filter: none !important; }",
+      "  #protect-poster-modal .protect-card { box-shadow: none !important; background: none !important; border: none !important; max-width: none !important; padding: 0 !important; }",
+      "  #protect-poster-modal .protect-card > :not(.protect-poster-out), .protect-poster-actions { display: none !important; }",
+      "  .protect-poster { border: 3px solid #000; border-radius: 24px; padding: 60px 40px; }",
+      "  .protect-poster-title { font-size: 48px; }",
+      "  .protect-poster-how { font-size: 22px; }",
+      "  .protect-poster .protect-qr-wrap img { width: 420px; height: 420px; }",
+      "  .protect-poster-until { font-size: 22px; }",
+      "  .protect-poster-url { font-size: 11px; }",
+      "}",
       ".protect-banner {",
       "  position: fixed; top: 0; left: 0; right: 0; z-index: 9997; text-align: center; font-size: 12.5px;",
       "  font-weight: 600; color: #F4F6FB; padding: 8px 10px; background: rgba(8,9,12,0.62); font-family: Arial, Helvetica, sans-serif;",
@@ -346,16 +400,16 @@
       ".protect-update-banner {",
       "  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 999998;",
       "  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; border-radius: 999px;",
-      "  background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04)); color: #F4F6FB; border: 1px solid rgba(255,255,255,0.22); font-family: Arial, Helvetica, sans-serif;",
+      "  background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB; border: 1px solid rgba(255,255,255,0.22); font-family: Arial, Helvetica, sans-serif;",
       "  font-size: 13px; font-weight: 600; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.28), 0 10px 30px rgba(0,0,0,0.55);",
       "  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }",
       ".protect-update-banner button, .protect-install-banner #protect-install-btn {",
       "  padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 12.5px; cursor: pointer;",
       "  color: #F4F6FB; background: linear-gradient(160deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08)); font-family: inherit; }",
       ".protect-install-banner {",
-      "  position: fixed; right: 18px; bottom: 78px; z-index: 9998; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;",
+      "  position: fixed; right: 18px; bottom: 126px; z-index: 9998; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;",
       "  max-width: 280px; padding: 10px 10px 10px 16px; border-radius: 22px;",
-      "  background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04)); color: #F4F6FB; border: 1px solid rgba(255,255,255,0.22);",
+      "  background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB; border: 1px solid rgba(255,255,255,0.22);",
       "  font-size: 12.5px; font-weight: 600; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.28), 0 10px 30px rgba(0,0,0,0.55);",
       "  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); font-family: Arial, Helvetica, sans-serif; }",
       ".protect-install-banner #protect-install-dismiss {",
@@ -382,7 +436,7 @@
       "html.embed-mode .protect-install-banner,",
       "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }",
       "@media print {",
-      "  #protect-share-btn, .protect-update-banner, .protect-install-banner,",
+      "  #protect-share-btn, #protect-back-link, #protect-poster-btn, .protect-update-banner, .protect-install-banner,",
       "  .protect-feedback-widget, .protect-highscore-btn, .protect-banner { display: none !important; }",
       "}"
     ].join("\n");
@@ -1081,6 +1135,163 @@
     });
   }
 
+  /* ---------------------------------------------------------
+     Gemeinsamer Rahmen für alle Tool-Seiten: Zurück-Link zur Startseite
+     (oben links) und "QR-Aushang" (unten rechts über dem Freigabe-Knopf).
+     Beides wird hier einmal für alle Seiten eingebaut, die protect.js mit
+     data-category einbinden — einzelne Tools brauchen dafür keinen eigenen
+     Code. Im Einbettungsmodus (?embed=1) und beim Drucken ausgeblendet.
+  --------------------------------------------------------- */
+  function toolTitle() {
+    const t = (document.title || "buildspace").replace(/\s*[–—|-]\s*buildspace\s*$/i, "").trim();
+    return t || "buildspace";
+  }
+
+  /* Wohin "Zurück" führt: normal auf die Startseite; innerhalb einer
+     Freigabe zurück in die freigegebene Ansicht (Kursmappe, Vertretung
+     oder Kategorie), samt Freigabe-Parametern — sonst würde die Freigabe
+     auf der Startseite verloren gehen. */
+  function backHref() {
+    const s = getShareParams();
+    if (s.active && s.vertretung) return HOME_HREF + "?vertretung=1#/vertretung";
+    if (s.active && s.posts) return HOME_HREF + shareQueryString() + "#/kursmappe";
+    if (s.active && s.cat) return HOME_HREF + shareQueryString() + "#/" + s.cat;
+    return HOME_HREF;
+  }
+
+  function addBackLink() {
+    if (isEmbedMode() || document.getElementById("protect-back-link")) return;
+    ensureStyle();
+    const a = document.createElement("a");
+    a.id = "protect-back-link";
+    a.className = "protect-back";
+    a.href = backHref();
+    a.setAttribute("aria-label", "Zurück zu buildspace");
+    a.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>' +
+      '<span class="protect-back-label">buildspace</span>';
+    document.body.appendChild(a);
+  }
+
+  function ensureQrLib(callback) {
+    if (typeof global.qrcode === "function") { callback(); return; }
+    const s = document.createElement("script");
+    s.src = HOME_HREF.replace(/index\.html$/, "") + "qrcode-generator.js";
+    s.onload = function () { callback(); };
+    s.onerror = function () { callback(); };
+    document.head.appendChild(s);
+  }
+
+  function fmtUntil(exp) {
+    const d = new Date(exp);
+    const pad = (n) => String(n).padStart(2, "0");
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + " Uhr, " + pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear();
+  }
+
+  function posterLinkFor(minutes) {
+    const exp = nowMs() + minutes * 60000;
+    const out = new URLSearchParams();
+    out.set("share", "1");
+    out.set("exp", String(exp));
+    out.set("posts", currentPageFile());
+    out.set("title", toolTitle());
+    return { exp: exp, url: location.origin + location.pathname + "?" + out.toString() };
+  }
+
+  function openPosterModal() {
+    ensureStyle();
+    if (document.getElementById("protect-poster-modal")) return;
+    const title = toolTitle();
+    const wrap = document.createElement("div");
+    wrap.id = "protect-poster-modal";
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-label", "QR-Aushang erstellen");
+    wrap.innerHTML =
+      '<div class="protect-card protect-poster-card">' +
+        '<div class="protect-poster-setup">' +
+          "<h2>QR-Aushang erstellen</h2>" +
+          '<p class="protect-sub">Ein Blatt mit QR-Code nur für „' + escapeHtmlLocal(title) + '“ — zeitlich begrenzt, ohne Anmeldung nutzbar.</p>' +
+          '<div class="protect-minutes-row">' +
+            '<input type="number" id="protect-poster-minutes" min="1" max="1440" step="1" value="45" inputmode="numeric" aria-label="Gültigkeit in Minuten" />' +
+            '<span class="protect-minutes-suffix">Minuten gültig</span>' +
+          "</div>" +
+          '<div class="protect-minutes-presets">' +
+            '<button type="button" class="protect-preset-btn" data-min="15">15</button>' +
+            '<button type="button" class="protect-preset-btn" data-min="45">45</button>' +
+            '<button type="button" class="protect-preset-btn" data-min="90">90</button>' +
+            '<button type="button" class="protect-preset-btn" data-min="180">180</button>' +
+            '<button type="button" class="protect-preset-btn" data-min="1440">24 h</button>' +
+          "</div>" +
+          '<button type="button" class="protect-submit" id="protect-poster-make">Aushang erstellen</button>' +
+        "</div>" +
+        '<div class="protect-poster-out" id="protect-poster-out" hidden>' +
+          '<div class="protect-poster" id="protect-poster">' +
+            '<div class="protect-poster-kicker">buildspace</div>' +
+            '<div class="protect-poster-title" id="protect-poster-title"></div>' +
+            '<div class="protect-poster-how">QR-Code mit der Kamera scannen und loslegen</div>' +
+            '<div class="protect-qr-wrap" id="protect-poster-qr"></div>' +
+            '<div class="protect-poster-until" id="protect-poster-until"></div>' +
+            '<div class="protect-poster-url" id="protect-poster-url"></div>' +
+          "</div>" +
+          '<div class="protect-poster-actions">' +
+            '<button type="button" class="protect-submit" id="protect-poster-print">Drucken</button>' +
+          "</div>" +
+        "</div>" +
+        '<button type="button" class="protect-close" id="protect-poster-close">Schließen</button>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    const close = () => { wrap.remove(); const b = document.getElementById("protect-poster-btn"); if (b) b.focus(); };
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+    wrap.querySelector("#protect-poster-close").addEventListener("click", close);
+    wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+    wrap.querySelectorAll(".protect-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => { wrap.querySelector("#protect-poster-minutes").value = btn.dataset.min; });
+    });
+    let current = null;
+    wrap.querySelector("#protect-poster-make").addEventListener("click", () => {
+      const input = wrap.querySelector("#protect-poster-minutes");
+      let minutes = Math.round(Number(input.value));
+      if (!minutes || minutes < 1) minutes = 45;
+      if (minutes > 1440) minutes = 1440;
+      input.value = String(minutes);
+      current = posterLinkFor(minutes);
+      wrap.querySelector("#protect-poster-title").textContent = title;
+      wrap.querySelector("#protect-poster-until").textContent = "Gültig bis " + fmtUntil(current.exp);
+      wrap.querySelector("#protect-poster-url").textContent = current.url;
+      wrap.querySelector("#protect-poster-out").hidden = false;
+      wrap.querySelector(".protect-poster-setup").hidden = true;
+      ensureQrLib(() => renderQrCode(wrap.querySelector("#protect-poster-qr"), current.url));
+      wrap.querySelector("#protect-poster-print").focus();
+    });
+    wrap.querySelector("#protect-poster-print").addEventListener("click", () => {
+      if (!current) return;
+      printHandout({
+        title: title,
+        meta: "QR-Code scannen und loslegen. Gültig bis " + fmtUntil(current.exp) + ".",
+        items: [],
+        qrText: current.url,
+        filename: "aushang-" + currentPageFile().replace(/\.html$/, "") + ".png"
+      });
+    });
+    const first = wrap.querySelector("#protect-poster-minutes");
+    if (first) first.focus();
+  }
+
+  function addPosterButton() {
+    if (isEmbedMode() || isShareMode() || document.getElementById("protect-poster-btn")) return;
+    ensureStyle();
+    const btn = document.createElement("button");
+    btn.id = "protect-poster-btn";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "QR-Aushang erstellen");
+    btn.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><path d="M14 14h2.5v2.5H14zM18.5 14H21M14 19v2M18 18.5h3V21"/></svg>' +
+      '<span class="protect-share-label">QR-Aushang</span>';
+    btn.addEventListener("click", openPosterModal);
+    document.body.appendChild(btn);
+  }
+
   function addShareButton(cat) {
     const existing = document.getElementById("protect-share-btn");
     if (isShareMode()) { if (existing) existing.remove(); return; }
@@ -1397,6 +1608,7 @@
       document.documentElement.classList.remove("protect-open");
       if (cat) {
         addShareButton(cat);
+        if (!isHomeApp_()) { addBackLink(); addPosterButton(); }
         initFeedbackWidget(cat);
         initHighscoreWidget();
       }
