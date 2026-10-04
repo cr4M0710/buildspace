@@ -87,7 +87,6 @@ const LANG_KEY = "myhome_lang";
 const I18N = {
   de: {
     heroSlogan: "Wo Innovation das Lernen verändert und Spiel zum individuellen Erfolg wird.",
-    heroSub: "Materialien, Lernspiele und Tools von Marc Stroh — Mathematik, Arbeitslehre, Handball & Freizeit, gesammelt an einem Ort.",
     greeting: { night: "Noch spät unterwegs", morning: "Guten Morgen", noon: "Schönen Mittag", day: "Guten Tag", evening: "Guten Abend" },
     statPost: (n) => (n === 1 ? "Beitrag" : "Beiträge"),
     statAreas: "Bereiche",
@@ -133,7 +132,6 @@ const I18N = {
   },
   en: {
     heroSlogan: "Where innovation transforms learning and play becomes individual success.",
-    heroSub: "Materials, learning games and tools by Marc Stroh — maths, careers education, handball & leisure, all in one place.",
     greeting: { night: "Up late", morning: "Good morning", noon: "Good midday", day: "Good afternoon", evening: "Good evening" },
     statPost: (n) => (n === 1 ? "post" : "posts"),
     statAreas: "areas",
@@ -1081,9 +1079,6 @@ function initHero() {
 
   const sloganEl = document.getElementById("hero-slogan");
   if (sloganEl) sloganEl.textContent = t("heroSlogan");
-
-  const subEl = document.getElementById("hero-sub");
-  if (subEl) subEl.textContent = t("heroSub");
 
   const footerEl = document.getElementById("site-footer-text");
   if (footerEl) footerEl.textContent = t("footer");
