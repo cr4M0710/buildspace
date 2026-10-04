@@ -9,7 +9,7 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v5';
+const CACHE = 'buildspace-v6';
 /* Bibliotheken von Fremd-Servern (three.js, PeerJS, QR, Schriften) landen in
    einem eigenen Cache, der Versions-Wechsel überlebt — sie sind fest
    versioniert und ändern sich nicht. */
@@ -39,6 +39,8 @@ const SHELL = [
   'hero-draw.js',
   'space.js',
   'stars.js',
+  'micro.js',
+  '404.html',
   'qrcode-generator.js',
   'site.webmanifest',
   'assets/favicon.svg',

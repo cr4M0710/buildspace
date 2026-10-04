@@ -33,7 +33,7 @@ const NO_PROTECT = ["lernbereich.html"];
 /* Seiten, die weder Tool noch Beitrag sind */
 /* lernbereich.html läuft bewusst ohne Eintrag/Schutz, escape-room-baukasten.html
    (2D) wurde auf Wunsch aus der Übersicht genommen, bleibt aber erreichbar. */
-const NOT_POSTS = ["index.html", "lernbereich.html", "escape-room-baukasten.html"];
+const NOT_POSTS = ["index.html", "404.html", "lernbereich.html", "escape-room-baukasten.html"];
 
 const protectSrc = read("protect.js");
 const vf = /const VERTRETUNG_FILES = \[([\s\S]*?)\];/.exec(protectSrc);
