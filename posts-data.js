@@ -658,4 +658,88 @@ const posts = [
     titleEn: "Pummelparty 3D",
     excerptEn: "3D board game chaos for 2–8 players on 4 islands: everyone plays on their own device, join by code or link, bots can join in."
    },
+   {
+    title: "Winkel-Detektiv",
+    excerpt: "Winkel in Figuren aufspüren: Neben- und Scheitelwinkel, Dreiecke, Vierecke und Parallelen, mit Skizze, Tipps und Lösungsweg in drei Niveaus.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "winkel-detektiv.html",
+    emoji: "📐",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Angle Detective",
+    excerptEn: "Track down angles in figures: adjacent and vertical angles, triangles, quadrilaterals and parallels, with sketches, hints and worked solutions on three levels."
+   },
+   {
+    title: "Körper-Baumeister",
+    excerpt: "Volumen und Oberfläche von Quader, Würfel, Prisma, Zylinder, Pyramide, Kegel und Kugel berechnen, mit Formelkarte und Sachaufgaben.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "koerper-rechner.html",
+    emoji: "🧊",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Solid Builder",
+    excerptEn: "Calculate volume and surface area of cuboids, cubes, prisms, cylinders, pyramids, cones and spheres, with a formula sheet and word problems."
+   },
+   {
+    title: "Pythagoras-Trainer",
+    excerpt: "Den Satz des Pythagoras anwenden: Hypotenuse und Katheten mit Skizze berechnen, dazu Sachaufgaben wie Leiter, Bildschirm und Abstand im Koordinatensystem.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "pythagoras-trainer.html",
+    emoji: "📏",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Pythagoras Trainer",
+    excerptEn: "Apply the Pythagorean theorem: calculate hypotenuse and legs with a sketch, plus word problems such as ladders, screens and distances in a coordinate system."
+   },
+   {
+    title: "Term-Trainer",
+    excerpt: "Terme zusammenfassen, einsetzen, ausmultiplizieren und mit binomischen Formeln umformen, mit Tipps und Lösungsweg in drei Niveaus.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "term-trainer.html",
+    emoji: "🧮",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Term Trainer",
+    excerptEn: "Simplify, substitute, expand and factor algebraic terms with binomial formulas, with hints and worked solutions on three levels."
+   },
+   {
+    title: "Statistik-Werkstatt",
+    excerpt: "Mittelwert, Median, Modus und Spannweite bestimmen, Häufigkeitstabellen auswerten und Säulendiagramme lesen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "statistik-werkstatt.html",
+    emoji: "📊",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Statistics Workshop",
+    excerptEn: "Work out mean, median, mode and range, evaluate frequency tables and read bar charts."
+   },
+   {
+    title: "Einheiten-Meister",
+    excerpt: "Größen umrechnen: Länge, Masse, Zeit, Geld, Fläche und Volumen, von einfachen Umrechnungen bis zu Dezimalzahlen und Zeitangaben.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "einheiten-meister.html",
+    emoji: "⚖️",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Unit Master",
+    excerptEn: "Convert quantities: length, mass, time, money, area and volume, from simple conversions to decimals and time spans."
+   },
+   {
+    title: "Dreisatz-Trainer",
+    excerpt: "Proportionale und antiproportionale Zuordnungen mit dem Dreisatz lösen, mit Alltagsaufgaben, Tipps und Lösungsweg.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "dreisatz-trainer.html",
+    emoji: "🔢",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Rule of Three Trainer",
+    excerptEn: "Solve proportional and inversely proportional relations with the rule of three, using everyday problems, hints and worked solutions."
+   },
 ];
