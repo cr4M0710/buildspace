@@ -742,4 +742,52 @@ const posts = [
     titleEn: "Rule of Three Trainer",
     excerptEn: "Solve proportional and inversely proportional relations with the rule of three, using everyday problems, hints and worked solutions."
    },
+   {
+    title: "Ernährungs-Ampel",
+    excerpt: "Lebensmittel nach der Ampel einordnen (täglich reichlich, in Maßen, selten) und Zuckerwürfel und Brennwert berechnen, mit Begründungen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "ernaehrung-ampel.html",
+    emoji: "🍎",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Nutrition Traffic Light",
+    excerptEn: "Sort foods by the traffic light (plenty, in moderation, rarely) and calculate sugar cubes and energy content, with explanations."
+   },
+   {
+    title: "Materialkunde-Quiz",
+    excerpt: "Werkstoffe und Werkzeuge kennen: Holz, Metall, Kunststoff, Eigenschaften, Verfahren und Sicherheit in der Werkstatt.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "materialkunde-quiz.html",
+    emoji: "🪵",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Materials Quiz",
+    excerptEn: "Know your materials and tools: wood, metal, plastics, properties, processes and workshop safety."
+   },
+   {
+    title: "Maßstab-Meister",
+    excerpt: "Mit Maßstäben rechnen: Zeichnungen, Grundrisse und Karten lesen, Längen umrechnen und den Maßstab bestimmen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "masstab-meister.html",
+    emoji: "📐",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Scale Master",
+    excerptEn: "Work with scales: read drawings, floor plans and maps, convert lengths and determine the scale."
+   },
+   {
+    title: "Fake-News-Detektiv",
+    excerpt: "Meldungen kritisch prüfen: Quelle, Belege, Sprache und Datum untersuchen und Falschmeldungen, Satire und Manipulation erkennen.",
+    date: "2026-10-04",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "fake-news-detektiv.html",
+    emoji: "🕵️",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Fake News Detective",
+    excerptEn: "Check news critically: examine source, evidence, language and date, and spot false reports, satire and manipulation."
+   },
 ];
