@@ -647,15 +647,15 @@ const posts = [
     excerptEn: "How does AI work? Visit stations on training, data, language models and fact-checking in a 3D data centre and earn the AI licence in two classes (Basic and Pro)."
    },
    {
-    title: "Pummelparty",
-    excerpt: "Brettspiel-Chaos für 2–8 Spieler: Alle spielen mit dem eigenen Gerät, per Code oder Link beitreten, Bots können mitspielen.",
+    title: "Pummelparty 3D",
+    excerpt: "3D-Brettspiel-Chaos für 2–8 Spieler auf 4 Inseln: Alle spielen mit dem eigenen Gerät, per Code oder Link beitreten, Bots können mitspielen.",
     date: "2026-10-04",
     category: "freizeit",
     subcategory: null,
     url: "pummelparty.html",
     emoji: "🎉",
     tags: ["spiel", "gruppenarbeit"],
-    titleEn: "Pummelparty",
-    excerptEn: "Board game chaos for 2–8 players: everyone plays on their own device, join by code or link, bots can join in."
+    titleEn: "Pummelparty 3D",
+    excerptEn: "3D board game chaos for 2–8 players on 4 islands: everyone plays on their own device, join by code or link, bots can join in."
    },
 ];
