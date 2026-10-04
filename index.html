@@ -29,81 +29,12 @@
 
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ---------- Animierter Hero-Hintergrund (reines CSS, kein Video) ----------
-     Statt eines eingebetteten Videos (Autoplay-Probleme auf manchen Handys,
-     aufwändiges Nachbauen der Größenanpassung an den echten Titel) laufen
-     hier dieselben vier Aurora-Farbflecken wie im ruhenden Seitenhintergrund
-     (body::before), nur etwas lebendiger animiert und dichter um die Mitte
-     des Hero-Bereichs verteilt -- so bleibt es "clean und dynamisch", ganz
-     ohne Datei-Ladezeit, Autoplay-Handling oder Skalierungs-Rechnerei. */
-  .hero {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    min-height: min(560px, 88vh);
-    max-height: 720px;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .hero-bg {
-    position: absolute; inset: 0; z-index: 0;
-    overflow: hidden;
-    /* Weiche runde Kante statt sichtbarer rechteckiger Box -- darunter
-       scheint der echte Seitenhintergrund weich durch. */
-    -webkit-mask-image: radial-gradient(58% 62% at 50% 51%, #000 0%, #000 48%, transparent 88%);
-    mask-image: radial-gradient(58% 62% at 50% 51%, #000 0%, #000 48%, transparent 88%);
-  }
-  .hero-bg::before {
-    content: '';
-    position: absolute;
-    inset: -25%;
-    background-image:
-      radial-gradient(26% 28% at 26% 68%, color-mix(in srgb, var(--aurora-1) 70%, transparent), transparent 70%),
-      radial-gradient(24% 26% at 74% 28%, color-mix(in srgb, var(--aurora-2) 65%, transparent), transparent 70%),
-      radial-gradient(22% 24% at 40% 24%, color-mix(in srgb, var(--aurora-3) 60%, transparent), transparent 70%),
-      radial-gradient(24% 26% at 64% 74%, color-mix(in srgb, var(--aurora-4) 60%, transparent), transparent 70%);
-    filter: blur(46px) saturate(150%);
-    opacity: var(--aurora-opacity);
-    animation: heroAuroraDrift 16s ease-in-out infinite alternate;
-  }
-  @keyframes heroAuroraDrift {
-    0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-    50%  { transform: translate3d(3%, -3.5%, 0) rotate(7deg) scale(1.1); }
-    100% { transform: translate3d(-3.5%, 3%, 0) rotate(-6deg) scale(1); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-bg::before { animation: none; }
-  }
-  /* Zusätzlicher dezenter Kontrast unter dem Text, damit er über den
-     Farbflecken lesbar bleibt. */
-  .hero-bg::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(46% 50% at 50% 51%, color-mix(in srgb, var(--bg) 42%, transparent) 0%, transparent 72%);
-  }
-  .hero-bg[hidden] { display: none; }
-  .hero-inner { position: relative; text-align: center; z-index: 1; }
-  @media (max-width: 560px) {
-    .hero { min-height: min(560px, 94vh); }
-  }
-  @media (max-width: 340px) {
-    .hero { min-height: min(610px, 96vh); }
-  }
-  @media print { .hero-bg { display: none !important; } }
-
   /* ---------- Mega-Prompt-Abschnitt (nur Startseite) ---------- */
   .megaprompt { margin-top: 48px; }
   .megaprompt[hidden] { display: none; }
   .mp-lab h2 { margin: 0 0 8px; font-size: 26px; }
   .mp-lab > .mp-lead { margin-bottom: 14px; }
-  .mp-card {
-    background: var(--surface); border: 1px solid var(--divider);
-    border-radius: var(--radius-lg); padding: 24px 28px; margin-top: 18px;
-  }
+  .mp-card { padding: 24px 28px; margin-top: 18px; }
   .mp-card h3 { margin: 0 0 6px; font-size: 20px; }
   .mp-lead { margin: 0 0 14px; color: var(--ink-soft); }
   .mp-steps { margin: 0 0 6px; padding-left: 22px; line-height: 1.6; }
@@ -133,7 +64,7 @@
   /* ---------- Kontaktformular (nur Startseite) ---------- */
   .contact { margin-top: 48px; margin-bottom: 56px; }
   .contact[hidden] { display: none; }
-  .ct-card { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-lg); padding: 24px 28px; }
+  .ct-card { padding: 24px 28px; }
   .ct-card h2 { margin: 0 0 6px; font-size: 26px; }
   .ct-card > p { margin: 0 0 18px; color: var(--ink-soft); }
   .ct-form { display: grid; gap: 16px; }
@@ -173,29 +104,60 @@
 </head>
 <body>
 
-  <nav class="site-nav">
-    <div class="wrap">
-      <a class="nav-brand" href="#/">
-        <img src="assets/marc-avatar.png" alt="Marc Stroh" class="nav-avatar">
-        <span class="nav-brand-text">
-          <span class="nav-brand-title">buildspace</span>
-          <span class="nav-brand-sub">Marc Stroh</span>
-        </span>
+  <!-- ===== Seitenleiste (Menü · Suche · Einstellungen) im Liquid-Glass-Look ===== -->
+  <button type="button" class="menu-fab" id="menu-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Menü öffnen">
+    <svg class="fab-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+    <img src="assets/marc-avatar.png" alt="" class="fab-avatar">
+    <span class="fab-text"><span class="fab-title">buildspace</span><span class="fab-sub">Marc Stroh</span></span>
+  </button>
+  <button type="button" class="search-fab" id="search-fab" aria-controls="sidebar" aria-label="Suche öffnen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+  </button>
+
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <aside class="sidebar" id="sidebar" aria-label="Navigation" aria-hidden="true" tabindex="-1">
+    <div class="side-head">
+      <a class="side-brand" href="#/" id="side-brand">
+        <img src="assets/marc-avatar.png" alt="Marc Stroh" class="fab-avatar">
+        <span class="fab-text"><span class="fab-title">buildspace</span><span class="fab-sub">Marc Stroh</span></span>
       </a>
-      <div class="nav-right">
-        <div class="breadcrumb" id="breadcrumb"></div>
-        <a href="#/kollegen" id="kollegen-nav-link" class="nav-icon-btn nav-emoji-btn" style="display:none;" title="Kolleg:innen-Bereich" aria-label="Kolleg:innen-Bereich">🤝</a>
-        <a href="#/kursmappe-erstellen" id="kursmappe-nav-link" class="nav-icon-btn nav-emoji-btn" style="display:none;" title="Kursmappe erstellen" aria-label="Kursmappe erstellen">🧩</a>
-        <button type="button" id="theme-toggle" class="nav-icon-btn" aria-label="Dunkelmodus aktivieren" title="Dunkelmodus aktivieren"></button>
-        <button type="button" id="lang-toggle" class="nav-icon-btn nav-lang-btn" aria-label="Switch to English" title="Switch to English">
-          <span id="lang-toggle-label">EN</span>
-        </button>
+      <button type="button" class="icon-btn" id="sidebar-close" aria-label="Menü schließen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="side-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="site-search" placeholder="Spiele &amp; Tools durchsuchen…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Beiträge durchsuchen">
+      <button type="button" class="side-search-clear" id="side-search-clear" hidden aria-label="Suche leeren">×</button>
+    </div>
+
+    <div class="side-scroll">
+      <nav class="side-nav" id="sidebar-nav" aria-label="Bereiche"></nav>
+      <div class="side-results" id="side-results" hidden aria-live="polite"></div>
+    </div>
+
+    <div class="side-settings" id="side-settings">
+      <div class="side-set-row">
+        <span id="set-theme-label">Darstellung</span>
+        <div class="seg" role="group" aria-labelledby="set-theme-label">
+          <button type="button" data-theme-set="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-set="light" aria-pressed="false">Hell</button>
+          <button type="button" data-theme-set="dark" aria-pressed="false">Dunkel</button>
+        </div>
+      </div>
+      <div class="side-set-row">
+        <span id="set-lang-label">Sprache</span>
+        <div class="seg" role="group" aria-labelledby="set-lang-label">
+          <button type="button" data-lang-set="de" aria-pressed="true">DE</button>
+          <button type="button" data-lang-set="en" aria-pressed="false">EN</button>
+        </div>
       </div>
     </div>
-  </nav>
+  </aside>
 
   <header class="hero" id="hero">
-    <div class="hero-bg" id="hero-bg" aria-hidden="true"></div>
     <div class="hero-inner" id="hero-inner">
       <p class="hero-eyebrow" id="hero-greeting">Willkommen</p>
       <h1 id="hero-title">buildspace</h1>
@@ -205,6 +167,7 @@
   </header>
 
   <main class="wrap">
+    <div class="breadcrumb" id="breadcrumb"></div>
     <div id="content"></div>
   </main>
 

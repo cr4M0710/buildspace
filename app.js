@@ -91,11 +91,8 @@ const I18N = {
     statPost: (n) => (n === 1 ? "Beitrag" : "Beiträge"),
     statAreas: "Bereiche",
     statNew: "diesen Monat neu",
-    searchPlaceholder: "Spiele, Tools & Beiträge durchsuchen…",
+    searchPlaceholder: "Spiele & Tools durchsuchen…",
     searchLabel: "Beiträge durchsuchen",
-    recentTitle: "Zuletzt geöffnet",
-    clearRecent: "Verlauf löschen",
-    featuredTitle: "Empfohlen",
     categoriesTitle: "Kategorien",
     newBadge: "Neu",
     home: "Start",
@@ -106,23 +103,25 @@ const I18N = {
     latestSub: "Alle Beiträge der letzten 30 Tage, automatisch sortiert — unabhängig vom Ordner.",
     footer: "buildspace — gebaut mit HTML, CSS & JavaScript, gehostet auf GitHub Pages.",
     postCount: (n) => (n === 1 ? "1 Beitrag" : `${n} Beiträge`),
-    themeToDark: "Dunkelmodus aktivieren",
-    themeToLight: "Hellmodus aktivieren",
-    langSwitchTo: "Switch to English",
-    langButtonLabel: "EN",
+    menuOpen: "Menü öffnen",
+    menuClose: "Menü schließen",
+    searchOpen: "Suche öffnen",
+    searchClear: "Suche leeren",
+    navLabel: "Bereiche",
+    navAdmin: "Verwaltung",
+    kollegenLabel: "Kolleg:innen-Bereich",
+    kursmappeLabel: "Kursmappe erstellen",
+    expandLabel: "Unterordner ein- oder ausklappen",
+    setTheme: "Darstellung",
+    themeAuto: "Auto",
+    themeLight: "Hell",
+    themeDark: "Dunkel",
+    setLang: "Sprache",
     dateLocale: "de-DE",
     favoritesTitle: "Favoriten",
     favAdd: "Zu Favoriten hinzufügen",
     favRemove: "Von Favoriten entfernen",
-    tagFilterClear: "Filter zurücksetzen",
-    tagFilterResults: (n) => (n === 1 ? "1 Treffer" : `${n} Treffer`),
-    tagFilterEmpty: "Keine Treffer für diese Auswahl.",
     guestLocked: "Nur mit Zugangscode",
-    tagLabels: {
-      einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
-      spiel: "Spiel", tool: "Tool", jg5: "Jahrgang 5", jg6: "Jahrgang 6",
-      jg7: "Jahrgang 7", jg10: "Jahrgang 10", vertretung: "Vertretungsstunde"
-    },
     folders: { neueste: "Neueste", schule: "Schule", handball: "Handball", freizeit: "Freizeit" },
     subfolders: {
       mathematik: "Mathematik", arbeitslehre: "Arbeitslehre",
@@ -138,11 +137,8 @@ const I18N = {
     statPost: (n) => (n === 1 ? "post" : "posts"),
     statAreas: "areas",
     statNew: "new this month",
-    searchPlaceholder: "Search games, tools & posts…",
+    searchPlaceholder: "Search games & tools…",
     searchLabel: "Search posts",
-    recentTitle: "Recently opened",
-    clearRecent: "Clear history",
-    featuredTitle: "Featured",
     categoriesTitle: "Categories",
     newBadge: "New",
     home: "Home",
@@ -153,23 +149,25 @@ const I18N = {
     latestSub: "All posts from the last 30 days, sorted automatically — across every folder.",
     footer: "buildspace — built with HTML, CSS & JavaScript, hosted on GitHub Pages.",
     postCount: (n) => (n === 1 ? "1 post" : `${n} posts`),
-    themeToDark: "Enable dark mode",
-    themeToLight: "Enable light mode",
-    langSwitchTo: "Auf Deutsch wechseln",
-    langButtonLabel: "DE",
+    menuOpen: "Open menu",
+    menuClose: "Close menu",
+    searchOpen: "Open search",
+    searchClear: "Clear search",
+    navLabel: "Areas",
+    navAdmin: "Administration",
+    kollegenLabel: "Colleagues area",
+    kursmappeLabel: "Create course folder",
+    expandLabel: "Expand or collapse subfolders",
+    setTheme: "Appearance",
+    themeAuto: "Auto",
+    themeLight: "Light",
+    themeDark: "Dark",
+    setLang: "Language",
     dateLocale: "en-GB",
     favoritesTitle: "Favourites",
     favAdd: "Add to favourites",
     favRemove: "Remove from favourites",
-    tagFilterClear: "Clear filters",
-    tagFilterResults: (n) => (n === 1 ? "1 result" : `${n} results`),
-    tagFilterEmpty: "No results for this selection.",
     guestLocked: "Access code required",
-    tagLabels: {
-      einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Group",
-      spiel: "Game", tool: "Tool", jg5: "Grade 5", jg6: "Grade 6",
-      jg7: "Grade 7", jg10: "Grade 10", vertretung: "Substitute-friendly"
-    },
     folders: { neueste: "Latest", schule: "School", handball: "Handball", freizeit: "Leisure" },
     subfolders: {
       mathematik: "Mathematics", arbeitslehre: "Vocational Studies",
@@ -319,50 +317,6 @@ function renderPostList(list, opts) {
 }
 
 /* ---------------------------------------------------------
-   "Zuletzt geöffnet" — merkt sich lokal im Browser (localStorage),
-   welche Beiträge zuletzt angeklickt wurden, damit man z. B. über
-   mehrere Stunden hinweg dieselbe Klasse schnell wieder zum zuletzt
-   gezeigten Spiel zurückführen kann. Rein clientseitig, pro Gerät/
-   Browser — daher der gut sichtbare "Verlauf löschen"-Button, weil
-   das Gerät oft mit wechselnden Klassen genutzt wird.
---------------------------------------------------------- */
-const RECENT_KEY = "myhome_recent_urls_v1";
-const RECENT_MAX = 3;
-
-function getRecentUrls() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
-    return Array.isArray(raw) ? raw : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function recordRecent(url) {
-  if (!url) return;
-  try {
-    const current = getRecentUrls().filter((u) => u !== url);
-    current.unshift(url);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(current.slice(0, RECENT_MAX)));
-  } catch (e) {
-    /* localStorage kann in seltenen Fällen blockiert sein (privates
-       Fenster o. Ä.) — der Verlauf ist ein Komfortfeature, kein Muss. */
-  }
-}
-
-function clearRecent() {
-  try {
-    localStorage.removeItem(RECENT_KEY);
-  } catch (e) {}
-}
-
-function getRecentPosts() {
-  return getRecentUrls()
-    .map((url) => posts.find((p) => p.url === url))
-    .filter(Boolean);
-}
-
-/* ---------------------------------------------------------
    Favoriten — im Unterschied zu "Zuletzt geöffnet" eine bewusste,
    dauerhafte Auswahl per Stern-Symbol auf jeder Karte, unabhängig
    vom Verlauf. Ebenfalls rein lokal im Browser gespeichert.
@@ -402,30 +356,9 @@ function getFavoritePosts() {
     .filter(Boolean);
 }
 
-/* ---------------------------------------------------------
-   Tags — zusätzlich zur festen Ordnerstruktur (Kategorie/Unterkategorie)
-   können Beiträge in posts-data.js beliebige Tags bekommen, z. B.
-   Gruppengröße (Einzel-/Partner-/Gruppenarbeit), Beitragsart (Spiel/Tool)
-   oder Jahrgang. Auf der Startseite lassen sie sich als Filter-Chips
-   quer über alle Ordner hinweg an- und abwählen. TAG_ORDER legt nur die
-   Anzeige-Reihenfolge bekannter Tags fest — neue, dort nicht gelistete
-   Tags aus posts-data.js tauchen automatisch (alphabetisch hinten) mit
-   auf, auch ohne dass hier etwas ergänzt wird (dann allerdings ohne
-   übersetztes Label, siehe tagLabel()).
---------------------------------------------------------- */
-const TAG_ORDER = ["einzelarbeit", "partnerarbeit", "gruppenarbeit", "spiel", "tool", "jg5", "jg6"];
-
-function getAllTagIds() {
-  const used = new Set();
-  posts.forEach((p) => (p.tags || []).forEach((tg) => used.add(tg)));
-  const ordered = TAG_ORDER.filter((tg) => used.has(tg));
-  const extra = [...used].filter((tg) => !TAG_ORDER.includes(tg)).sort();
-  return [...ordered, ...extra];
-}
-
-function tagLabel(id) {
-  const labels = I18N[getLang()].tagLabels || {};
-  return labels[id] || id;
+/* Gast-Zugriff: nur Beiträge aus erlaubten Bereichen anzeigen. */
+function isPostAllowed(p) {
+  return window.Protect ? window.Protect.isCategoryAllowed(p.category) : true;
 }
 
 function renderTopLevel() {
@@ -447,157 +380,38 @@ function renderTopLevel() {
     locked: window.Protect ? !window.Protect.isCategoryAllowed(c.id) : false
   }));
 
-  // Im Gast-Zugriff dürfen Favoriten/Verlauf/Empfohlen aus gesperrten
-  // Bereichen (z. B. von einer früheren Anmeldung mit vollem Zugriff)
-  // nicht auf der Startseite auftauchen.
-  const isPostAllowed = (p) => (window.Protect ? window.Protect.isCategoryAllowed(p.category) : true);
-  const featured = posts.filter((p) => p.featured && isPostAllowed(p));
-  const recentPosts = getRecentPosts().filter(isPostAllowed);
+  // Im Gast-Zugriff dürfen Favoriten aus gesperrten Bereichen (z. B. von
+  // einer früheren Anmeldung mit vollem Zugriff) nicht auf der Startseite
+  // auftauchen.
   const favoritePosts = getFavoritePosts().filter(isPostAllowed);
-  const tagIds = getAllTagIds();
-  // Aktive Tag-Auswahl lebt nur innerhalb dieses Renders (wie das leere
-  // Suchfeld bei jedem Seitenaufruf) — kein eigener localStorage-Schlüssel.
-  const activeTags = new Set();
 
   content.innerHTML = `
-    <div class="home-search">
-      <svg class="home-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" id="site-search" class="home-search-input" placeholder="${escapeHtml(t("searchPlaceholder"))}" autocomplete="off" aria-label="${escapeHtml(t("searchLabel"))}">
-      <span class="home-search-hint" id="search-hint" aria-hidden="true">/</span>
-    </div>
     ${
-      tagIds.length
-        ? `<div class="tag-filter-row" id="tag-filter-row">
-             ${tagIds.map((id) => `<button type="button" class="tag-chip" data-tag="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(tagLabel(id))}</button>`).join("")}
-             <button type="button" class="tag-filter-clear" id="tag-filter-clear" hidden>${escapeHtml(t("tagFilterClear"))}</button>
-           </div>`
+      favoritePosts.length
+        ? `<h2 class="section-label section-label--favorites"><span aria-hidden="true">⭐</span> ${t("favoritesTitle")}</h2>${renderPostList(favoritePosts, { preserveOrder: true })}`
         : ""
     }
-    <div id="search-results" class="search-results" hidden></div>
-    <div id="home-normal">
-      ${
-        favoritePosts.length
-          ? `<h2 class="section-label section-label--favorites"><span aria-hidden="true">⭐</span> ${t("favoritesTitle")}</h2>${renderPostList(favoritePosts, { preserveOrder: true })}`
-          : ""
-      }
-      ${
-        recentPosts.length
-          ? `<div class="section-label-row">
-               <h2 class="section-label section-label--recent"><span aria-hidden="true">🕘</span> ${t("recentTitle")}</h2>
-               <button type="button" class="clear-recent-btn" id="clear-recent-btn">${t("clearRecent")}</button>
-             </div>
-             <div id="recent-list">${renderPostList(recentPosts, { preserveOrder: true })}</div>`
-          : ""
-      }
-      ${
-        featured.length
-          ? `<h2 class="section-label section-label--featured"><span class="sparkle" aria-hidden="true">✨</span> ${t("featuredTitle")}</h2>${renderPostList(featured, { featured: true })}`
-          : ""
-      }
-      <h2 class="section-label">${t("categoriesTitle")}</h2>
-      <div class="folder-grid">
-        ${cards
-          .map((c, i) =>
-            c.locked
-              ? `
-          <a class="folder-card is-disabled" href="${c.href}" style="--i:${i}" title="${escapeHtml(t("guestLocked"))}">
-            <span class="folder-icon icon-${c.id}">${c.icon}</span>
-            <h2>${folderLabel(c.id)}</h2>
-            <span class="folder-count folder-count--locked">${LOCK_GLYPH} ${escapeHtml(t("guestLocked"))}</span>
-          </a>`
-              : `
-          <a class="folder-card" href="${c.href}" style="--i:${i}">
-            <span class="folder-icon icon-${c.id}">${c.icon}</span>
-            <h2>${folderLabel(c.id)}</h2>
-            <span class="folder-count">${t("postCount")(c.count)}</span>
-          </a>`
-          )
-          .join("")}
-      </div>
+    <h2 class="section-label">${t("categoriesTitle")}</h2>
+    <div class="folder-grid">
+      ${cards
+        .map((c, i) =>
+          c.locked
+            ? `
+        <a class="folder-card is-disabled" href="${c.href}" style="--i:${i}" title="${escapeHtml(t("guestLocked"))}">
+          <span class="folder-icon icon-${c.id}">${c.icon}</span>
+          <h2>${folderLabel(c.id)}</h2>
+          <span class="folder-count folder-count--locked">${LOCK_GLYPH} ${escapeHtml(t("guestLocked"))}</span>
+        </a>`
+            : `
+        <a class="folder-card" href="${c.href}" style="--i:${i}">
+          <span class="folder-icon icon-${c.id}">${c.icon}</span>
+          <h2>${folderLabel(c.id)}</h2>
+          <span class="folder-count">${t("postCount")(c.count)}</span>
+        </a>`
+        )
+        .join("")}
     </div>
   `;
-
-  const searchInput = document.getElementById("site-search");
-  const searchResults = document.getElementById("search-results");
-  const homeNormal = document.getElementById("home-normal");
-  const searchHint = document.getElementById("search-hint");
-  const clearRecentBtn = document.getElementById("clear-recent-btn");
-  const tagFilterRow = document.getElementById("tag-filter-row");
-  const tagFilterClear = document.getElementById("tag-filter-clear");
-
-  if (clearRecentBtn) {
-    clearRecentBtn.addEventListener("click", () => {
-      clearRecent();
-      renderTopLevel();
-    });
-  }
-
-  if (searchHint) {
-    searchInput.addEventListener("focus", () => { searchHint.hidden = true; });
-    searchInput.addEventListener("blur", () => {
-      if (!searchInput.value) searchHint.hidden = false;
-    });
-  }
-
-  /* Text-Suche und Tag-Filter grenzen gemeinsam dieselbe Trefferliste
-     ein — beide unabhängig voneinander an- und abschaltbar, damit z. B.
-     "Bruch" + "Partnerarbeit" kombiniert werden kann. */
-  function updateFilteredView() {
-    const raw = searchInput.value.trim();
-    const q = raw.toLowerCase();
-    if (!q && activeTags.size === 0) {
-      searchResults.hidden = true;
-      searchResults.innerHTML = "";
-      homeNormal.hidden = false;
-      return;
-    }
-    homeNormal.hidden = true;
-    searchResults.hidden = false;
-    // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
-    // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
-    const matches = posts.filter((p0) => {
-      if (!isPostAllowed(p0)) return false;
-      const p = localizePost(p0);
-      const textMatch = !q || p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
-      const tagMatch = activeTags.size === 0 || [...activeTags].every((tg) => (p0.tags || []).includes(tg));
-      return textMatch && tagMatch;
-    });
-    if (!matches.length) {
-      searchResults.innerHTML = `<p class="empty-state">${q ? t("searchEmpty")(escapeHtml(raw)) : t("tagFilterEmpty")}</p>`;
-      return;
-    }
-    const heading = q ? t("searchResults")(matches.length, escapeHtml(raw)) : t("tagFilterResults")(matches.length);
-    searchResults.innerHTML = `<h2 class="section-label">${heading}</h2>${renderPostList(matches, { highlight: q ? raw : "" })}`;
-  }
-
-  searchInput.addEventListener("input", updateFilteredView);
-
-  if (tagFilterRow) {
-    tagFilterRow.querySelectorAll(".tag-chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        const id = chip.dataset.tag;
-        const wasActive = activeTags.has(id);
-        if (wasActive) activeTags.delete(id);
-        else activeTags.add(id);
-        chip.classList.toggle("is-active", !wasActive);
-        chip.setAttribute("aria-pressed", String(!wasActive));
-        if (tagFilterClear) tagFilterClear.hidden = activeTags.size === 0;
-        updateFilteredView();
-      });
-    });
-  }
-
-  if (tagFilterClear) {
-    tagFilterClear.addEventListener("click", () => {
-      activeTags.clear();
-      tagFilterRow.querySelectorAll(".tag-chip").forEach((chip) => {
-        chip.classList.remove("is-active");
-        chip.setAttribute("aria-pressed", "false");
-      });
-      tagFilterClear.hidden = true;
-      updateFilteredView();
-    });
-  }
 }
 
 function renderNeueste() {
@@ -1301,29 +1115,20 @@ function initHero() {
 }
 
 /* ---------------------------------------------------------
-   Dunkel-/Hellmodus-Umschalter oben rechts. Folgt standardmäßig der
-   Systemeinstellung (siehe style.css); ein Klick merkt sich eine
-   bewusste Wahl in localStorage und überschreibt das per data-theme
-   auf <html>, bis der Umschalter erneut betätigt wird.
+   Einstellungen in der Seitenleiste: Darstellung (Auto/Hell/Dunkel)
+   und Sprache (DE/EN). "Auto" folgt der Systemeinstellung (siehe
+   style.css); Hell/Dunkel merken sich eine bewusste Wahl in
+   localStorage und setzen sie per data-theme auf <html>.
 --------------------------------------------------------- */
 const THEME_KEY = "myhome_theme";
-const SUN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
-const MOON_GLYPH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.7 14.9A8.7 8.7 0 0 1 9.1 3.3a.6.6 0 0 0-.7-.8A9.9 9.9 0 1 0 21.5 15.6a.6.6 0 0 0-.8-.7z"/></svg>';
 
 function getStoredTheme() {
   try {
-    return localStorage.getItem(THEME_KEY);
+    const v = localStorage.getItem(THEME_KEY);
+    return v === "light" || v === "dark" ? v : null;
   } catch (e) {
     return null;
   }
-}
-
-function getSystemTheme() {
-  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function getEffectiveTheme() {
-  return getStoredTheme() || getSystemTheme();
 }
 
 function applyThemeAttribute(theme) {
@@ -1334,69 +1139,260 @@ function applyThemeAttribute(theme) {
   }
 }
 
-function updateThemeToggleUI() {
-  const btn = document.getElementById("theme-toggle");
-  if (!btn) return;
-  const effective = getEffectiveTheme();
-  const label = effective === "dark" ? t("themeToLight") : t("themeToDark");
-  btn.setAttribute("aria-label", label);
-  btn.title = label;
-  btn.innerHTML = effective === "dark" ? SUN_GLYPH : MOON_GLYPH;
-}
-
-function toggleTheme() {
-  const next = getEffectiveTheme() === "dark" ? "light" : "dark";
-  setThemeStorage(next);
-  applyThemeAttribute(next);
-  updateThemeToggleUI();
-}
-
-function setThemeStorage(theme) {
+function setThemeMode(mode) {
   try {
-    localStorage.setItem(THEME_KEY, theme);
+    if (mode === "light" || mode === "dark") localStorage.setItem(THEME_KEY, mode);
+    else localStorage.removeItem(THEME_KEY);
   } catch (e) {}
+  applyThemeAttribute(mode === "light" || mode === "dark" ? mode : null);
+  updateSettingsUI();
 }
 
-function initTheme() {
+function updateSettingsUI() {
+  const mode = getStoredTheme() || "auto";
+  document.querySelectorAll("[data-theme-set]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.themeSet === mode));
+  });
+  const lang = getLang();
+  document.querySelectorAll("[data-lang-set]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.langSet === lang));
+  });
+  const txt = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+  txt("set-theme-label", "setTheme");
+  txt("set-lang-label", "setLang");
+  const setBtnText = (sel, key) => { const el = document.querySelector(sel); if (el) el.textContent = t(key); };
+  setBtnText('[data-theme-set="auto"]', "themeAuto");
+  setBtnText('[data-theme-set="light"]', "themeLight");
+  setBtnText('[data-theme-set="dark"]', "themeDark");
+  const menuBtn = document.getElementById("menu-toggle");
+  if (menuBtn) menuBtn.setAttribute("aria-label", t("menuOpen"));
+  const closeBtn = document.getElementById("sidebar-close");
+  if (closeBtn) closeBtn.setAttribute("aria-label", t("menuClose"));
+  const searchFab = document.getElementById("search-fab");
+  if (searchFab) searchFab.setAttribute("aria-label", t("searchOpen"));
+  const clearBtn = document.getElementById("side-search-clear");
+  if (clearBtn) clearBtn.setAttribute("aria-label", t("searchClear"));
+  const input = document.getElementById("site-search");
+  if (input) {
+    input.setAttribute("placeholder", t("searchPlaceholder"));
+    input.setAttribute("aria-label", t("searchLabel"));
+  }
+  document.documentElement.lang = lang;
+}
+
+function initSettings() {
   applyThemeAttribute(getStoredTheme());
-  updateThemeToggleUI();
-  const btn = document.getElementById("theme-toggle");
-  if (btn) btn.addEventListener("click", toggleTheme);
+  updateSettingsUI();
+  document.querySelectorAll("[data-theme-set]").forEach((b) => {
+    b.addEventListener("click", () => setThemeMode(b.dataset.themeSet));
+  });
+  document.querySelectorAll("[data-lang-set]").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (b.dataset.langSet === getLang()) return;
+      setLang(b.dataset.langSet);
+      updateSettingsUI();
+      initHero();
+      renderSidebarNav();
+      renderSidebarResults();
+      render();
+    });
+  });
 }
 
 /* ---------------------------------------------------------
-   Sprachumschalter oben rechts (DE/EN) — siehe I18N weiter oben.
-   Ändert nur die Oberflächensprache dieser Startseite/SPA; die
-   einzelnen Spiel-/Tool-Seiten bleiben deutsch.
+   Seitenleiste: Menü über alle Bereiche, Suche, Einstellungen.
+   Gleitet als Glas-Fläche über die Inhalte (Schließen per Esc, Klick
+   daneben, Schließen-Knopf oder Navigation). "/" öffnet sie mit
+   fokussierter Suche.
 --------------------------------------------------------- */
-function updateLangToggleUI() {
-  const btn = document.getElementById("lang-toggle");
-  const labelEl = document.getElementById("lang-toggle-label");
-  if (!btn) return;
-  const label = t("langSwitchTo");
-  btn.setAttribute("aria-label", label);
-  btn.title = label;
-  if (labelEl) labelEl.textContent = t("langButtonLabel");
-  document.documentElement.lang = getLang();
+const HOME_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.5 10v9.5h4.6v-5.2h3.8v5.2h4.6V10"/></svg>';
+const ADMIN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const CHEVRON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
+
+const sidebarEl = document.getElementById("sidebar");
+const sidebarNavEl = document.getElementById("sidebar-nav");
+const sideResultsEl = document.getElementById("side-results");
+const searchInputEl = document.getElementById("site-search");
+const searchClearEl = document.getElementById("side-search-clear");
+const openGroups = new Set();
+
+function isSidebarOpen() {
+  return document.documentElement.classList.contains("sidebar-open");
 }
 
-function toggleLang() {
-  setLang(getLang() === "de" ? "en" : "de");
-  updateLangToggleUI();
-  updateThemeToggleUI();
-  initHero();
-  render();
+function openSidebar(focusSearch) {
+  document.documentElement.classList.add("sidebar-open");
+  sidebarEl.setAttribute("aria-hidden", "false");
+  const toggle = document.getElementById("menu-toggle");
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
+  renderSidebarNav();
+  // Auf Touch-Geräten würde ein Autofokus sofort die Tastatur einblenden —
+  // deshalb nur, wenn ausdrücklich die Suche gewünscht ist.
+  setTimeout(() => {
+    if (focusSearch && searchInputEl) searchInputEl.focus();
+    else {
+      sidebarEl.focus({ preventScroll: true });
+    }
+  }, 60);
 }
 
-function initLang() {
-  updateLangToggleUI();
-  const btn = document.getElementById("lang-toggle");
-  if (btn) btn.addEventListener("click", toggleLang);
+function closeSidebar(returnFocus) {
+  if (!isSidebarOpen()) return;
+  document.documentElement.classList.remove("sidebar-open");
+  sidebarEl.setAttribute("aria-hidden", "true");
+  const toggle = document.getElementById("menu-toggle");
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", "false");
+    if (returnFocus) toggle.focus({ preventScroll: true });
+  }
+}
+
+function currentSegments() {
+  return parseHash();
+}
+
+function sideIcon(id) {
+  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : MINI_ICONS[id] || "";
+  return `<span class="side-ico side-ico--${id}" aria-hidden="true">${glyph}</span>`;
+}
+
+function renderSidebarNav() {
+  if (!sidebarNavEl) return;
+  const seg = currentSegments();
+  const route = seg.join("/");
+  const lockOf = (id) => (window.Protect ? !window.Protect.isCategoryAllowed(id) : false);
+  const lockMark = (id) => (lockOf(id) ? `<span class="side-lock" aria-hidden="true">${LOCK_GLYPH}</span>` : "");
+  const cls = (active, locked) => "side-link" + (active ? " is-active" : "") + (locked ? " is-locked" : "");
+  const cur = (active) => (active ? ' aria-current="page"' : "");
+
+  let html = "";
+  html += `<div class="side-row"><a class="${cls(route === "", false)}" href="#/"${cur(route === "")}>${sideIcon("home")}<span class="side-text">${escapeHtml(t("home"))}</span></a></div>`;
+  const newCount = posts.filter((p) => isWithinLast30Days(p.date)).length;
+  html += `<div class="side-row"><a class="${cls(route === "neueste", lockOf("neueste"))}" href="#/neueste"${cur(route === "neueste")}>${sideIcon("neueste")}<span class="side-text">${escapeHtml(folderLabel("neueste"))}</span>${lockMark("neueste")}<span class="side-count">${newCount}</span></a></div>`;
+
+  Object.entries(folderStructure).forEach(([id, f]) => {
+    const subs = f.subfolders
+      .map((sf) => ({ id: sf.id, count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length }))
+      .filter((s2) => s2.count > 0);
+    const total = posts.filter((p) => p.category === id).length;
+    const active = seg[0] === id;
+    if (active) openGroups.add(id);
+    const open = openGroups.has(id);
+    const locked = lockOf(id);
+    html += `<div class="side-group${open ? " is-open" : ""}" data-group="${id}">
+      <div class="side-row">
+        <a class="${cls(active && seg.length === 1, locked)}" href="#/${id}"${cur(active && seg.length === 1)}>${sideIcon(id)}<span class="side-text">${escapeHtml(folderLabel(id))}</span>${lockMark(id)}<span class="side-count">${total}</span></a>
+        ${subs.length ? `<button type="button" class="side-expand" data-expand="${id}" aria-expanded="${open}" aria-label="${escapeHtml(t("expandLabel"))}">${CHEVRON_GLYPH}</button>` : ""}
+      </div>
+      ${subs.length ? `<div class="side-sub"><div>${subs.map((s2) => {
+        const a2 = active && seg[1] === s2.id;
+        return `<a class="side-sublink${a2 ? " is-active" : ""}" href="#/${id}/${s2.id}"${cur(a2)}><span class="side-text">${escapeHtml(subfolderLabel(s2.id))}</span><span class="side-count">${s2.count}</span></a>`;
+      }).join("")}</div></div>` : ""}
+    </div>`;
+  });
+
+  html += `<div class="side-label" id="side-admin-label" style="display:none">${escapeHtml(t("navAdmin"))}</div>`;
+  html += `<div class="side-row"><a class="${cls(route === "kollegen" || route.startsWith("kollegen/"), false)}" href="#/kollegen" id="kollegen-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kollegenLabel"))}</span></a></div>`;
+  html += `<div class="side-row"><a class="${cls(route === "kursmappe-erstellen", false)}" href="#/kursmappe-erstellen" id="kursmappe-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kursmappeLabel"))}</span></a></div>`;
+  sidebarNavEl.innerHTML = html;
+  updateAdminNavLinks();
+}
+
+function renderSidebarResults() {
+  if (!sideResultsEl || !searchInputEl) return;
+  const raw = searchInputEl.value.trim();
+  const q = raw.toLowerCase();
+  if (searchClearEl) searchClearEl.hidden = !searchInputEl.value;
+  if (!q) {
+    sideResultsEl.hidden = true;
+    sideResultsEl.innerHTML = "";
+    sidebarNavEl.hidden = false;
+    return;
+  }
+  sidebarNavEl.hidden = true;
+  sideResultsEl.hidden = false;
+  // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
+  // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
+  const matches = posts
+    .filter((p0) => {
+      if (!isPostAllowed(p0)) return false;
+      const p = localizePost(p0);
+      return p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!matches.length) {
+    sideResultsEl.innerHTML = `<p class="side-empty">${t("searchEmpty")(escapeHtml(raw))}</p>`;
+    return;
+  }
+  sideResultsEl.innerHTML =
+    `<p class="side-result-count">${t("searchResults")(matches.length, escapeHtml(raw))}</p>` +
+    matches
+      .map((p0) => {
+        const p = localizePost(p0);
+        const isExternal = /^https?:\/\//i.test(p.url);
+        const attrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
+        const where = [folderStructure[p.category] ? folderLabel(p.category) : p.category, p.subcategory ? subfolderLabel(p.subcategory) : ""].filter(Boolean).join(" · ");
+        const emoji = p.emoji ? escapeHtml(p.emoji) : "";
+        return `<a class="side-result" href="${escapeHtml(p.url)}"${attrs}>
+          <span class="side-result-emoji" aria-hidden="true">${emoji || `<span class="icon-badge icon-badge--${p.category}">${MINI_ICONS[p.category] || ""}</span>`}</span>
+          <span><b>${highlightMatch(p.title, raw)}</b><small>${escapeHtml(where)}</small></span>
+        </a>`;
+      })
+      .join("");
+}
+
+function initSidebar() {
+  const toggle = document.getElementById("menu-toggle");
+  const searchFab = document.getElementById("search-fab");
+  const closeBtn = document.getElementById("sidebar-close");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (!sidebarEl) return;
+
+  toggle.addEventListener("click", () => (isSidebarOpen() ? closeSidebar(true) : openSidebar(false)));
+  searchFab.addEventListener("click", () => openSidebar(true));
+  closeBtn.addEventListener("click", () => closeSidebar(true));
+  backdrop.addEventListener("click", () => closeSidebar(false));
+
+  // Navigation (innere Links) schließt die Leiste — auch wenn nur der
+  // Hash gleich bleibt (z. B. erneuter Klick auf "Start").
+  sidebarEl.addEventListener("click", (e) => {
+    const expand = e.target.closest("[data-expand]");
+    if (expand) {
+      const id = expand.dataset.expand;
+      const grp = expand.closest(".side-group");
+      const open = !grp.classList.contains("is-open");
+      grp.classList.toggle("is-open", open);
+      expand.setAttribute("aria-expanded", String(open));
+      if (open) openGroups.add(id);
+      else openGroups.delete(id);
+      return;
+    }
+    const link = e.target.closest("a[href]");
+    if (link) closeSidebar(false);
+  });
+
+  searchInputEl.addEventListener("input", renderSidebarResults);
+  searchInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const first = sideResultsEl.querySelector("a.side-result");
+      if (first) first.click();
+    }
+  });
+  searchClearEl.addEventListener("click", () => {
+    searchInputEl.value = "";
+    renderSidebarResults();
+    searchInputEl.focus();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isSidebarOpen()) closeSidebar(true);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  initLang();
+  initSettings();
+  initSidebar();
+  renderSidebarNav();
   initHero();
 });
 
@@ -1448,8 +1444,15 @@ function updateAdminNavLinks() {
   const access = window.Protect ? window.Protect.getAccess() : null;
   const kollegenLink = document.getElementById("kollegen-nav-link");
   const kursmappeLink = document.getElementById("kursmappe-nav-link");
-  if (kollegenLink) kollegenLink.style.display = access === "full" || access === "kollegen" ? "" : "none";
-  if (kursmappeLink) kursmappeLink.style.display = access === "full" ? "" : "none";
+  const showKollegen = access === "full" || access === "kollegen";
+  const showKursmappe = access === "full";
+  const row = (el) => el && el.parentElement;
+  if (row(kollegenLink)) row(kollegenLink).style.display = showKollegen ? "" : "none";
+  if (row(kursmappeLink)) row(kursmappeLink).style.display = showKursmappe ? "" : "none";
+  if (kollegenLink) kollegenLink.style.display = showKollegen ? "" : "none";
+  if (kursmappeLink) kursmappeLink.style.display = showKursmappe ? "" : "none";
+  const label = document.getElementById("side-admin-label");
+  if (label) label.style.display = showKollegen || showKursmappe ? "" : "none";
 }
 
 function render() {
@@ -1463,8 +1466,9 @@ function render() {
      DOMContentLoaded-Render darf dieses Anmeldefenster nicht wegschließen,
      bevor sich jemand für Passwort oder Gast entschieden hat. */
   if (window.Protect && window.Protect.getAccess()) window.Protect.closeOverlay();
-  updateAdminNavLinks();
   const segments = parseHash();
+  document.documentElement.classList.toggle("is-home", segments.length === 0);
+  renderSidebarNav();
   if (!isAllowedRoute(segments)) {
     if (window.Protect && window.Protect.isVertretungMode && window.Protect.isVertretungMode()) {
       location.hash = "#/vertretung";
@@ -1501,7 +1505,7 @@ window.addEventListener("DOMContentLoaded", render);
    per Event-Delegation, damit es auch nach jedem Neu-Rendern (Routing)
    ohne erneutes Binden funktioniert. */
 function updateGlassHighlight(x, y, target) {
-  const el = target.closest(".folder-card, .post-card");
+  const el = target.closest(".folder-card, .post-card, .mp-card, .ct-card, .hero-inner, .sidebar, .side-link, .side-result");
   if (!el) return;
   const r = el.getBoundingClientRect();
   el.style.setProperty("--mx", ((x - r.left) / r.width) * 100 + "%");
@@ -1517,20 +1521,6 @@ document.addEventListener(
   },
   { passive: true }
 );
-
-/* Merkt sich per Klick auf eine Beitragskarte den Verlauf für "Zuletzt
-   geöffnet" — per Event-Delegation, damit es unabhängig davon greift,
-   welche Liste gerade gerendert ist (Neueste, Kategorie, Suche, …). */
-document.addEventListener("click", (e) => {
-  const link = e.target.closest(".post-card-link");
-  if (!link) return;
-  // Während einer Freigabe (Kursmappe/Vertretungsstunde) hängt an jedem
-  // Link zusätzlich deren Kennung dran (siehe renderPostList) — im
-  // Verlauf soll aber weiterhin die reine Beitrags-URL landen, damit sie
-  // sich mit posts-data.js abgleichen lässt.
-  const href = (link.getAttribute("href") || "").split("?")[0];
-  recordRecent(href);
-});
 
 /* Stern-Symbol auf jeder Karte: Favorit an/aus. Liegt als eigenständiges
    Element NEBEN dem Karten-Link (nicht darin verschachtelt), daher ohne
@@ -1574,15 +1564,14 @@ document.addEventListener("click", (e) => {
     .catch(() => alert("Zurücksetzen fehlgeschlagen — bitte später erneut versuchen."));
 });
 
-/* Tastaturkürzel "/" springt ins Suchfeld auf der Startseite — nur wenn
-   gerade nicht ohnehin in einem Eingabefeld getippt wird. */
+/* Tastaturkürzel "/" öffnet die Seitenleiste mit fokussierter Suche — nur
+   wenn gerade nicht ohnehin in einem Eingabefeld getippt wird. */
 document.addEventListener("keydown", (e) => {
   if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
   const active = document.activeElement;
   const isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
   if (isTyping) return;
-  const searchInput = document.getElementById("site-search");
-  if (!searchInput) return;
+  if (document.documentElement.classList.contains("share-mode") || document.documentElement.classList.contains("embed-mode")) return;
   e.preventDefault();
-  searchInput.focus();
+  openSidebar(true);
 });

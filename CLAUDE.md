@@ -8,8 +8,9 @@ Reines HTML/CSS/JS, **kein Framework, kein Build-Schritt**. Was im Repo liegt, i
 
 - `index.html` – Startseite, lädt `posts-data.js` und danach `app.js`
 - `posts-data.js` – **die** Liste aller Beiträge (`const posts = [ … ]`). Jede Karte auf der Seite kommt von hier.
-- `app.js` – Ordner-Navigation, Suche, Tag-Filter, Übersetzungen (`I18N`)
+- `app.js` – Routing, Seitenleiste (Menü, Suche, Einstellungen), Ordner-Navigation, Übersetzungen (`I18N`)
 - `protect.js` – Login/Schutz für Classroom Management (Firebase)
+- `style.css` – Liquid-Glass-Design: gemeinsame Glas-Oberfläche für alle Bausteine (Selektorliste „Glas-Oberfläche“ ganz oben), Seitenleiste, Aurora-Hintergrund
 - Tool-/Spielseiten liegen als einzelne `.html`-Dateien **im Root** (z. B. `hallenplan.html`, `minigolf-winkel.html`)
 
 ## Standardaufgabe: neues Tool / neuen Beitrag einstellen
@@ -42,7 +43,7 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
   - `freizeit` → `subcategory: null`
 - `tags` (optional): `spiel` oder `tool`; Gruppengröße `einzelarbeit` | `partnerarbeit` | `gruppenarbeit`; `vertretung` = ohne Lehrkraft selbsterklärend nutzbar; `jg5`–`jg10` **nur**, wenn das Tool eindeutig für einen Jahrgang gedacht ist – nicht raten.
 - `titleEn` / `excerptEn` immer mitliefern.
-- `featured: true` **nur**, wenn Marc es ausdrücklich will.
+- `featured: true` hat seit dem Liquid-Glass-Umbau keine sichtbare Wirkung mehr (Bereich „Empfohlen“ und Tag-Filter wurden entfernt); nicht setzen.
 - Externe Links: `url` ist die volle https-Adresse, im `excerpt` am Ende „(Externe Seite, …)“ vermerken.
 
 Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
