@@ -61,9 +61,9 @@
 
     /* Himmel */
     var sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, "#02030A");
-    sky.addColorStop(0.55, "#04061A");
-    sky.addColorStop(1, "#070B22");
+    sky.addColorStop(0, "#020203");
+    sky.addColorStop(0.55, "#030304");
+    sky.addColorStop(1, "#010101");
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
 
@@ -82,8 +82,8 @@
       var core = 1 - Math.min(1, Math.abs(t) / (diag * 0.6));
       var al = 0.03 + 0.036 * core;
       g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, "rgba(176,196,255," + al + ")");
-      g.addColorStop(1, "rgba(176,196,255,0)");
+      g.addColorStop(0, "rgba(205,205,208," + al + ")");
+      g.addColorStop(1, "rgba(205,205,208,0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
@@ -92,8 +92,8 @@
       x = cx + dx * t + px * gauss(r) * bandW * 0.2; y = cy + dy * t + py * gauss(r) * bandW * 0.2;
       rad = diag * (0.04 + r() * 0.07);
       g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, "rgba(255,238,215,0.05)");
-      g.addColorStop(1, "rgba(255,238,215,0)");
+      g.addColorStop(0, "rgba(240,240,240,0.055)");
+      g.addColorStop(1, "rgba(240,240,240,0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
@@ -103,8 +103,8 @@
       x = cx + dx * t + px * gauss(r) * bandW * 0.35; y = cy + dy * t + py * gauss(r) * bandW * 0.35;
       rad = diag * (0.025 + r() * 0.06);
       g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, "rgba(2,3,10,0.34)");
-      g.addColorStop(1, "rgba(2,3,10,0)");
+      g.addColorStop(0, "rgba(0,0,0,0.38)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
@@ -120,7 +120,7 @@
       var sz = r() < 0.04 ? 0.9 + r() * 0.9 : 0.25 + r() * 0.55;
       var a = 0.25 + r() * 0.7;
       var warm = r();
-      ctx.fillStyle = warm < 0.18 ? "rgba(255,226,196," + a + ")" : warm < 0.34 ? "rgba(190,210,255," + a + ")" : "rgba(255,255,255," + a + ")";
+      ctx.fillStyle = warm < 0.3 ? "rgba(215,215,215," + a + ")" : "rgba(255,255,255," + a + ")";
       ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.2832); ctx.fill();
       if (sz > 1) {
         g = ctx.createRadialGradient(x, y, 0, x, y, sz * 5);
@@ -138,114 +138,118 @@
   }
 
   /* Ferner Gasplanet, nur zum Teil am rechten oberen Rand sichtbar,
-     von links oben angestrahlt (heller Sichelrand). */
+     von links oben angestrahlt (heller Sichelrand) — rein grau. */
   function drawGasPlanet(w, h) {
-    var m = Math.min(w, h), R = m * 0.17;
-    var cx = w * 0.985, cy = h * 0.19;
+    var m = Math.min(w, h), R = m * 0.14;
+    var cx = w * 0.99, cy = h * 0.17;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.clip();
     var base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
-    var bands = ["#2a3042", "#3b4256", "#2c3245", "#464d63", "#30374a", "#3d4459", "#272d3f"];
+    var bands = ["#161616", "#262626", "#1a1a1a", "#303030", "#1d1d1d", "#292929", "#141414"];
     bands.forEach(function (c, k) { base.addColorStop(k / (bands.length - 1), c); });
     ctx.fillStyle = base; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     var lit = ctx.createRadialGradient(cx - R * 0.55, cy - R * 0.5, R * 0.1, cx - R * 0.2, cy - R * 0.1, R * 1.35);
-    lit.addColorStop(0, "rgba(255,255,255,0.1)");
-    lit.addColorStop(0.45, "rgba(0,0,6,0.15)");
-    lit.addColorStop(1, "rgba(0,0,6,0.92)");
+    lit.addColorStop(0, "rgba(255,255,255,0.12)");
+    lit.addColorStop(0.45, "rgba(0,0,0,0.2)");
+    lit.addColorStop(1, "rgba(0,0,0,0.94)");
     ctx.fillStyle = lit; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     ctx.restore();
     var rim = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.12);
-    rim.addColorStop(0, "rgba(190,210,255,0)");
-    rim.addColorStop(0.45, "rgba(190,210,255,0.3)");
-    rim.addColorStop(1, "rgba(190,210,255,0)");
+    rim.addColorStop(0, "rgba(255,255,255,0)");
+    rim.addColorStop(0.45, "rgba(255,255,255,0.22)");
+    rim.addColorStop(1, "rgba(255,255,255,0)");
     ctx.globalCompositeOperation = "lighter";
     ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(cx, cy, R * 1.12, 0, 6.2832); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.28)"; ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.arc(cx, cy, R * 0.995, Math.PI * 0.82, Math.PI * 1.45); ctx.stroke();
     ctx.globalCompositeOperation = "source-over";
   }
 
   /* Kleiner Mond mit heller Sichel */
   function drawMoon(w, h) {
-    var m = Math.min(w, h), R = m * 0.03;
-    var cx = w * 0.2, cy = h * 0.27;
+    var m = Math.min(w, h), R = m * 0.022;
+    var cx = w * 0.14, cy = h * 0.2;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.clip();
     var g = ctx.createRadialGradient(cx + R * 0.55, cy - R * 0.35, R * 0.1, cx + R * 0.2, cy, R * 1.5);
-    g.addColorStop(0, "#d9dce6"); g.addColorStop(0.5, "#6a6f80"); g.addColorStop(1, "#05060c");
+    g.addColorStop(0, "#d8d8d8"); g.addColorStop(0.5, "#5a5a5a"); g.addColorStop(1, "#000");
     ctx.fillStyle = g; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     ctx.restore();
     var glow = ctx.createRadialGradient(cx, cy, R, cx, cy, R * 3);
-    glow.addColorStop(0, "rgba(200,210,235,0.16)"); glow.addColorStop(1, "rgba(200,210,235,0)");
+    glow.addColorStop(0, "rgba(230,230,230,0.12)"); glow.addColorStop(1, "rgba(230,230,230,0)");
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 3, 0, 6.2832); ctx.fill();
   }
 
-  /* Die Erde bei Nacht: großer Bogen am unteren Rand, dunkle Ozeane,
-     leuchtende Städte auf den Kontinenten, dünner Atmosphärenrand. */
+  /* Die Erde bei Nacht (Schwarzweiß, nach Referenzbild): ein großer Bogen
+     mit dünnem, hellem Atmosphärenrand, dunklen Ozeanen und Kontinenten,
+     deren Umrisse nur durch die Lichter der Städte erkennbar sind. Die
+     Lichter dünnen nach unten aus, der Rest bleibt tiefschwarz. */
   function drawEarth(w, h) {
     var portraitMode = h > w * 1.1;
-    var R = portraitMode ? h * 0.9 : Math.max(w * 0.85, h);
-    var cx = portraitMode ? w * 0.5 : w * 0.3;
-    var cy = h + R * (portraitMode ? 0.74 : 0.7);
+    var R = portraitMode ? w * 1.02 : w * 0.64;
+    var cx = w * 0.5;
+    var top = h * (portraitMode ? 0.5 : 0.62);
+    var cy = top + R;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.clip();
 
-    var sea = ctx.createRadialGradient(cx - R * 0.1, cy - R * 0.92, R * 0.02, cx, cy, R);
-    sea.addColorStop(0, "#0a1a3a");
-    sea.addColorStop(0.18, "#061029");
-    sea.addColorStop(1, "#02040c");
+    var sea = ctx.createLinearGradient(0, top, 0, top + R * 0.9);
+    sea.addColorStop(0, "#101010");
+    sea.addColorStop(0.35, "#060606");
+    sea.addColorStop(1, "#000000");
     ctx.fillStyle = sea; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
 
-    // schwache Wolkenschleier
-    ctx.globalCompositeOperation = "lighter";
-    var r = rng(77);
-    for (var c = 0; c < 18; c++) {
-      var x = r() * w, y = h * (0.66 + r() * 0.34), rad = 60 + r() * 160;
-      var cg = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      cg.addColorStop(0, "rgba(150,175,230,0.02)"); cg.addColorStop(1, "rgba(150,175,230,0)");
-      ctx.fillStyle = cg; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
-    }
-
-    // Städtelichter: nur auf "Land", dichter in Clustern
-    var minY = cy - R, attempts = Math.round(w * (h - minY) * 0.5);
-    var sc = 0.0042 * (R / 900 + 0.35);
-    var warm = ["255,214,140", "255,196,112", "255,236,196", "255,176,96"];
+    var depth = R * 0.7;
+    var attempts = Math.round(w * R * 0.85);
     var rr = rng(4242);
+    ctx.globalCompositeOperation = "lighter";
     for (var k = 0; k < attempts; k++) {
-      var px = rr() * w, py = minY + rr() * (h - minY);
+      var px = rr() * w, py = top + rr() * depth;
       var ddx = px - cx, ddy = py - cy;
-      if (ddx * ddx + ddy * ddy > R * R * 0.992) continue;
-      var land = fbm(px * sc, py * sc * 1.15, 3);
+      if (ddx * ddx + ddy * ddy > R * R * 0.994) continue;
+      var land = fbm(px * 0.0042, py * 0.0046, 3);
       if (land < 0.5) continue;
-      var dens = fbm(px * sc * 3.4 + 40, py * sc * 3.4, 9);
-      if (rr() > dens * dens * 1.5) continue;
-      var al = 0.25 + rr() * 0.6;
-      ctx.fillStyle = "rgba(" + warm[(rr() * warm.length) | 0] + "," + al + ")";
-      var s = 0.35 + rr() * 0.7;
+      var dens = fbm(px * 0.012 + 40, py * 0.012, 9);
+      var fade = Math.pow(Math.max(0, 1 - (py - top) / depth), 0.85);
+      if (rr() > dens * dens * 0.85 * fade) continue;
+      var al = 0.16 + rr() * 0.5;
+      var tone = 215 + ((rr() * 40) | 0);
+      ctx.fillStyle = "rgba(" + tone + "," + tone + "," + tone + "," + al + ")";
+      var s = 0.3 + rr() * 0.55;
       ctx.beginPath(); ctx.arc(px, py, s, 0, 6.2832); ctx.fill();
-      if (dens > 0.6 && rr() < 0.012) {
-        var gr = 7 + rr() * 14;
+      if (dens > 0.66 && rr() < 0.004) {
+        var gr = 6 + rr() * 14;
         var gg = ctx.createRadialGradient(px, py, 0, px, py, gr);
-        gg.addColorStop(0, "rgba(255,200,120,0.2)"); gg.addColorStop(1, "rgba(255,200,120,0)");
+        gg.addColorStop(0, "rgba(255,255,255,0.1)"); gg.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = gg; ctx.fillRect(px - gr, py - gr, gr * 2, gr * 2);
       }
     }
-
-    // Sonnenaufgangs-Schimmer an der Kante
-    var dawn = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R);
-    dawn.addColorStop(0, "rgba(120,170,255,0)"); dawn.addColorStop(0.8, "rgba(120,170,255,0)"); dawn.addColorStop(1, "rgba(140,185,255,0.38)");
-    ctx.fillStyle = dawn; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+    // helles Band entlang des Randes (Streulicht der Atmosphäre)
+    var edge = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R);
+    edge.addColorStop(0, "rgba(255,255,255,0)");
+    edge.addColorStop(0.78, "rgba(255,255,255,0)");
+    edge.addColorStop(1, "rgba(255,255,255,0.3)");
+    ctx.fillStyle = edge; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     ctx.restore();
+    ctx.globalCompositeOperation = "lighter";
 
-    // Atmosphäre außen
-    var atm = ctx.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * 1.035);
-    atm.addColorStop(0, "rgba(120,170,255,0)");
-    atm.addColorStop(0.53, "rgba(120,170,255,0.45)");
-    atm.addColorStop(0.78, "rgba(100,150,255,0.14)");
-    atm.addColorStop(1, "rgba(100,150,255,0)");
-    ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(cx, cy, R * 1.035, 0, 6.2832); ctx.fill();
-    ctx.strokeStyle = "rgba(190,215,255,0.5)"; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.arc(cx, cy, R * 0.9985, Math.PI * 1.12, Math.PI * 1.92); ctx.stroke();
+    // Atmosphäre außen: weicher Schein + dünne helle Linie, oben am stärksten
+    var atm = ctx.createRadialGradient(cx, cy, R * 0.97, cx, cy, R * 1.04);
+    atm.addColorStop(0, "rgba(255,255,255,0)");
+    atm.addColorStop(0.4, "rgba(255,255,255,0.4)");
+    atm.addColorStop(0.7, "rgba(255,255,255,0.1)");
+    atm.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(cx, cy, R * 1.04, 0, 6.2832); ctx.fill();
+    ctx.save();
+    ctx.shadowBlur = 12; ctx.shadowColor = "rgba(255,255,255,0.8)";
+    var rimG = ctx.createLinearGradient(0, top, w, top);
+    rimG.addColorStop(0, "rgba(255,255,255,0.15)");
+    rimG.addColorStop(0.35, "rgba(255,255,255,0.75)");
+    rimG.addColorStop(0.65, "rgba(255,255,255,0.55)");
+    rimG.addColorStop(1, "rgba(255,255,255,0.15)");
+    ctx.strokeStyle = rimG; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.9985, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+    ctx.restore();
     ctx.globalCompositeOperation = "source-over";
   }
 

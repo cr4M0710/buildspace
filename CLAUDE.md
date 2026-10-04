@@ -10,7 +10,7 @@ Reines HTML/CSS/JS, **kein Framework, kein Build-Schritt**. Was im Repo liegt, i
 - `posts-data.js` – **die** Liste aller Beiträge (`const posts = [ … ]`). Jede Karte auf der Seite kommt von hier.
 - `app.js` – Routing, Seitenleiste (Menü, Suche, Einstellungen), Ordner-Navigation, Übersetzungen (`I18N`)
 - `protect.js` – Login/Schutz für Classroom Management (Firebase)
-- `style.css` – Liquid-Glass-Design: gemeinsame Glas-Oberfläche für alle Bausteine (Selektorliste „Glas-Oberfläche“ ganz oben), Seitenleiste, Aurora-Hintergrund
+- `style.css` – Liquid-Glass-Design: gemeinsame Glas-Oberfläche für alle Bausteine (Selektorliste „Glas-Oberfläche“ ganz oben), Seitenleiste; `space.js` malt den Weltraum-Hintergrund, `stars.js` die Sternschnuppen
 - Tool-/Spielseiten liegen als einzelne `.html`-Dateien **im Root** (z. B. `hallenplan.html`, `minigolf-winkel.html`)
 
 ## Standardaufgabe: neues Tool / neuen Beitrag einstellen

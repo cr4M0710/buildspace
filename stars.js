@@ -65,7 +65,7 @@
     lastT = now;
     ctx.clearRect(0, 0, w, h);
     var dark = isDark();
-    var glow = dark ? "rgba(255,255,255,0.85)" : "rgba(95,85,230,0.6)";
+    var glow = dark ? "rgba(255,255,255,0.85)" : "rgba(40,40,48,0.5)";
 
     for (var i = stars.length - 1; i >= 0; i--) {
       var s = stars[i];
