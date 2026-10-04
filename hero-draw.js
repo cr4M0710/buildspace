@@ -115,17 +115,52 @@
       });
   }
 
-  /* ---------- Animation ---------- */
-  var dash = 0, offset = 0, last = 0, raf = 0, visible = true;
+  /* ---------- Animation ----------
+     Ablauf pro Durchlauf: zeichnen -> komplett sichtbar kurz aufleuchten
+     (farbiger Schein um die Buchstaben) -> ausblenden -> neu zeichnen. */
+  var dash = 0, offset = 0, raf = 0, visible = true;
+  var phase = "draw", phaseStart = 0, last = 0;
+  var GLOW_UP = 450, GLOW_DOWN = 1300, FADE = 600;
 
   function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  function setGlow(g) {
+    // g: 0 = ruhig, 1 = volles Aufleuchten. Schein in den beiden Verlaufsfarben.
+    var base = 0.22;
+    var a = base + (1 - base) * g;
+    svg.style.filter =
+      "drop-shadow(0 0 " + (4 + 10 * g).toFixed(1) + "px rgba(240,147,251," + (0.45 * a + 0.1).toFixed(2) + "))" +
+      " drop-shadow(0 0 " + (8 + 26 * g).toFixed(1) + "px rgba(245,87,108," + (0.8 * g + 0.08).toFixed(2) + "))";
+    text.setAttribute("stroke-width", String((STROKE * (1 + 0.45 * g)).toFixed(2)));
+  }
 
   function tick(now) {
     var dt = Math.min(48, now - last);
     last = now;
-    offset -= (dash / (DURATION * 1000)) * dt;
-    if (offset <= 0) offset = dash;
-    text.style.strokeDashoffset = String(offset);
+    if (phase === "draw") {
+      offset -= (dash / (DURATION * 1000)) * dt;
+      if (offset <= 0) {
+        offset = 0;
+        phase = "glow";
+        phaseStart = now;
+      }
+      text.style.strokeDashoffset = String(offset);
+    } else if (phase === "glow") {
+      var t = now - phaseStart;
+      var g = t < GLOW_UP ? t / GLOW_UP : Math.max(0, 1 - (t - GLOW_UP) / GLOW_DOWN);
+      g = g * g * (3 - 2 * g);
+      setGlow(g);
+      if (t >= GLOW_UP + GLOW_DOWN) { phase = "fade"; phaseStart = now; setGlow(0); }
+    } else {
+      var f = Math.min(1, (now - phaseStart) / FADE);
+      svg.style.opacity = String(1 - f);
+      if (f >= 1) {
+        phase = "draw";
+        offset = dash;
+        text.style.strokeDashoffset = String(offset);
+        svg.style.opacity = "1";
+      }
+    }
     raf = requestAnimationFrame(tick);
   }
 
@@ -141,6 +176,7 @@
     text.style.strokeDasharray = dash + " " + dash;
     text.style.strokeDashoffset = String(offset);
     svg.style.visibility = "visible";
+    setGlow(0);
     start();
   }
 

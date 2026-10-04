@@ -31,7 +31,7 @@
   window.addEventListener("resize", resize);
 
   var stars = [], sparks = [], raf = 0, spawnTimer = 0, lastT = 0;
-  var MAX_STARS = 3;
+  var MAX_STARS = 4;
 
   function isDark() {
     var t = document.documentElement.getAttribute("data-theme");
@@ -44,21 +44,21 @@
   function spawn() {
     if (stars.length < MAX_STARS) {
       var dir = Math.random() < 0.5 ? 1 : -1;            // 1 = nach rechts unten, -1 = nach links unten
-      var ang = rand(20, 42) * Math.PI / 180;
-      var speed = rand(420, 820);
+      var ang = rand(18, 38) * Math.PI / 180;
+      var speed = rand(70, 140);
       stars.push({
         x: dir === 1 ? rand(-0.05, 0.7) * w : rand(0.3, 1.05) * w,
         y: rand(-0.05, 0.45) * h,
         vx: Math.cos(ang) * speed * dir,
         vy: Math.sin(ang) * speed,
         age: 0,
-        life: rand(1.1, 2.1),
-        tail: rand(90, 190),
+        life: rand(5, 9),
+        tail: rand(50, 110),
         r: rand(1.7, 2.9),
         sparkAcc: 0
       });
     }
-    spawnTimer = setTimeout(spawn, rand(900, 3200));
+    spawnTimer = setTimeout(spawn, rand(1800, 4800));
     kick();
   }
 
@@ -76,7 +76,9 @@
       if (p >= 1) { stars.splice(i, 1); continue; }
       s.x += s.vx * dt; s.y += s.vy * dt;
       // sanft einblenden (erste 15 %), lange ausblenden (letzte 45 %)
-      var a = p < 0.15 ? p / 0.15 : p > 0.55 ? Math.max(0, (1 - p) / 0.45) : 1;
+      var a = p < 0.12 ? p / 0.12 : p > 0.3 ? Math.max(0, (1 - p) / 0.7) : 1;
+      a = a * a * (3 - 2 * a);
+      var sc = 1 - 0.55 * p;                              // wird kleiner, wie in die Ferne
       var len = Math.hypot(s.vx, s.vy);
       var tx = s.x - (s.vx / len) * s.tail * (0.4 + 0.6 * a);
       var ty = s.y - (s.vy / len) * s.tail * (0.4 + 0.6 * a);
@@ -86,17 +88,17 @@
       g.addColorStop(1, "rgba(255,255,255,0)");
       ctx.save();
       ctx.shadowBlur = 8; ctx.shadowColor = glow;
-      ctx.strokeStyle = g; ctx.lineWidth = s.r * 0.9; ctx.lineCap = "round";
+      ctx.strokeStyle = g; ctx.lineWidth = s.r * 0.9 * sc; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(tx, ty); ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255," + a + ")";
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * sc, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
 
       // kleine Funken entlang der Bahn
       s.sparkAcc += dt;
-      if (s.sparkAcc > 0.05 && a > 0.2) {
+      if (s.sparkAcc > 0.35 && a > 0.2) {
         s.sparkAcc = 0;
-        sparks.push({ x: s.x + rand(-4, 4), y: s.y + rand(-4, 4), age: 0, life: rand(0.5, 0.9), r: rand(0.6, 1.3) });
+        sparks.push({ x: s.x + rand(-3, 3), y: s.y + rand(-3, 3), age: 0, life: rand(1.6, 2.8), r: rand(0.6, 1.3) });
       }
     }
 
