@@ -34,9 +34,7 @@
   var MAX_STARS = 4;
 
   function isDark() {
-    var t = document.documentElement.getAttribute("data-theme");
-    if (t) return t === "dark";
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return document.documentElement.getAttribute("data-theme") !== "light";
   }
 
   function rand(a, b) { return a + Math.random() * (b - a); }

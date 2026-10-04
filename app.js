@@ -113,9 +113,8 @@ const I18N = {
     kursmappeLabel: "Kursmappe erstellen",
     expandLabel: "Unterordner ein- oder ausklappen",
     setTheme: "Darstellung",
-    themeAuto: "Auto",
     themeLight: "Hell",
-    themeDark: "Dunkel",
+    themeDark: "Nacht",
     setLang: "Sprache",
     dateLocale: "de-DE",
     favoritesTitle: "Favoriten",
@@ -159,9 +158,8 @@ const I18N = {
     kursmappeLabel: "Create course folder",
     expandLabel: "Expand or collapse subfolders",
     setTheme: "Appearance",
-    themeAuto: "Auto",
     themeLight: "Light",
-    themeDark: "Dark",
+    themeDark: "Night",
     setLang: "Language",
     dateLocale: "en-GB",
     favoritesTitle: "Favourites",
@@ -1110,41 +1108,36 @@ function initHero() {
 }
 
 /* ---------------------------------------------------------
-   Einstellungen in der Seitenleiste: Darstellung (Auto/Hell/Dunkel)
-   und Sprache (DE/EN). "Auto" folgt der Systemeinstellung (siehe
-   style.css); Hell/Dunkel merken sich eine bewusste Wahl in
-   localStorage und setzen sie per data-theme auf <html>.
+   Einstellungen in der Seitenleiste: Darstellung (Nacht/Hell)
+   und Sprache (DE/EN). Standard ist "Nacht"; die Wahl wird in
+   localStorage gemerkt und per data-theme auf <html> gesetzt.
 --------------------------------------------------------- */
 const THEME_KEY = "myhome_theme";
 
+/* Standard ist der Nachtmodus (Weltraum-Hintergrund); "Hell" dimmt die Szene. */
 function getStoredTheme() {
   try {
-    const v = localStorage.getItem(THEME_KEY);
-    return v === "light" || v === "dark" ? v : null;
+    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
   } catch (e) {
-    return null;
+    return "dark";
   }
 }
 
 function applyThemeAttribute(theme) {
-  if (theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
+  document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
 }
 
 function setThemeMode(mode) {
+  const theme = mode === "light" ? "light" : "dark";
   try {
-    if (mode === "light" || mode === "dark") localStorage.setItem(THEME_KEY, mode);
-    else localStorage.removeItem(THEME_KEY);
+    localStorage.setItem(THEME_KEY, theme);
   } catch (e) {}
-  applyThemeAttribute(mode === "light" || mode === "dark" ? mode : null);
+  applyThemeAttribute(theme);
   updateSettingsUI();
 }
 
 function updateSettingsUI() {
-  const mode = getStoredTheme() || "auto";
+  const mode = getStoredTheme();
   document.querySelectorAll("[data-theme-set]").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.themeSet === mode));
   });
@@ -1156,7 +1149,6 @@ function updateSettingsUI() {
   txt("set-theme-label", "setTheme");
   txt("set-lang-label", "setLang");
   const setBtnText = (sel, key) => { const el = document.querySelector(sel); if (el) el.textContent = t(key); };
-  setBtnText('[data-theme-set="auto"]', "themeAuto");
   setBtnText('[data-theme-set="light"]', "themeLight");
   setBtnText('[data-theme-set="dark"]', "themeDark");
   const menuBtn = document.getElementById("menu-toggle");
