@@ -672,4 +672,15 @@ const posts = [
     titleEn: "Mathematics Core Curriculum 5–10",
     excerptEn: "The school's internal maths curriculum, interactive: filter, search and sort by grade, topic area and course level (A/B/C) – with competencies, textbook pages and digital skills."
    },
+   {
+    title: "Türen-Challenge: Around Town",
+    excerpt: "Interaktive Lern-Challenge „Around Town“ als eigenständige Webseite. (Externe Seite, kein buildspace-Inhalt)",
+    date: "2026-10-05",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "https://tueren-challenge-around-town-holle.sebastianholle.chatgpt.site/",
+    emoji: "🚪",
+    titleEn: "Doors Challenge: Around Town",
+    excerptEn: "Interactive learning challenge \"Around Town\" as a standalone website. (External site, not buildspace content)"
+   },
 ];
