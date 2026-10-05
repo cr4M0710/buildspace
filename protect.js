@@ -38,7 +38,8 @@
     handball: "Handball",
     freizeit: "Freizeit",
     neueste: "Neueste",
-    kollegen: "Kolleg:innen-Bereich"
+    kollegen: "Kolleg:innen-Bereich",
+    material: "Unterrichtsmaterialien"
   };
   const ACCESS_KEY = "buildspace_access_v1";
   const INSTALL_DISMISS_KEY = "buildspace_install_dismissed_until";

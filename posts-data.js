@@ -665,6 +665,7 @@ const posts = [
     category: "schule",
     subcategory: "mathematik",
     folder: "unterrichtsmaterialien",
+    gate: "material",
     url: "kerncurriculum-mathematik.html",
     emoji: "📚",
     tags: ["tool"],

@@ -71,7 +71,7 @@ posts.forEach((p, i) => {
   if (!NO_PROTECT.includes(file) && !/strafenkasse\//.test(file)) {
     const m = /<script[^>]*data-category="([a-z]+)"[^>]*src="protect\.js"[^>]*>|<script[^>]*src="protect\.js"[^>]*data-category="([a-z]+)"[^>]*>/.exec(html);
     if (!m) err(`${id}: ${file} bindet protect.js nicht mit data-category ein (Freigabe für Lernende fehlt)`);
-    else if ((m[1] || m[2]) !== p.category) err(`${id}: data-category "${m[1] || m[2]}" ≠ category "${p.category}" in ${file}`);
+    else if ((m[1] || m[2]) !== (p.gate || p.category)) err(`${id}: data-category "${m[1] || m[2]}" ≠ category "${p.gate || p.category}" in ${file}`);
   }
   const t = /<title>([\s\S]*?)<\/title>/i.exec(html);
   if (!t) err(`${id}: ${file} hat kein <title>`);

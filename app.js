@@ -356,7 +356,7 @@ function getFavoritePosts() {
 
 /* Gast-Zugriff: nur Beiträge aus erlaubten Bereichen anzeigen. */
 function isPostAllowed(p) {
-  return window.Protect ? window.Protect.isCategoryAllowed(p.category) : true;
+  return window.Protect ? window.Protect.isCategoryAllowed(p.gate || p.category) : true;
 }
 
 function renderTopLevel() {
@@ -497,6 +497,11 @@ function renderFolderUnlocked(id) {
   if (window.Protect) window.Protect.addShareButton(id);
 }
 
+/* Ordner innerhalb eines Unterordners, die nur mit dem Passwort (voller Zugang) erreichbar sind.
+   Der Wert ist die Zugriffs-Kategorie (siehe LABELS in protect.js). Beiträge darin tragen
+   dasselbe als "gate" in posts-data.js und data-category im protect.js-Tag der Seite. */
+const GATED_FOLDERS = { unterrichtsmaterialien: "material" };
+
 function renderSubfolder(id, subId, matId) {
   const folder = folderStructure[id];
   if (!folder) {
@@ -505,7 +510,7 @@ function renderSubfolder(id, subId, matId) {
   }
   if (window.Protect) {
     window.Protect.removeShareButton();
-    window.Protect.guard(id, () => renderSubfolderUnlocked(id, subId, matId));
+    window.Protect.guard((matId && GATED_FOLDERS[matId]) || id, () => renderSubfolderUnlocked(id, subId, matId));
   } else {
     renderSubfolderUnlocked(id, subId, matId);
   }
@@ -550,7 +555,7 @@ function renderSubfolderContent(id, subId, cmAuthInfo, matId) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
           </span>
           <h2>${subfolderLabel(m)}</h2>
-          <span class="folder-count">${t("postCount")(inSub.filter((p) => p.folder === m).length)}</span>
+          <span class="folder-count${GATED_FOLDERS[m] && window.Protect && !window.Protect.isCategoryAllowed(GATED_FOLDERS[m]) ? " folder-count--locked" : ""}">${GATED_FOLDERS[m] && window.Protect && !window.Protect.isCategoryAllowed(GATED_FOLDERS[m]) ? LOCK_GLYPH + " " + escapeHtml(t("guestLocked")) : t("postCount")(inSub.filter((p) => p.folder === m).length)}</span>
         </a>`).join("")}</div>`
     : "";
   content.innerHTML = `
