@@ -44,6 +44,7 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
   - `handball` → `jugend` | `maenner1` | `maenner2` | `hallendienst` | `training`
   - `freizeit` → `subcategory: null`
 - `tags` (optional): `spiel` oder `tool`; Gruppengröße `einzelarbeit` | `partnerarbeit` | `gruppenarbeit`; `vertretung` = ohne Lehrkraft selbsterklärend nutzbar; `jg5`–`jg10` **nur**, wenn das Tool eindeutig für einen Jahrgang gedacht ist – nicht raten.
+- `folder` (optional): legt den Beitrag in einen Ordner **innerhalb** des Unterordners, z. B. `folder: "unterrichtsmaterialien"` unter Schule → Mathematik (dritte Ebene, siehe `renderSubfolderContent` in `app.js`; neue Ordner-Namen in `I18N.subfolders` eintragen). Beiträge mit `folder` erscheinen nicht in der Hauptliste des Unterordners, sondern nur im Ordner.
 - `titleEn` / `excerptEn` immer mitliefern.
 - `featured: true` hat seit dem Liquid-Glass-Umbau keine sichtbare Wirkung mehr (Bereich „Empfohlen“ und Tag-Filter wurden entfernt); nicht setzen.
 - Externe Links: `url` ist die volle https-Adresse, im `excerpt` am Ende „(Externe Seite, …)“ vermerken.

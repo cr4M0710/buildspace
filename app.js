@@ -125,7 +125,7 @@ const I18N = {
     subfolders: {
       mathematik: "Mathematik", arbeitslehre: "Arbeitslehre",
       faecheruebergreifend: "Classroom Management", weiterefaecher: "Weitere Fächer",
-      sonstiges: "Sonstiges",
+      sonstiges: "Sonstiges", unterrichtsmaterialien: "Unterrichtsmaterialien",
       jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
       hallendienst: "Hallendienst", training: "Training"
     }
@@ -170,7 +170,7 @@ const I18N = {
     subfolders: {
       mathematik: "Mathematics", arbeitslehre: "Vocational Studies",
       faecheruebergreifend: "Classroom Management", weiterefaecher: "Other subjects",
-      sonstiges: "Miscellaneous",
+      sonstiges: "Miscellaneous", unterrichtsmaterialien: "Teaching materials",
       jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
       hallendienst: "Hall Duty", training: "Training"
     }
@@ -497,7 +497,7 @@ function renderFolderUnlocked(id) {
   if (window.Protect) window.Protect.addShareButton(id);
 }
 
-function renderSubfolder(id, subId) {
+function renderSubfolder(id, subId, matId) {
   const folder = folderStructure[id];
   if (!folder) {
     renderTopLevel();
@@ -505,13 +505,13 @@ function renderSubfolder(id, subId) {
   }
   if (window.Protect) {
     window.Protect.removeShareButton();
-    window.Protect.guard(id, () => renderSubfolderUnlocked(id, subId));
+    window.Protect.guard(id, () => renderSubfolderUnlocked(id, subId, matId));
   } else {
-    renderSubfolderUnlocked(id, subId);
+    renderSubfolderUnlocked(id, subId, matId);
   }
 }
 
-function renderSubfolderUnlocked(id, subId) {
+function renderSubfolderUnlocked(id, subId, matId) {
   /* "Classroom Management" (Schule → faecheruebergreifend) sammelt Marcs
      eigene Unterrichtsorganisation statt nur allgemeine Lernwerkzeuge --
      deshalb ein eigenes, vom normalen Zugriffslevel unabhängiges Gate
@@ -520,28 +520,45 @@ function renderSubfolderUnlocked(id, subId) {
      überhaupt erreicht hat (Passwort, Kolleg:innen-Kennwort, Gast oder
      Freigabe-Link) -- alle Wege laufen hier zusammen. */
   if (id === "schule" && subId === "faecheruebergreifend" && window.Protect && typeof window.Protect.guardClassroomManagement === "function") {
-    window.Protect.guardClassroomManagement((cmAuthInfo) => renderSubfolderContent(id, subId, cmAuthInfo));
+    window.Protect.guardClassroomManagement((cmAuthInfo) => renderSubfolderContent(id, subId, cmAuthInfo, matId));
     return;
   }
-  renderSubfolderContent(id, subId);
+  renderSubfolderContent(id, subId, undefined, matId);
 }
 
 /* cmAuthInfo ist nur bei "schule/faecheruebergreifend" gesetzt (siehe oben)
    und enthält { user, status, isAdmin } aus der Classroom-Management-
    Anmeldung -- für den Admin (Marc) blenden wir hier zusätzlich eine
    Warteliste ein, um neu angemeldete Lehrkräfte freizuschalten. */
-function renderSubfolderContent(id, subId, cmAuthInfo) {
+function renderSubfolderContent(id, subId, cmAuthInfo, matId) {
   const folder = folderStructure[id];
   const sub = folder.subfolders.find((s) => s.id === subId);
   const label = sub ? subfolderLabel(subId) : subId;
-  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/${id}">${folderLabel(id)}</a><span class="sep">›</span><span class="current">${label}</span>`;
+  /* Dritte Ebene: Beiträge mit "folder" (z. B. "unterrichtsmaterialien") liegen in einem
+     Ordner INNERHALB des Unterordners und erscheinen dort als eigene Kachel. */
+  const inSub = posts.filter((p) => p.category === id && p.subcategory === subId);
+  const matLabel = matId ? subfolderLabel(matId) : "";
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/${id}">${folderLabel(id)}</a><span class="sep">›</span>` +
+    (matId ? `<a href="#/${id}/${subId}">${label}</a><span class="sep">›</span><span class="current">${matLabel}</span>` : `<span class="current">${label}</span>`);
 
-  const list = posts.filter((p) => p.category === id && p.subcategory === subId);
+  const list = matId ? inSub.filter((p) => p.folder === matId) : inSub.filter((p) => !p.folder);
+  const matIds = matId ? [] : [...new Set(inSub.map((p) => p.folder).filter(Boolean))];
+  const matCards = matIds.length
+    ? `<div class="folder-grid">${matIds.map((m, i) => `
+        <a class="folder-card" href="#/${id}/${subId}/${m}" style="--i:${i}">
+          <span class="folder-icon" style="--tile-accent:${folderStructure[id].color}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          </span>
+          <h2>${subfolderLabel(m)}</h2>
+          <span class="folder-count">${t("postCount")(inSub.filter((p) => p.folder === m).length)}</span>
+        </a>`).join("")}</div>`
+    : "";
   content.innerHTML = `
-    <h1 class="section-label">${folderLabel(id)} — ${label}</h1>
+    <h1 class="section-label">${folderLabel(id)} — ${matId ? label + " — " + matLabel : label}</h1>
     ${cmAuthInfo ? '<div id="cm-account-bar" class="cm-account-bar"></div>' : ""}
     ${cmAuthInfo && cmAuthInfo.isAdmin ? '<div id="cm-admin-panel" class="cm-admin-panel"></div>' : ""}
-    ${renderPostList(list, { headingLevel: 2 })}
+    ${matCards ? matCards + (list.length ? '<div class="folder-list-gap"></div>' : "") : ""}
+    ${matCards && !list.length ? "" : renderPostList(list, { headingLevel: 2 })}
   `;
   if (window.Protect) window.Protect.addShareButton(id);
   if (cmAuthInfo) renderCmAccountBar(cmAuthInfo);
@@ -1531,7 +1548,7 @@ function render() {
   } else if (segments.length === 1) {
     renderFolder(segments[0]);
   } else {
-    renderSubfolder(segments[0], segments[1]);
+    renderSubfolder(segments[0], segments[1], segments[2]);
   }
   updateDocumentTitle();
   setTimeout(updateDocumentTitle, 400);

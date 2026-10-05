@@ -658,4 +658,17 @@ const posts = [
     titleEn: "Pummelparty 3D",
     excerptEn: "3D board game chaos for 2–8 players on 4 islands: everyone plays on their own device, join by code or link, bots can join in."
    },
+   {
+    title: "Kerncurriculum Mathematik 5–10",
+    excerpt: "Das schulinterne Mathematik-Curriculum interaktiv: nach Jahrgang, Themenfeld und Kursniveau (A/B/C) filtern, durchsuchen und sortieren – mit Kompetenzen, Buchseiten und digitalen Kompetenzen.",
+    date: "2026-10-05",
+    category: "schule",
+    subcategory: "mathematik",
+    folder: "unterrichtsmaterialien",
+    url: "kerncurriculum-mathematik.html",
+    emoji: "📚",
+    tags: ["tool"],
+    titleEn: "Mathematics Core Curriculum 5–10",
+    excerptEn: "The school's internal maths curriculum, interactive: filter, search and sort by grade, topic area and course level (A/B/C) – with competencies, textbook pages and digital skills."
+   },
 ];
