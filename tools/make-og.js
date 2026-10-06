@@ -9,11 +9,12 @@ const code = fs.readFileSync(path.join(root, "posts-data.js"), "utf8");
 const posts = new Function(code + ";return posts;")();
 const SUB = { mathematik: "Mathematik", arbeitslehre: "Arbeitslehre", faecheruebergreifend: "Classroom Management", weiterefaecher: "Weitere Fächer", sonstiges: "Sonstiges", jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2", hallendienst: "Hallendienst", training: "Training" };
 const CAT = { schule: "Schule", handball: "Handball", freizeit: "Freizeit" };
+const bg = "data:image/jpeg;base64," + fs.readFileSync(path.join(root, "assets/bg-nacht.jpg")).toString("base64");
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const html = (p) => `<!doctype html><meta charset="utf-8"><style>
-*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;font-family:Arial,"Liberation Sans","DejaVu Sans",sans-serif;color:#f4f6fb;background:radial-gradient(1100px 420px at 50% 128%,#3a3d4a 0,#14151c 45%,transparent 70%),radial-gradient(500px 300px at 92% -5%,rgba(255,255,255,.12),transparent 70%),#03040a;position:relative;overflow:hidden}
-.shade{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 8% 20%,#fff,transparent),radial-gradient(1px 1px at 30% 80%,#fff,transparent),radial-gradient(1.5px 1.5px at 62% 12%,#fff,transparent),radial-gradient(1px 1px at 78% 70%,#fff,transparent),radial-gradient(1px 1px at 95% 40%,#fff,transparent),radial-gradient(1px 1px at 45% 50%,#fff,transparent);opacity:.8}
-.card{position:absolute;left:64px;top:64px;right:64px;bottom:64px;border-radius:44px;border:2px solid rgba(255,255,255,.28);background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.04));box-shadow:inset 0 2px 0 rgba(255,255,255,.3);padding:48px 56px;display:flex;flex-direction:column}
+*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;font-family:Arial,"Liberation Sans","DejaVu Sans",sans-serif;color:#f4f6fb;background:#020204 url(${bg}) 72% 55%/cover;position:relative;overflow:hidden}
+.shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.15) 70%)}
+.card{position:absolute;left:64px;top:64px;right:64px;bottom:64px;border-radius:44px;border:2px solid rgba(255,255,255,.28);background:linear-gradient(160deg,rgba(10,11,16,.72),rgba(10,11,16,.5));backdrop-filter:blur(8px);box-shadow:inset 0 2px 0 rgba(255,255,255,.3);padding:48px 56px;display:flex;flex-direction:column}
 .k{font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:#c9ccd6;font-weight:700}
 .e{font-size:92px;line-height:1;margin:22px 0 8px}
 h1{font-size:${p.title.length > 26 ? 56 : 68}px;line-height:1.08;margin:0 0 18px;letter-spacing:-.01em}
@@ -26,6 +27,16 @@ h1{font-size:${p.title.length > 26 ? 56 : 68}px;line-height:1.08;margin:0 0 18px
   fs.mkdirSync(path.join(root, "assets/og"), { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
+  /* Startseite (assets/og-image.jpg) */
+  const icon = "data:image/png;base64," + fs.readFileSync(path.join(root, "assets/icon-192.png")).toString("base64");
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;font-family:Arial,"Liberation Sans","DejaVu Sans",sans-serif;color:#f4f6fb;background:#020204 url(${bg}) 72% 55%/cover;position:relative;overflow:hidden}
+.shade{position:absolute;inset:0;background:radial-gradient(700px 360px at 40% 50%,rgba(0,0,0,.6),rgba(0,0,0,.1))}
+.card{position:absolute;left:64px;top:64px;right:64px;bottom:64px;border-radius:44px;border:2px solid rgba(255,255,255,.28);background:linear-gradient(160deg,rgba(10,11,16,.6),rgba(10,11,16,.38));backdrop-filter:blur(6px);box-shadow:inset 0 2px 0 rgba(255,255,255,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
+img{width:128px;height:128px;border-radius:30px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+h1{font-size:104px;margin:22px 0 10px;letter-spacing:-.02em;line-height:1}
+p{font-size:33px;line-height:1.35;color:#d8dbe4;margin:0;max-width:820px}.n{margin-top:26px;font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:#aeb0b8;font-weight:700}</style>
+<div class="shade"></div><div class="card"><img src="${icon}"><h1>buildspace</h1><p>Wo Innovation das Lernen verändert und Spiel zum individuellen Erfolg wird.</p><div class="n">Marc Stroh</div></div>`);
+  await page.screenshot({ path: path.join(root, "assets/og-image.jpg"), type: "jpeg", quality: 84 });
   const seen = new Set(); let n = 0, upd = 0;
   for (const p of posts) {
     const u = p.url;
