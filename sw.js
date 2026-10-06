@@ -9,7 +9,7 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v8';
+const CACHE = 'buildspace-v9';
 /* Bibliotheken von Fremd-Servern (three.js, PeerJS, QR, Schriften) landen in
    einem eigenen Cache, der Versions-Wechsel überlebt — sie sind fest
    versioniert und ändern sich nicht. */
@@ -47,7 +47,7 @@ const SHELL = [
   'assets/icon-180.png',
   'assets/icon-192.png',
   'assets/icon-512.png',
-  'assets/bg-horizon.jpg',
+  'assets/bg-nacht.jpg',
   /* Die neun Vertretungsstunden-Werkzeuge (Tag "vertretung" in
      posts-data.js, siehe auch VERTRETUNG_FILES in protect.js) werden
      hier mit vorab gecacht, damit "kein Internet nötig" auch beim

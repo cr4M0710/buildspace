@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------
    space.js
-   Hintergrund der Startseite: ein ruhiger Horizont bei Nacht
-   (assets/bg-horizon.jpg) mit leuchtendem Ring und spiegelnder
+   Hintergrund der Startseite: ein Planet am Horizont bei Nacht
+   (assets/bg-nacht.jpg) mit leuchtendem Rand und spiegelnder
    Fläche. Das Bild liegt fest hinter allen Inhalten; ein dunkler
    Verlauf sorgt dafür, dass Text auf den Glas-Flächen gut lesbar
    bleibt. Die Sternschnuppen (stars.js) fliegen darüber in der
