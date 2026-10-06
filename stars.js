@@ -46,7 +46,7 @@
       var speed = rand(70, 140);
       stars.push({
         x: dir === 1 ? rand(-0.05, 0.7) * w : rand(0.3, 1.05) * w,
-        y: rand(-0.05, 0.45) * h,
+        y: rand(-0.03, 0.26) * h,
         vx: Math.cos(ang) * speed * dir,
         vy: Math.sin(ang) * speed,
         age: 0,
@@ -76,6 +76,10 @@
       // sanft einblenden (erste 15 %), lange ausblenden (letzte 45 %)
       var a = p < 0.12 ? p / 0.12 : p > 0.3 ? Math.max(0, (1 - p) / 0.7) : 1;
       a = a * a * (3 - 2 * a);
+      /* nur in der oberen Bildschirmhälfte: ab ca. 38 % Höhe ausblenden, bei 50 % weg */
+      var lim = Math.max(0, Math.min(1, (0.5 * h - s.y) / (0.12 * h)));
+      a = a * lim;
+      if (s.y > 0.5 * h) { stars.splice(i, 1); continue; }
       var sc = 1 - 0.55 * p;                              // wird kleiner, wie in die Ferne
       var len = Math.hypot(s.vx, s.vy);
       var tx = s.x - (s.vx / len) * s.tail * (0.4 + 0.6 * a);
