@@ -15,10 +15,9 @@
 
   var NS = "http://www.w3.org/2000/svg";
   var TEXT = (host.getAttribute("data-text") || "buildspace").trim();
-  /* Verlauf wie im Glas-Neon-Vorbild: Blau-Violett -> Magenta -> Pink -> Orange */
-  var STOPS = [["0%", "#6f6bff"], ["22%", "#b565ff"], ["48%", "#ff55c8"], ["72%", "#ff6b8e"], ["100%", "#ffb04a"]];
-  var VB_W = 1100, VB_H = 250, FONT = 118, STROKE = 7, DURATION = 5.5, BASE = 130;
-  var FONT_FAMILY = '"SF Pro Rounded", "Arial Rounded MT Bold", "Nunito", Arial, Helvetica, sans-serif';
+  var FROM = "#f093fb";
+  var TO = "#f5576c";
+  var VB_W = 1100, VB_H = 200, FONT = 96, STROKE = 3, DURATION = 5.5;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var svg = document.createElementNS(NS, "svg");
@@ -30,67 +29,32 @@
   grad.setAttribute("id", "hero-draw-grad");
   grad.setAttribute("x1", "0%"); grad.setAttribute("y1", "0%");
   grad.setAttribute("x2", "100%"); grad.setAttribute("y2", "0%");
-  STOPS.forEach(function (s) {
+  [["0%", FROM], ["100%", TO]].forEach(function (s) {
     var stop = document.createElementNS(NS, "stop");
     stop.setAttribute("offset", s[0]);
     stop.setAttribute("stop-color", s[1]);
     grad.appendChild(stop);
   });
   defs.appendChild(grad);
-  /* Spiegelung unter der Schrift: blendet nach unten aus */
-  var fade = document.createElementNS(NS, "linearGradient");
-  fade.setAttribute("id", "hero-draw-fade"); fade.setAttribute("gradientUnits", "userSpaceOnUse");
-  fade.setAttribute("x1", "0"); fade.setAttribute("y1", String(BASE + 4)); fade.setAttribute("x2", "0"); fade.setAttribute("y2", String(BASE + 78));
-  [["0", "0.3"], ["1", "0"]].forEach(function (s) {
-    var st = document.createElementNS(NS, "stop");
-    st.setAttribute("offset", s[0]); st.setAttribute("stop-color", "#fff"); st.setAttribute("stop-opacity", s[1]);
-    fade.appendChild(st);
-  });
-  defs.appendChild(fade);
-  var mask = document.createElementNS(NS, "mask");
-  mask.setAttribute("id", "hero-draw-mask"); mask.setAttribute("maskUnits", "userSpaceOnUse");
-  mask.setAttribute("x", "-200"); mask.setAttribute("y", "0"); mask.setAttribute("width", String(VB_W + 400)); mask.setAttribute("height", String(VB_H));
-  var mr = document.createElementNS(NS, "rect");
-  mr.setAttribute("x", "-200"); mr.setAttribute("y", "0"); mr.setAttribute("width", String(VB_W + 400)); mr.setAttribute("height", String(VB_H)); mr.setAttribute("fill", "url(#hero-draw-fade)");
-  mask.appendChild(mr); defs.appendChild(mask);
   svg.appendChild(defs);
 
-  function mkText(attrs) {
-    var t = document.createElementNS(NS, "text");
-    t.setAttribute("x", "50%"); t.setAttribute("y", String(BASE));
-    t.setAttribute("text-anchor", "middle");
-    t.setAttribute("stroke-linejoin", "round"); t.setAttribute("stroke-linecap", "round");
-    t.setAttribute("font-size", String(FONT)); t.setAttribute("font-weight", "bold");
-    t.setAttribute("font-family", FONT_FAMILY); t.setAttribute("letter-spacing", "0.06em");
-    Object.keys(attrs).forEach(function (k) { t.setAttribute(k, attrs[k]); });
-    t.textContent = TEXT;
-    return t;
-  }
-  /* Hauptkontur (wird gezeichnet) + heller Kern (Glas-Glanz) + sanfte Füllung */
-  var text = mkText({ fill: "none", stroke: "url(#hero-draw-grad)", "stroke-width": String(STROKE) });
-  var inner = mkText({ fill: "none", stroke: "rgba(10,8,22,0.62)", "stroke-width": String(STROKE * 0.5), "data-extra": "1" });
-  var core = mkText({ fill: "none", stroke: "#ffffff", "stroke-opacity": "0.6", "stroke-width": "1.1", "data-extra": "1" });
-  var fillT = mkText({ fill: "url(#hero-draw-grad)", "fill-opacity": "0", stroke: "none", "data-extra": "1" });
-  var reflGroup = document.createElementNS(NS, "g");
-  reflGroup.setAttribute("mask", "url(#hero-draw-mask)"); reflGroup.setAttribute("data-extra", "1");
-  var reflInner = document.createElementNS(NS, "g");
-  reflInner.setAttribute("transform", "translate(0 " + (2 * (BASE + 4)) + ") scale(1 -1)");
-  var refl = mkText({ fill: "none", stroke: "url(#hero-draw-grad)", "stroke-width": String(STROKE) });
-  reflInner.appendChild(refl); reflGroup.appendChild(reflInner);
-  svg.appendChild(reflGroup);
-  svg.appendChild(fillT);
+  var text = document.createElementNS(NS, "text");
+  text.setAttribute("x", "50%");
+  text.setAttribute("y", "50%");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("dominant-baseline", "middle");
+  text.setAttribute("fill", "none");
+  text.setAttribute("stroke", "url(#hero-draw-grad)");
+  text.setAttribute("stroke-width", String(STROKE));
+  text.setAttribute("stroke-linejoin", "round");
+  text.setAttribute("stroke-linecap", "round");
+  text.setAttribute("font-size", String(FONT));
+  text.setAttribute("font-weight", "bold");
+  text.setAttribute("font-family", "Arial, Helvetica, sans-serif");
+  text.setAttribute("letter-spacing", "0.02em");
+  text.textContent = TEXT;
   svg.appendChild(text);
-  svg.appendChild(inner);
-  svg.appendChild(core);
   host.appendChild(svg);
-  var strokeEls = [text, inner, core, refl];
-  function setArr(v) { strokeEls.forEach(function (e) { e.style.strokeDasharray = v; }); }
-  function setOff(v) {
-    strokeEls.forEach(function (e) { e.style.strokeDashoffset = String(v); });
-    /* Füllung blendet ein, sobald die Kontur zu ~85 % gezeichnet ist */
-    var prog = dash ? 1 - v / dash : 1;
-    fillT.setAttribute("fill-opacity", String(Math.max(0, Math.min(1, (prog - 0.85) / 0.15)) * 0.14));
-  }
 
   /* ---------- exakte Strichlänge per Raster-Test ---------- */
   function loadImage(url) {
@@ -106,7 +70,6 @@
     var clone = svg.cloneNode(true);
     clone.setAttribute("xmlns", NS);
     clone.style.visibility = "visible";
-    Array.prototype.slice.call(clone.querySelectorAll("[data-extra]")).forEach(function (n) { n.parentNode.removeChild(n); });
     var t = clone.querySelector("text");
     apply(t);
     t.setAttribute("stroke", "#ffffff");
@@ -166,11 +129,9 @@
     var base = 0.22;
     var a = base + (1 - base) * g;
     svg.style.filter =
-      "drop-shadow(0 0 " + (4 + 10 * g).toFixed(1) + "px rgba(181,101,255," + (0.45 * a + 0.1).toFixed(2) + "))" +
-      " drop-shadow(0 0 " + (8 + 26 * g).toFixed(1) + "px rgba(255,85,200," + (0.8 * g + 0.08).toFixed(2) + "))";
-    var sw = String((STROKE * (1 + 0.4 * g)).toFixed(2));
-    text.setAttribute("stroke-width", sw); refl.setAttribute("stroke-width", sw);
-    inner.setAttribute("stroke-width", String((STROKE * 0.5 * (1 + 0.4 * g)).toFixed(2)));
+      "drop-shadow(0 0 " + (4 + 10 * g).toFixed(1) + "px rgba(240,147,251," + (0.45 * a + 0.1).toFixed(2) + "))" +
+      " drop-shadow(0 0 " + (8 + 26 * g).toFixed(1) + "px rgba(245,87,108," + (0.8 * g + 0.08).toFixed(2) + "))";
+    text.setAttribute("stroke-width", String((STROKE * (1 + 0.45 * g)).toFixed(2)));
   }
 
   function tick(now) {
@@ -183,7 +144,7 @@
         phase = "hold";
         phaseStart = now;
       }
-      setOff(offset);
+      text.style.strokeDashoffset = String(offset);
     } else if (phase === "hold") {
       // Schrift steht komplett — kurz ruhen, dann erst aufleuchten.
       if (now - phaseStart >= HOLD) { phase = "glow"; phaseStart = now; }
@@ -199,7 +160,7 @@
       if (f >= 1) {
         phase = "draw";
         offset = dash;
-        setOff(offset);
+        text.style.strokeDashoffset = String(offset);
         svg.style.opacity = "1";
       }
     }
@@ -218,16 +179,16 @@
     // Schrift garantiert komplett gezeichnet, bevor das Aufleuchten startet.
     dash = Math.ceil(len * 1.12) + 6;
     offset = dash;
-    setArr(dash + " " + dash);
-    setOff(offset);
+    text.style.strokeDasharray = dash + " " + dash;
+    text.style.strokeDashoffset = String(offset);
     svg.style.visibility = "visible";
     setGlow(0);
     start();
   }
 
   function showStatic() {
-    setArr("none");
-    setOff(0);
+    text.style.strokeDasharray = "none";
+    text.style.strokeDashoffset = "0";
     svg.style.visibility = "visible";
   }
 
