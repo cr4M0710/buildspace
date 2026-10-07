@@ -707,4 +707,40 @@ const posts = [
     titleEn: "Gapless",
     excerptEn: "Parking without a scratch: 30 spaces in four stages, from a compact car to a rig with a trailer. Touch anything and you start over."
    },
+   {
+    title: "Kochfaul",
+    excerpt: "Kochen für Faule: Supermarkt, Wochenbudget und Faulheitsgrad wählen – daraus entstehen ein Wochenplan mit einfachen Rezepten und eine nach Laufweg sortierte Einkaufsliste.",
+    date: "2026-10-07",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "kochfaul.html",
+    emoji: "🍝",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "Kochfaul – Cooking for the Lazy",
+    excerptEn: "Cooking for the lazy: pick a supermarket, weekly budget and laziness level to get a weekly plan with easy recipes and a shopping list sorted by store route."
+   },
+   {
+    title: "KomPo7 – Formulierungshilfe",
+    excerpt: "Beobachtungen den neun Schlüsselkompetenzen zuordnen und als Satzbausteine in einen Bericht übernehmen – in der dritten Person, im Präteritum, Mitschüler anonymisiert.",
+    date: "2026-10-07",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "kompo7-formulierungshilfe.html",
+    emoji: "📝",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "KomPo7 – Writing Aid",
+    excerptEn: "Assign observations to the nine key competencies and turn them into sentence building blocks for a report – third person, past tense, classmates anonymised."
+   },
+   {
+    title: "Blockwerk",
+    excerpt: "Eine Welt aus Blöcken, die du Stück für Stück umbaust: bauen, abbauen und erkunden im Einzelspieler oder gemeinsam im Mehrspieler-Modus, mit Maus und Tastatur oder per Touch.",
+    date: "2026-10-07",
+    category: "freizeit",
+    subcategory: null,
+    url: "blockwerk.html",
+    emoji: "🧱",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Blockwerk",
+    excerptEn: "A world of blocks that you rebuild piece by piece: build, mine and explore alone or together in multiplayer, with mouse and keyboard or touch."
+   },
 ];
