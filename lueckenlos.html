@@ -49,7 +49,7 @@ button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 .brand p{max-width:34em;margin:14px 0 0;font-size:18px;line-height:1.45;color:var(--muted)}
 .lane{height:6px;margin:30px 0 0;
   background:repeating-linear-gradient(90deg,var(--paint) 0 38px,transparent 38px 66px);opacity:.75}
-.bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-top:30px;
+.bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));margin-top:30px;
   border-top:4px solid var(--paint)}
 .bay{position:relative;min-height:200px;padding:16px 16px 18px;background:transparent;border:0;
   box-shadow:inset 2px 0 0 var(--paint),inset -2px 0 0 var(--paint);text-align:left;cursor:pointer;
@@ -57,7 +57,7 @@ button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 .bay:hover:not(:disabled){background:rgba(255,201,40,.07)}
 .bay-num{font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-weight:800;font-size:72px;line-height:.9;
   color:var(--signal);opacity:.92}
-.bay-name{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;-webkit-hyphens:auto;hyphens:auto}
+.bay-name{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:break-word;-webkit-hyphens:manual;hyphens:manual}
 .bay-meta{font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
 .stars{letter-spacing:2px;color:#5d6268}
 .stars .on{color:var(--signal)}
@@ -65,7 +65,13 @@ button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 .bay:disabled .bay-num{color:#555b61}
 .bay:disabled .bay-name{color:#7c8288}
 
-.stage{margin-top:44px}
+.modebar{display:inline-flex;margin-top:26px;border:2px solid var(--paint);border-radius:12px;overflow:hidden}
+.mode{font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-weight:700;font-size:22px;padding:10px 22px;background:transparent;border:0;cursor:pointer;color:var(--paint)}
+.mode[aria-pressed="true"]{background:var(--signal);color:var(--ink)}
+.mode:focus-visible{outline-offset:-4px}
+.modetext{margin:10px 0 0;color:var(--muted);font-size:16px;line-height:1.4;max-width:40em}
+#timer.practice{border:1px dashed var(--signal)}
+.stage{margin-top:36px}
 .stage-head{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
 .stage-veh{width:220px;height:66px;flex:none}
 .stage-txt{flex:1;min-width:240px}
@@ -180,11 +186,17 @@ body.sides #gas{width:58px;height:120px}
       <p>Einparken ohne Kratzer. 30 Lücken in vier Stufen, vom Kompaktwagen bis zum Gespann mit Anhänger. Wer etwas berührt, fängt von vorn an.</p>
       <div class="lane" aria-hidden="true"></div>
     </header>
+    <div class="modebar" role="group" aria-label="Spielmodus">
+      <button class="mode" id="modeScore" aria-pressed="true">Mit Wertung</button>
+      <button class="mode" id="modePractice" aria-pressed="false">Freies Üben</button>
+    </div>
+    <p id="modeText" class="modetext"></p>
     <div id="stages"></div>
     <div class="menu-foot">
       <p><strong>Ziel:</strong> Stell das Auto komplett in die gelbe Lücke. Der Pfeil zeigt, wohin die Front zeigen muss. Bleib kurz stehen, dann zählt es.</p>
       <p><strong>Touch:</strong> Lenkrad links drehen, rechts Gang wählen, Gas und Bremse gedrückt halten.<br>
       <strong>Tastatur:</strong> Pfeiltasten oder WASD fahren und lenken, Leertaste bremst, R startet neu, M zeigt die ganze Karte, Esc führt zurück.</p>
+      <p><strong>Freies Üben:</strong> Alle Level sind offen, nichts wird gewertet. Mit dem Button „↶ 3 s“ oder der Taste Z spulst du drei Sekunden zurück, auch direkt nach dem Anfahren.</p>
       <p><strong>Große Karten:</strong> Die Kamera fährt mit. Oben rechts siehst du eine Minikarte, ein gelber Pfeil am Rand zeigt zur Lücke.</p>
     </div>
   </div>
@@ -196,6 +208,7 @@ body.sides #gas{width:58px;height:120px}
     <button id="btnMenu" class="hbtn" aria-label="Zur Levelauswahl">Levels</button>
     <div id="timer" aria-live="off">0:00.0</div>
     <div class="hud-title"><span id="lvlNum">1</span><span id="lvlName"></span><span id="lvlVeh"></span></div>
+    <button id="btnRewind" class="hbtn hidden" aria-label="Drei Sekunden zurückspulen">&#8630; 3 s</button>
     <button id="btnMap" class="hbtn hidden" aria-pressed="false" aria-label="Ganze Karte anzeigen">Karte</button>
     <button id="btnGuide" class="hbtn" aria-pressed="true" aria-label="Hilfslinien ein oder aus">Linien</button>
     <button id="btnRestart" class="hbtn" aria-label="Level neu starten">Neu</button>
@@ -576,7 +589,7 @@ const KEY='lueckenlos-v1';
 let save={levels:{},guide:true};
 try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);if(p&&typeof p==='object')save=Object.assign(save,p);}}catch(e){}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(save));}catch(e){}}
-const unlocked=i=>i===0||((save.levels[i-1]||{}).stars||0)>0;
+const unlocked=i=>save.practice||i===0||((save.levels[i-1]||{}).stars||0)>0;
 
 /* ================= Zustand ================= */
 let lvl=null,cur=0,state='menu',S=null,gear=1,elapsed=0,started=false,hold=0,acc=0;
@@ -584,6 +597,7 @@ let crashInfo=null,crashT=0,wrongShown=false,targetState='none',view=null,overvi
 const cam={x:0,y:0,s:1};
 const inp={gasPad:false,brakePad:false,keyGas:false,keyBrake:false,keyL:false,keyR:false};
 let wheelAngle=0,wheelDrag=null;
+let hist=[],histT=0;
 
 /* ================= Canvas ================= */
 const cv=$('#cv'),mainCtx=cv.getContext('2d');let ctx=mainCtx;
@@ -888,15 +902,20 @@ function crash(hit){
   state='crash';crashInfo=hit;crashT=0;
   try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}
   const msg=hit.kind==='jackknife'?'Der Anhänger ist eingeknickt. Rückwärts nur kleine Lenkbewegungen, und rechtzeitig gegenlenken.'
-    :`Du hast ${CRASH_TEXT[hit.kind]||'etwas'} berührt. Versuch es noch einmal.`;
+    :`Du hast ${CRASH_TEXT[hit.kind]||'etwas'} berührt. ${save.practice?'Spul drei Sekunden zurück und probier es noch einmal.':'Versuch es noch einmal.'}`;
   setTimeout(()=>{if(state!=='crash')return;
     showOverlay(`<div class="card crash"><h2>${hit.kind==='jackknife'?'Eingeknickt!':'Angefahren!'}</h2><p>${msg}</p>
-      <div class="actions"><button class="btn primary" data-act="retry">Nochmal</button><button class="btn" data-act="menu">Levels</button></div></div>`);},550);
+      <div class="actions">${save.practice?'<button class="btn primary" data-act="rewind">Zurückspulen</button><button class="btn" data-act="retry">Neu starten</button>':'<button class="btn primary" data-act="retry">Nochmal</button>'}<button class="btn" data-act="menu">Levels</button></div></div>`);},550);
 }
 function win(){
   state='win';const t=elapsed,st=starsFor(t,lvl),rec=save.levels[cur]||{};const newBest=!rec.best||t<rec.best;
-  save.levels[cur]={stars:Math.max(rec.stars||0,st),best:newBest?t:rec.best};persist();
+  if(!save.practice){save.levels[cur]={stars:Math.max(rec.stars||0,st),best:newBest?t:rec.best};persist();}
   const last=cur>=LEVELS.length-1,nextNew=!last&&LEVELS[cur+1].s!==LEVELS[cur].s;
+  if(save.practice){
+    showOverlay(`<div class="card win"><h2>Geparkt!</h2><p>Zeit ${fmt(t)}<br><span class="sub">Freies Üben, diese Fahrt wird nicht gewertet.</span></p>
+      <div class="actions">${last?'':'<button class="btn primary" data-act="next">Nächstes Level</button>'}<button class="btn${last?' primary':''}" data-act="retry">Nochmal</button><button class="btn" data-act="menu">Levels</button></div></div>`);
+    return;
+  }
   const nextTxt=nextNew?`Weiter zum ${STAGES[LEVELS[cur+1].s].title}`:'Weiter';
   showOverlay(`<div class="card win"><h2>Geparkt!</h2><div class="bigstars">${starHTML(st,'')}</div>
     <p>Zeit ${fmt(t)}${newBest?', neue Bestzeit':', Bestzeit '+fmt(rec.best)}<br>
@@ -908,7 +927,7 @@ function win(){
 function showOverlay(html){const o=$('#overlay');o.innerHTML=html;o.classList.remove('hidden');const b=o.querySelector('.btn.primary');b&&b.focus();}
 function hideOverlay(){$('#overlay').classList.add('hidden');$('#overlay').innerHTML='';}
 $('#overlay').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act);});
-function act(a){if(a==='retry')startLevel(cur);else if(a==='next')startLevel(cur+1);else if(a==='menu')showMenu();}
+function act(a){if(a==='retry')startLevel(cur);else if(a==='next')startLevel(cur+1);else if(a==='menu')showMenu();else if(a==='rewind')rewind();}
 
 let toastTimer=null;
 function toast(msg,ms=4500){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,ms);}
@@ -916,6 +935,14 @@ function hideToast(){$('#toast').classList.remove('show');}
 function resetInputs(){inp.gasPad=inp.brakePad=inp.keyGas=inp.keyBrake=inp.keyL=inp.keyR=false;wheelAngle=0;wheelDrag=null;
   document.querySelectorAll('.pedal').forEach(p=>p.classList.remove('down'));}
 function setGear(g){gear=g;$('#gear').classList.toggle('rev',g<0);}
+function rewind(){
+  if(!lvl||!hist.length||(state!=='play'&&state!=='crash'))return;
+  const idx=Math.max(0,hist.length-1-12),h=hist[idx];
+  hist.length=idx+1;histT=0;
+  S=Object.assign({},h.S);S.v=0;setGear(h.gear);
+  crashInfo=null;hold=0;targetState='none';hideOverlay();state='play';
+  const f=focusPoint();cam.x=f.x;cam.y=f.y;
+}
 function setOverview(on){overview=on;$('#btnMap').setAttribute('aria-pressed',on?'true':'false');}
 
 function startLevel(i){
@@ -925,10 +952,13 @@ function startLevel(i){
   $('#menu').classList.add('hidden');$('#game').classList.remove('hidden');
   $('#lvlNum').textContent=i+1;$('#lvlName').textContent=lvl.name;$('#lvlVeh').textContent=lvl.V.name;$('#timer').textContent='0:00.0';
   $('#btnGuide').setAttribute('aria-pressed',save.guide?'true':'false');
+  hist=[{S:{...S},gear:1}];histT=0;
+  $('#btnRewind').classList.toggle('hidden',!save.practice);$('#timer').classList.toggle('practice',!!save.practice);
+  $('#lvlVeh').textContent=lvl.V.name+(save.practice?' · Üben':'');
   state='play';resize();computeView();
   intro=(reduceMotion||!view.big)?1:0;updateCam(0,true);
   const first=i===0||LEVELS[i-1].s!==LEVELS[i].s;
-  toast((first&&i>0?`Neues Fahrzeug: ${lvl.V.name}. `:'')+lvl.hint,6500);
+  toast((first&&i>0?`Neues Fahrzeug: ${lvl.V.name}. `:'')+lvl.hint+(save.practice?' Mit „↶ 3 s“ oder Z spulst du drei Sekunden zurück.':''),6500);
 }
 
 /* ================= Menü ================= */
@@ -944,8 +974,15 @@ function vehiclePreview(canvas,V){
   drawVehicle(V.wb/2,0,0,V.len,V.wid,V.style,V.color,{wb:V.wb,stripes:V.stripes,livery:V.style==='van'});
   ctx=prevCtx;
 }
+function updateModeUI(){
+  $('#modeScore').setAttribute('aria-pressed',save.practice?'false':'true');
+  $('#modePractice').setAttribute('aria-pressed',save.practice?'true':'false');
+  $('#modeText').textContent=save.practice?'Alle 30 Level sind offen. Nichts wird gewertet, und nach einem Anfahren kannst du drei Sekunden zurückspulen.':'Sterne und Bestzeiten zählen. Die Stufen schalten sich nacheinander frei.';
+}
+$('#modeScore').addEventListener('click',()=>{save.practice=false;persist();showMenu();});
+$('#modePractice').addEventListener('click',()=>{save.practice=true;persist();showMenu();});
 function showMenu(){
-  state='menu';hideOverlay();hideToast();
+  state='menu';hideOverlay();hideToast();updateModeUI();
   $('#game').classList.add('hidden');$('#menu').classList.remove('hidden');
   const wrap=$('#stages');wrap.innerHTML='';
   STAGES.forEach((st,si)=>{
@@ -1000,11 +1037,13 @@ $('#gear').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault()
 $('#btnMenu').addEventListener('click',showMenu);
 $('#btnRestart').addEventListener('click',()=>startLevel(cur));
 $('#btnMap').addEventListener('click',()=>setOverview(!overview));
+$('#btnRewind').addEventListener('click',()=>{rewind();$('#btnRewind').blur();});
 $('#btnGuide').addEventListener('click',()=>{save.guide=!save.guide;persist();$('#btnGuide').setAttribute('aria-pressed',save.guide?'true':'false');});
 window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();if(state==='menu')return;
   if(k==='escape'){e.preventDefault();showMenu();return;}
   if(state==='crash'||state==='win'){
+    if((k==='z'||k==='backspace')&&save.practice&&state==='crash'){e.preventDefault();rewind();return;}
     if(k==='enter'||k==='r'||k===' '){e.preventDefault();if(k==='r')act('retry');else{const b=$('#overlay .btn.primary');b&&b.click();}}
     return;
   }
@@ -1015,6 +1054,7 @@ window.addEventListener('keydown',e=>{
   else if(k==='arrowright'||k==='d')inp.keyR=true;
   else if(k===' ')inp.keyBrake=true;
   else if(k==='r')startLevel(cur);
+  else if((k==='z'||k==='backspace')&&save.practice){e.preventDefault();rewind();}
   else if(k==='m'&&view&&view.big)setOverview(!overview);
 });
 window.addEventListener('keyup',e=>{
@@ -1041,7 +1081,7 @@ function frame(now){
     if(intro<1){intro=Math.min(1,intro+(levelT>1.0||started?dt/(started?0.4:1.2):0));}
     if(state==='play'){
       acc+=dt;while(acc>=H&&state==='play'){step(H);acc-=H;}
-      if(state==='play'){checkPark(dt);if(started)elapsed+=dt;}
+      if(state==='play'){checkPark(dt);if(started)elapsed+=dt;histT+=dt;if(histT>=0.25){histT=0;hist.push({S:{...S},gear});if(hist.length>48)hist.shift();}}
       $('#timer').textContent=fmt(elapsed);
     }else if(state==='crash')crashT+=dt;
     updateCam(dt,false);draw(now);
