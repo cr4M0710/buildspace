@@ -433,12 +433,23 @@
       "#protect-highscore-modal .protect-hs-list li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; }",
       "#protect-highscore-modal .protect-hs-loading { font-size: 13px; color: #AAABB2; text-align: center; }",
       "html.embed-mode .site-nav, html.embed-mode .hero, html.embed-mode .site-footer, html.embed-mode .top-link,",
+      /* Auf Spiel- und Tool-Seiten blenden Zurück-Link, QR-Aushang, Freigabe-Button und Feedback
+         nach 10 Sekunden aus (stören sonst im Spiel); ein kleiner Knopf holt sie für 10 Sekunden zurück. */
+      "html.protect-ui-hidden #protect-back-link, html.protect-ui-hidden #protect-poster-btn, html.protect-ui-hidden #protect-share-btn,",
+      "html.protect-ui-hidden .protect-feedback-widget { opacity: 0 !important; pointer-events: none !important; visibility: hidden; transition: opacity 0.5s ease, visibility 0s linear 0.5s; }",
+      "#protect-back-link, #protect-poster-btn, #protect-share-btn, .protect-feedback-widget { transition: opacity 0.35s ease; }",
+      "#protect-ui-handle { position: fixed; left: 14px; bottom: 14px; z-index: 9998; width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0;",
+      "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(44,46,58,0.7), rgba(14,15,20,0.66)); color: #F4F6FB; opacity: 0.4; transition: opacity 0.2s;",
+      "  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.45); }",
+      "#protect-ui-handle:hover, #protect-ui-handle:focus-visible { opacity: 0.95; }",
+      "html.protect-ui-hidden #protect-ui-handle { display: inline-flex; }",
+      "html.embed-mode #protect-ui-handle { display: none !important; }",
       "html.embed-mode #protect-share-btn, html.embed-mode .protect-update-banner,",
       "html.embed-mode .protect-install-banner,",
       "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }",
       "@media print {",
       "  #protect-share-btn, #protect-back-link, #protect-poster-btn, .protect-update-banner, .protect-install-banner,",
-      "  .protect-feedback-widget, .protect-highscore-btn, .protect-banner { display: none !important; }",
+      "  .protect-feedback-widget, .protect-highscore-btn, .protect-banner, #protect-ui-handle { display: none !important; }",
       "}"
     ].join("\n");
     document.head.appendChild(style);
@@ -1654,6 +1665,41 @@
     });
   }
 
+  /* Blendet die schwebenden Bedienelemente (Zurück, QR-Aushang, Freigabe, Feedback) 10 Sekunden
+     nach dem Laden aus. Ein kleiner Knopf unten links blendet sie für weitere 10 Sekunden ein.
+     Solange ein Fenster (Freigabe, QR-Aushang) offen ist oder ein Feld Fokus hat, bleibt alles stehen. */
+  function initAutoHideUi() {
+    const HIDE_MS = 10000;
+    const root = document.documentElement;
+    let timer = 0;
+    let handle = null;
+    function busy() {
+      if (document.querySelector("#protect-share-modal, #protect-poster-modal, #protect-highscore-modal")) return true;
+      const a = document.activeElement;
+      return !!(a && a.closest && a.closest(".protect-feedback-widget"));
+    }
+    function schedule() {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        if (busy()) { schedule(); return; }
+        root.classList.add("protect-ui-hidden");
+      }, HIDE_MS);
+    }
+    function show() {
+      root.classList.remove("protect-ui-hidden");
+      schedule();
+    }
+    handle = document.createElement("button");
+    handle.type = "button";
+    handle.id = "protect-ui-handle";
+    handle.setAttribute("aria-label", "Zurück, QR-Aushang und Feedback einblenden");
+    handle.title = "Menü einblenden";
+    handle.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+    handle.addEventListener("click", show);
+    document.body.appendChild(handle);
+    schedule();
+  }
+
   function initStandalone() {
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
@@ -1669,6 +1715,7 @@
         if (!isHomeApp_()) { addBackLink(); addPosterButton(); }
         initFeedbackWidget(cat);
         initHighscoreWidget();
+        if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
       }
       /* Auf der Startseite (app.js) sorgt das dafür, dass die Ordner-
          Kacheln sofort den richtigen Zugriffsstand (voll/Gast/Kolleg:in)
