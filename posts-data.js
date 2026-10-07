@@ -683,4 +683,28 @@ const posts = [
     titleEn: "Doors Challenge: Around Town",
     excerptEn: "Interactive learning challenge \"Around Town\" as a standalone website. (External site, not buildspace content)"
    },
+   {
+    title: "Kart Krawall",
+    excerpt: "3D-Kartrennen mit Grand Prix, Einzelrennen, Zeitfahren und Mehrspieler per Code: Fahrer und Kart wählen, driften, Boosts sammeln und gegen Bots antreten.",
+    date: "2026-10-07",
+    category: "freizeit",
+    subcategory: null,
+    url: "kart-krawall.html",
+    emoji: "🏎️",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Kart Krawall",
+    excerptEn: "3D kart racing with Grand Prix, single races, time trial and multiplayer by code: pick a driver and kart, drift, collect boosts and race against bots."
+   },
+   {
+    title: "Lückenlos",
+    excerpt: "Einparken ohne Kratzer: 30 Lücken in vier Stufen, vom Kompaktwagen bis zum Gespann mit Anhänger. Wer etwas berührt, fängt von vorn an.",
+    date: "2026-10-07",
+    category: "freizeit",
+    subcategory: null,
+    url: "lueckenlos.html",
+    emoji: "🚗",
+    tags: ["spiel", "einzelarbeit"],
+    titleEn: "Gapless",
+    excerptEn: "Parking without a scratch: 30 spaces in four stages, from a compact car to a rig with a trailer. Touch anything and you start over."
+   },
 ];
