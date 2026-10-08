@@ -56,7 +56,7 @@ Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
 - **Eine eigenständige Datei**: CSS und JS inline, keine lokalen Abhängigkeiten. Externe Bibliotheken nur per CDN (bevorzugt cdnjs), mit fester Version.
 - Sprache Deutsch, `<html lang="de">`, `<meta charset="UTF-8">`, `<title>` = Titel aus `posts-data.js`.
 - **Muss auf iPad und iPhone gut funktionieren** (Marcs Hauptgeräte, Schüler-iPads): Touch-Bedienung, keine Hover-Abhängigkeit, ausreichend große Bedienelemente, responsives Layout, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
-- Speichern nur per `localStorage` (mit try/catch). Keine `window.storage`- oder Claude-API-Aufrufe – die gibt es auf GitHub Pages nicht.
+- Speichern nur per `localStorage` (mit try/catch). Keine `window.storage`- oder Claude-API-Aufrufe – die gibt es auf GitHub Pages nicht. Einzige Ausnahme: `kompo7-formulierungshilfe.html` (optionale KI-Prüfung mit eigenem API-Schlüssel der Nutzenden, steht in `API_KEY_OPT_IN` in `tools/check-site.js` und in der Datenschutzerklärung).
 - Unterricht: Differenzierung nach A/B/C-Kurs mitdenken, wenn es sich anbietet. Schülerdaten nur als Pseudonyme, keine echten Namen.
 - Keine API-Keys, Passwörter oder Tokens in Dateien schreiben.
 

@@ -183,7 +183,7 @@ body.sides #gas{width:58px;height:120px}
   <div class="menu-inner">
     <header class="brand">
       <h1>Lückenlos</h1>
-      <p>Einparken ohne Kratzer. 30 Lücken in vier Stufen, vom Kompaktwagen bis zum Gespann mit Anhänger. Wer etwas berührt, fängt von vorn an.</p>
+      <p>Einparken ohne Kratzer. 50 Lücken in sechs Stufen, vom Kompaktwagen bis zum Lieferwagen im Stadtverkehr mit Ampeln, Schranken und Zügen. Wer etwas berührt, fängt von vorn an.</p>
       <div class="lane" aria-hidden="true"></div>
     </header>
     <div class="modebar" role="group" aria-label="Spielmodus">
@@ -197,6 +197,7 @@ body.sides #gas{width:58px;height:120px}
       <p><strong>Touch:</strong> Lenkrad links drehen, rechts Gang wählen, Gas und Bremse gedrückt halten.<br>
       <strong>Tastatur:</strong> Pfeiltasten oder WASD fahren und lenken, Leertaste bremst, R startet neu, M zeigt die ganze Karte, Esc führt zurück.</p>
       <p><strong>Freies Üben:</strong> Alle Level sind offen, nichts wird gewertet. Mit dem Button „↶ 3 s“ oder der Taste Z spulst du drei Sekunden zurück, auch direkt nach dem Anfahren.</p>
+      <p><strong>Stadtverkehr (ab Level 31):</strong> Autos fahren, Ampeln schalten, Fußgänger queren, Schranken senken sich vor dem Zug. Die Uhr der Welt läuft erst, wenn du losfährst. Du darfst jederzeit stehen bleiben und warten.</p>
       <p><strong>Große Karten:</strong> Die Kamera fährt mit. Oben rechts siehst du eine Minikarte, ein gelber Pfeil am Rand zeigt zur Lücke.</p>
     </div>
   </div>
@@ -245,7 +246,7 @@ const D=Math.PI/180;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const PALETTE=['#c9ccd1','#5b6570','#24364f','#7a2430','#e9e7e1','#1d1f22','#55603e','#8c6a3f','#3d5f7a','#9a9da3','#b9a27a','#2f4a3a'];
-const PT={c:{len:4.2,wid:1.8,style:'car'},s:{len:4.7,wid:1.95,style:'suv'},v:{len:5.6,wid:2.0,style:'van'}};
+const PT={c:{len:4.2,wid:1.8,style:'car'},s:{len:4.7,wid:1.95,style:'suv'},v:{len:5.6,wid:2.0,style:'van'},b:{len:7.6,wid:2.45,style:'van'},t:{len:4.5,wid:1.85,style:'car'}};
 
 /* Spielerfahrzeuge */
 const VEH={
@@ -254,6 +255,9 @@ const VEH={
   transporter:{name:'Transporter',len:5.9,wid:2.05,wb:3.66,steer:32,vf:3.8,vr:2.0,color:'#e8742a',style:'van',stripes:false},
   gespann:{name:'Gespann',len:4.6,wid:1.9,wb:2.75,steer:33,vf:3.4,vr:1.8,color:'#6b4bb8',style:'suv',stripes:true,
     trailer:{len:3.0,wid:1.8,bar:1.3,hitch:0.2}}
+,
+  taxi:{name:'Taxi',len:4.5,wid:1.85,wb:2.75,steer:37,vf:5.0,vr:2.6,color:'#f2c230',style:'car',stripes:false,taxi:true},
+  lieferwagen:{name:'Lieferwagen',len:6.4,wid:2.1,wb:4.0,steer:30,vf:3.8,vr:2.0,color:'#e9e9e4',style:'van',stripes:false,band:'#2f6fb5'}
 };
 for(const k in VEH){const V=VEH[k];V.id=k;V.maxSteer=V.steer*D;
   if(V.trailer){V.hOff=(V.len-V.wb)/2+V.trailer.hitch;V.Lt=V.trailer.bar+V.trailer.len/2;}}
@@ -262,12 +266,14 @@ const STAGES=[
   {veh:'kompakt',title:'Kompaktwagen',text:'Stufe 1. Kurz und wendig, ideal zum Reinkommen.'},
   {veh:'suv',title:'SUV',text:'Stufe 2. Länger, breiter, größerer Wendekreis. Die Karten werden weitläufig.'},
   {veh:'transporter',title:'Transporter',text:'Stufe 3. Fast sechs Meter lang, der Wendekreis ist riesig.'},
-  {veh:'gespann',title:'Gespann mit Anhänger',text:'Stufe 4. Der Anhänger muss in die Lücke. Rückwärts lenkt er gegen dich.'}
+  {veh:'gespann',title:'Gespann mit Anhänger',text:'Stufe 4. Der Anhänger muss in die Lücke. Rückwärts lenkt er gegen dich.'},
+  {veh:'taxi',title:'Taxi im Stadtverkehr',text:'Stufe 5. Flink, aber die Stadt lebt: Autos fahren, Ampeln schalten, Fußgänger queren. Der Verkehr beginnt, sobald du losfährst.'},
+  {veh:'lieferwagen',title:'Lieferwagen',text:'Stufe 6. Lang, schwerfällig und mit Bahnübergang, Schranken und Gegenverkehr. Hier zählt gutes Timing.'}
 ];
 
 /* Bausteine */
 function base(name,hint,stars,W=36,H=22,theme='street'){
-  return{name,hint,stars,W,H,theme,start:null,target:null,cars:[],cones:[],blocks:[],circles:[],spots:[],paint:[]};
+  return{name,hint,stars,W,H,theme,start:null,target:null,dyn:[],cars:[],cones:[],blocks:[],circles:[],spots:[],paint:[]};
 }
 function pickC(R){return PALETTE[Math.floor(R()*PALETTE.length)];}
 function row(L,R,o){
@@ -526,8 +532,283 @@ function circHit(c,r,P){
 function angDiff(a,b){let d=(a-b)%(2*Math.PI);if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;return d;}
 function bbox(P){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const p of P){if(p.x<x0)x0=p.x;if(p.y<y0)y0=p.y;if(p.x>x1)x1=p.x;if(p.y>y1)y1=p.y;}return{x0,y0,x1,y1};}
 
+
+/* ===== Dynamische Hindernisse: alles ist eine reine Funktion der Weltzeit t ===== */
+function pathInfo(path){
+  const seg=[];let tot=0;
+  for(let i=1;i<path.length;i++){const dx=path[i][0]-path[i-1][0],dy=path[i][1]-path[i-1][1],l=Math.hypot(dx,dy);seg.push({l,a:Math.atan2(dy,dx),x:path[i-1][0],y:path[i-1][1],s0:tot});tot+=l;}
+  return{seg,tot};
+}
+function pathAt(info,s){
+  s=clamp(s,0,info.tot);
+  for(const g of info.seg)if(s<=g.s0+g.l+1e-9){const u=s-g.s0;return{x:g.x+Math.cos(g.a)*u,y:g.y+Math.sin(g.a)*u,a:g.a};}
+  const g=info.seg[info.seg.length-1];return{x:g.x+Math.cos(g.a)*g.l,y:g.y+Math.sin(g.a)*g.l,a:g.a};
+}
+/* Wie weit ist ein Auto der Ampelspur zum Zeitpunkt t? Wartet vor der Haltelinie bis Grün. */
+function laneS(d,c,t){
+  const P=d.period,u=(((t+(c.phase||0))%P)+P)%P,v=d.speed,sStop=c.stop,tA=sStop/v;
+  const tG=d.green;                      // Beginn der Grünphase (in u)
+  if(u<tA&&u<tG)return sStop-(tA-u)*v>=0?sStop-(tA-u)*v:0;   // anfahren aus dem Kartenrand
+  if(u<tG+(c.delay||0))return sStop;     // wartet an der Haltelinie
+  const s=sStop+(u-tG-(c.delay||0))*v;
+  return s>d.len+8?-1:s;                 // nach der Fahrt außer Sicht
+}
+function lightState(d,t){
+  const P=d.period,u=((t%P)+P)%P,g0=d.green,g1=d.green+d.gLen;
+  if(u>=g0&&u<g1-1)return'green';if(u>=g1-1&&u<g1)return'yellow';return'red';
+}
+function gateAngle(g,t){            // 0 = offen (senkrecht), 1 = geschlossen (waagerecht)
+  const P=g.period,u=((t%P)+P)%P,a=g.from,b=g.to,r=g.ramp||1.2;
+  if(u<a)return 0;if(u<a+r)return(u-a)/r;if(u<b)return 1;if(u<b+r)return 1-(u-b)/r;return 0;
+}
+function trainPos(d,t){
+  const P=d.period,u=((t%P)+P)%P,tt=u-d.enter,tot=(d.span+d.length)/d.speed;
+  if(tt<0||tt>tot)return null;return -d.length/2+tt*d.speed;   // Mittelpunkt entlang der Achse, 0 = Kartenrand
+}
+/* Liefert alle beweglichen Objekte zum Zeitpunkt t, mit Polygonen für die Kollision */
+function dynAt(L,t,pad){
+  pad=pad||0;const out=[];
+  for(const d of L.dyn||[]){
+    if(d.type==='flow'||d.type==='lane'){
+      const info=d.info||(d.info=pathInfo(d.path)),cs=d.type==='flow'?d.cars:d.cars;
+      cs.forEach((c,i)=>{
+        let s;
+        if(d.type==='flow'){const cyc=info.tot+d.gap;s=((c.s0+d.speed*t)%cyc+cyc)%cyc;if(s>info.tot)return;}
+        else{s=laneS(d,c,t);if(s<0)return;}
+        const p=pathAt(info,s),pt=PT[c.t||'c'],a=p.a+(c.rev?Math.PI:0);
+        out.push({kind:'mcar',x:p.x,y:p.y,a,t:c.t||'c',c:c.c||PALETTE[(i*5+3)%PALETTE.length],len:pt.len,wid:pt.wid,style:pt.style,
+          poly:corners(p.x,p.y,a,pt.len+pad,pt.wid+pad*0.5),brake:d.type==='lane'&&Math.abs(s-c.stop)<0.05});
+      });
+    }else if(d.type==='ped'){
+      const info=d.info||(d.info=pathInfo(d.path)),cyc=2*(info.tot/d.speed+d.pause),u=(((t+(d.phase||0))%cyc)+cyc)%cyc,mv=info.tot/d.speed;
+      let s;if(u<d.pause)s=0;else if(u<d.pause+mv)s=(u-d.pause)*d.speed;else if(u<2*d.pause+mv)s=info.tot;else s=info.tot-(u-2*d.pause-mv)*d.speed;
+      const p=pathAt(info,s);out.push({kind:'ped',x:p.x,y:p.y,r:0.38+pad*0.4,a:p.a,moving:!(u<d.pause||(u>=d.pause+mv&&u<2*d.pause+mv))});
+    }else if(d.type==='gate'){
+      const k=gateAngle(d,t);
+      // Arm: dreht von senkrecht (offen) zu waagerecht (zu) um den Pivot. dir = Richtung des geschlossenen Arms.
+      const ang=d.dir+(1-k)*d.lift,ex=d.x+Math.cos(ang)*d.len,ey=d.y+Math.sin(ang)*d.len;
+      const o={kind:'gate',x:d.x,y:d.y,ex,ey,k,len:d.len,ang};
+      if(k>=0.55){const nx=-Math.sin(d.dir)*0.12,ny=Math.cos(d.dir)*0.12;
+        o.poly=[{x:d.x+nx,y:d.y+ny},{x:d.x-nx,y:d.y-ny},{x:ex-nx*0+0,y:ey-ny*0+0},{x:ex+nx,y:ey+ny}].map(p=>p);
+        const c=Math.cos(d.dir),s=Math.sin(d.dir),w=0.14+pad*0.4;
+        o.poly=[{x:d.x-s*w,y:d.y+c*w},{x:d.x+s*w,y:d.y-c*w},{x:d.x+c*d.len+s*w,y:d.y+s*d.len-c*w},{x:d.x+c*d.len-s*w,y:d.y+s*d.len+c*w}];}
+      out.push(o);
+    }else if(d.type==='train'){
+      const m=trainPos(d,t);
+      if(m!==null){
+        let x,y,a;if(d.axis==='x'){x=m;y=d.at;a=0;}else{x=d.at;y=m;a=Math.PI/2;}
+        out.push({kind:'train',x,y,a,len:d.length,wid:d.wid||3.0,poly:corners(x,y,a,d.length+pad,(d.wid||3.0)+pad*0.5)});
+      }
+    }
+  }
+  return out;
+}
+function collideDyn(poly,dyn){
+  for(const o of dyn){
+    if(o.kind==='ped'){if(circHit(o,o.r,poly))return{kind:'ped',obj:o,px:o.x,py:o.y};continue;}
+    if(!o.poly)continue;
+    if(overlap(poly,o.poly)){let p=o.poly[0];for(const q of poly)if(inPoly(q,o.poly)){p=q;break;}
+      return{kind:o.kind==='mcar'?'mcar':o.kind,obj:o,px:p.x,py:p.y};}
+  }
+  return null;
+}
+
+
+/* ===== Helfer für Stufe 5 und 6 ===== */
+function mkFlow(path,speed,gap,cars){return{type:'flow',path,speed,gap,cars:cars.map(c=>typeof c==='number'?{s0:c}:c)};}
+function mkLane(o){const info=pathInfo(o.path);o.len=info.tot;return Object.assign({type:'lane'},o);}
+function mkPed(path,speed,pause,phase){return{type:'ped',path,speed,pause,phase:phase||0};}
+function mkGate(x,y,dir,len,period,from,to,lift){return{type:'gate',x,y,dir,len,period,from,to,ramp:1.2,lift:lift===undefined?-Math.PI/2:lift};}
+function mkTrain(axis,at,span,length,speed,period,enter){return{type:'train',axis,at,span,length,speed,period,enter};}
+/* Bahnübergang: zwei Halbschranken für eine waagerechte Straße y0..y1 über ein senkrechtes Gleis bei x=at */
+function railGatesX(L,at,y0,y1,period,from,to){
+  const mid=(y0+y1)/2;
+  L.dyn.push(mkGate(at-2.6,y1,-Math.PI/2,y1-mid+0.1,period,from,to,Math.PI));
+  L.dyn.push(mkGate(at+2.6,y0,Math.PI/2,mid-y0+0.1,period,from+0.8,to-0.4,Math.PI));
+}
+/* dasselbe für eine senkrechte Straße x0..x1 über ein waagerechtes Gleis bei y=at */
+function railGatesY(L,at,x0,x1,period,from,to){
+  const mid=(x0+x1)/2;
+  L.dyn.push(mkGate(x1,at-2.6,Math.PI,x1-mid+0.1,period,from,to,Math.PI));
+  L.dyn.push(mkGate(x0,at+2.6,0,mid-x0+0.1,period,from+0.8,to-0.4,Math.PI));
+}
+function mkRing(cx,cy,r,n){const p=[];for(let i=0;i<=n;i++){const a=-Math.PI/2+i*2*Math.PI/n;p.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}return p;}
+
+/* ================= Stufe 5: Taxi im Stadtverkehr ================= */
+LEVELS.push(
+{s:4,b:R=>{const L=base('Rote Welle','Quere die Kreuzung, wenn der Querverkehr Rot hat. Die Ampeln zeigen dir den Takt. Der Verkehr läuft erst, wenn du losfährst.',[18,30],52,34);
+  block(L,0,0,22,13,'building');block(L,30,0,22,13,'building');block(L,0,21,22,13,'building');block(L,30,26.8,22,7.2,'building');
+  row(L,R,{x:33.5,y:23.9,dx:3.0,n:6,a:90,len:5.4,wid:2.9,mix:'cs',target:3,ta:90});
+  const cyc={speed:5,period:14,green:7,gLen:4.5};
+  L.dyn.push(mkLane({...cyc,path:[[24.6,0],[24.6,34]],cars:[{stop:10.4,t:'c'},{stop:5.0,delay:0.6,t:'s'}],light:{x:29.3,y:12.2},pLight:{x:21.0,y:21.9}}));
+  L.dyn.push(mkLane({...cyc,path:[[27.4,34],[27.4,0]],cars:[{stop:9.8,t:'s'},{stop:4.4,delay:0.6,t:'c'}],light:{x:22.7,y:21.9}}));
+  L.start={x:6,y:17.6,a:0};return L;}},
+{s:4,b:R=>{const L=base('Zebrastreifen','Fußgänger haben Vorrang. Warte, bis der Streifen frei ist, und achte auf den Gegenverkehr.',[22,36],56,26);
+  block(L,0,0,56,5.6,'building');block(L,0,23.4,56,2.6,'building');
+  row(L,R,{x:3.5,y:20.7,dx:3.0,n:6,a:90,len:5.4,wid:2.9,mix:'cs'});
+  row(L,R,{x:30.5,y:20.7,dx:3.0,n:9,a:90,len:5.4,wid:2.9,mix:'cs',target:4,ta:90});
+  L.paint.push({zebra:{x:21.2,y:8,w:5.2,h:10,vertical:true}});
+  L.dyn.push(mkPed([[23.0,6.2],[23.0,20.2]],1.5,2.2,0),mkPed([[24.6,20.2],[24.6,6.2]],1.3,3.0,3.0));
+  L.dyn.push(mkFlow([[56,10.4],[0,10.4]],4.5,26,[0,23,52,80].map(s0=>({s0,rev:false}))));
+  L.start={x:5,y:15.2,a:0};return L;}},
+{s:4,b:R=>{const L=base('Gegenverkehr','Auf die andere Straßenseite einparken: Nutze die Lücke im Gegenverkehr und rangiere im Ernstfall nach.',[24,40],60,28);
+  block(L,0,27,60,1,'building');
+  row(L,R,{x:6,y:23.9,dx:3.0,n:17,a:90,len:5.4,wid:2.9,mix:'cs',empty:[]});
+  row(L,R,{x:12,y:2.9,dx:3.0,n:15,a:-90,len:5.4,wid:2.9,mix:'cs',target:6,ta:-90});
+  L.dyn.push(mkFlow([[60,10.2],[0,10.2]],4.5,60,[0,40,90]));
+  L.paint.push({x1:0,y1:14,x2:60,y2:14,dash:true});
+  L.start={x:4,y:17.8,a:0};return L;}},
+{s:4,b:R=>{const L=base('Parkhausschranke','Die Schranke öffnet nur kurz. Fahr zügig durch und park rückwärts ein. Drinnen kurvt ein Auto durch die Gasse.',[30,48],48,30,'garage');
+  block(L,13.5,0,1,12,'wall');block(L,13.5,18,1,12,'wall');
+  L.dyn.push(mkGate(14,12,Math.PI/2,6,10,3.5,9,-Math.PI));
+  row(L,R,{x:19,y:3.2,dx:3.0,n:10,a:-90,len:5.4,wid:2.8,mix:'cs'});
+  row(L,R,{x:19,y:26.8,dx:3.0,n:10,a:90,len:5.4,wid:2.8,mix:'cs',target:6,ta:-90});
+  [25.5,34.5,43.5].forEach(x=>{block(L,x-0.3,8.6,0.6,0.6,'pillar');block(L,x-0.3,20.8,0.6,0.6,'pillar');});
+  L.dyn.push(mkFlow([[46,11.4],[15,11.4]],3.0,26,[0,18]));
+  L.start={x:5,y:15.2,a:0};return L;}},
+{s:4,b:R=>{const L=base('Einfädeln','Park parallel am Bordstein, während der Verkehr rollt. Ein Auto kommt von hinten, eins von vorn.',[26,42],64,26);
+  block(L,0,22,64,4,'curb');block(L,0,0,64,3,'building');
+  parallel(L,R,{x0:1,curb:22,side:1,a:0,seq:['c','s','c',{gap:7.8,target:true,ta:0},'s','c','v','s','c']});
+  L.dyn.push(mkFlow([[64,6.0],[0,6.0]],4.5,40,[0,28,60,90]));
+  L.dyn.push(mkFlow([[0,10.6],[64,10.6]],4.5,50,[30,78]));
+  L.start={x:6,y:14.4,a:0};return L;}}
+);
+
+/* Ampelkreuzung: senkrechte Querstraße bei x=xc, waagerechte Hauptstraße y0..y1 */
+function crossing(L,o){
+  const xc=o.x,y0=o.y0,y1=o.y1,H=L.H,cyc={speed:o.speed||5,period:o.period,green:o.green,gLen:o.gLen||5};
+  const sS=y0-2.5,sN=H-(y1+2.5);
+  L.dyn.push(mkLane({...cyc,path:[[xc-1.4,0],[xc-1.4,H]],cars:[{stop:sS,t:'c'},{stop:sS-5.4,delay:0.6,t:'s'}],light:{x:xc+3.3,y:y0-0.8},pLight:{x:xc-3.3,y:y1+0.8}}));
+  L.dyn.push(mkLane({...cyc,path:[[xc+1.4,H],[xc+1.4,0]],cars:[{stop:sN,t:'s'},{stop:sN-5.4,delay:0.6,t:'c'}],light:{x:xc-3.3,y:y1+0.8}}));
+}
+LEVELS.push(
+{s:4,b:R=>{const L=base('Bahnübergang','Die Schranken senken sich vor dem Zug. Fahr nur bei offener Schranke über die Gleise und bleib nie darauf stehen.',[24,40],56,30);
+  block(L,0,0,22,8.6,'building');block(L,30,0,26,8.6,'building');block(L,0,24.4,22,5.6,'building');block(L,30,24.4,26,5.6,'building');
+  row(L,R,{x:3.5,y:21.7,dx:3.0,n:6,a:90,len:5.4,wid:2.9,mix:'cs'});
+  row(L,R,{x:32.5,y:21.7,dx:3.0,n:8,a:90,len:5.4,wid:2.9,mix:'cs',target:4,ta:90});
+  L.dyn.push(mkTrain('y',26,30,22,9,16,2));
+  railGatesX(L,26,11,19,16,0.5,8.5);
+  L.dyn.push(mkFlow([[56,13.2],[0,13.2]],4,60,[10,70]));
+  L.start={x:5,y:15.6,a:0};return L;}},
+{s:4,b:R=>{const L=base('Kreisverkehr','Fahr im Kreisverkehr gegen den Uhrzeigersinn und nimm die Ausfahrt nach oben. Wer im Kreis fährt, hat Vorfahrt.',[30,48],50,50);
+  block(L,0,0,13,13,'building');block(L,37,0,13,13,'building');block(L,0,37,13,13,'building');block(L,37,37,13,13,'building');
+  L.circles.push({x:25,y:25,r:5,kind:'island'});
+  row(L,R,{x:16.5,y:2.9,dx:3.0,n:7,a:-90,len:5.4,wid:2.9,mix:'cs',target:3,ta:-90});
+  const ring=mkRing(25,25,9,32).reverse(),info=pathInfo(ring);
+  L.dyn.push(mkFlow(ring,3.5,0,[0,0.25,0.5,0.75].map(f=>({s0:info.tot*f+3}))));
+  L.start={x:25,y:47,a:-90};return L;}},
+{s:4,b:R=>{const L=base('Marktplatz','Zwischen den Ständen und den Passanten durch: Fußgänger laufen unvorhersehbar über deinen Weg. Park oben ein.',[28,46],60,40);
+  row(L,R,{x:8,y:2.9,dx:3.0,n:16,a:-90,len:5.4,wid:2.9,mix:'cs',target:9,ta:-90});
+  block(L,16,13,9,2.6,'planter');block(L,36,13,9,2.6,'planter');block(L,26,22,9,2.6,'planter');block(L,6,22,9,2.6,'planter');block(L,46,22,9,2.6,'planter');
+  L.dyn.push(mkPed([[8,31],[40,31]],1.3,1.5,0),mkPed([[56,27],[24,27]],1.4,1.0,2),mkPed([[30,18],[30,36]],1.2,2.0,1),
+    mkPed([[46,10],[46,34]],1.4,1.2,3),mkPed([[14,10],[14,30]],1.1,2.0,5),mkPed([[34,8.6],[56,8.6]],1.3,1.0,4));
+  L.start={x:5,y:35,a:0};return L;}},
+{s:4,b:R=>{const L=base('Grüne Welle','Zwei Ampeln hintereinander. Die zweite schaltet später: Erwischst du beide bei Grün, bist du schnell am Ziel.',[24,40],72,32);
+  block(L,0,0,16,12,'building');block(L,24,0,20,12,'building');block(L,52,0,20,12,'building');block(L,0,20,16,12,'building');block(L,24,20,20,12,'building');block(L,52,25.4,20,6.6,'building');
+  row(L,R,{x:55.5,y:22.7,dx:3.0,n:6,a:90,len:5.4,wid:2.9,mix:'cs',target:2,ta:90});
+  crossing(L,{x:20,y0:12,y1:20,period:16,green:8});
+  crossing(L,{x:48,y0:12,y1:20,period:16,green:11});
+  L.start={x:5,y:16.7,a:0};return L;}},
+{s:4,b:R=>{const L=base('Rushhour','Alles auf einmal: Ampel, Fußgänger, Gegenverkehr. Dann parallel in die Lücke am rechten Bordstein.',[40,64],76,46);
+  block(L,0,0,18,18,'building');block(L,26,0,50,18,'building');block(L,0,28,18,18,'building');block(L,26,28,50,3,'curb');block(L,26,31,50,15,'building');
+  parallel(L,R,{x0:44,curb:28,side:1,a:0,seq:['c','s',{gap:7.8,target:true,ta:0},'s','c']});
+  crossing(L,{x:22,y0:18,y1:28,period:16,green:8});
+  L.paint.push({zebra:{x:33,y:18,w:5,h:10,vertical:true}});
+  L.dyn.push(mkPed([[34.2,16.4],[34.2,29.6]],1.5,2.0,0),mkPed([[36.8,29.6],[36.8,16.4]],1.3,2.5,4));
+  L.dyn.push(mkFlow([[76,20.6],[0,20.6]],4.5,60,[10,62]));
+  L.start={x:5,y:25.0,a:0};return L;}}
+);
+
+/* ================= Stufe 6: Lieferwagen ================= */
+LEVELS.push(
+{s:5,b:R=>{const L=base('Laderampe','Rückwärts an die Rampe. Zwischen den Paletten fahren Gabelstapler hin und her, und sie bremsen nicht für dich.',[30,48],56,36);
+  block(L,0,0,56,5,'building');
+  row(L,R,{x:8,y:8.4,dx:3.4,n:13,a:90,len:6.8,wid:3.4,mix:'v',target:7,ta:90});
+  block(L,6,22,8,3,'container');block(L,22,24,10,3,'container');block(L,44,23,8,3,'container');
+  L.dyn.push(mkFlow([[56,18.5],[0,18.5]],3,24,[0,30]));
+  L.dyn.push(mkFlow([[40,36],[40,15]],2.6,24,[0,28]));
+  L.start={x:5,y:31,a:0};return L;}},
+{s:5,b:R=>{const L=base('Linienbus','Gegenverkehr mit langen Bussen. Quere die Fahrbahn in einer Lücke und park auf der anderen Seite ein.',[30,48],64,26);
+  block(L,0,24.8,64,1.2,'building');
+  row(L,R,{x:5,y:21.4,dx:3.5,n:17,a:90,len:7.0,wid:3.4,mix:'vs'});
+  row(L,R,{x:30,y:4.2,dx:3.5,n:8,a:-90,len:7.0,wid:3.4,mix:'vs',target:4,ta:-90});
+  L.dyn.push(mkFlow([[64,10.4],[0,10.4]],3.5,80,[{s0:0,t:'b'},{s0:76,t:'s'}]));
+  L.paint.push({x1:0,y1:13,x2:64,y2:13,dash:true});
+  L.start={x:4,y:15.6,a:0};return L;}},
+{s:5,b:R=>{const L=base('Bahnübergang lang','Direkt hinter den Gleisen liegt die Lücke. Der Zug kommt oft: Warte vor der Schranke und fahr sofort los, wenn sie sich hebt.',[34,56],60,30);
+  block(L,0,0,17,11,'building');block(L,43,0,17,11,'building');block(L,0,19,17,11,'building');block(L,43,19,17,11,'building');
+  row(L,R,{x:20.6,y:2.4,dy:3.6,n:3,a:0,len:6.8,wid:3.4,mix:'v',target:2,ta:180});
+  row(L,R,{x:39.4,y:2.4,dy:3.6,n:3,a:180,len:6.8,wid:3.4,mix:'v'});
+  L.dyn.push(mkTrain('x',14,60,24,12,16,1));
+  L.dyn.push(mkGate(36,16.6,Math.PI,6.1,16,0.5,8.5,Math.PI),mkGate(24,11.4,0,6.1,16,1.3,8.1,Math.PI));
+  L.start={x:31,y:26.2,a:-90};return L;}},
+{s:5,b:R=>{const L=base('Baustellenampel','Eine Fahrspur für beide Richtungen. Der Gegenverkehr hat abwechselnd Grün: Fahr durch, wenn er steht.',[34,56],64,34);
+  block(L,0,0,64,3,'building');block(L,0,29.7,64,4.3,'building');
+  block(L,24,3,16,10,'barrier');
+  coneLine(L,21,13.4,24,13.4);coneLine(L,40,13.4,43,13.4);
+  row(L,R,{x:52,y:26.1,dx:3.4,n:4,a:90,len:7.2,wid:3.4,mix:'vs',target:2,ta:90});
+  L.dyn.push(mkLane({speed:4,period:24,green:12,gLen:7,path:[[64,10.6],[46,10.6],[40,15.6],[0,15.6]],
+    cars:[{stop:16.5,t:'s'},{stop:6.0,delay:1.2,t:'c'}],light:{x:45.2,y:8.0},pLight:{x:22.5,y:19.0}}));
+  L.start={x:5,y:17.8,a:0};return L;}},
+{s:5,b:R=>{const L=base('Marktstraße','Lange Lücke, viele Passanten. Parallel einparken, während Fußgänger die Straße queren.',[36,58],64,30);
+  block(L,0,0,64,5,'building');block(L,0,24,64,2.4,'curb');block(L,0,26.4,64,3.6,'building');
+  parallel(L,R,{x0:4,curb:24,side:1,a:0,twid:2.7,seq:['c','s','v','c',{gap:10.0,target:true,ta:0},'s','v','c','s']});
+  L.dyn.push(mkPed([[14,5.8],[14,20.2]],1.4,1.5,0),mkPed([[30,20.2],[30,5.8]],1.3,2.2,3),mkPed([[50,5.8],[50,20.2]],1.4,1.2,6),mkPed([[22,20.2],[22,5.8]],1.2,3.0,2));
+  L.dyn.push(mkFlow([[64,9.4],[0,9.4]],4,70,[10,70]));
+  L.start={x:5,y:16.6,a:0};return L;}}
+);
+
+LEVELS.push(
+{s:5,b:R=>{const L=base('Hafenschranke','Die Hafenschranke öffnet nur kurz. Drinnen kreuzen Stapler deinen Weg. Setz den Wagen rückwärts an den Kai.',[34,56],60,36);
+  block(L,11.5,0,1,14,'wall');block(L,11.5,22,1,14,'wall');
+  L.dyn.push(mkGate(12,14,Math.PI/2,8,12,4,10,-Math.PI));
+  block(L,18,3,34,4,'container');block(L,18,29,34,4,'container');
+  row(L,R,{x:56.6,y:11.8,dy:3.5,n:4,a:0,len:6.8,wid:3.4,mix:'v',target:2,ta:180});
+  L.dyn.push(mkFlow([[52,24.5],[14,24.5]],3,22,[0,28]));
+  L.dyn.push(mkFlow([[36,8],[36,28]],2.6,22,[0,26]));
+  L.start={x:5,y:18,a:0};return L;}},
+{s:5,b:R=>{const L=base('Kreuzung XL','Eine große Kreuzung mit Doppelspur. Der Querverkehr läuft nur bei Grün. Dahinter quert noch ein Zebrastreifen.',[40,64],64,48);
+  block(L,0,0,26,18,'building');block(L,38,0,26,18,'building');block(L,0,30,26,18,'building');block(L,38,36.8,26,11.2,'building');
+  row(L,R,{x:44.5,y:33.4,dx:3.5,n:5,a:90,len:6.8,wid:3.4,mix:'vs',target:3,ta:90});
+  crossing(L,{x:32,y0:18,y1:30,period:18,green:9});
+  L.paint.push({zebra:{x:48,y:18,w:5,h:12,vertical:true}});
+  L.dyn.push(mkPed([[49.2,16.4],[49.2,31.6]],1.5,2.0,0),mkPed([[51.8,31.6],[51.8,16.4]],1.3,3.0,5));
+  L.dyn.push(mkFlow([[64,21.4],[0,21.4]],4,60,[{s0:0,t:'b'},{s0:62,t:'s'}]));
+  L.start={x:5,y:26.6,a:0};return L;}},
+{s:5,b:R=>{const L=base('Gleisfeld','Zwei Gleise, zwei Schranken, zu verschiedenen Zeiten. Warte im Gleisfeld dazwischen, bis auch das zweite frei ist.',[40,64],60,40);
+  block(L,0,31,24,9,'building');block(L,36,31,24,9,'building');block(L,0,0,17.5,9,'building');block(L,42.5,0,17.5,9,'building');
+  row(L,R,{x:21.6,y:2.4,dy:3.6,n:2,a:0,len:6.8,wid:3.4,mix:'v',target:1,ta:180});
+  row(L,R,{x:38.4,y:2.4,dy:3.6,n:2,a:180,len:6.8,wid:3.4,mix:'v'});
+  L.dyn.push(mkTrain('x',28,60,22,12,18,1),mkTrain('x',12,60,22,12,18,7));
+  L.dyn.push(mkGate(34,30.6,Math.PI,6.1,18,0.5,9.2,Math.PI),mkGate(26,25.4,0,6.1,18,1.3,8.8,Math.PI));
+  L.dyn.push(mkGate(34,14.6,Math.PI,6.1,18,6.5,15.0,Math.PI),mkGate(26,9.4,0,6.1,18,7.3,14.6,Math.PI));
+  L.start={x:31,y:36.2,a:-90};return L;}},
+{s:5,b:R=>{const L=base('Stadtlauf','Ampel, Zebrastreifen, Bahnübergang: Alles liegt auf deiner Strecke. Dahinter die Lücke.',[44,70],76,44);
+  block(L,0,0,12,17,'building');block(L,20,0,28,17,'building');block(L,52,0,24,17,'building');
+  block(L,0,27,12,17,'building');block(L,20,27,28,17,'building');block(L,52,36.8,24,7.2,'building');
+  row(L,R,{x:58.5,y:30.4,dx:3.5,n:5,a:90,len:7.2,wid:3.4,mix:'vs',target:2,ta:90});
+  crossing(L,{x:16,y0:17,y1:27,period:16,green:8});
+  L.paint.push({zebra:{x:30,y:17,w:5,h:10,vertical:true}});
+  L.dyn.push(mkPed([[31.2,15.4],[31.2,28.6]],1.5,2.0,1),mkPed([[33.8,28.6],[33.8,15.4]],1.3,2.5,5));
+  L.dyn.push(mkTrain('y',50,44,22,10,18,2));
+  railGatesX(L,50,17,27,18,0.5,9.2);
+  L.start={x:5,y:23.4,a:0};return L;}},
+{s:5,b:R=>{const L=base('Spedition','Das Finale: Hofschranke, Ampel, Bahnübergang und Stapler. Fahr ans Ende des Hofs, wende und setz rückwärts an die Rampe.',[70,110],76,50);
+  block(L,13,0,1,21,'wall');block(L,13,29,1,21,'wall');
+  L.dyn.push(mkGate(13.5,21,Math.PI/2,8,14,5,11,-Math.PI));
+  block(L,14,0,12,17,'building');block(L,34,0,10.5,17,'building');block(L,47.5,0,26.5,17,'building');
+  block(L,14,33,12,17,'building');block(L,34,33,10.5,17,'building');block(L,47.5,33,26.5,17,'building');
+  row(L,R,{x:71.6,y:21,dy:3.4,n:3,a:0,len:6.8,wid:3.4,mix:'v',target:1,ta:180});
+  crossing(L,{x:30,y0:17,y1:33,period:16,green:8});
+  L.dyn.push(mkTrain('y',46,50,22,10,18,2));
+  railGatesX(L,46,17,33,18,0.5,9.8);
+  L.dyn.push(mkFlow([[64,19.4],[16,19.4]],3.2,40,[0,34]));
+  L.start={x:5,y:27,a:0};return L;}}
+);
+
+const STAR_OVERRIDE={"31": [38, 62], "32": [30, 50], "33": [24, 41], "34": [34, 56], "35": [21, 35], "36": [34, 56], "37": [32, 53], "38": [33, 54], "39": [40, 65], "40": [38, 63], "41": [35, 57], "42": [41, 67], "43": [29, 47], "44": [36, 59], "45": [30, 50], "46": [48, 78], "47": [49, 81], "48": [39, 64], "49": [42, 69], "50": [77, 125]};
 function prepare(i){
-  const def=LEVELS[i],L=def.b(mulberry(1000+i*77));
+  const def=LEVELS[i],L=def.b(mulberry(1000+i*77));if(STAR_OVERRIDE[i+1])L.stars=STAR_OVERRIDE[i+1];
   L.stage=def.s;L.V=VEH[STAGES[def.s].veh];
   L.cars.forEach(c=>{c.a*=D;const t=PT[c.t||'c'];c.len=t.len;c.wid=t.wid;c.style=t.style;
     c.poly=corners(c.x,c.y,c.a,c.len,c.wid);c.bb=bbox(c.poly);});
@@ -567,10 +848,16 @@ function collidePoly(L,poly){
   for(const c of L.cones)if(c.x+0.3>B.x0&&c.x-0.3<B.x1&&c.y+0.3>B.y0&&c.y-0.3<B.y1&&circHit(c,0.3,poly))return{kind:'cone',obj:c,px:c.x,py:c.y};
   return null;
 }
-function collideState(L,S){
+function collideState(L,S,t,pad){
   const V=L.V,P=vehPolys(S,V);
   if(V.trailer&&Math.abs(angDiff(S.th,S.ph))>80*D)return{kind:'jackknife',px:P.hitch.x,py:P.hitch.y};
-  return collidePoly(L,P.car)||(P.trailer&&collidePoly(L,P.trailer));
+  let h=collidePoly(L,P.car)||(P.trailer&&collidePoly(L,P.trailer));
+  if(h)return h;
+  if(L.dyn&&L.dyn.length&&t!==undefined){
+    const dy=dynAt(L,t,pad||0);
+    return collideDyn(P.car,dy)||(P.trailer&&collideDyn(P.trailer,dy))||null;
+  }
+  return null;
 }
 /* Prüft, ob das (bzw. der Anhänger) korrekt in der Lücke steht */
 function parkState(L,S){
@@ -579,6 +866,7 @@ function parkState(L,S){
   for(const p of poly){const dx=p.x-T.x,dy=p.y-T.y,lx=dx*c+dy*s,ly=-dx*s+dy*c;if(Math.abs(lx)<=T.len/2&&Math.abs(ly)<=T.wid/2)n++;}
   return{inside:n===4,n,angOk:Math.abs(angDiff(head,T.a))<30*D};
 }
+
 
 const $=s=>document.querySelector(s);
 const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -597,7 +885,7 @@ let crashInfo=null,crashT=0,wrongShown=false,targetState='none',view=null,overvi
 const cam={x:0,y:0,s:1};
 const inp={gasPad:false,brakePad:false,keyGas:false,keyBrake:false,keyL:false,keyR:false};
 let wheelAngle=0,wheelDrag=null;
-let hist=[],histT=0;
+let hist=[],histT=0,wt=0,curDyn=[];
 
 /* ================= Canvas ================= */
 const cv=$('#cv'),mainCtx=cv.getContext('2d');let ctx=mainCtx;
@@ -679,11 +967,14 @@ function drawVehicle(x,y,a,len,wid,style,color,o={}){
   ctx.fillStyle='rgba(255,255,255,.13)';rr(-l+0.25,-w+0.12,len-0.5,0.32,0.15);ctx.fill();
   ctx.fillStyle='rgba(0,0,0,.14)';rr(-l+0.25,w-0.42,len-0.5,0.3,0.15);ctx.fill();
   if(o.stripes){ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(-l+0.15,-0.26,len-0.3,0.13);ctx.fillRect(-l+0.15,0.13,len-0.3,0.13);}
+  if(o.taxi){ctx.fillStyle='#fff';rr(-0.35,-0.34,0.7,0.68,0.12);ctx.fill();ctx.fillStyle='#17191c';ctx.fillRect(-0.28,-0.08,0.56,0.16);
+    ctx.fillStyle='#17191c';for(let k=0;k<6;k++)if(k%2===0)ctx.fillRect(1.0+k*0.12,-w+0.02,0.12,0.12);}
   if(o.livery){ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(-l+0.3,w-0.36,len*0.75,0.16);ctx.fillRect(-l+0.3,-w+0.2,len*0.75,0.16);}
   const fx=St.f*l,bx=St.b*l,rx=St.r*l;
   ctx.fillStyle='#1b252d';quad(fx,w-0.17,bx,w-0.27);
   if(St.rw!==null)quad(rx,w-0.28,St.rw*l,w-0.22);
   ctx.fillStyle=shade(color,-0.1);rr(rx,-w+0.28,bx-rx,wid-0.56,0.18);ctx.fill();
+  if(o.band){ctx.fillStyle=o.band;ctx.fillRect(rx+0.15,-0.3,bx-rx-0.3,0.6);ctx.fillRect(-l+0.3,-0.12,len-0.6,0.24);}
   if(o.stripes){ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(rx,-0.26,bx-rx,0.13);ctx.fillRect(rx,0.13,bx-rx,0.13);}
   if(style==='van'){ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=0.05;for(let k=rx+0.5;k<bx-0.2;k+=0.6){ctx.beginPath();ctx.moveTo(k,-w+0.34);ctx.lineTo(k,w-0.34);ctx.stroke();}}
   if(style==='suv'){ctx.fillStyle='rgba(20,22,24,.6)';ctx.fillRect(rx+0.1,-w+0.32,bx-rx-0.2,0.07);ctx.fillRect(rx+0.1,w-0.39,bx-rx-0.2,0.07);}
@@ -798,11 +1089,101 @@ function drawPlayer(){
   const braking=inp.brakePad||inp.keyBrake||((inp.gasPad||inp.keyGas)&&S.v*gear<-0.05);
   if(P.trailer)drawTrailer(P,V,{brake:braking,reverse:gear<0});
   const c=Math.cos(S.th),s=Math.sin(S.th);
-  drawVehicle(S.rx+c*V.wb/2,S.ry+s*V.wb/2,S.th,V.len,V.wid,V.style,V.color,{wb:V.wb,steer:S.steer,brake:braking,reverse:gear<0,stripes:V.stripes,livery:V.style==='van'});
+  drawVehicle(S.rx+c*V.wb/2,S.ry+s*V.wb/2,S.th,V.len,V.wid,V.style,V.color,{wb:V.wb,steer:S.steer,brake:braking,reverse:gear<0,stripes:V.stripes,livery:V.style==='van'&&!V.band,taxi:V.taxi,band:V.band});
+}
+
+/* ===== Zeichnen der dynamischen Elemente ===== */
+function drawZebra(z){
+  ctx.save();ctx.fillStyle='rgba(241,238,228,.78)';
+  const n=Math.floor((z.vertical?z.h:z.w)/0.9);
+  for(let i=0;i<n;i++){
+    if(z.vertical)ctx.fillRect(z.x,z.y+0.2+i*0.9,z.w,0.5);else ctx.fillRect(z.x+0.2+i*0.9,z.y,0.5,z.h);
+  }
+  ctx.restore();
+}
+function drawTrack(d){
+  const L=lvl,hw=1.1;
+  ctx.save();
+  if(d.axis==='x'){
+    ctx.fillStyle='#4b4640';ctx.fillRect(0,d.at-1.5,L.W,3);
+    for(let x=0.3;x<L.W;x+=0.9){ctx.fillStyle='#2f2a25';ctx.fillRect(x,d.at-1.4,0.35,2.8);}
+    ctx.fillStyle='#b9bcc0';ctx.fillRect(0,d.at-hw+0.12,L.W,0.16);ctx.fillRect(0,d.at+hw-0.28,L.W,0.16);
+  }else{
+    ctx.fillStyle='#4b4640';ctx.fillRect(d.at-1.5,0,3,L.H);
+    for(let y=0.3;y<L.H;y+=0.9){ctx.fillStyle='#2f2a25';ctx.fillRect(d.at-1.4,y,2.8,0.35);}
+    ctx.fillStyle='#b9bcc0';ctx.fillRect(d.at-hw+0.12,0,0.16,L.H);ctx.fillRect(d.at+hw-0.28,0,0.16,L.H);
+  }
+  ctx.restore();
+}
+function drawLight(x,y,state){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='rgba(0,0,0,.35)';rr(-0.3,-0.9,1.0,2.1,0.2);ctx.fill();
+  ctx.fillStyle='#1b1d20';rr(-0.45,-1.1,0.9,2.2,0.2);ctx.fill();
+  const cols=[['#ff3b3b','#4a1b1d','red',-0.7],['#ffc928','#4a3d12','yellow',0],['#46e08a','#12402a','green',0.7]];
+  for(const[on,off,k,dy]of cols){ctx.fillStyle=state===k?on:off;ctx.beginPath();ctx.arc(0,dy,0.26,0,7);ctx.fill();
+    if(state===k){ctx.fillStyle=on.replace(')',',.25)').replace('#','#');ctx.globalAlpha=.3;ctx.beginPath();ctx.arc(0,dy,0.6,0,7);ctx.fill();ctx.globalAlpha=1;}}
+  ctx.restore();
+}
+function drawGate(o,now){
+  ctx.save();ctx.translate(o.x,o.y);
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.arc(0.1,0.15,0.45,0,7);ctx.fill();
+  ctx.fillStyle='#d6312f';ctx.beginPath();ctx.arc(0,0,0.4,0,7);ctx.fill();
+  ctx.rotate(Math.atan2(o.ey-o.y,o.ex-o.x));
+  const len=Math.hypot(o.ex-o.x,o.ey-o.y);
+  ctx.fillStyle='#f4f2ec';ctx.fillRect(0,-0.12,len,0.24);
+  ctx.fillStyle='#d6312f';for(let x=0.3;x<len-0.2;x+=1.0)ctx.fillRect(x,-0.12,0.5,0.24);
+  ctx.restore();
+  if(o.k>0.02&&!reduceMotion){
+    const on=Math.floor(now/350)%2===0;ctx.fillStyle=on?'#ff3b3b':'#4a1b1d';
+    ctx.beginPath();ctx.arc(o.x,o.y,0.22,0,7);ctx.fill();
+  }
+}
+function drawTrain(o){
+  ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.a);
+  const l=o.len/2,w=o.wid/2;
+  ctx.fillStyle='rgba(0,0,0,.35)';rr(-l+0.15,-w+0.2,o.len,o.wid,0.3);ctx.fill();
+  const n=Math.max(2,Math.round(o.len/9));const cl=o.len/n;
+  for(let i=0;i<n;i++){
+    const x0=-l+i*cl+0.12;
+    ctx.fillStyle=i===n-1?'#b3202a':'#5c6b78';rr(x0,-w,cl-0.24,o.wid,0.3);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(x0+0.25,-w+0.2,cl-0.74,0.35);
+    ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x0+0.25,w-0.55,cl-0.74,0.3);
+    ctx.fillStyle='#2b343c';ctx.fillRect(x0+cl*0.5-0.1,-w+0.3,0.2,o.wid-0.6);
+  }
+  ctx.fillStyle='#fff3c4';ctx.fillRect(l-0.3,-w+0.25,0.2,0.5);ctx.fillRect(l-0.3,w-0.75,0.2,0.5);
+  ctx.restore();
+}
+function drawPed(o,now){
+  ctx.save();ctx.translate(o.x,o.y);
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.arc(0.1,0.14,0.4,0,7);ctx.fill();
+  ctx.fillStyle='#e4b894';ctx.beginPath();ctx.arc(0,0,0.22,0,7);ctx.fill();
+  const sw=o.moving&&!reduceMotion?Math.sin(now/110)*0.1:0;
+  ctx.rotate(o.a);ctx.fillStyle='#e0557a';rr(-0.1+sw,-0.42,0.34,0.84,0.17);ctx.fill();
+  ctx.fillStyle='#e4b894';ctx.beginPath();ctx.arc(0.04+sw,0,0.2,0,7);ctx.fill();
+  ctx.restore();
+}
+function drawDynGround(){
+  for(const d of lvl.dyn){
+    if(d.type==='train')drawTrack(d);
+  }
+  for(const p of lvl.paint)if(p.zebra)drawZebra(p.zebra);
+}
+function drawDynTop(now){
+  for(const d of lvl.dyn){
+    if(d.type==='lane'&&d.light)drawLight(d.light.x,d.light.y,lightState(d,wt));
+    if(d.type==='lane'&&d.pLight)drawLight(d.pLight.x,d.pLight.y,lightState(d,wt)==='green'||lightState(d,wt)==='yellow'?'red':'green');
+  }
+  for(const o of curDyn){
+    if(o.kind==='mcar')drawVehicle(o.x,o.y,o.a,o.len,o.wid,o.style,o.c,{brake:o.brake});
+    else if(o.kind==='ped')drawPed(o,now);
+    else if(o.kind==='gate')drawGate(o,now);
+    else if(o.kind==='train')drawTrain(o);
+  }
 }
 
 function draw(now){
   const L=lvl,garage=L.theme==='garage';
+  curDyn=L.dyn.length?dynAt(L,wt,0):[];
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.fillStyle=garage?'#17181a':'#80848a';ctx.fillRect(0,0,cw,ch);
   let sx=0,sy=0;
@@ -812,14 +1193,16 @@ function draw(now){
   if(noiseFloor){ctx.fillStyle=noiseFloor;ctx.fillRect(0,0,L.W,L.H);}
   ctx.lineWidth=0.3;ctx.strokeStyle=garage?'#0f1012':'#c4c7ca';ctx.strokeRect(-0.15,-0.15,L.W+0.3,L.H+0.3);
   if(garage){ctx.strokeStyle='rgba(255,201,40,.55)';ctx.lineWidth=0.12;ctx.setLineDash([0.6,0.6]);ctx.strokeRect(0.2,0.2,L.W-0.4,L.H-0.4);ctx.setLineDash([]);}
-  for(const p of L.paint){ctx.strokeStyle='rgba(241,238,228,.7)';ctx.lineWidth=0.14;if(p.dash)ctx.setLineDash([2,1.6]);
+  for(const p of L.paint){if(p.zebra)continue;ctx.strokeStyle='rgba(241,238,228,.7)';ctx.lineWidth=0.14;if(p.dash)ctx.setLineDash([2,1.6]);
     ctx.beginPath();ctx.moveTo(p.x1,p.y1);ctx.lineTo(p.x2,p.y2);ctx.stroke();ctx.setLineDash([]);}
+  drawDynGround();
   for(const s of L.spots)drawSpot(s);
   drawTarget(now);
   for(const b of L.blocks)drawBlock(b);
   for(const c of L.circles)if(c.kind!=='tree')drawCircle(c);
   for(const c of L.cars)drawVehicle(c.x,c.y,c.a,c.len,c.wid,c.style,c.c);
   for(const c of L.cones)drawCone(c);
+  drawDynTop(now);
   if(save.guide&&state==='play')drawGuide();
   drawPlayer();
   for(const c of L.circles)if(c.kind==='tree')drawCircle(c);
@@ -859,6 +1242,7 @@ function drawMinimap(){
   ctx.fillStyle='#6a7076';for(const c of L.cars){ctx.beginPath();c.poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.fill();}
   ctx.fillStyle='#4d7a3c';for(const c of L.circles){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill();}
   ctx.fillStyle='#f27a1a';for(const c of L.cones)ctx.fillRect(c.x-0.4,c.y-0.4,0.8,0.8);
+  ctx.fillStyle='#e8e6df';for(const o of curDyn)if(o.poly){ctx.beginPath();o.poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.fill();}
   const T=L.target;ctx.fillStyle='#ffc928';ctx.beginPath();corners(T.x,T.y,T.a,T.len,T.wid).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.fill();
   const P=vehPolys(S,L.V);ctx.fillStyle='#ffffff';
   for(const poly of [P.car,P.trailer])if(poly){ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.fill();}
@@ -876,11 +1260,15 @@ function step(h){
     else{S.v+=gear*2.4*h;const mx=gear>0?V.vf:V.vr;if(Math.abs(S.v)>mx)S.v=Math.sign(S.v)*mx;}
   }else{S.v-=Math.sign(S.v)*Math.min(Math.abs(S.v),1.8*h);}
   const tgt=(wheelAngle/WMAX)*V.maxSteer;S.steer+=clamp(tgt-S.steer,-3*h,3*h);
-  if(Math.abs(S.v)<1e-4)return;
+  if(started)wt+=h;
+  if(Math.abs(S.v)<1e-4){
+    if(started&&lvl.dyn.length){const hit=collideState(lvl,S,wt);if(hit){S.v=0;crash(hit);}}
+    return;
+  }
   if(!started){started=true;hideToast();}
   const prev={...S};
   advance(S,V,S.v*h);
-  const hit=collideState(lvl,S);
+  const hit=collideState(lvl,S,wt);
   if(hit){Object.assign(S,prev);S.v=0;crash(hit);}
 }
 function checkPark(dt){
@@ -893,7 +1281,7 @@ function checkPark(dt){
 
 /* ================= Ablauf ================= */
 const CRASH_TEXT={car:'ein anderes Auto',cone:'ein Hütchen',curb:'den Bordstein',pillar:'einen Pfeiler',island:'die Verkehrsinsel',
-  edge:'die Absperrung am Rand',building:'ein Gebäude',wall:'die Mauer',barrier:'die Absperrung',container:'einen Container',planter:'den Grünstreifen',tree:'einen Baum'};
+  edge:'die Absperrung am Rand',building:'ein Gebäude',wall:'die Mauer',barrier:'die Absperrung',container:'einen Container',planter:'den Grünstreifen',tree:'einen Baum',mcar:'ein fahrendes Auto',ped:'einen Fußgänger',gate:'die Schranke',train:'den Zug'};
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
 function starsFor(t,L){return t<=L.stars[0]?3:t<=L.stars[1]?2:1;}
 function starHTML(n,cls='stars'){let h=`<span class="${cls}" aria-label="${n} von 3 Sternen">`;for(let i=0;i<3;i++)h+=`<span class="${i<n?'on':''}">★</span>`;return h+'</span>';}
@@ -901,10 +1289,11 @@ function starHTML(n,cls='stars'){let h=`<span class="${cls}" aria-label="${n} vo
 function crash(hit){
   state='crash';crashInfo=hit;crashT=0;
   try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}
-  const msg=hit.kind==='jackknife'?'Der Anhänger ist eingeknickt. Rückwärts nur kleine Lenkbewegungen, und rechtzeitig gegenlenken.'
+  const msg=hit.kind==='train'?'Auf den Gleisen erwischt. Warte bei Rotlicht und fahr erst, wenn die Schranke offen ist.'
+    :hit.kind==='jackknife'?'Der Anhänger ist eingeknickt. Rückwärts nur kleine Lenkbewegungen, und rechtzeitig gegenlenken.'
     :`Du hast ${CRASH_TEXT[hit.kind]||'etwas'} berührt. ${save.practice?'Spul drei Sekunden zurück und probier es noch einmal.':'Versuch es noch einmal.'}`;
   setTimeout(()=>{if(state!=='crash')return;
-    showOverlay(`<div class="card crash"><h2>${hit.kind==='jackknife'?'Eingeknickt!':'Angefahren!'}</h2><p>${msg}</p>
+    showOverlay(`<div class="card crash"><h2>${hit.kind==='jackknife'?'Eingeknickt!':hit.kind==='train'?'Zug!':'Angefahren!'}</h2><p>${msg}</p>
       <div class="actions">${save.practice?'<button class="btn primary" data-act="rewind">Zurückspulen</button><button class="btn" data-act="retry">Neu starten</button>':'<button class="btn primary" data-act="retry">Nochmal</button>'}<button class="btn" data-act="menu">Levels</button></div></div>`);},550);
 }
 function win(){
@@ -939,7 +1328,7 @@ function rewind(){
   if(!lvl||!hist.length||(state!=='play'&&state!=='crash'))return;
   const idx=Math.max(0,hist.length-1-12),h=hist[idx];
   hist.length=idx+1;histT=0;
-  S=Object.assign({},h.S);S.v=0;setGear(h.gear);
+  S=Object.assign({},h.S);S.v=0;setGear(h.gear);wt=h.wt||0;
   crashInfo=null;hold=0;targetState='none';hideOverlay();state='play';
   const f=focusPoint();cam.x=f.x;cam.y=f.y;
 }
@@ -947,18 +1336,18 @@ function setOverview(on){overview=on;$('#btnMap').setAttribute('aria-pressed',on
 
 function startLevel(i){
   cur=i;lvl=prepare(i);S=makeState(lvl);
-  elapsed=0;started=false;hold=0;acc=0;crashInfo=null;wrongShown=false;targetState='none';levelT=0;
+  wt=0;elapsed=0;started=false;hold=0;acc=0;crashInfo=null;wrongShown=false;targetState='none';levelT=0;
   resetInputs();setGear(1);hideOverlay();setOverview(false);
   $('#menu').classList.add('hidden');$('#game').classList.remove('hidden');
   $('#lvlNum').textContent=i+1;$('#lvlName').textContent=lvl.name;$('#lvlVeh').textContent=lvl.V.name;$('#timer').textContent='0:00.0';
   $('#btnGuide').setAttribute('aria-pressed',save.guide?'true':'false');
-  hist=[{S:{...S},gear:1}];histT=0;
+  hist=[{S:{...S},gear:1,wt:0}];histT=0;wt=0;
   $('#btnRewind').classList.toggle('hidden',!save.practice);$('#timer').classList.toggle('practice',!!save.practice);
   $('#lvlVeh').textContent=lvl.V.name+(save.practice?' · Üben':'');
   state='play';resize();computeView();
   intro=(reduceMotion||!view.big)?1:0;updateCam(0,true);
   const first=i===0||LEVELS[i-1].s!==LEVELS[i].s;
-  toast((first&&i>0?`Neues Fahrzeug: ${lvl.V.name}. `:'')+lvl.hint+(save.practice?' Mit „↶ 3 s“ oder Z spulst du drei Sekunden zurück.':''),6500);
+  toast((first&&i>0?`Neues Fahrzeug: ${lvl.V.name}. `:'')+(i===30?'Neu: Der Verkehr beginnt, sobald du losfährst. ':'')+lvl.hint+(save.practice?' Mit „↶ 3 s“ oder Z spulst du drei Sekunden zurück.':''),6500);
 }
 
 /* ================= Menü ================= */
@@ -971,13 +1360,13 @@ function vehiclePreview(canvas,V){
   const front=V.wb/2+V.len/2,off=(total/2)-front;
   g.setTransform(r*sc,0,0,r*sc,r*(W/2+off*sc),r*Hh/2);
   if(V.trailer)drawTrailer(vehPolys(S0,V),V);
-  drawVehicle(V.wb/2,0,0,V.len,V.wid,V.style,V.color,{wb:V.wb,stripes:V.stripes,livery:V.style==='van'});
+  drawVehicle(V.wb/2,0,0,V.len,V.wid,V.style,V.color,{wb:V.wb,stripes:V.stripes,livery:V.style==='van'&&!V.band,taxi:V.taxi,band:V.band});
   ctx=prevCtx;
 }
 function updateModeUI(){
   $('#modeScore').setAttribute('aria-pressed',save.practice?'false':'true');
   $('#modePractice').setAttribute('aria-pressed',save.practice?'true':'false');
-  $('#modeText').textContent=save.practice?'Alle 30 Level sind offen. Nichts wird gewertet, und nach einem Anfahren kannst du drei Sekunden zurückspulen.':'Sterne und Bestzeiten zählen. Die Stufen schalten sich nacheinander frei.';
+  $('#modeText').textContent=save.practice?'Alle 50 Level sind offen. Nichts wird gewertet, und nach einem Anfahren kannst du drei Sekunden zurückspulen.':'Sterne und Bestzeiten zählen. Die Stufen schalten sich nacheinander frei.';
 }
 $('#modeScore').addEventListener('click',()=>{save.practice=false;persist();showMenu();});
 $('#modePractice').addEventListener('click',()=>{save.practice=true;persist();showMenu();});
@@ -1081,7 +1470,7 @@ function frame(now){
     if(intro<1){intro=Math.min(1,intro+(levelT>1.0||started?dt/(started?0.4:1.2):0));}
     if(state==='play'){
       acc+=dt;while(acc>=H&&state==='play'){step(H);acc-=H;}
-      if(state==='play'){checkPark(dt);if(started)elapsed+=dt;histT+=dt;if(histT>=0.25){histT=0;hist.push({S:{...S},gear});if(hist.length>48)hist.shift();}}
+      if(state==='play'){checkPark(dt);if(started)elapsed+=dt;histT+=dt;if(histT>=0.25){histT=0;hist.push({S:{...S},gear,wt});if(hist.length>48)hist.shift();}}
       $('#timer').textContent=fmt(elapsed);
     }else if(state==='crash')crashT+=dt;
     updateCam(dt,false);draw(now);

@@ -2163,6 +2163,12 @@ function updatePlayer(dt) {
   } else if (p.inWater) {
     p.vel.y -= 9 * dt; p.vel.y *= Math.exp(-2 * dt);
     if (space) p.vel.y = Math.min(p.vel.y + 24 * dt, 3.2);
+    // Aus dem Wasser steigen: Wer im Wasser gegen eine Kante schwimmt, bekommt Schub nach oben,
+    // sofern über dem Kopf Platz ist. Ohne das reicht der Auftrieb nie für einen Block Höhe.
+    const pushing = fwd !== 0 || side !== 0 || space;
+    if (p.hitWall && pushing && !collides(p.pos.x, p.pos.y + 0.6, p.pos.z, p.sneaking ? 1.5 : 1.8)) p.vel.y = Math.max(p.vel.y, 10);
+    // Im flachen Wasser auf dem Boden stehend normal springen
+    else if (space && p.onGround) p.vel.y = Math.max(p.vel.y, 7);
   } else {
     p.vel.y = Math.max(p.vel.y - 32 * dt, -60);
     if (space && p.onGround) { p.vel.y = 9; p.onGround = false; p.exh += p.sprinting ? 0.2 : 0.05; }
@@ -2172,17 +2178,18 @@ function updatePlayer(dt) {
   const guard = p.sneaking && p.onGround;
   const steps = Math.max(1, Math.ceil(Math.max(Math.abs(p.vel.x), Math.abs(p.vel.y), Math.abs(p.vel.z)) * dt / 0.4));
   const sdt = dt / steps;
-  let grounded = false;
+  let grounded = false, hitWall = false;
   for (let s = 0; s < steps; s++) {
     let old = p.pos.x;
-    if (moveBody(p, 'x', p.vel.x * sdt, HW, hgt)) p.vel.x = 0;
+    if (moveBody(p, 'x', p.vel.x * sdt, HW, hgt)) { p.vel.x = 0; hitWall = true; }
     if (guard && !collides(p.pos.x, p.pos.y - 0.1, p.pos.z, 0.05)) { p.pos.x = old; p.vel.x = 0; }
     old = p.pos.z;
-    if (moveBody(p, 'z', p.vel.z * sdt, HW, hgt)) p.vel.z = 0;
+    if (moveBody(p, 'z', p.vel.z * sdt, HW, hgt)) { p.vel.z = 0; hitWall = true; }
     if (guard && !collides(p.pos.x, p.pos.y - 0.1, p.pos.z, 0.05)) { p.pos.z = old; p.vel.z = 0; }
     if (moveBody(p, 'y', p.vel.y * sdt, HW, hgt)) { if (p.vel.y < 0) grounded = true; p.vel.y = 0; }
   }
   p.onGround = grounded;
+  p.hitWall = hitWall;
   if (grounded && p.flying) p.flying = false;
 
   // Fallschaden: gezählt wird die Höhe, die seit dem letzten Bodenkontakt gefallen wurde
@@ -3272,6 +3279,7 @@ function moveMob(m, dt) {
   if (m.inWater) { m.vel.y = Math.min(m.vel.y + 18 * dt, 2.2); const k = Math.exp(-1.5 * dt); m.vel.x *= k; m.vel.z *= k; }
   else m.vel.y = Math.max(m.vel.y - 28 * dt, -50);
   if (d.climbs && m.blocked) m.vel.y = 2.6;
+  else if (m.inWater && m.blocked) m.vel.y = Math.max(m.vel.y, 10);
   const steps = Math.max(1, Math.ceil(Math.max(Math.abs(m.vel.x), Math.abs(m.vel.y), Math.abs(m.vel.z)) * dt / 0.4)), sdt = dt / steps;
   let grounded = false;
   m.blocked = false;

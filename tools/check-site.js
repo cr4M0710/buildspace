@@ -33,6 +33,7 @@ const NO_PROTECT = ["lernbereich.html"];
 /* Seiten, die weder Tool noch Beitrag sind */
 /* lernbereich.html läuft bewusst ohne Eintrag/Schutz, escape-room-baukasten.html
    (2D) wurde auf Wunsch aus der Übersicht genommen, bleibt aber erreichbar. */
+const API_KEY_OPT_IN = ["kompo7-formulierungshilfe.html"];
 const NOT_POSTS = ["index.html", "404.html", "impressum.html", "datenschutz.html", "lernbereich.html", "escape-room-baukasten.html"];
 
 const protectSrc = read("protect.js");
@@ -79,7 +80,8 @@ posts.forEach((p, i) => {
   if (!/<html[^>]*lang="de"/i.test(html)) warn(`${id}: ${file} hat kein <html lang="de">`);
   if (!/name="viewport"/i.test(html)) err(`${id}: ${file} hat keinen viewport-Meta-Tag (iPad/iPhone)`);
   if (!/property="og:image"/i.test(html) && !/strafenkasse\//.test(file)) warn(`${id}: ${file} hat keine Vorschau-Tags (og:image)`);
-  if (/api\.anthropic\.com|sk-ant-/.test(html)) err(`${id}: ${file} enthält einen Claude-API-Aufruf/Schlüssel (gibt es auf GitHub Pages nicht)`);
+  /* Ausnahme: Seiten, bei denen Nutzende freiwillig einen EIGENEN API-Schlüssel eintragen (kein Schlüssel in der Datei). */
+  if (!API_KEY_OPT_IN.includes(file) && /api\.anthropic\.com|sk-ant-/.test(html)) err(`${id}: ${file} enthält einen Claude-API-Aufruf/Schlüssel (gibt es auf GitHub Pages nicht)`);
   if (/window\.storage/.test(html) && !/localStorage/.test(html)) err(`${id}: ${file} nutzt window.storage ohne localStorage-Ersatz (gibt es auf GitHub Pages nicht)`);
   (html.match(/https:\/\/[^"'\s)]+\.(?:js|css)/g) || []).forEach((u) => {
     if (/@latest|\/latest\//.test(u)) warn(`${id}: ${file} nutzt unversionierte Bibliothek ${u}`);
