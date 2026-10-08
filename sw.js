@@ -4,12 +4,12 @@
    strafenkasse/sw.js. Der App-Shell (Startseite, Styles, Skripte, Icons)
    wird beim Installieren einmal vorab gecacht, damit buildspace auch
    beim allerersten Offline-Aufruf funktioniert (z. B. nach dem
-   Hinzufügen zum iPad-Homescreen, siehe site.webmanifest). Die
+   Hinzufügen zum iPad-Homescreen, siehe buildspace-v3.webmanifest). Die
    einzelnen Spiel-/Tool-Seiten werden automatisch mitgecacht, sobald sie
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v12';
+const CACHE = 'buildspace-v13';
 /* Bibliotheken von Fremd-Servern (three.js, PeerJS, QR, Schriften) landen in
    einem eigenen Cache, der Versions-Wechsel überlebt — sie sind fest
    versioniert und ändern sich nicht. */
@@ -44,7 +44,7 @@ const SHELL = [
   'impressum.html',
   'datenschutz.html',
   'qrcode-generator.js',
-  'site.webmanifest',
+  'buildspace-v3.webmanifest',
   'assets/favicon.svg',
   'assets/icon-v3-180.png',
   'assets/icon-v3-192.png',

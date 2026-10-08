@@ -1457,7 +1457,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* ---------------------------------------------------------
    Service Worker — macht buildspace installierbar (siehe
-   site.webmanifest) und auch offline nutzbar, z. B. bei schwachem
+   buildspace-v3.webmanifest) und auch offline nutzbar, z. B. bei schwachem
    Schul-WLAN oder nach dem Hinzufügen zum iPad-Homescreen. Registrierung
    schlägt in nicht unterstützenden Kontexten einfach folgenlos fehl.
 --------------------------------------------------------- */
