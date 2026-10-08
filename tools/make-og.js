@@ -28,7 +28,7 @@ h1{font-size:${p.title.length > 26 ? 56 : 68}px;line-height:1.08;margin:0 0 18px
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
   /* Startseite (assets/og-image.jpg) */
-  const icon = "data:image/png;base64," + fs.readFileSync(path.join(root, "assets/icon-192.png")).toString("base64");
+  const icon = "data:image/png;base64," + fs.readFileSync(path.join(root, "assets/icon-v3-192.png")).toString("base64");
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;width:1200px;height:630px;font-family:Arial,"Liberation Sans","DejaVu Sans",sans-serif;color:#f4f6fb;background:#020204 url(${bg}) 72% 55%/cover;position:relative;overflow:hidden}
 .shade{position:absolute;inset:0;background:radial-gradient(700px 360px at 40% 50%,rgba(0,0,0,.6),rgba(0,0,0,.1))}
 .card{position:absolute;left:64px;top:64px;right:64px;bottom:64px;border-radius:44px;border:2px solid rgba(255,255,255,.28);background:linear-gradient(160deg,rgba(10,11,16,.6),rgba(10,11,16,.38));backdrop-filter:blur(6px);box-shadow:inset 0 2px 0 rgba(255,255,255,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
