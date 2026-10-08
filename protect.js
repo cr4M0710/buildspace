@@ -746,7 +746,8 @@
     "minigolf-winkel.html",
     "escape-room-baukasten-3d.html",
     "kart-krawall.html",
-    "blockwerk.html"
+    "blockwerk.html",
+    "vokabel-arena.html"
   ];
   function isMultiplayerPage_() { return MULTIPLAYER_FILES.indexOf(currentPageFile()) !== -1; }
   function joinKey_() { return "buildspace_join_" + currentPageFile(); }
