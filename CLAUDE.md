@@ -68,6 +68,10 @@ Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
 
 Neue Tags, Kategorien oder Übersetzungen brauchen ggf. Änderungen in `app.js` (`I18N.tagLabels`, `subfolders`) – dann vorher kurz Bescheid geben.
 
+## Vorübergehend deaktiviert
+
+- **Kolleg:innen-Bereich** (`#/kollegen`, enthält die Auswertung von Feedback und Bestenlisten): ausgeblendet über `KOLLEGEN_AKTIV = false` in `app.js` und `protect.js`. Zum Wieder-Einschalten beide auf `true` setzen.
+
 ## Vor dem Abschluss prüfen
 
 - `node tools/check-site.js` meldet keine Fehler (prüft Einträge, Dateien, `protect.js`, `VERTRETUNG_FILES`, Service Worker; läuft auch automatisch bei jedem Push als GitHub Action)

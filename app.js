@@ -1499,11 +1499,15 @@ function isAllowedRoute(segments) {
 /* Blendet die beiden Verwaltungs-Links oben in der Navigation je nach
    Zugriffs-Ebene ein/aus: "Kolleg:innen" für volle und Kolleg:innen-
    Zugänge, "Kursmappe erstellen" nur für den vollen Zugang (Marc). */
+/* Kolleg:innen-Bereich: vorübergehend ausgeblendet (Menü-Eintrag und Seite #/kollegen).
+   Zum Wieder-Einschalten hier UND in protect.js (KOLLEGEN_AKTIV) auf true setzen. */
+const KOLLEGEN_AKTIV = false;
+
 function updateAdminNavLinks() {
   const access = window.Protect ? window.Protect.getAccess() : null;
   const kollegenLink = document.getElementById("kollegen-nav-link");
   const kursmappeLink = document.getElementById("kursmappe-nav-link");
-  const showKollegen = access === "full" || access === "kollegen";
+  const showKollegen = KOLLEGEN_AKTIV && (access === "full" || access === "kollegen");
   const showKursmappe = access === "full";
   const row = (el) => el && el.parentElement;
   if (row(kollegenLink)) row(kollegenLink).style.display = showKollegen ? "" : "none";
@@ -1548,7 +1552,7 @@ function render() {
     renderKursmappeView();
   } else if (segments[0] === "kursmappe-erstellen") {
     renderKursmappeBuilder();
-  } else if (segments[0] === "kollegen") {
+  } else if (segments[0] === "kollegen" && KOLLEGEN_AKTIV) {
     renderKollegen(segments[1]);
   } else if (segments.length === 1) {
     renderFolder(segments[0]);

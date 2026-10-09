@@ -32,6 +32,8 @@
   "use strict";
 
   const PASSWORD = "mstroh_GGL#99";
+  /* Kolleg:innen-Bereich vorübergehend deaktiviert (Kennwort wird nicht angenommen); siehe auch KOLLEGEN_AKTIV in app.js */
+  const KOLLEGEN_AKTIV = false;
   const KOLLEGEN_PASSWORD = "ggl-ipad-team-2026";
   const LABELS = {
     schule: "Schule",
@@ -463,7 +465,7 @@
 
   function checkPasswordInput(value) {
     if (value === PASSWORD) return "full";
-    if (value === KOLLEGEN_PASSWORD) return "kollegen";
+    if (KOLLEGEN_AKTIV && value === KOLLEGEN_PASSWORD) return "kollegen";
     return null;
   }
 
