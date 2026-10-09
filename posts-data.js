@@ -755,4 +755,16 @@ const posts = [
     titleEn: "Vocab Arena",
     excerptEn: "Learn vocabulary in 9 languages with an adaptive flashcard box, A1–B1 core vocabulary, custom lists with import/export, digital or printable tests with grades, games for 1–4 players and a live class quiz via QR code."
    },
+   {
+    title: "KI-Guide für Lehrkräfte",
+    excerpt: "Beispielkatalog mit 56 kopierbaren Prompts für Unterricht, E-Mails, Lernspiele, Visualisierungen und Differenzierung, mit Datenschutz-Ampel, Filtern, Favoriten, Prompt-Baukasten und Druckansicht.",
+    date: "2026-10-09",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "ki-guide-lehrkraefte.html",
+    emoji: "🧭",
+    tags: ["tool", "einzelarbeit"],
+    titleEn: "AI Guide for Teachers",
+    excerptEn: "Catalogue of 56 copyable prompts for lessons, emails, learning games, visualisations and differentiation, with a privacy traffic light, filters, favourites, a prompt builder and print view."
+   },
 ];
