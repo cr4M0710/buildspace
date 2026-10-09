@@ -743,4 +743,16 @@ const posts = [
     titleEn: "Blockwerk",
     excerptEn: "A world of blocks that you rebuild piece by piece: build, mine and explore alone or together in multiplayer, with mouse and keyboard or touch."
    },
+   {
+    title: "Vokabel-Arena",
+    excerpt: "Vokabeln lernen in 9 Sprachen (DE, EN, ES, FR, Latein, RU, UK, TR, ZH) mit adaptivem Karteikasten, A1–B1-Grundwortschatz, eigenen Listen samt Import/Export, Tests digital oder zum Drucken mit Note, Spielen für 1–4 Spieler und einem Live-Klassenquiz per QR-Code.",
+    date: "2026-10-09",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "vokabel-arena.html",
+    emoji: "🗣️",
+    tags: ["spiel", "tool", "einzelarbeit", "gruppenarbeit"],
+    titleEn: "Vocab Arena",
+    excerptEn: "Learn vocabulary in 9 languages with an adaptive flashcard box, A1–B1 core vocabulary, custom lists with import/export, digital or printable tests with grades, games for 1–4 players and a live class quiz via QR code."
+   },
 ];
