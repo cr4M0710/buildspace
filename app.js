@@ -96,6 +96,8 @@ const I18N = {
     categoriesTitle: "Kategorien",
     newBadge: "Neu",
     home: "Start",
+    promptlabLabel: "Promptlabor",
+    slashLabel: "Slash-Codes",
     emptyState: "Hier gibt es noch keine Beiträge.",
     searchResults: (n, raw) => `${n} Treffer für „${raw}“`,
     searchEmpty: (raw) => `Keine Treffer für „${raw}“. Versuch es mit einem anderen Suchbegriff.`,
@@ -141,6 +143,8 @@ const I18N = {
     categoriesTitle: "Categories",
     newBadge: "New",
     home: "Home",
+    promptlabLabel: "Prompt lab",
+    slashLabel: "Slash codes",
     emptyState: "There are no posts here yet.",
     searchResults: (n, raw) => `${n} result${n === 1 ? "" : "s"} for “${raw}”`,
     searchEmpty: (raw) => `No results for “${raw}”. Try a different search term.`,
@@ -1218,6 +1222,7 @@ function initSettings() {
    daneben, Schließen-Knopf oder Navigation). "/" öffnet sie mit
    fokussierter Suche.
 --------------------------------------------------------- */
+const PROMPT_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5L5.5 19v-3.5H4z"/><path d="m8.5 9.5 2 1.5-2 1.5M12.5 12.5h3"/></svg>';
 const HOME_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.5 10v9.5h4.6v-5.2h3.8v5.2h4.6V10"/></svg>';
 const ADMIN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 const CHEVRON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
@@ -1285,7 +1290,7 @@ function currentSegments() {
 }
 
 function sideIcon(id) {
-  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : MINI_ICONS[id] || "";
+  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : id === "prompt" ? PROMPT_GLYPH : MINI_ICONS[id] || "";
   return `<span class="side-ico side-ico--${id}" aria-hidden="true">${glyph}</span>`;
 }
 
@@ -1323,6 +1328,10 @@ function renderSidebarNav() {
       }).join("")}</div></div>` : ""}
     </div>`;
   });
+
+  html += `<div class="side-label">${escapeHtml(t("promptlabLabel"))}</div>`;
+  html += `<div class="side-row"><a class="${cls(route === "promptlabor", false)}" href="#/promptlabor"${cur(route === "promptlabor")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("promptlabLabel"))}</span></a></div>`;
+  html += `<div class="side-row"><a class="${cls(route === "promptlabor/slash-codes", false)}" href="#/promptlabor/slash-codes"${cur(route === "promptlabor/slash-codes")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("slashLabel"))}</span></a></div>`;
 
   html += `<div class="side-label" id="side-admin-label" style="display:none">${escapeHtml(t("navAdmin"))}</div>`;
   html += `<div class="side-row"><a class="${cls(route === "kollegen" || route.startsWith("kollegen/"), false)}" href="#/kollegen" id="kollegen-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kollegenLabel"))}</span></a></div>`;
@@ -1518,6 +1527,15 @@ function updateAdminNavLinks() {
   if (label) label.style.display = showKollegen || showKursmappe ? "" : "none";
 }
 
+/* Promptlabor und Slash-Codes: eigene Ansicht, die nur den Abschnitt aus index.html zeigt
+   (#/promptlabor, #/promptlabor/slash-codes springt zur Karte der Slash-Codes). */
+function renderPromptlabor(sub) {
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${t("promptlabLabel")}</span>`;
+  content.innerHTML = `<h1 class="sr-only">${t("promptlabLabel")}</h1>`;
+  const target = document.getElementById(sub === "slash-codes" ? "slashcodes" : "megaprompt-section");
+  if (target) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+}
+
 function render() {
   ensureShareHomeHash();
   /* Falls noch ein Passwort-Fenster von der vorherigen Route offen ist (z. B.
@@ -1546,6 +1564,8 @@ function render() {
     renderTopLevel();
   } else if (segments[0] === "neueste") {
     renderNeueste();
+  } else if (segments[0] === "promptlabor") {
+    renderPromptlabor(segments[1]);
   } else if (segments[0] === "vertretung") {
     renderVertretung();
   } else if (segments[0] === "kursmappe") {
