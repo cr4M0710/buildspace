@@ -767,4 +767,16 @@ const posts = [
     titleEn: "AI Guide for Teachers",
     excerptEn: "Catalogue of 56 copyable prompts for lessons, emails, learning games, visualisations and differentiation, with a privacy traffic light, filters, favourites, a prompt builder and print view."
    },
+   {
+    title: "Kompetenz-Parcours",
+    excerpt: "Kompetenzen für Berufsorientierung und Praktikum spielerisch erleben: 20 Stationen (KomPo7-Schlüsselkompetenzen und berufliche Kompetenzen, 2D und 3D), Selbst- und Fremdeinschätzung per Code, Kompetenztest und Auswertung mit Berufsfeld- und Praktikumsempfehlungen.",
+    date: "2026-10-09",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "kompetenz-parcours.html",
+    emoji: "🎯",
+    tags: ["spiel", "tool", "einzelarbeit", "partnerarbeit"],
+    titleEn: "Skills Course",
+    excerptEn: "Experience career-related skills through play: 20 stations (KomPo7 key skills and vocational skills, 2D and 3D), self- and peer assessment via code, a skills test and a results page with career field and internship suggestions."
+   },
 ];
