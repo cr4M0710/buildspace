@@ -1,419 +1,894 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prozent-Rennen – Lernspiel Prozentrechnung</title>
+<meta name="description" content="Prozentwert, Prozentsatz, Grundwert, Rabatt, Mehrwertsteuer und Zinsen – im Wettrennen allein, zu mehreren oder als Klassenquiz mit Host.">
+<meta name="theme-color" content="#14191f">
 <link rel="icon" href="assets/icon-v3-192.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/icon-v3-180.png">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Prozent-Rennen – Lernspiel Prozentrechnung</title>
-<meta name="description" content="Lernspiel zur Prozentrechnung (Grundwert, Prozentsatz, Prozentwert) für 1 bis 4 Spieler.">
-<style>
-  :root{
-    --bg1:#0F2A3D; --bg2:#164A63; --track:#0B1F2E;
-    --paper:#FFFFFF; --ink:#132433; --ink-soft:#4B6478;
-    --accent:#FF9F1C; --accent-dark:#D97F06;
-    --good:#1E8E5A; --good-bg:#E3F6EC;
-    --bad:#D6403A; --bad-bg:#FDEBEA;
-    --radius:20px;
-    --p1:#FF6B6B; --p2:#4D96FF; --p3:#FFC93D; --p4:#63D471;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --paper:#1B2836; --ink:#EAF1F8; --ink-soft:#9FB2C3;
-      --bad-bg:#3A2323; --good-bg:#1D3327;
-    }
-  }
-  * { box-sizing:border-box; }
-  html,body { margin:0; padding:0; }
-  body {
-    font-family: var(--font);
-    min-height:100vh;
-    background: radial-gradient(circle at 20% 0%, var(--bg2), var(--bg1) 60%);
-    color:var(--ink);
-    display:flex; flex-direction:column; align-items:center;
-    padding:20px 14px 60px;
-  }
-  .wrap { width:100%; max-width:760px; }
-  .top-link {
-    display:inline-flex; align-items:center; gap:6px;
-    color:#CFE8F5; text-decoration:none; font-size:13.5px; font-weight:600;
-    margin-bottom:14px; opacity:0.85;
-  }
-  .top-link:hover { opacity:1; }
-  h1 {
-    color:#fff; font-size:clamp(1.8rem, 5vw, 2.6rem); margin:0 0 4px; font-weight:800;
-    letter-spacing:-0.02em;
-  }
-  .subtitle { color:#B9D6E8; margin:0 0 22px; font-size:15px; }
-  .card {
-    background:var(--paper); border-radius:var(--radius); padding:28px;
-    box-shadow:0 20px 50px rgba(0,0,0,0.35);
-  }
-  .screen { display:none; }
-  .screen.active { display:block; }
-
-  /* ---- Setup ---- */
-  .field-label { font-weight:700; font-size:14px; margin:18px 0 8px; color:var(--ink); }
-  .field-label:first-child { margin-top:0; }
-  .choice-row { display:flex; gap:10px; flex-wrap:wrap; }
-  .choice-btn {
-    flex:1; min-width:64px; padding:14px 10px; border-radius:14px; border:2px solid transparent;
-    background:#EEF3F7; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer;
-    transition: all 0.15s ease;
-  }
-  .choice-btn.selected { background:var(--accent); color:#fff; box-shadow:0 6px 16px -4px rgba(217,127,6,0.5); }
-  .diff-btn { flex-direction:column; align-items:flex-start; text-align:left; padding:12px 14px; }
-  .diff-btn small { display:block; font-weight:500; font-size:12px; opacity:0.75; margin-top:2px; }
-  .name-inputs { display:grid; gap:10px; margin-top:4px; }
-  .name-input-row { display:flex; align-items:center; gap:10px; }
-  .name-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
-  .name-input-row input {
-    flex:1; padding:10px 12px; border-radius:10px; border:1.5px solid #D9E2E8;
-    font-size:15px; font-family:inherit;
-  }
-  .start-btn {
-    width:100%; margin-top:26px; padding:15px; border:none; border-radius:14px;
-    background:linear-gradient(155deg, var(--accent), var(--accent-dark)); color:#fff;
-    font-size:17px; font-weight:800; cursor:pointer; box-shadow:0 10px 24px -6px rgba(217,127,6,0.6);
-  }
-  .start-btn:active { transform:translateY(1px); }
-
-  /* ---- Game ---- */
-  .track-area { margin-bottom:22px; display:grid; gap:10px; }
-  .lane { display:flex; align-items:center; gap:10px; }
-  .lane-name { width:92px; flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--ink-soft); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lane-track { flex:1; height:26px; background:var(--track); border-radius:999px; position:relative; overflow:hidden; }
-  .lane-track::after {
-    content:''; position:absolute; right:6px; top:50%; transform:translateY(-50%);
-    font-size:13px; opacity:0.5;
-  }
-  .lane-fill { height:100%; border-radius:999px; transition: width 0.5s cubic-bezier(.2,.9,.3,1); position:relative; }
-  .lane-runner {
-    position:absolute; top:50%; transform:translate(-50%,-50%); font-size:19px;
-    transition: left 0.5s cubic-bezier(.2,.9,.3,1); left:0%;
-  }
-  .lane.current .lane-name { color:var(--ink); }
-  .lane.current .lane-track { box-shadow:0 0 0 3px var(--accent); }
-
-  .turn-banner {
-    text-align:center; font-weight:800; font-size:15px; padding:10px 14px; border-radius:12px;
-    margin-bottom:18px; color:#fff;
-  }
-  .question-box { text-align:center; padding:10px 0 4px; }
-  .q-text { font-size:clamp(1.2rem, 4vw, 1.55rem); font-weight:700; color:var(--ink); margin:0 0 20px; line-height:1.4; }
-  .q-answer-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
-  .q-answer-row input {
-    width:150px; padding:14px 16px; font-size:22px; text-align:center; border-radius:14px;
-    border:2px solid #D9E2E8; font-family:inherit; font-weight:700;
-  }
-  .q-answer-row input:focus { outline:none; border-color:var(--accent); }
-  .q-unit { font-size:20px; font-weight:700; color:var(--ink-soft); }
-  .submit-btn {
-    padding:14px 22px; border:none; border-radius:14px; background:var(--accent); color:#fff;
-    font-size:16px; font-weight:800; cursor:pointer;
-  }
-  .feedback {
-    text-align:center; margin-top:18px; padding:14px; border-radius:14px; font-weight:700; font-size:15px;
-    display:none;
-  }
-  .feedback.show { display:block; }
-  .feedback.good { background:var(--good-bg); color:var(--good); }
-  .feedback.bad { background:var(--bad-bg); color:var(--bad); }
-
-  /* ---- End ---- */
-  .end-emoji { font-size:56px; text-align:center; margin-bottom:6px; }
-  .end-title { text-align:center; font-size:1.6rem; font-weight:800; margin:0 0 22px; }
-  table.stats { width:100%; border-collapse:collapse; margin-bottom:24px; }
-  table.stats th, table.stats td { padding:10px 8px; text-align:left; font-size:14px; border-bottom:1px solid #EEF1F4; }
-  table.stats th { color:var(--ink-soft); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; }
-  .end-actions { display:flex; gap:10px; }
-  .end-actions button {
-    flex:1; padding:14px; border-radius:14px; border:none; font-weight:800; font-size:15px; cursor:pointer;
-  }
-  .btn-primary { background:var(--accent); color:#fff; }
-  .btn-secondary { background:#EEF3F7; color:var(--ink); }
-
-  @media (max-width:480px) {
-    .card { padding:20px 16px; }
-    .lane-name { width:64px; font-size:11px; }
-  }
-</style>
-<script defer src="qrcode-generator.js"></script>
-<script defer data-category="schule" src="protect.js"></script>
-<script defer src="cursor.js"></script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="buildspace">
 <meta property="og:title" content="Prozent-Rennen – buildspace">
-<meta property="og:description" content="Lernspiel zur Prozentrechnung (Grundwert, Prozentsatz, Prozentwert) im Wettrennen — für 1 bis 4 Lernende am selben Gerät, drei Schwierigkeitsstufen.">
+<meta property="og:description" content="Prozentwert, Prozentsatz, Grundwert, Rabatt, Mehrwertsteuer und Zinsen – im Wettrennen allein, zu mehreren oder als Klassenquiz mit Host.">
 <meta property="og:url" content="https://buildspaceos.de/prozent-rennen.html">
 <meta property="og:image" content="https://buildspaceos.de/assets/og/prozent-rennen.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Prozent-Rennen – buildspace">
-<meta name="twitter:description" content="Lernspiel zur Prozentrechnung (Grundwert, Prozentsatz, Prozentwert) im Wettrennen — für 1 bis 4 Lernende am selben Gerät, drei Schwierigkeitsstufen.">
+<meta name="twitter:description" content="Prozentwert, Prozentsatz, Grundwert, Rabatt, Mehrwertsteuer und Zinsen – im Wettrennen allein, zu mehreren oder als Klassenquiz mit Host.">
 <meta name="twitter:image" content="https://buildspaceos.de/assets/og/prozent-rennen.jpg">
+<style>
+:root{--bg:#14191f;--bgart:repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 18px,transparent 18px 36px),radial-gradient(900px 400px at 50% -10%,rgba(229,57,53,.25),transparent 65%);--ink:#f2f4f7;--soft:#b7c0cb;--line:rgba(255,255,255,.2);--card:#212932;--cardink:#f6f8fa;--cardsoft:#b9c3ce;--cardalt:rgba(255,255,255,.08);--inp:rgba(0,0,0,.35);--acc:#ff3b30;--acc2:#ff6b61;--accdark:#a1130b;--accink:#fff;--accsoft:rgba(255,59,48,.2);--linkc:#ff9e97;--banner:#262c34;--bannerink:#fff;--bannerink2:#d4dbe3;--tshadow:0 2px 10px rgba(0,0,0,.55);--shadow:0 10px 30px rgba(0,0,0,.5);--trackbox:#1b2128;--trackbg:rgba(0,0,0,.45);--road:#3a424c;--cluebg:rgba(255,255,255,.08);--choicebg:#f2f4f7;--choiceink:#161b21;--ok:#34d27b;--okbg:#d8f6e4;--okink:#0a4a28;--okfb:#7cf0ae;--bad:#ff6b6b;--badbg:#ffdcdc;--badink:#7a1111;--badfb:#ffb0b0;--warn:#ffb020;--c0:#e53935;--c1:#1e88e5;--c2:#fdd835;--c3:#43a047;--font:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--fh:'Avenir Next Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;--fq:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;background:var(--bgart);pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:12px 14px 90px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+h1,h2,h3{font-family:var(--fh);margin:0;line-height:1.15}
+.h2{font-size:1.7rem;margin:18px 0 12px}.h3{font-size:1.1rem;margin:20px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.muted{color:var(--soft)}.small{font-size:.85rem}.center{text-align:center}
+.ok{color:var(--ok)}.no{color:var(--bad)}
+/* Banner */
+.banner{position:relative;border-radius:26px;overflow:hidden;min-height:150px;margin-bottom:6px;background:var(--banner);border:1px solid var(--line);box-shadow:var(--shadow)}
+.bannerart{position:absolute;inset:0}.bannerart svg{width:100%;height:100%;display:block}
+.bannerart::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--banner) 0,var(--banner) 52%,transparent 86%)}
+.bannertxt{position:relative;padding:58px 22px 20px;max-width:470px;text-shadow:var(--tshadow)}
+.bannertxt h1{font-size:clamp(1.9rem,6vw,2.9rem);color:var(--bannerink);letter-spacing:-.01em}
+.bannertxt p{margin:4px 0 0;color:var(--bannerink2);font-size:1rem}
+.back{position:absolute;left:12px;top:10px;z-index:2;display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;background:rgba(0,0,0,.35);color:#fff;text-decoration:none;font-size:.9rem;font-weight:700;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+/* Karten & Bedienelemente */
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:var(--shadow);color:var(--cardink)}
+.card .muted{color:var(--cardsoft)}
+.modes{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:16px}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:18px;min-height:150px;border-radius:22px;border:2px solid var(--line);background:var(--card);color:var(--cardink);box-shadow:var(--shadow);transition:transform .12s,border-color .12s}
+.mode:hover,.mode:focus-visible{border-color:var(--acc);transform:translateY(-2px)}
+.mico{display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 10px;border-radius:14px;background:var(--acc);color:var(--accink);font-weight:800;font-size:1.1rem;font-family:var(--fh)}
+.mt{font-family:var(--fh);font-size:1.2rem;font-weight:700}.md{color:var(--cardsoft);font-size:.95rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 24px;border-radius:999px;border:0;background:var(--acc);color:var(--accink);font-weight:800;font-size:1.05rem;box-shadow:0 4px 0 var(--accdark)}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--accdark)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.big{min-height:60px;font-size:1.2rem;padding:0 34px}
+.btn.ghost{background:transparent;color:var(--cardink);border:2px solid var(--line);box-shadow:none}
+.link{background:none;border:0;color:var(--linkc);text-decoration:underline;min-height:44px;padding:0 8px;font-size:.95rem}
+.mini{background:transparent;border:1px solid var(--line);color:var(--cardsoft);border-radius:999px;padding:2px 10px;font-size:.78rem;min-height:28px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.inp{min-height:52px;padding:8px 14px;border-radius:14px;border:2px solid var(--line);background:var(--inp);color:var(--cardink);font-size:1.1rem;width:100%}
+.inp.code{max-width:200px;text-transform:uppercase;letter-spacing:.3em;font-weight:800;text-align:center;font-family:var(--fh)}
+.lab{display:block;font-weight:700;margin:12px 0 6px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.seg button,.chip{min-height:46px;padding:0 16px;border-radius:999px;border:2px solid var(--line);background:transparent;color:var(--cardink);font-weight:700}
+.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.levels{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.lvl{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border-radius:16px;border:2px solid var(--line);background:transparent;color:var(--cardink)}
+.lvl span{color:var(--cardsoft);font-size:.9rem}
+.lvl[aria-pressed=true]{border-color:var(--acc);background:var(--accsoft)}
+.two{display:grid;gap:6px 24px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.chk{display:flex;gap:10px;align-items:center;margin:16px 0 0;min-height:44px;font-weight:600}
+.chk input{width:24px;height:24px;accent-color:var(--acc)}
+.go{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:24px}
+.names{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:12px}
+.nm{display:flex;gap:10px;align-items:center}
+.av{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#111;font-weight:800;flex:none;font-size:.95rem}
+.joincard{margin-top:6px}
+/* Lobby */
+.bigcode{font-family:var(--fh);font-size:clamp(3rem,16vw,5.5rem);letter-spacing:.18em;font-weight:800;color:var(--acc2)}
+.qrbox{width:200px;margin:10px auto;background:#fff;padding:8px;border-radius:14px}.qrbox svg{width:100%;height:auto;display:block}
+.cfg{margin:10px 0;font-weight:700}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.plist li{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;border:1px solid var(--line);background:var(--inp)}
+/* Spiel */
+.play{display:flex;flex-direction:column;gap:12px}
+.topbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:6px 4px}
+.topbar .prog{font-weight:800;font-family:var(--fh)}
+.topbar .who{color:var(--soft)}
+.topbar .link{color:var(--ink)}
+.timer{position:relative;height:16px;border-radius:99px;background:var(--trackbg);overflow:hidden}
+.timer[hidden]{display:none}
+.timer i{display:block;height:100%;width:100%;background:var(--ok);transition:width .15s linear,background .3s}
+.timer i.mid{background:var(--warn)}.timer i.low{background:var(--bad)}
+.timer span{position:absolute;right:8px;top:-3px;font-size:.78rem;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.track{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:18px;background:var(--trackbox);border:1px solid var(--line)}
+.lane{display:grid;grid-template-columns:84px 1fr 52px;gap:8px;align-items:center}
+.lname{font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.lscore{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+.road{position:relative;height:34px;border-radius:99px;background:var(--road);overflow:hidden}
+.compact .road{height:24px}.compact .lane{grid-template-columns:70px 1fr 44px}
+.mark{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:30px;transition:left .8s cubic-bezier(.3,.8,.3,1);display:block}
+.mark svg{width:100%;height:100%;display:block}
+.compact .mark{width:28px;height:22px}
+.goal{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:22px;height:22px;opacity:.9}
+.goal svg{width:100%;height:100%}
+.qcard{background:var(--card);color:var(--cardink);border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+.turn{display:flex;gap:10px;align-items:center;font-weight:700;margin:-4px 0 10px;color:var(--cardsoft)}
+.qtext{font-family:var(--fq);font-size:clamp(1.6rem,5.2vw,2.5rem);font-weight:700;line-height:1.3;text-align:center;overflow-wrap:anywhere}
+.qtext small{display:block;font-size:.55em;font-weight:600;color:var(--cardsoft);margin-bottom:6px;font-family:var(--font)}
+.qsvg{display:flex;justify-content:center;margin-top:12px}.qsvg svg{max-width:100%;height:auto;max-height:280px}
+.clues{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.clue{display:none;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:14px;background:var(--cluebg);font-size:1.15rem;font-weight:600}
+.clue.on{display:flex;animation:pop .3s ease}
+.clue .cn{display:inline-grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:var(--acc);color:var(--accink);font-weight:800;font-size:.9rem}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.choices{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.choice{position:relative;display:flex;align-items:center;gap:12px;min-height:72px;padding:10px 14px;border-radius:18px;border:3px solid transparent;background:var(--choicebg);color:var(--choiceink);text-align:left;font-size:clamp(1.2rem,3.8vw,1.7rem);font-weight:700;box-shadow:0 3px 0 rgba(0,0,0,.25);overflow:hidden}
+.choice .lt{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;font-family:var(--fh);font-weight:800;color:#fff;font-size:1.1rem}
+.choice.c0 .lt{background:var(--c0)}.choice.c1 .lt{background:var(--c1)}.choice.c2 .lt{background:var(--c2);color:#1b1b1b}.choice.c3 .lt{background:var(--c3)}
+.choice .tx{flex:1;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.choice:not(:disabled):hover,.choice:not(:disabled):focus-visible{border-color:var(--acc)}
+.choice.sel{border-color:var(--acc);background:var(--accsoft)}
+.choice:disabled{cursor:default;opacity:1}
+.choice.right{background:var(--okbg);border-color:var(--ok);color:var(--okink)}
+.choice.wrong{background:var(--badbg);border-color:var(--bad);color:var(--badink)}
+.choice.right::after{content:"✓";position:absolute;right:12px;font-size:1.5rem;color:var(--ok)}
+.choice.wrong::after{content:"✗";position:absolute;right:12px;font-size:1.5rem;color:var(--bad)}
+.dist{position:absolute;left:0;right:0;bottom:0;height:8px;background:rgba(0,0,0,.18)}.dist i{display:block;height:100%;background:var(--acc)}.dist em{position:absolute;right:10px;bottom:10px;font-style:normal;font-weight:800;font-size:1rem}
+.typed{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.typed .inp{flex:1;min-width:180px;font-size:1.5rem;font-weight:700;text-align:center}.unit{font-weight:700;color:var(--soft)}
+.fb{min-height:1.6em;text-align:center;font-weight:800;font-size:1.3rem}
+.fb .ok{color:var(--okfb)}.fb .no{color:var(--badfb)}
+.wait{text-align:center;color:var(--soft);font-weight:700}
+.expl{margin-top:6px;padding:14px 16px;border-radius:16px;background:var(--cardalt);color:var(--cardink);border-left:6px solid var(--acc);font-size:1.05rem}
+.expl>b:first-child{display:block;margin-bottom:4px;font-family:var(--fh)}
+#after{display:flex;flex-direction:column;gap:12px;align-items:stretch}#after .btn{align-self:center}
+.mini{}
+ol.mini{border:0;background:none;border-radius:0;min-height:0;font-size:inherit;color:inherit;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+ol.mini li{display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:14px;background:var(--trackbox);border:1px solid var(--line);color:var(--ink)}
+ol.mini .n{flex:1;font-weight:700}ol.mini .s{font-weight:800}ol.mini em{font-style:normal;color:var(--ok);font-size:.85em}
+.ansn{text-align:center;color:var(--soft);font-weight:700}
+.screenmode .qtext{font-size:clamp(2rem,6vw,3.4rem)}.screenmode .choice{font-size:clamp(1.5rem,4vw,2.4rem);min-height:96px}
+/* Ende */
+.bignum{font-family:var(--fh);font-size:4.5rem;font-weight:800;color:var(--acc2)}
+.podium{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left}
+.podium li{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:var(--cardalt);font-size:1.1rem}
+.podium .rk{font-family:var(--fh);font-weight:800;width:2em}.podium .n{flex:1;font-weight:700}.podium .s{font-weight:800}.podium small{font-weight:400;color:var(--cardsoft)}
+.podium .top1{background:var(--accsoft);border:2px solid var(--acc)}.podium .me{outline:2px dashed var(--acc2)}
+.rev{margin-top:14px;text-align:left}.rev summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800}
+.rev ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rev li{padding:12px 14px;border-radius:14px;background:var(--cardalt)}.rev .qh{font-weight:700}.rev .re{color:var(--cardsoft);font-size:.95rem;margin-top:4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;padding:12px 18px;border-radius:14px;background:#111;color:#fff;font-weight:700;pointer-events:none;transition:.25s;z-index:20;max-width:90vw}.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:560px){.choices{grid-template-columns:1fr}.lane{grid-template-columns:64px 1fr 44px}.card,.qcard{padding:16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+</style>
 </head>
 <body>
-
-  <div class="wrap">
-    <a class="top-link" href="index.html#/schule/mathematik">← Zurück zu Mathematik</a>
-    <h1>📊 Prozent-Rennen</h1>
-    <p class="subtitle">Grundwert, Prozentsatz und Prozentwert im Wettrennen üben — für 1 bis 4 Spieler am selben Gerät.</p>
-
-    <div class="card">
-
-      <!-- SETUP -->
-      <section class="screen active" id="screen-setup">
-        <div class="field-label">Anzahl Spieler</div>
-        <div class="choice-row" id="player-count-row"></div>
-
-        <div class="field-label">Schwierigkeit</div>
-        <div class="choice-row" id="difficulty-row">
-          <button class="choice-btn diff-btn" data-diff="A">Leicht<small>runde Prozentsätze</small></button>
-          <button class="choice-btn diff-btn selected" data-diff="B">Mittel<small>mehr Prozentsätze, alle 3 Fragetypen</small></button>
-          <button class="choice-btn diff-btn" data-diff="C">Schwer<small>knifflige Prozentsätze &amp; größere Zahlen</small></button>
-        </div>
-
-        <div class="field-label">Namen (optional)</div>
-        <div class="name-inputs" id="name-inputs"></div>
-
-        <button class="start-btn" id="start-btn">🏁 Rennen starten</button>
-      </section>
-
-      <!-- GAME -->
-      <section class="screen" id="screen-game">
-        <div class="track-area" id="track-area"></div>
-        <div class="turn-banner" id="turn-banner"></div>
-        <div class="question-box">
-          <p class="q-text" id="q-text"></p>
-          <div class="q-answer-row">
-            <input type="number" id="q-input" inputmode="decimal" autocomplete="off" placeholder="?">
-            <span class="q-unit" id="q-unit"></span>
-            <button class="submit-btn" id="submit-btn">Antworten</button>
-          </div>
-          <div class="feedback" id="feedback"></div>
-        </div>
-      </section>
-
-      <!-- END -->
-      <section class="screen" id="screen-end">
-        <div class="end-emoji">🏆</div>
-        <h2 class="end-title" id="end-title"></h2>
-        <table class="stats" id="stats-table"></table>
-        <div class="end-actions">
-          <button class="btn-secondary" id="restart-setup-btn">Einstellungen ändern</button>
-          <button class="btn-primary" id="play-again-btn">Nochmal spielen</button>
-        </div>
-      </section>
-
-    </div>
-  </div>
-
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-(function () {
-  "use strict";
-
-  const COLORS = ["#FF6B6B", "#4D96FF", "#FFC93D", "#63D471"];
-  const RUNNER = ["🏃", "🚴", "🐇", "🦊"];
-  const TARGET = 8; // richtige Antworten zum Sieg
-
-  let players = [];
-  let difficulty = "B";
-  let numPlayers = 2;
-  let currentPlayer = 0;
-  let currentQuestion = null;
-  let gameOver = false;
-
-  const el = (id) => document.getElementById(id);
-
-  /* ---------- Setup screen ---------- */
-  const playerCountRow = el("player-count-row");
-  [1, 2, 3, 4].forEach((n) => {
-    const btn = document.createElement("button");
-    btn.className = "choice-btn" + (n === numPlayers ? " selected" : "");
-    btn.textContent = n;
-    btn.dataset.count = n;
-    btn.addEventListener("click", () => {
-      numPlayers = n;
-      [...playerCountRow.children].forEach((b) => b.classList.toggle("selected", Number(b.dataset.count) === n));
-      renderNameInputs();
-    });
-    playerCountRow.appendChild(btn);
-  });
-
-  el("difficulty-row").addEventListener("click", (e) => {
-    const btn = e.target.closest(".diff-btn");
-    if (!btn) return;
-    difficulty = btn.dataset.diff;
-    [...el("difficulty-row").children].forEach((b) => b.classList.toggle("selected", b === btn));
-  });
-
-  function renderNameInputs() {
-    const wrap = el("name-inputs");
-    wrap.innerHTML = "";
-    for (let i = 0; i < numPlayers; i++) {
-      const row = document.createElement("div");
-      row.className = "name-input-row";
-      row.innerHTML =
-        '<span class="name-dot" style="background:' + COLORS[i] + '"></span>' +
-        '<input type="text" maxlength="16" placeholder="Spieler ' + (i + 1) + '" id="name-input-' + i + '">';
-      wrap.appendChild(row);
+/* ===== Hilfsfunktionen für Aufgaben-Generatoren ===== */
+var H = (function () {
+  function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  /* Zahl im deutschen Format, max. d Nachkommastellen, ohne überflüssige Nullen */
+  function fmt(n, d) {
+    if (d === undefined) d = 2;
+    var v = Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+    if (Object.is(v, -0)) v = 0;
+    var s = String(v);
+    if (s.indexOf('e') >= 0) s = v.toFixed(d);
+    var parts = s.split('.');
+    var ip = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (parts[1] ? ip + ',' + parts[1] : ip).replace('-', '−');
+  }
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = b; b = a % b; a = t; } return a; }
+  function isPrime(n) { if (n < 2) return false; for (var i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; }
+  function digitSum(n) { var s = 0; n = Math.abs(n); while (n) { s += n % 10; n = Math.floor(n / 10); } return s; }
+  function uniq(a) { var o = []; a.forEach(function (x) { if (o.indexOf(x) < 0) o.push(x); }); return o; }
+  /* Ablenker für Zahlen: nahe Werte, typische Fehler; alle verschieden von richtig und untereinander */
+  function numWrong(correct, cands, d, min) {
+    d = d === undefined ? 2 : d;
+    var seen = {}; seen[fmt(correct, d)] = 1; var out = [];
+    function add(v) {
+      if (!isFinite(v)) return;
+      if (min !== undefined && v < min) return;
+      var s = fmt(v, d); if (seen[s]) return; seen[s] = 1; out.push(s);
     }
+    shuffle(cands || []).forEach(add);
+    var step = Math.max(Math.pow(10, -d), Math.abs(correct) >= 20 ? Math.pow(10, Math.floor(Math.log10(Math.abs(correct))) - 1) : 1);
+    var tries = 0;
+    while (out.length < 3 && tries++ < 60) { add(correct + pick([-3, -2, -1, 1, 2, 3, 4, -4, 5, -5]) * step * (1 + Math.floor(tries / 12))); }
+    return out.slice(0, 3);
   }
-  renderNameInputs();
-
-  el("start-btn").addEventListener("click", startGame);
-
-  /* ---------- Question generator ---------- */
-  function gcd(a, b) { return b ? gcd(b, a % b) : a; }
-
-  function genQuestion(diff) {
-    const percentSets = {
-      A: [10, 20, 25, 50, 75],
-      B: [5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 80],
-      C: [4, 8, 12, 15, 18, 24, 35, 45, 55, 65, 70, 85, 90]
-    };
-    const kRange = { A: [2, 16], B: [2, 36], C: [3, 60] };
-    const typesBy = { A: ["W"], B: ["W", "W", "P"], C: ["W", "P", "G"] };
-
-    const pList = percentSets[diff] || percentSets.B;
-    const [kMin, kMax] = kRange[diff] || kRange.B;
-    const types = typesBy[diff] || typesBy.B;
-
-    const p = pList[Math.floor(Math.random() * pList.length)];
-    const mult = 100 / gcd(p, 100);
-    const k = kMin + Math.floor(Math.random() * (kMax - kMin + 1));
-    const G = mult * k;
-    const W = Math.round((G * p) / 100);
-    const type = types[Math.floor(Math.random() * types.length)];
-
-    if (type === "W") {
-      return { prompt: "Wie viel sind " + p + "% von " + G + "?", answer: W, unit: "", given: { G, p } };
-    }
-    if (type === "P") {
-      return { prompt: "Wie viel Prozent sind " + W + " von " + G + "?", answer: p, unit: "%", given: { G, W } };
-    }
-    return { prompt: W + " sind " + p + "% von welcher Zahl?", answer: G, unit: "", given: { W, p } };
-  }
-
-  /* ---------- Game flow ---------- */
-  function startGame() {
-    players = [];
-    for (let i = 0; i < numPlayers; i++) {
-      const input = el("name-input-" + i);
-      const name = (input && input.value.trim()) || "Spieler " + (i + 1);
-      players.push({ name: name, color: COLORS[i], correct: 0, wrong: 0 });
-    }
-    currentPlayer = 0;
-    gameOver = false;
-    showScreen("screen-game");
-    renderTrack();
-    nextQuestion();
-  }
-
-  function showScreen(id) {
-    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-    el(id).classList.add("active");
-  }
-
-  function renderTrack() {
-    const area = el("track-area");
-    area.innerHTML = "";
-    players.forEach((pl, i) => {
-      const pct = Math.min(100, (pl.correct / TARGET) * 100);
-      const lane = document.createElement("div");
-      lane.className = "lane" + (i === currentPlayer && !gameOver ? " current" : "");
-      lane.innerHTML =
-        '<span class="lane-name">' + escapeHtml(pl.name) + '</span>' +
-        '<div class="lane-track">' +
-          '<div class="lane-fill" style="width:' + pct + '%; background:' + pl.color + '33;"></div>' +
-          '<span class="lane-runner" style="left:' + pct + '%;">' + RUNNER[i] + '</span>' +
-        '</div>';
-      area.appendChild(lane);
-    });
-  }
-
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-
-  function nextQuestion() {
-    currentQuestion = genQuestion(difficulty);
-    const pl = players[currentPlayer];
-    const banner = el("turn-banner");
-    banner.textContent = pl.name + " ist dran";
-    banner.style.background = pl.color;
-    el("q-text").textContent = currentQuestion.prompt;
-    el("q-unit").textContent = currentQuestion.unit;
-    const input = el("q-input");
-    input.value = "";
-    el("feedback").className = "feedback";
-    el("feedback").textContent = "";
-    renderTrack();
-    setTimeout(() => input.focus(), 50);
-  }
-
-  function submitAnswer() {
-    if (gameOver) return;
-    const input = el("q-input");
-    const val = parseFloat(input.value);
-    const fb = el("feedback");
-    if (isNaN(val)) {
-      fb.className = "feedback show bad";
-      fb.textContent = "Bitte eine Zahl eingeben.";
-      return;
-    }
-    const pl = players[currentPlayer];
-    const correct = Math.abs(val - currentQuestion.answer) < 0.001;
-    if (correct) {
-      pl.correct++;
-      fb.className = "feedback show good";
-      fb.textContent = "✅ Richtig! " + pl.name + " hat jetzt " + pl.correct + " von " + TARGET + ".";
-    } else {
-      pl.wrong++;
-      fb.className = "feedback show bad";
-      fb.textContent = "❌ Leider falsch. Richtig wäre: " + currentQuestion.answer + currentQuestion.unit;
-    }
-    renderTrack();
-
-    if (pl.correct >= TARGET) {
-      gameOver = true;
-      setTimeout(showEnd, 1100);
-      return;
-    }
-
-    currentPlayer = (currentPlayer + 1) % players.length;
-    setTimeout(nextQuestion, 1300);
-  }
-
-  el("submit-btn").addEventListener("click", submitAnswer);
-  el("q-input").addEventListener("keydown", (e) => { if (e.key === "Enter") submitAnswer(); });
-
-  function showEnd() {
-    const winner = players.reduce((a, b) => (a.correct > b.correct ? a : b));
-    el("end-title").textContent = players.length === 1
-      ? "Geschafft, " + winner.name + "! 🎉"
-      : winner.name + " gewinnt das Rennen! 🎉";
-    const table = el("stats-table");
-    table.innerHTML =
-      "<tr><th>Spieler</th><th>Richtig</th><th>Falsch</th></tr>" +
-      players.map((pl) => "<tr><td>" + escapeHtml(pl.name) + "</td><td>" + pl.correct + "</td><td>" + pl.wrong + "</td></tr>").join("");
-    showScreen("screen-end");
-  }
-
-  el("play-again-btn").addEventListener("click", () => {
-    players.forEach((pl) => { pl.correct = 0; pl.wrong = 0; });
-    currentPlayer = 0;
-    gameOver = false;
-    showScreen("screen-game");
-    nextQuestion();
-  });
-
-  el("restart-setup-btn").addEventListener("click", () => showScreen("screen-setup"));
+  return { rnd: rnd, pick: pick, shuffle: shuffle, fmt: fmt, gcd: gcd, isPrime: isPrime, digitSum: digitSum, uniq: uniq, numWrong: numWrong };
 })();
-</script>
 
+
+</script>
+<script>
+/* ===== Prozent-Rennen: Prozentrechnung ===== */
+(function () {
+var rnd = H.rnd, pick = H.pick, fmt = H.fmt, nw = H.numWrong;
+var NB = ' ';
+function res(html, v, d, unit, cands, expl) {
+  var u = unit ? NB + unit : '';
+  return { html: html, ans: fmt(v, d) + u, num: v, tol: Math.pow(10, -d) / 2 + 1e-9, unit: unit, wrong: nw(v, cands, d, 0).map(function (s) { return s + u; }), expl: expl };
+}
+function P(p) { return fmt(p, 1) + NB + '%'; }
+var THINGS = [['Sneaker', 80], ['Jacke', 120], ['Kopfhörer', 60], ['Trikot', 45], ['Rucksack', 50], ['Fahrrad', 400], ['Tablet', 300], ['Handballschuhe', 90], ['Spielekonsole', 250], ['Smartwatch', 180]];
+function pickG(L, nice) {
+  if (nice) return pick([40, 50, 60, 80, 100, 120, 200, 400, 500, 800]);
+  return pick([20, 25, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 800, 1200]);
+}
+var CTX = [
+  function (W, G, p) { return { wert: ['Beim Handballspiel werfen die Rotenburger ' + G + ' Mal aufs Tor. ' + P(p) + ' der Würfe sind Treffer. Wie viele Tore sind das?', ' Tore'], satz: ['Von ' + G + ' Würfen aufs Tor sind ' + W + ' Treffer. Wie viel Prozent der Würfe sind Treffer?', ' Treffer'], grund: [W + ' Treffer entsprechen ' + P(p) + ' aller Würfe. Wie viele Würfe gab es insgesamt?', ' Würfe'] }; },
+  function (W, G, p) { return { wert: ['In einer Schule mit ' + G + ' Lernenden kommen ' + P(p) + ' mit dem Fahrrad. Wie viele Lernende sind das?', ' Lernende'], satz: ['In einer Schule mit ' + G + ' Lernenden kommen ' + W + ' mit dem Fahrrad. Wie viel Prozent sind das?', ' Lernende'], grund: ['In einer Schule kommen ' + W + ' Lernende mit dem Fahrrad. Das sind ' + P(p) + ' aller Lernenden. Wie viele Lernende hat die Schule?', ' Lernende'] }; },
+  function (W, G, p) { return { wert: ['Eine Klasse hat ' + G + ' Aufgaben. ' + P(p) + ' davon hat Lena schon gelöst. Wie viele Aufgaben sind das?', ' Aufgaben'], satz: ['Von ' + G + ' Aufgaben hat Lena ' + W + ' gelöst. Wie viel Prozent sind das?', ' Aufgaben'], grund: ['Lena hat ' + W + ' Aufgaben gelöst. Das sind ' + P(p) + ' aller Aufgaben. Wie viele Aufgaben gibt es?', ' Aufgaben'] }; }
+];
+var gen = {
+  wert: function (L) {
+    var p, G, W;
+    if (L === 1) { p = pick([10, 20, 25, 50, 75]); G = pickG(1, true); }
+    else if (L === 2) { do { p = rnd(2, 98); G = pickG(2); W = G * p / 100; } while (W * 10 % 1 > 1e-9 || [10, 20, 25, 50, 75].indexOf(p) >= 0); }
+    else { p = pick([12.5, 7.5, 2.5, 33, 45, 62.5, 15, 35]); do { G = pickG(3); W = G * p / 100; } while (Math.abs(W * 100 - Math.round(W * 100)) > 1e-9); }
+    W = Math.round(G * p) / 100;
+    var c = pick(CTX)(W, G, p).wert, text = Math.random() < 0.5 ? '<small>Prozentwert gesucht</small>' + fmt(p, 1) + NB + '% von ' + fmt(G, 0) + ' = ?' : c[0];
+    var d = W % 1 ? 2 : 0, unit = text === c[0] ? c[1].trim() : '';
+    return res(text === c[0] ? text : text, W, d, unit, [G * p, G / p, G - W, W * 10, W / 10, G * p / 10], 'Prozentwert: W = G · p : 100 = ' + fmt(G, 0) + ' · ' + fmt(p, 1) + ' : 100 = <b>' + fmt(W, 2) + '</b>. Tipp: 1 % von ' + fmt(G, 0) + ' sind ' + fmt(G / 100, 2) + '.');
+  },
+  satz: function (L) {
+    var G, W, p;
+    if (L === 1) { p = pick([10, 20, 25, 50, 75]); G = pick([20, 40, 80, 100, 200, 400]); }
+    else if (L === 2) { do { p = rnd(2, 98); G = pick([20, 25, 40, 50, 100, 200, 250, 400, 500]); W = G * p / 100; } while (W % 1 !== 0 || [10, 20, 25, 50, 75].indexOf(p) >= 0); }
+    else { p = pick([12.5, 7.5, 37.5, 62.5, 2.5, 87.5, 4.5, 15.5]); do { G = pick([40, 80, 200, 400, 800, 1000]); W = G * p / 100; } while (Math.abs(W - Math.round(W)) > 1e-9); }
+    W = Math.round(G * p / 100);
+    var t = Math.random() < 0.5 ? '<small>Prozentsatz gesucht</small>' + W + ' von ' + fmt(G, 0) + ' sind wie viel Prozent?' : pick(CTX)(W, G, p).satz[0], unit = '%';
+    return res(t, p, 1, unit, [W / G, G / W * 100, 100 - p, p * 2, p / 2, W], 'Prozentsatz: p = W : G · 100 = ' + W + ' : ' + fmt(G, 0) + ' · 100 = <b>' + fmt(p, 1) + ' %</b>. (Dreisatz: ' + fmt(G, 0) + ' sind 100 %, also ' + W + ' sind ' + fmt(p, 1) + ' %.)');
+  },
+  grund: function (L) {
+    var G, W, p;
+    if (L === 1) { p = pick([10, 20, 25, 50]); G = pick([40, 60, 80, 100, 200, 400]); }
+    else if (L === 2) { do { p = rnd(2, 95); G = pickG(2); W = G * p / 100; } while (W % 1 !== 0 || [10, 20, 25, 50, 75].indexOf(p) >= 0); }
+    else { p = pick([12.5, 7.5, 2.5, 37.5, 62.5, 16, 35, 45, 6]); do { G = pickG(3); W = G * p / 100; } while (Math.abs(W - Math.round(W)) > 1e-9 || W < 3); }
+    W = Math.round(G * p / 100);
+    var t = Math.random() < 0.5 ? '<small>Grundwert gesucht</small>' + fmt(p, 1) + NB + '% sind ' + W + '. Wie groß ist der Grundwert (100 %)?' : pick(CTX)(W, G, p).grund[0];
+    return res(t, G, 0, '', [W * p, W / p, W * p / 100, W * 100, G / 10, G * 2], 'Grundwert: G = W · 100 : p = ' + W + ' · 100 : ' + fmt(p, 1) + ' = <b>' + fmt(G, 0) + '</b>. (Dreisatz: ' + fmt(p, 1) + ' % sind ' + W + ', also 1 % sind ' + fmt(W / p, 3) + ' und 100 % sind ' + fmt(G, 0) + '.)');
+  },
+  preis: function (L) {
+    var th = pick(THINGS), name = th[0], G = th[1] * pick([1, 1, 2]) / (th[1] > 200 ? 1 : 1), p, kind;
+    if (L === 1) { p = pick([10, 20, 25, 50]); kind = pick(['neu', 'sparen']); }
+    else if (L === 2) { p = pick([5, 15, 30, 35, 40, 12, 8]); kind = pick(['neu', 'sparen', 'auf']); }
+    else { p = pick([15, 20, 25, 30, 35, 40]); kind = pick(['ursprung', 'ursprung', 'rabatt', 'auf']); }
+    var W = G * p / 100;
+    if (Math.abs(W * 100 - Math.round(W * 100)) > 1e-9) { G = 100 * Math.ceil(G / 100); W = G * p / 100; }
+    var neu = G - W, up = G + W;
+    if (kind === 'neu') return res('<small>Rabatt</small>' + name + ': ' + fmt(G, 2) + NB + '€. Im Angebot gibt es ' + fmt(p, 1) + NB + '% Rabatt. Wie viel kostet er jetzt?', neu, 2, '€', [W, G + W, G * p / 100 * 100, neu + 10, neu - 10], 'Rabatt: ' + fmt(p, 1) + ' % von ' + fmt(G, 2) + ' € = ' + fmt(W, 2) + ' €. Neuer Preis: ' + fmt(G, 2) + ' − ' + fmt(W, 2) + ' = <b>' + fmt(neu, 2) + ' €</b>. (Oder direkt: ' + fmt(100 - p, 1) + ' % von ' + fmt(G, 2) + ' €.)');
+    if (kind === 'sparen') return res('<small>Rabatt</small>' + name + ': ' + fmt(G, 2) + NB + '€. Es gibt ' + fmt(p, 1) + NB + '% Rabatt. Wie viel Euro spart man?', W, 2, '€', [neu, G + W, W * 10, W / 10, G - 10], 'Ersparnis: ' + fmt(p, 1) + ' % von ' + fmt(G, 2) + ' € = ' + fmt(G, 2) + ' · ' + fmt(p, 1) + ' : 100 = <b>' + fmt(W, 2) + ' €</b>.');
+    if (kind === 'auf') return res('<small>Preiserhöhung</small>' + name + ' kostete ' + fmt(G, 2) + NB + '€. Der Preis steigt um ' + fmt(p, 1) + NB + '%. Wie viel kostet er danach?', up, 2, '€', [neu, W, G + p, up + 10, up - 10], 'Erhöhung: ' + fmt(p, 1) + ' % von ' + fmt(G, 2) + ' € = ' + fmt(W, 2) + ' €. Neuer Preis: ' + fmt(G, 2) + ' + ' + fmt(W, 2) + ' = <b>' + fmt(up, 2) + ' €</b>.');
+    if (kind === 'ursprung') return res('<small>Rückwärts rechnen</small>' + name + ' kostet nach ' + fmt(p, 1) + NB + '% Rabatt nur noch ' + fmt(neu, 2) + NB + '€. Wie viel kostete er vorher?', G, 2, '€', [neu + p, neu * (1 + p / 100), neu + W, neu / (1 + p / 100), neu * 2], 'Der neue Preis entspricht ' + fmt(100 - p, 1) + ' % des alten Preises. Also: G = ' + fmt(neu, 2) + ' : ' + fmt(100 - p, 1) + ' · 100 = <b>' + fmt(G, 2) + ' €</b>. (Nicht einfach ' + fmt(p, 1) + ' % aufschlagen!)');
+    return res('<small>Rabatt in Prozent</small>' + name + ' kostete ' + fmt(G, 2) + NB + '€, jetzt nur noch ' + fmt(neu, 2) + NB + '€. Wie viel Prozent Rabatt sind das?', p, 1, '%', [100 - p, p * 2, p / 2, neu / G * 100, W], 'Ersparnis: ' + fmt(G, 2) + ' − ' + fmt(neu, 2) + ' = ' + fmt(W, 2) + ' €. Prozentsatz: ' + fmt(W, 2) + ' : ' + fmt(G, 2) + ' · 100 = <b>' + fmt(p, 1) + ' %</b>.');
+  },
+  steuer: function (L) {
+    var N, rate = 19, kind;
+    if (L === 1) { N = pick([100, 200, 50, 300, 500]); kind = pick(['brutto', 'mwst']); }
+    else if (L === 2) { N = pick([80, 120, 250, 340, 450, 70, 160]); kind = pick(['brutto', 'mwst', 'brutto']); rate = pick([19, 19, 7]); }
+    else { N = pick([100, 200, 250, 400, 500, 80, 160]); rate = pick([19, 7]); kind = pick(['netto', 'netto', 'mwst', 'brutto']); }
+    var T = N * rate / 100, B = N + T, f = 'Mehrwertsteuer ' + rate + ' %';
+    if (kind === 'brutto') return res('<small>Mehrwertsteuer</small>Ein Gerät kostet netto ' + fmt(N, 2) + NB + '€. Dazu kommen ' + rate + NB + '% Mehrwertsteuer. Wie hoch ist der Bruttopreis?', B, 2, '€', [T, N - T, N + rate, B + 10, N * rate], 'Steuer: ' + rate + ' % von ' + fmt(N, 2) + ' € = ' + fmt(T, 2) + ' €. Brutto: ' + fmt(N, 2) + ' + ' + fmt(T, 2) + ' = <b>' + fmt(B, 2) + ' €</b>. (Kurz: ' + fmt(N, 2) + ' · ' + fmt(1 + rate / 100, 2) + '.)');
+    if (kind === 'mwst') return res('<small>Mehrwertsteuer</small>Der Nettopreis beträgt ' + fmt(N, 2) + NB + '€. Wie viel Euro Mehrwertsteuer (' + rate + NB + '%) sind das?', T, 2, '€', [B, N - T, T * 10, T / 10, N + T], 'Steuer: ' + fmt(N, 2) + ' · ' + rate + ' : 100 = <b>' + fmt(T, 2) + ' €</b>.');
+    return res('<small>Rückwärts rechnen</small>Der Bruttopreis ist ' + fmt(B, 2) + NB + '€ (inklusive ' + rate + NB + '% Mehrwertsteuer). Wie hoch ist der Nettopreis?', N, 2, '€', [B - B * rate / 100, B * (1 - rate / 100), B - rate, B / 2, B + T], 'Der Bruttopreis entspricht ' + (100 + rate) + ' % des Nettopreises. Netto: ' + fmt(B, 2) + ' : ' + (100 + rate) + ' · 100 = <b>' + fmt(N, 2) + ' €</b>. (Nicht einfach ' + rate + ' % abziehen!)');
+  },
+  zins: function (L) {
+    var K, p, kind, Z;
+    if (L === 1) { K = pick([1000, 500, 200, 800, 2000]); p = pick([1, 2, 5, 4, 10]); kind = 'Z'; }
+    else if (L === 2) { K = pick([1200, 2500, 3000, 4500, 800, 1500]); p = pick([1.5, 2, 2.5, 3, 3.5, 4]); kind = pick(['Z', 'Z', 'Kend', 'p']); }
+    else { K = pick([2000, 5000, 1500, 2500, 4000]); p = pick([2, 3, 4, 2.5, 1.5]); kind = pick(['K', 'p', 'zz', 'zz']); }
+    Z = K * p / 100;
+    if (kind === 'Z') return res('<small>Zinsen</small>Anna legt ' + fmt(K, 0) + NB + '€ ein Jahr lang zu ' + fmt(p, 1) + NB + '% an. Wie viel Zinsen bekommt sie?', Z, 2, '€', [K + Z, Z * 10, Z / 10, K * p, K / p], 'Zinsen: Z = K · p : 100 = ' + fmt(K, 0) + ' · ' + fmt(p, 1) + ' : 100 = <b>' + fmt(Z, 2) + ' €</b>.');
+    if (kind === 'Kend') return res('<small>Zinsen</small>Anna legt ' + fmt(K, 0) + NB + '€ ein Jahr lang zu ' + fmt(p, 1) + NB + '% an. Wie viel Geld hat sie nach einem Jahr?', K + Z, 2, '€', [Z, K - Z, K + Z * 10, K + p, K * p], 'Zinsen: ' + fmt(K, 0) + ' · ' + fmt(p, 1) + ' : 100 = ' + fmt(Z, 2) + ' €. Guthaben: ' + fmt(K, 0) + ' + ' + fmt(Z, 2) + ' = <b>' + fmt(K + Z, 2) + ' €</b>.');
+    if (kind === 'p') return res('<small>Zinssatz</small>Auf ' + fmt(K, 0) + NB + '€ gibt es in einem Jahr ' + fmt(Z, 2) + NB + '€ Zinsen. Wie hoch ist der Zinssatz?', p, 1, '%', [p * 2, p / 2, Z / K, K / Z, p + 1], 'Zinssatz: p = Z : K · 100 = ' + fmt(Z, 2) + ' : ' + fmt(K, 0) + ' · 100 = <b>' + fmt(p, 1) + ' %</b>.');
+    if (kind === 'K') return res('<small>Kapital</small>Bei ' + fmt(p, 1) + NB + '% Zinsen gibt es in einem Jahr ' + fmt(Z, 2) + NB + '€. Wie viel Geld wurde angelegt?', K, 2, '€', [Z * p, Z / p, Z * 100, K / 10, K * 2], 'Kapital: K = Z · 100 : p = ' + fmt(Z, 2) + ' · 100 : ' + fmt(p, 1) + ' = <b>' + fmt(K, 2) + ' €</b>.');
+    var K2 = K * (1 + p / 100) * (1 + p / 100); K2 = Math.round(K2 * 100) / 100;
+    return res('<small>Zinseszins</small>' + fmt(K, 0) + NB + '€ werden zwei Jahre lang zu ' + fmt(p, 1) + NB + '% angelegt. Die Zinsen des ersten Jahres werden mitverzinst. Wie viel Geld ist es nach zwei Jahren?', K2, 2, '€', [K + 2 * Z, K + Z, K * 1.2, K2 + 10], 'Nach Jahr 1: ' + fmt(K, 0) + ' · ' + fmt(1 + p / 100, 3) + ' = ' + fmt(K * (1 + p / 100), 2) + ' €. Nach Jahr 2: ' + fmt(K * (1 + p / 100), 2) + ' · ' + fmt(1 + p / 100, 3) + ' = <b>' + fmt(K2, 2) + ' €</b>. (Ohne Zinseszins wären es nur ' + fmt(K + 2 * Z, 2) + ' €.)');
+  }
+};
+window.GAME = {
+  id: 'prozent-rennen', title: 'Prozent-Rennen', subtitle: 'Gib Gas: Jede richtige Antwort bringt dich näher ans Ziel.', peerPrefix: 'prozentrennen-',
+  topics: [
+    { id: 'wert', label: 'Prozentwert', desc: 'W = G · p : 100' },
+    { id: 'satz', label: 'Prozentsatz', desc: 'wie viel Prozent?' },
+    { id: 'grund', label: 'Grundwert', desc: 'Wie groß ist das Ganze?' },
+    { id: 'preis', label: 'Rabatt & Preise', desc: 'Rabatt, Preiserhöhung, Rückwärtsrechnen' },
+    { id: 'steuer', label: 'Mehrwertsteuer', desc: 'Netto, Brutto, 19 % und 7 %' },
+    { id: 'zins', label: 'Zinsen', desc: 'Jahreszinsen, Kapital, Zinseszins' }
+  ],
+  levels: [
+    { id: 1, label: 'Stufe 1', desc: 'Klasse 6/7: 10 %, 20 %, 25 %, 50 %, 75 %' },
+    { id: 2, label: 'Stufe 2', desc: 'Klasse 7/8: beliebige ganze Prozentsätze' },
+    { id: 3, label: 'Stufe 3', desc: 'Klasse 8/9: Dezimal-Prozente, Rückwärtsrechnen' }
+  ],
+  make: function (t, L) { return gen[t](L); }
+};
+})();
+
+window.GAME.scene="<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 160\" preserveAspectRatio=\"xMidYMid slice\"><rect width=\"800\" height=\"160\" fill=\"#262c34\"/><path d=\"M0 112h800v48H0z\" fill=\"#3a424c\"/><path d=\"M0 134h800\" stroke=\"#fff\" stroke-width=\"4\" stroke-dasharray=\"36 28\" opacity=\".8\"/><rect y=\"104\" width=\"800\" height=\"8\" fill=\"#e53935\"/><g fill=\"#fff\"><rect y=\"104\" width=\"40\" height=\"8\" opacity=\".0\"/></g><g opacity=\".9\"><path d=\"M640 112V32\" stroke=\"#fff\" stroke-width=\"5\"/><g><rect x=\"643\" y=\"32\" width=\"90\" height=\"48\" fill=\"#fff\"/><g fill=\"#111\"><rect x=\"643\" y=\"32\" width=\"18\" height=\"16\"/><rect x=\"679\" y=\"32\" width=\"18\" height=\"16\"/><rect x=\"715\" y=\"32\" width=\"18\" height=\"16\"/><rect x=\"661\" y=\"48\" width=\"18\" height=\"16\"/><rect x=\"697\" y=\"48\" width=\"18\" height=\"16\"/><rect x=\"643\" y=\"64\" width=\"18\" height=\"16\"/><rect x=\"679\" y=\"64\" width=\"18\" height=\"16\"/><rect x=\"715\" y=\"64\" width=\"18\" height=\"16\"/></g></g></g><g fill=\"#fff\" font-family=\"Arial Narrow,Arial,sans-serif\" font-weight=\"800\" opacity=\".55\"><text x=\"300\" y=\"70\" font-size=\"70\">%</text><text x=\"400\" y=\"96\" font-size=\"36\">19 %</text><text x=\"210\" y=\"96\" font-size=\"30\">\u221225 %</text></g><g transform=\"translate(70 70)\"><path d=\"M0 38c0-8 4-12 12-14l14-14c4-4 10-6 18-6h22c8 0 14 2 18 6l12 12c10 2 16 6 16 16v6z\" fill=\"#e53935\"/><path d=\"M34 12h20v14H26z\" fill=\"#9fd3ff\" opacity=\".9\"/><path d=\"M60 12h14l12 14H60z\" fill=\"#9fd3ff\" opacity=\".9\"/><circle cx=\"26\" cy=\"44\" r=\"11\" fill=\"#111\"/><circle cx=\"26\" cy=\"44\" r=\"5\" fill=\"#bbb\"/><circle cx=\"82\" cy=\"44\" r=\"11\" fill=\"#111\"/><circle cx=\"82\" cy=\"44\" r=\"5\" fill=\"#bbb\"/></g></svg>";window.GAME.icon="<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 36 30\" fill=\"currentColor\"><path d=\"M2 21c0-5 3-7 7-8l5-7c2-2 5-3 8-3h4c3 0 6 1 8 3l2 4c2 1 3 3 3 6v2z\" stroke=\"rgba(0,0,0,.35)\" stroke-width=\"1\"/><circle cx=\"10\" cy=\"24\" r=\"4.2\" fill=\"#111\"/><circle cx=\"27\" cy=\"24\" r=\"4.2\" fill=\"#111\"/></svg>";window.GAME.goal="<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M4 2v20\" stroke=\"#fff\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><g><rect x=\"5\" y=\"3\" width=\"15\" height=\"11\" fill=\"#fff\"/><g fill=\"#111\"><rect x=\"5\" y=\"3\" width=\"3.75\" height=\"3.67\"/><rect x=\"12.5\" y=\"3\" width=\"3.75\" height=\"3.67\"/><rect x=\"8.75\" y=\"6.67\" width=\"3.75\" height=\"3.67\"/><rect x=\"16.25\" y=\"6.67\" width=\"3.75\" height=\"3.67\"/><rect x=\"5\" y=\"10.33\" width=\"3.75\" height=\"3.67\"/><rect x=\"12.5\" y=\"10.33\" width=\"3.75\" height=\"3.67\"/></g></g></svg>";
+</script>
+<script>
+/* =====================================================================
+   Lernspiel-Motor: Einzel · mehrere an einem Gerät · mehrere Geräte
+   (Raum-Code) · Klassenquiz mit Host (Beamer + Schüler-Geräte)
+   Das jeweilige Spiel liefert window.GAME (Themen, Stufen, Aufgaben).
+   ===================================================================== */
+(function () {
+'use strict';
+var G = window.GAME;
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+var rnd = H.rnd, pick = H.pick, shuffle = H.shuffle;
+var COLORS = ['#ff5d73', '#3fa9ff', '#ffc928', '#3ddc97', '#b388ff', '#ff9f43', '#4dd4e6', '#f06ec3'];
+var LETTERS = ['A', 'B', 'C', 'D'];
+var PEER_SRC = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+var QR_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+var NETDEBUG = /[?&]net=bc\b/.test(location.search);
+var LSKEY = 'arena-' + G.id;
+var app = $('#app');
+
+/* ---------- Speicher ---------- */
+function loadPrefs() {
+  var d = { mode: 'solo', topics: G.topics.map(function (t) { return t.id; }), level: 2, n: 10, time: 20, typed: false, names: ['Spieler 1', 'Spieler 2', 'Spieler 3', 'Spieler 4'], count: 2, hostPlays: false, sound: true, name: '' };
+  try { var s = JSON.parse(localStorage.getItem(LSKEY) || '{}'); for (var k in s) d[k] = s[k]; } catch (e) {}
+  d.topics = d.topics.filter(function (id) { return G.topics.some(function (t) { return t.id === id; }); });
+  if (!d.topics.length) d.topics = G.topics.map(function (t) { return t.id; });
+  return d;
+}
+var P = loadPrefs();
+function savePrefs() { try { localStorage.setItem(LSKEY, JSON.stringify(P)); } catch (e) {} }
+function bestGet() { try { return +localStorage.getItem(LSKEY + '-best') || 0; } catch (e) { return 0; } }
+function bestSet(v) { try { localStorage.setItem(LSKEY + '-best', String(v)); } catch (e) {} }
+
+/* ---------- Ton ---------- */
+var actx = null;
+function beep(ok) {
+  if (!P.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.type = 'sine'; o.frequency.value = ok ? 660 : 180; g.gain.value = 0.08;
+    o.start(); if (ok) o.frequency.setValueAtTime(880, actx.currentTime + 0.1);
+    o.stop(actx.currentTime + (ok ? 0.22 : 0.3));
+  } catch (e) {}
+}
+
+/* ---------- Aufgaben erzeugen ---------- */
+function buildChoices(q) {
+  var wrong = H.uniq((q.wrong || []).map(String)).filter(function (w) { return w !== String(q.ans); }).slice(0, 3);
+  var all = shuffle([String(q.ans)].concat(wrong));
+  return { choices: all, correct: all.indexOf(String(q.ans)) };
+}
+function makeQuestions(S) {
+  var tops = shuffle(S.topics), out = [], lastKey = '';
+  for (var k = 0; k < S.n; k++) {
+    var tid = tops[k % tops.length], q = null, tries = 0;
+    do { q = G.make(tid, S.level); tries++; } while (q && (q.html + (q.svg || '')) === lastKey && tries < 8);
+    lastKey = q.html + (q.svg || '');
+    var c = buildChoices(q);
+    out.push({ topic: tid, html: q.html, svg: q.svg || '', clues: q.clues || null, choices: c.choices, correct: c.correct, ans: String(q.ans), num: q.num, tol: q.tol, expl: q.expl || '', unit: q.unit || '' });
+  }
+  return out;
+}
+function pubQ(q) { return { html: q.html, svg: q.svg, clues: q.clues, choices: q.choices, topic: q.topic, typed: q.num !== undefined, unit: q.unit }; }
+function isCorrect(q, a) {
+  if (!a) return false;
+  if (a.k !== undefined && a.k !== null) return a.k === q.correct;
+  if (a.v !== undefined && q.num !== undefined) return Math.abs(a.v - q.num) <= (q.tol !== undefined ? q.tol : 0.0051);
+  return false;
+}
+function parseNum(s) {
+  s = String(s).trim().replace(/\s| /g, '').replace('−', '-');
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '');
+  s = s.replace(',', '.');
+  if (/^-?\d+(\.\d+)?\/\d+(\.\d+)?$/.test(s)) { var p = s.split('/'); return parseFloat(p[0]) / parseFloat(p[1]); }
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+
+/* ---------- Netzwerk (PeerJS; ?net=bc = Test über BroadcastChannel) ---------- */
+function loadScript(src) {
+  return new Promise(function (res, rej) {
+    var s = document.createElement('script'); s.src = src; s.async = true;
+    s.onload = res; s.onerror = function () { rej(new Error('Skript nicht ladbar: ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+function waitFor(fn, ms) { return new Promise(function (res, rej) { var t0 = Date.now(); (function w() { if (fn()) return res(); if (Date.now() - t0 > ms) return rej(new Error('Zeitüberschreitung')); setTimeout(w, 60); })(); }); }
+var Net = {
+  host: function (code, onMsg, onGone) {
+    if (NETDEBUG) {
+      var bc = new BroadcastChannel('arena-bc-' + G.id + '-' + code);
+      bc.onmessage = function (e) { var m = e.data; if (m.to === 'host') onMsg(m.from, m.msg); };
+      return Promise.resolve({ send: function (id, msg) { bc.postMessage({ to: id, msg: msg }); }, all: function (msg) { bc.postMessage({ to: '*', msg: msg }); }, close: function () { bc.close(); } });
+    }
+    return loadScript(PEER_SRC).then(function () { return waitFor(function () { return window.Peer; }, 9000); }).then(function () {
+      return new Promise(function (res, rej) {
+        var peer = new window.Peer(G.peerPrefix + code.toLowerCase()), conns = {}, done = false;
+        var to = setTimeout(function () { if (!done) rej(new Error('Vermittlungsserver nicht erreichbar')); }, 12000);
+        peer.on('error', function (e) { if (!done) { done = true; clearTimeout(to); rej(new Error(e && e.type === 'unavailable-id' ? 'Code schon vergeben' : 'Verbindungsfehler')); } });
+        peer.on('open', function () {
+          done = true; clearTimeout(to);
+          peer.on('connection', function (c) {
+            c.on('open', function () { conns[c.peer] = c; });
+            c.on('data', function (m) { conns[c.peer] = c; onMsg(c.peer, m); });
+            c.on('close', function () { delete conns[c.peer]; onGone(c.peer); });
+            c.on('error', function () {});
+          });
+          res({
+            send: function (id, msg) { if (conns[id]) try { conns[id].send(msg); } catch (e) {} },
+            all: function (msg) { for (var id in conns) try { conns[id].send(msg); } catch (e) {} },
+            close: function () { try { peer.destroy(); } catch (e) {} }
+          });
+        });
+      });
+    });
+  },
+  join: function (code, onMsg, onClose) {
+    if (NETDEBUG) {
+      var id = 'c' + Math.random().toString(36).slice(2, 8);
+      var bc = new BroadcastChannel('arena-bc-' + G.id + '-' + code);
+      bc.onmessage = function (e) { var m = e.data; if (m.to === id || m.to === '*') onMsg(m.msg); };
+      return Promise.resolve({ send: function (msg) { bc.postMessage({ from: id, to: 'host', msg: msg }); }, close: function () { bc.close(); } });
+    }
+    return loadScript(PEER_SRC).then(function () { return waitFor(function () { return window.Peer; }, 9000); }).then(function () {
+      return new Promise(function (res, rej) {
+        var peer = new window.Peer(), done = false;
+        var to = setTimeout(function () { if (!done) { done = true; rej(new Error('Keine Verbindung zum Raum ' + code + '. Stimmt der Code?')); } }, 12000);
+        peer.on('error', function () { if (!done) { done = true; clearTimeout(to); rej(new Error('Raum nicht gefunden. Stimmt der Code?')); } });
+        peer.on('open', function () {
+          var c = peer.connect(G.peerPrefix + code.toLowerCase(), { reliable: true });
+          c.on('open', function () {
+            done = true; clearTimeout(to);
+            c.on('data', onMsg); c.on('close', onClose);
+            res({ send: function (m) { try { c.send(m); } catch (e) {} }, close: function () { try { peer.destroy(); } catch (e) {} } });
+          });
+          c.on('error', function () { if (!done) { done = true; clearTimeout(to); rej(new Error('Verbindung fehlgeschlagen')); } });
+        });
+      });
+    });
+  }
+};
+function newCode() { var c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = ''; for (var i = 0; i < 4; i++) s += c[rnd(0, c.length - 1)]; return s; }
+function joinUrl(code) { return location.origin + location.pathname + '?room=' + code; }
+function qrSvg(text) {
+  try { var q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch (e) { return ''; }
+}
+
+/* ---------- Spiel-Sitzung (Host bzw. lokal) ---------- */
+function Session(S, players, opts) {
+  this.S = S; this.players = players; this.opts = opts || {};
+  this.qs = []; this.i = -1; this.phase = 'lobby'; this.t0 = 0; this.timer = null; this.autoT = null; this.rev = null; this.listeners = [];
+  this.history = [];
+}
+Session.prototype.on = function (fn) { this.listeners.push(fn); };
+Session.prototype.eligible = function () {
+  var self = this;
+  return this.players.filter(function (p) { return !p.gone && (!self.opts.turns || p.id === self.activeId()); });
+};
+Session.prototype.activeId = function () { return this.opts.turns ? this.players[this.i % this.players.length].id : null; };
+Session.prototype.view = function () {
+  var self = this, q = this.qs[this.i];
+  var v = {
+    t: 'st', phase: this.phase, code: this.opts.code || '', i: this.i, n: this.S.n, T: this.S.time, ms: this.t0 ? Date.now() - this.t0 : 0,
+    turns: !!this.opts.turns, active: this.opts.turns && this.phase !== 'lobby' && this.phase !== 'end' ? this.activeId() : null,
+    hostPlays: !!this.opts.hostPlays, level: this.S.level, typed: !!this.S.typed,
+    cfg: { levelLabel: levelLabel(this.S.level), topics: this.S.topics.map(topicLabel), n: this.S.n, T: this.S.time },
+    players: this.players.map(function (p) { return { id: p.id, name: p.name, color: p.color, score: p.score, streak: p.streak, right: p.right, answered: p.ans != null, gone: !!p.gone, d: p.d || 0 }; })
+  };
+  if (q && (this.phase === 'q' || this.phase === 'reveal')) v.q = pubQ(q);
+  if (this.phase === 'reveal') v.rev = this.rev;
+  if (this.phase === 'end') v.review = this.qs.map(function (qq, k) { return { html: qq.html, ans: qq.ans, expl: qq.expl, res: self.history[k] || {} }; });
+  return v;
+};
+Session.prototype.emit = function () { var v = this.view(); this.listeners.forEach(function (f) { f(v); }); };
+Session.prototype.start = function () {
+  this.qs = makeQuestions(this.S); this.i = -1; this.history = [];
+  this.players.forEach(function (p) { p.score = 0; p.streak = 0; p.right = 0; p.ans = null; p.d = 0; });
+  this.next();
+};
+Session.prototype.next = function () {
+  clearTimeout(this.timer); clearTimeout(this.autoT);
+  this.i++;
+  if (this.i >= this.qs.length) return this.finish();
+  this.players.forEach(function (p) { p.ans = null; p.d = 0; });
+  this.phase = 'q'; this.t0 = Date.now(); this.rev = null;
+  var self = this;
+  if (this.S.time > 0) this.timer = setTimeout(function () { self.reveal(); }, this.S.time * 1000 + 400);
+  this.emit();
+};
+Session.prototype.answer = function (pid, a) {
+  if (this.phase !== 'q') return;
+  var p = this.players.filter(function (x) { return x.id === pid; })[0];
+  if (!p || p.ans != null) return;
+  if (this.opts.turns && pid !== this.activeId()) return;
+  p.ans = a; p.at = Date.now(); p.cl = a.cl;
+  this.emit();
+  var el = this.eligible();
+  if (el.length && el.every(function (x) { return x.ans != null; })) { var self = this; clearTimeout(this.timer); this.timer = setTimeout(function () { self.reveal(); }, this.opts.turns ? 150 : 700); }
+};
+Session.prototype.dropPlayer = function (pid) {
+  var p = this.players.filter(function (x) { return x.id === pid; })[0]; if (!p) return;
+  p.gone = true;
+  if (this.phase === 'q') { var el = this.eligible(); if (!el.length || el.every(function (x) { return x.ans != null; })) this.reveal(); else this.emit(); } else this.emit();
+};
+Session.prototype.reveal = function () {
+  if (this.phase !== 'q') return;
+  clearTimeout(this.timer);
+  var q = this.qs[this.i], self = this, res = {}, dist = [0, 0, 0, 0], T = this.S.time;
+  this.players.forEach(function (p) {
+    var ok = isCorrect(q, p.ans), d = 0;
+    if (p.ans && p.ans.k != null && p.ans.k >= 0) dist[p.ans.k]++;
+    if (ok) {
+      var base = 100;
+      if (q.clues) { var shown = Math.max(1, Math.min(q.clues.length, p.cl || q.clues.length)); base = Math.round(100 * (q.clues.length - shown + 1) / q.clues.length); }
+      var speed = T > 0 && p.at ? Math.round(80 * Math.max(0, 1 - (p.at - self.t0) / (T * 1000))) : 0;
+      d = base + speed + Math.min(5, p.streak) * 10;
+      p.streak++; p.right++;
+    } else if (p.ans || (!self.opts.turns) || p.id === self.activeId()) { p.streak = 0; }
+    p.score += d; p.d = d;
+    if (!p.gone && (!self.opts.turns || p.id === self.activeId())) res[p.id] = { ok: ok, d: d, a: p.ans && p.ans.k != null ? p.ans.k : -1, v: p.ans && p.ans.v !== undefined ? p.ans.v : null, none: !p.ans };
+  });
+  this.history[this.i] = (function () { var o = {}; for (var k in res) o[k] = res[k].ok ? 1 : 0; return o; })();
+  this.phase = 'reveal'; this.rev = { correct: q.correct, ans: q.ans, expl: q.expl, res: res, dist: dist };
+  this.emit();
+  if (this.opts.auto) { this.autoT = setTimeout(function () { self.next(); }, this.opts.auto); }
+};
+Session.prototype.finish = function () { clearTimeout(this.timer); clearTimeout(this.autoT); this.phase = 'end'; this.emit(); };
+Session.prototype.stop = function () { clearTimeout(this.timer); clearTimeout(this.autoT); this.listeners = []; };
+
+function levelLabel(l) { var o = G.levels.filter(function (x) { return x.id === l; })[0]; return o ? o.label : 'Stufe ' + l; }
+function topicLabel(id) { var o = G.topics.filter(function (x) { return x.id === id; })[0]; return o ? o.label : id; }
+
+/* ---------- UI: gemeinsame Bausteine ---------- */
+var ctx = { role: 'none', session: null, net: null, me: null, V: null, key: '', mine: null, tickT: null, localT0: 0, clueShown: 1, typedVal: '' };
+
+function banner() { return '<header class="banner"><a class="back" href="index.html#/" id="homeLink" aria-label="Zur Startseite">‹ Start</a><div class="bannerart" aria-hidden="true">' + G.scene + '</div><div class="bannertxt"><h1>' + esc(G.title) + '</h1><p>' + esc(G.subtitle) + '</p></div></header>'; }
+function set(html) { app.innerHTML = html; window.scrollTo(0, 0); }
+function stopAll() {
+  clearInterval(ctx.tickT);
+  if (ctx.session) ctx.session.stop();
+  if (ctx.net && ctx.net.close) ctx.net.close();
+  ctx.session = null; ctx.net = null; ctx.role = 'none'; ctx.me = null; ctx.V = null; ctx.key = '';
+}
+function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, 2600); }
+function avatar(p, s) { return '<span class="av" style="background:' + p.color + ';' + (s ? 'width:' + s + 'px;height:' + s + 'px;font-size:' + Math.round(s * 0.5) + 'px' : '') + '">' + esc((p.name || '?').trim().charAt(0).toUpperCase()) + '</span>'; }
+
+/* ---------- Startseite ---------- */
+function showStart(prefillCode) {
+  stopAll();
+  var modes = [
+    { id: 'solo', t: 'Allein spielen', d: 'Du gegen die Aufgaben – mit Rekord.', ico: '1' },
+    { id: 'hotseat', t: 'Mehrere an einem Gerät', d: '2 bis 4 Spielende wechseln sich ab.', ico: '2–4' },
+    { id: 'room', t: 'Mehrere Geräte', d: 'Jeder am eigenen Gerät, Beitritt per Code oder QR.', ico: '⇄' },
+    { id: 'class', t: 'Klassenquiz', d: 'Lehrkraft zeigt die Aufgaben am Beamer, die Klasse antwortet am eigenen Gerät.', ico: '▣' }
+  ];
+  set(banner() +
+    '<main class="screen"><h2 class="h2">Wie wollt ihr spielen?</h2><div class="modes">' +
+    modes.map(function (m) { return '<button class="mode" data-a="mode" data-m="' + m.id + '"><span class="mico">' + m.ico + '</span><span class="mt">' + m.t + '</span><span class="md">' + m.d + '</span></button>'; }).join('') +
+    '</div><section class="card joincard"><h2 class="h3">Mit Code beitreten</h2><p class="muted">Du hast von deiner Lehrkraft oder einem Mitspielenden einen vierstelligen Code bekommen?</p>' +
+    '<div class="row"><input class="inp code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" value="' + esc(prefillCode || '') + '" aria-label="Raum-Code"><button class="btn" data-a="joinNext">Weiter</button></div></section>' +
+    (bestGet() ? '<p class="muted center">Dein Rekord (allein): <b>' + bestGet() + ' Punkte</b></p>' : '') + '</main>');
+  if (prefillCode) setTimeout(function () { var el = $('#joinCode'); if (el) el.focus(); }, 50);
+}
+
+/* ---------- Einstellungen ---------- */
+function showSetup(mode) {
+  P.mode = mode; savePrefs();
+  var title = { solo: 'Allein spielen', hotseat: 'Mehrere an einem Gerät', room: 'Raum für mehrere Geräte', class: 'Klassenquiz' }[mode];
+  var h = banner() + '<main class="screen"><button class="link" data-a="start">‹ Spielart ändern</button><h2 class="h2">' + title + '</h2><section class="card">';
+  if (mode === 'hotseat') {
+    h += '<h3 class="h3">Spielende</h3><div class="seg" role="group" aria-label="Anzahl">' + [2, 3, 4].map(function (c) { return '<button data-a="count" data-v="' + c + '" aria-pressed="' + (P.count === c) + '">' + c + ' Personen</button>'; }).join('') + '</div><div class="names">' +
+      [0, 1, 2, 3].slice(0, P.count).map(function (k) { return '<label class="nm"><span class="av" style="background:' + COLORS[k] + '">' + (k + 1) + '</span><input class="inp" data-name="' + k + '" value="' + esc(P.names[k] || '') + '" maxlength="14" aria-label="Name Spieler ' + (k + 1) + '" placeholder="Spitzname"></label>'; }).join('') + '</div><p class="muted small">Bitte Spitznamen oder Kürzel verwenden, keine echten Namen.</p>';
+  }
+  if (mode === 'room' || mode === 'class') {
+    h += '<h3 class="h3">Ablauf</h3>' + (mode === 'room' ? '<p class="muted">Du erstellst den Raum und spielst selbst mit. Alle anderen treten per Code oder QR bei.</p>' : '<p class="muted">Dein Gerät ist der Host und zeigt die Aufgaben (am besten am Beamer). Die Klasse antwortet am eigenen Gerät. Du kannst optional mitspielen.</p><label class="chk"><input type="checkbox" data-chk="hostPlays" ' + (P.hostPlays ? 'checked' : '') + '> Ich spiele selbst mit</label>');
+  }
+  h += '<h3 class="h3">Themen <button class="mini" data-a="allTopics">alle</button><button class="mini" data-a="noTopics">keine</button></h3><div class="chips" role="group" aria-label="Themen">' +
+    G.topics.map(function (t) { return '<button class="chip" data-a="topic" data-v="' + t.id + '" aria-pressed="' + (P.topics.indexOf(t.id) >= 0) + '" title="' + esc(t.desc || '') + '">' + esc(t.label) + '</button>'; }).join('') + '</div>' +
+    '<h3 class="h3">Aufgabenniveau</h3><div class="levels" role="group" aria-label="Stufe">' +
+    G.levels.map(function (l) { return '<button class="lvl" data-a="level" data-v="' + l.id + '" aria-pressed="' + (P.level === l.id) + '"><b>' + esc(l.label) + '</b><span>' + esc(l.desc) + '</span></button>'; }).join('') + '</div>' +
+    '<div class="two"><div><h3 class="h3">Aufgaben</h3><div class="seg">' + [8, 10, 15, 20].map(function (n) { return '<button data-a="n" data-v="' + n + '" aria-pressed="' + (P.n === n) + '">' + n + '</button>'; }).join('') + '</div></div>' +
+    '<div><h3 class="h3">Zeit pro Aufgabe</h3><div class="seg">' + [0, 10, 20, 30, 45].map(function (n) { return '<button data-a="time" data-v="' + n + '" aria-pressed="' + (P.time === n) + '">' + (n ? n + ' s' : 'frei') + '</button>'; }).join('') + '</div></div></div>';
+  if (mode === 'solo' || mode === 'hotseat') h += '<label class="chk"><input type="checkbox" data-chk="typed" ' + (P.typed ? 'checked' : '') + '> Antwort selbst eintippen (statt Auswahl) – wo möglich</label>';
+  h += '<label class="chk"><input type="checkbox" data-chk="sound" ' + (P.sound ? 'checked' : '') + '> Töne</label>' +
+    '<div class="go"><button class="btn big" data-a="go">' + (mode === 'room' || mode === 'class' ? 'Raum öffnen' : 'Los geht’s') + '</button></div></section></main>';
+  set(h);
+}
+
+/* ---------- Lokales Spiel (Einzel / ein Gerät) ---------- */
+function settingsNow() { return { topics: P.topics.slice(), level: P.level, n: P.n, time: P.time, typed: P.typed && (P.mode === 'solo' || P.mode === 'hotseat') }; }
+function startLocal() {
+  if (!P.topics.length) { toast('Bitte mindestens ein Thema wählen.'); return; }
+  var count = P.mode === 'solo' ? 1 : P.count;
+  var players = [];
+  for (var k = 0; k < count; k++) players.push({ id: 'p' + k, name: P.mode === 'solo' ? 'Du' : ((P.names[k] || '').trim() || 'Spieler ' + (k + 1)), color: COLORS[k], score: 0, streak: 0, right: 0, ans: null });
+  var s = new Session(settingsNow(), players, { turns: P.mode === 'hotseat', auto: 0 });
+  ctx.role = 'local'; ctx.session = s; ctx.me = null;
+  s.on(onView); s.start();
+}
+
+/* ---------- Raum (Host) ---------- */
+function hostRoom() {
+  if (!P.topics.length) { toast('Bitte mindestens ein Thema wählen.'); return; }
+  var code = newCode(), plays = P.mode === 'room' ? true : P.hostPlays;
+  set(banner() + '<main class="screen"><section class="card center"><h2 class="h2">Raum wird geöffnet …</h2><p class="muted">Verbindung zum Vermittlungsserver</p></section></main>');
+  var players = [];
+  if (plays) players.push({ id: 'host', name: ((P.name || '').trim() || 'Host'), color: COLORS[0], score: 0, streak: 0, right: 0, ans: null });
+  var s = new Session(settingsNow(), players, { turns: false, hostPlays: plays, code: code, auto: P.mode === 'class' ? 0 : 7000 });
+  var net;
+  function onMsg(from, m) {
+    if (!m) return;
+    if (m.t === 'join') {
+      if (s.phase !== 'lobby') { net.send(from, { t: 'err', msg: 'Das Spiel läuft schon. Bitte warte auf die nächste Runde.' }); return; }
+      if (s.players.length >= 40) { net.send(from, { t: 'err', msg: 'Der Raum ist voll.' }); return; }
+      var ex = s.players.filter(function (p) { return p.cid === from; })[0];
+      var name = String(m.name || 'Spieler').trim().slice(0, 14) || 'Spieler';
+      if (!ex) {
+        var base = name, c = 2; while (s.players.some(function (p) { return p.name === name; })) name = base + ' ' + (c++);
+        ex = { id: 'c' + s.players.length + Math.random().toString(36).slice(2, 4), cid: from, name: name, color: COLORS[s.players.length % COLORS.length], score: 0, streak: 0, right: 0, ans: null };
+        s.players.push(ex);
+      }
+      net.send(from, { t: 'hello', id: ex.id, name: ex.name });
+      s.emit();
+    } else if (m.t === 'ans') {
+      var p = s.players.filter(function (x) { return x.cid === from; })[0];
+      if (p && m.i === s.i) s.answer(p.id, { k: m.k, v: m.v, cl: m.cl });
+    }
+  }
+  function onGone(cid) { var p = s.players.filter(function (x) { return x.cid === cid; })[0]; if (p) { if (s.phase === 'lobby') { s.players = s.players.filter(function (x) { return x !== p; }); s.emit(); } else s.dropPlayer(p.id); } }
+  Net.host(code, onMsg, onGone).then(function (n) {
+    net = n; ctx.net = n; ctx.role = 'host'; ctx.session = s; ctx.me = plays ? 'host' : null;
+    s.on(function (v) { n.all(v); onView(v); });
+    s.emit();
+    loadScript(QR_SRC).then(function () { if (ctx.V && ctx.V.phase === 'lobby') { var el = $('#qr'); if (el) el.innerHTML = qrSvg(joinUrl(code)); } }).catch(function () {});
+  }).catch(function (e) {
+    set(banner() + '<main class="screen"><section class="card center"><h2 class="h2">Raum konnte nicht geöffnet werden</h2><p>' + esc(e.message) + '</p><p class="muted">Prüfe die Internetverbindung (WLAN der Schule) und versuche es erneut. Für ein Spiel ohne Netz nutze „Mehrere an einem Gerät“.</p><button class="btn" data-a="start">Zurück</button></section></main>');
+  });
+}
+
+/* ---------- Beitreten (Client) ---------- */
+function showJoin(code) {
+  stopAll();
+  set(banner() + '<main class="screen"><button class="link" data-a="start">‹ Zurück</button><section class="card"><h2 class="h2">Raum ' + esc(code) + ' beitreten</h2><label class="lab">Dein Spitzname</label><input class="inp" id="joinName" maxlength="14" autocomplete="off" placeholder="z. B. Lena" value="' + esc(P.name || '') + '"><p class="muted small">Bitte keinen echten Namen verwenden.</p><div class="go"><button class="btn big" data-a="joinGo" data-code="' + esc(code) + '">Beitreten</button></div><p class="muted small" id="joinMsg" role="status"></p></section></main>');
+  var el = $('#joinName'); if (el) el.focus();
+}
+function joinRoom(code) {
+  var name = ($('#joinName').value || '').trim(); if (!name) { $('#joinMsg').textContent = 'Bitte einen Spitznamen eintippen.'; return; }
+  P.name = name; savePrefs();
+  $('#joinMsg').textContent = 'Verbinde …';
+  Net.join(code, function (m) {
+    if (!m) return;
+    if (m.t === 'hello') { ctx.me = m.id; }
+    else if (m.t === 'err') { toast(m.msg); showJoinError(m.msg); }
+    else if (m.t === 'st') { ctx.role = 'client'; ctx.V = m; onView(m); }
+  }, function () { if (ctx.role === 'client') { toast('Verbindung getrennt'); stopAll(); showStart(); } }).then(function (n) {
+    ctx.net = n; ctx.role = 'client'; n.send({ t: 'join', name: name });
+    setTimeout(function () { if (!ctx.V && $('#joinMsg')) $('#joinMsg').textContent = 'Warte auf Antwort vom Raum …'; }, 3000);
+  }).catch(function (e) { var el = $('#joinMsg'); if (el) el.textContent = e.message; });
+}
+function showJoinError(msg) { set(banner() + '<main class="screen"><section class="card center"><h2 class="h2">Beitritt nicht möglich</h2><p>' + esc(msg) + '</p><button class="btn" data-a="start">Zurück</button></section></main>'); }
+
+/* ---------- Ansicht je Phase ---------- */
+function meP(v) { return v.players.filter(function (p) { return p.id === ctx.me; })[0]; }
+function canAnswer(v) {
+  if (v.phase !== 'q') return false;
+  if (ctx.role === 'local') return true;
+  var me = meP(v); return !!me && !me.answered;
+}
+function track(v) {
+  var n = Math.max(1, v.n), lanes = v.players.filter(function (p) { return !p.gone; });
+  if (lanes.length > 10) lanes = lanes.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, 10);
+  var compact = lanes.length > 4;
+  return '<div class="track' + (compact ? ' compact' : '') + '" id="track" aria-label="Spielstand auf der Strecke">' + lanes.map(function (p) {
+    var pos = Math.min(100, Math.round(p.right / n * 100));
+    return '<div class="lane" data-pid="' + p.id + '"><span class="lname">' + esc(p.name) + '</span><div class="road"><span class="mark" style="left:calc(' + pos + '% - ' + Math.round(pos * 0.38) + 'px);color:' + p.color + '">' + G.icon + '</span><span class="goal" aria-hidden="true">' + G.goal + '</span></div><span class="lscore">' + p.score + '</span></div>';
+  }).join('') + '</div>';
+}
+function onView(v) {
+  ctx.V = v;
+  var key = v.i + ':' + (ctx.role === 'local' ? v.active || '' : '');
+  if (v.phase === 'lobby') { ctx.key = ''; showReveal.done = false; clearInterval(ctx.tickT); return renderLobby(v); }
+  if (v.phase === 'end') { ctx.key = ''; showReveal.done = false; clearInterval(ctx.tickT); return renderEnd(v); }
+  if (key !== ctx.key) { ctx.key = key; ctx.mine = null; ctx.typedVal = ''; renderPlay(v); }
+  else updatePlay(v);
+}
+function renderLobby(v) {
+  var isHost = ctx.role === 'host', code = v.code;
+  var plist = v.players.map(function (p) { return '<li>' + avatar(p, 34) + '<span>' + esc(p.name) + (p.id === ctx.me ? ' <em>(du)</em>' : '') + '</span></li>'; }).join('') || '<li class="muted">Noch niemand da …</li>';
+  var h = banner() + '<main class="screen"><section class="card center lobby"><p class="muted">Raum-Code</p><div class="bigcode" aria-label="Raum-Code ' + esc(code.split('').join(' ')) + '">' + esc(code) + '</div>';
+  if (isHost) h += '<div class="qrbox" id="qr" aria-hidden="true"></div><p class="muted small">QR-Code scannen oder <b>' + esc(location.host + location.pathname) + '</b> öffnen und den Code eingeben.</p>';
+  else h += '<p class="muted">Du bist drin! Warte, bis der Host startet.</p>';
+  h += '<div class="cfg">' + esc(v.cfg.levelLabel) + ' · ' + v.cfg.n + ' Aufgaben · ' + (v.cfg.T ? v.cfg.T + ' s' : 'ohne Zeitlimit') + '<br><span class="muted small">' + v.cfg.topics.map(esc).join(' · ') + '</span></div>' +
+    '<h3 class="h3">' + v.players.length + ' im Raum</h3><ul class="plist">' + plist + '</ul>';
+  if (isHost) h += '<div class="go"><button class="btn big" data-a="startRoom" ' + ((v.players.length < 1) ? 'disabled' : '') + '>' + (v.players.length < 2 && !v.hostPlays ? 'Starten' : 'Spiel starten') + '</button><button class="link" data-a="start">Raum schließen</button></div>';
+  else h += '<div class="go"><button class="link" data-a="start">Verlassen</button></div>';
+  set(h + '</section></main>');
+  if (isHost) { var el = $('#qr'); if (el && window.qrcode) el.innerHTML = qrSvg(joinUrl(code)); }
+}
+
+function choiceHtml(q, v, st) {
+  var typed = false;
+  return '<div class="choices" id="choices" role="group" aria-label="Antwortmöglichkeiten">' + q.choices.map(function (c, k) {
+    var cls = 'choice c' + k;
+    return '<button class="' + cls + '" data-a="pick" data-k="' + k + '" ' + (st && st.disabled ? 'disabled' : '') + '><span class="lt">' + LETTERS[k] + '</span><span class="tx">' + c + '</span></button>';
+  }).join('') + '</div>';
+}
+function renderPlay(v) {
+  var q = v.q, isScreen = ctx.role === 'host' && !v.hostPlays, me = meP(v);
+  var h = '<div class="play ' + (isScreen ? 'screenmode' : '') + '"><div class="topbar"><button class="link" data-a="quit">✕ Beenden</button><span class="prog" id="prog">Aufgabe ' + (v.i + 1) + ' / ' + v.n + '</span>' + (ctx.role === 'host' ? '<button class="link" data-a="reveal" id="revealBtn">Jetzt auswerten</button>' : '') + '<span class="who" id="who"></span></div>';
+  h += '<div class="timer" id="timer" ' + (v.T > 0 ? '' : 'hidden') + '><i id="timerbar"></i><span id="timertxt"></span></div>';
+  h += track(v);
+  h += '<section class="qcard" aria-live="polite">';
+  if (v.turns && v.active) { var ap = v.players.filter(function (p) { return p.id === v.active; })[0]; h += '<div class="turn">' + avatar(ap, 30) + '<span>Dran: <b>' + esc(ap.name) + '</b></span></div>'; }
+  h += '<div class="qtext">' + q.html + '</div>';
+  if (q.svg) h += '<div class="qsvg">' + q.svg + '</div>';
+  if (q.clues) h += '<ol class="clues" id="clues">' + q.clues.map(function (c, k) { return '<li class="clue' + (k === 0 ? ' on' : '') + '" data-k="' + k + '"><span class="cn">' + (k + 1) + '</span><span>' + c + '</span></li>'; }).join('') + '</ol>' + (v.T === 0 && !isScreen ? '<button class="btn ghost" data-a="clue" id="clueBtn">Nächsten Hinweis aufdecken</button>' : '');
+  h += '</section>';
+  var typedMode = v.typed && q.typed && ctx.role === 'local';
+  if (typedMode) {
+    h += '<div class="typed"><input class="inp num" id="typedIn" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Deine Antwort" aria-label="Antwort">' + (q.unit ? '<span class="unit">' + esc(q.unit) + '</span>' : '') + '<button class="btn" data-a="typedGo">Prüfen</button></div>';
+  } else h += choiceHtml(q, v, { disabled: !canAnswer(v) || isScreen });
+  h += '<div id="fb" class="fb" role="status" aria-live="assertive"></div><div id="after"></div>';
+  if (isScreen) h += '<div class="ansn" id="ansn"></div>';
+  h += '</div>';
+  set(h);
+  ctx.localT0 = Date.now() - (v.ms || 0); ctx.clueShown = 1;
+  clearInterval(ctx.tickT); ctx.tickT = setInterval(function () { tick(); }, 120); tick();
+  updatePlay(v);
+  if (typedMode) { var ti = $('#typedIn'); if (ti) ti.focus(); }
+}
+function clueCount(v) { return v.q && v.q.clues ? v.q.clues.length : 0; }
+function tick() {
+  var v = ctx.V; if (!v || v.phase === 'lobby' || v.phase === 'end') return;
+  var el = Date.now() - ctx.localT0, T = v.T * 1000, bar = $('#timerbar'), txt = $('#timertxt');
+  if (v.phase === 'q' && v.T > 0 && bar) {
+    var left = Math.max(0, T - el), pct = left / T * 100;
+    bar.style.width = pct + '%'; bar.className = pct < 25 ? 'low' : pct < 55 ? 'mid' : '';
+    txt.textContent = Math.ceil(left / 1000) + ' s';
+  }
+  if (v.phase === 'q' && clueCount(v) && v.T > 0) {
+    var n = clueCount(v), step = T * 0.75 / n, shown = Math.min(n, 1 + Math.floor(el / step));
+    if (shown !== ctx.clueShown) { ctx.clueShown = shown; showClues(shown); }
+  }
+}
+function showClues(n) { $$('#clues .clue').forEach(function (li, k) { li.classList.toggle('on', k < n); }); }
+function updatePlay(v) {
+  var me = meP(v), isScreen = ctx.role === 'host' && !v.hostPlays;
+  var who = $('#who'); if (who) { who.innerHTML = me ? 'Punkte: <b>' + me.score + '</b>' + (me.streak > 1 ? ' · Serie ' + me.streak : '') : (ctx.role === 'local' && !v.turns ? '' : ''); }
+  var tr = $('#track'); if (tr) { var t2 = document.createElement('div'); t2.innerHTML = track(v); tr.replaceWith(t2.firstChild); }
+  var an = $('#ansn');
+  if (an) { var ans = v.players.filter(function (p) { return p.answered; }).length, tot = v.players.filter(function (p) { return !p.gone; }).length; an.textContent = ans + ' von ' + tot + ' haben geantwortet'; }
+  if (v.phase === 'q') {
+    var after = $('#after'); if (after && !isScreen && ctx.role !== 'local' && me && me.answered && !after.dataset.done) { after.dataset.done = 1; after.innerHTML = '<p class="wait">Antwort gesendet. Warte auf die anderen …</p>'; $$('#choices .choice').forEach(function (b) { b.disabled = true; }); }
+  }
+  if (v.phase === 'reveal') showReveal(v);
+}
+function showReveal(v) {
+  var r = v.rev, q = v.q, isScreen = ctx.role === 'host' && !v.hostPlays, me = meP(v);
+  var my = r.res && r.res[ctx.role === 'local' ? (v.active || v.players[0].id) : ctx.me];
+  if (!showReveal.done || showReveal.key !== ctx.key) {
+    showReveal.done = true; showReveal.key = ctx.key; clearInterval(ctx.tickT); var rb = $('#revealBtn'); if (rb) rb.remove();
+    $$('#choices .choice').forEach(function (b, k) { b.disabled = true; b.classList.toggle('right', k === r.correct); if (my && my.a === k && k !== r.correct) b.classList.add('wrong'); });
+    if (isScreen) { var tot = r.dist.reduce(function (a, b) { return a + b; }, 0) || 1; $$('#choices .choice').forEach(function (b, k) { b.insertAdjacentHTML('beforeend', '<span class="dist"><i style="width:' + Math.round(r.dist[k] / tot * 100) + '%"></i><em>' + r.dist[k] + '</em></span>'); }); }
+    var fb = $('#fb'), good = my && my.ok;
+    if (ctx.role === 'local' && v.turns) { var ap = v.players.filter(function (p) { return p.id === v.active; })[0]; fb.innerHTML = good ? '<span class="ok">✓ Richtig, ' + esc(ap.name) + '! +' + my.d + '</span>' : '<span class="no">✗ Leider falsch.</span>'; }
+    else if (isScreen) fb.innerHTML = '<span class="ok">Richtig: ' + q.choices[r.correct] + '</span>';
+    else fb.innerHTML = good ? '<span class="ok">✓ Richtig! +' + my.d + ' Punkte</span>' : (my && !my.none ? '<span class="no">✗ Leider falsch.</span>' : '<span class="no">Zeit abgelaufen.</span>');
+    if (my) beep(!!good);
+    var ex = '<div class="expl"><b>Richtig: ' + q.choices[r.correct] + (q.unit && q.typed ? '' : '') + '</b>' + (r.expl ? '<div>' + r.expl + '</div>' : '') + '</div>';
+    var board = '';
+    if (ctx.role !== 'local') board = '<ol class="mini">' + v.players.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, isScreen ? 6 : 3).map(function (p) { return '<li>' + avatar(p, 26) + '<span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + (p.d ? ' <em>+' + p.d + '</em>' : '') + '</span></li>'; }).join('') + '</ol>';
+    var btn = '';
+    if (ctx.role === 'local' || (ctx.role === 'host')) btn = '<button class="btn big" data-a="next" id="nextBtn">' + (v.i + 1 >= v.n ? 'Ergebnis' : 'Weiter') + '</button>';
+    else btn = '<p class="wait">Gleich geht es weiter …</p>';
+    $('#after').innerHTML = ex + board + btn;
+    var nb = $('#nextBtn'); if (nb) nb.focus();
+  }
+}
+
+/* ---------- Ende ---------- */
+function renderEnd(v) {
+  var sorted = v.players.slice().sort(function (a, b) { return b.score - a.score; });
+  var isHost = ctx.role === 'host', me = meP(v), medals = ['1.', '2.', '3.'];
+  var solo = ctx.role === 'local' && v.players.length === 1;
+  var h = banner() + '<main class="screen"><section class="card center end"><h2 class="h2">' + (solo ? 'Geschafft!' : 'Endstand') + '</h2>';
+  if (solo) {
+    var p = sorted[0], old = bestGet(), rec = p.score > old; if (rec) bestSet(p.score);
+    h += '<div class="bignum">' + p.score + '</div><p class="muted">Punkte · ' + p.right + ' von ' + v.n + ' richtig' + (rec ? ' · <b class="ok">neuer Rekord!</b>' : (old ? ' · Rekord ' + old : '')) + '</p>';
+  } else {
+    h += '<ol class="podium">' + sorted.map(function (p, k) { return '<li class="pl' + (k < 3 ? ' top' + (k + 1) : '') + (p.id === ctx.me ? ' me' : '') + '"><span class="rk">' + (k + 1) + '.</span>' + avatar(p, 36) + '<span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' <small>(' + p.right + '/' + v.n + ')</small></span></li>'; }).join('') + '</ol>';
+  }
+  var pid = ctx.role === 'local' ? null : ctx.me;
+  var wrong = v.review.map(function (r, k) { return { r: r, k: k }; }).filter(function (x) { var ids = pid ? [pid] : Object.keys(x.r.res); return ids.some(function (id) { return x.r.res[id] === 0; }); });
+  if (wrong.length) h += '<details class="rev"><summary>' + wrong.length + ' Aufgabe' + (wrong.length > 1 ? 'n' : '') + ' zum Nachschauen</summary><ul>' + wrong.map(function (x) { return '<li><div class="qh">' + x.r.html + '</div><div class="ra">Richtig: <b>' + x.r.ans + '</b></div>' + (x.r.expl ? '<div class="re">' + x.r.expl + '</div>' : '') + '</li>'; }).join('') + '</ul></details>';
+  h += '<div class="go">';
+  if (ctx.role === 'local') h += '<button class="btn big" data-a="again">Nochmal</button>';
+  if (isHost) h += '<button class="btn big" data-a="lobbyAgain">Neue Runde im selben Raum</button>';
+  h += '<button class="link" data-a="start">Zur Spielauswahl</button></div></section></main>';
+  set(h);
+}
+
+/* ---------- Aktionen ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-a]'); if (!b) return;
+  var a = b.dataset.a, v = b.dataset.v;
+  if (a === 'mode') { var m = b.dataset.m; showSetup(m); }
+  else if (a === 'start') showStart();
+  else if (a === 'joinNext') { var c = ($('#joinCode').value || '').trim().toUpperCase(); if (c.length !== 4) { toast('Bitte den vierstelligen Code eingeben.'); return; } showJoin(c); }
+  else if (a === 'joinGo') joinRoom(b.dataset.code);
+  else if (a === 'count') { P.count = +v; savePrefs(); showSetup(P.mode); }
+  else if (a === 'topic') { var i = P.topics.indexOf(v); if (i >= 0) P.topics.splice(i, 1); else P.topics.push(v); savePrefs(); b.setAttribute('aria-pressed', i < 0); }
+  else if (a === 'allTopics') { P.topics = G.topics.map(function (t) { return t.id; }); savePrefs(); showSetup(P.mode); }
+  else if (a === 'noTopics') { P.topics = []; savePrefs(); showSetup(P.mode); }
+  else if (a === 'level') { P.level = +v; savePrefs(); showSetup(P.mode); }
+  else if (a === 'n') { P.n = +v; savePrefs(); showSetup(P.mode); }
+  else if (a === 'time') { P.time = +v; savePrefs(); showSetup(P.mode); }
+  else if (a === 'go') { if (P.mode === 'room' || P.mode === 'class') hostRoom(); else startLocal(); }
+  else if (a === 'startRoom') { if (ctx.session && ctx.session.phase === 'lobby') ctx.session.start(); }
+  else if (a === 'lobbyAgain') { if (ctx.session) { var s = ctx.session; s.phase = 'lobby'; s.i = -1; s.t0 = 0; s.players = s.players.filter(function (p) { return !p.gone; }); s.emit(); } }
+  else if (a === 'pick') pickChoice(+b.dataset.k);
+  else if (a === 'typedGo') submitTyped();
+  else if (a === 'clue') { var n = clueCount(ctx.V); if (ctx.clueShown < n) { ctx.clueShown++; showClues(ctx.clueShown); if (ctx.clueShown >= n && $('#clueBtn')) $('#clueBtn').disabled = true; } }
+  else if (a === 'next') { if (ctx.session) ctx.session.next(); }
+  else if (a === 'reveal') { if (ctx.session) ctx.session.reveal(); }
+  else if (a === 'again') { startLocal(); }
+  else if (a === 'quit') { if (confirm('Spiel wirklich beenden?')) showStart(); }
+});
+document.addEventListener('change', function (e) {
+  var c = e.target.dataset && e.target.dataset.chk;
+  if (c) { P[c] = e.target.checked; savePrefs(); }
+});
+document.addEventListener('input', function (e) {
+  var k = e.target.dataset && e.target.dataset.name;
+  if (k !== undefined) { P.names[+k] = e.target.value; savePrefs(); }
+  if (e.target.id === 'joinCode') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    if (e.target.id === 'typedIn') { submitTyped(); return; }
+    if (e.target.id === 'joinCode') { var b = $('[data-a=joinNext]'); if (b) b.click(); return; }
+    if (e.target.id === 'joinName') { var j = $('[data-a=joinGo]'); if (j) j.click(); return; }
+  }
+  if (!ctx.V || e.target.tagName === 'INPUT') return;
+  var v = ctx.V;
+  if (v.phase === 'q') { var k = '1234'.indexOf(e.key); if (k < 0) k = 'abcd'.indexOf(e.key.toLowerCase()); if (k >= 0 && k < v.q.choices.length) pickChoice(k); }
+  else if (v.phase === 'reveal' && (e.key === 'Enter' || e.key === ' ')) { var nb = $('#nextBtn'); if (nb && document.activeElement === document.body) { e.preventDefault(); nb.click(); } }
+});
+function currentCl() { return ctx.clueShown || 1; }
+function sendAnswer(a) {
+  var v = ctx.V; if (!v || v.phase !== 'q') return;
+  if (ctx.role === 'local') ctx.session.answer(v.active || v.players[0].id, a);
+  else if (ctx.role === 'host') { if (ctx.me) ctx.session.answer(ctx.me, a); }
+  else if (ctx.role === 'client') { var me = meP(v); if (!me || me.answered) return; a.t = 'ans'; a.i = v.i; ctx.net.send(a); me.answered = true; ctx.mine = a.k; updatePlay(v); }
+}
+function pickChoice(k) {
+  var v = ctx.V; if (!v || !canAnswer(v) || ctx.mine !== null && ctx.role === 'client') return;
+  ctx.mine = k; $$('#choices .choice').forEach(function (b, i) { b.classList.toggle('sel', i === k); });
+  sendAnswer({ k: k, cl: v.q.clues ? currentCl() : undefined });
+}
+function submitTyped() {
+  var v = ctx.V; if (!v || v.phase !== 'q') return;
+  var inp = $('#typedIn'); if (!inp) return;
+  var val = parseNum(inp.value); if (isNaN(val)) { toast('Bitte eine Zahl eingeben.'); return; }
+  inp.disabled = true;
+  sendAnswer({ v: val, cl: v.q.clues ? currentCl() : undefined });
+}
+window.addEventListener('beforeunload', function () { if (ctx.net && ctx.net.close) ctx.net.close(); });
+
+/* ---------- Start ---------- */
+(function init() {
+  var m = /[?&]room=([A-Za-z0-9]{4})/.exec(location.search);
+  if (m) showJoin(m[1].toUpperCase()); else showStart();
+  window.__arena = { ctx: ctx, P: P, G: G, makeQuestions: makeQuestions };
+})();
+})();
+
+</script>
+<script defer data-category="schule" src="protect.js"></script>
+<script defer src="cursor.js"></script>
 </body>
 </html>

@@ -202,7 +202,7 @@ const posts = [
    },
    {
     title: "Prozent-Rennen",
-    excerpt: "Lernspiel zur Prozentrechnung (Grundwert, Prozentsatz, Prozentwert) im Wettrennen — für 1 bis 4 Lernende am selben Gerät, drei Schwierigkeitsstufen.",
+    excerpt: "Wettrennen zur Prozentrechnung: Prozentwert, Prozentsatz, Grundwert, Rabatt, Mehrwertsteuer und Zinsen. Wähle Themen und Niveau – allein, zu mehreren an einem Gerät, über mehrere Geräte oder als Klassenquiz mit Host (wie Kahoot).",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -210,11 +210,11 @@ const posts = [
     emoji: "📊",
     tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Percentage Race",
-    excerptEn: "Learning game on percentages (base value, rate, percentage value) in race format — for 1 to 4 learners on the same device, three difficulty levels."
+    excerptEn: "Race through percentages: percentage value, rate, base value, discounts, VAT and interest. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
    {
     title: "Gleichungs-Duell",
-    excerpt: "Lineare Gleichungen nach x auflösen, vom einfachen Rechenschritt bis zu x auf beiden Seiten — für 1 bis 4 Lernende am selben Gerät.",
+    excerpt: "Lineare Gleichungen nach x auflösen – von einem Rechenschritt bis x auf beiden Seiten, Klammern, Brüche und Textaufgaben. Wähle Themen und Niveau – allein, zu mehreren an einem Gerät, über mehrere Geräte oder als Klassenquiz mit Host (wie Kahoot).",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -222,11 +222,11 @@ const posts = [
     emoji: "⚔️",
     tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Equation Duel",
-    excerptEn: "Solve linear equations for x, from a single step to x on both sides — for 1 to 4 learners on the same device."
+    excerptEn: "Solve linear equations for x – from one step to x on both sides, brackets, fractions and word problems. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
    {
     title: "Flächen-Fuchs",
-    excerpt: "Umfang und Fläche von Rechteck, Quadrat, Dreieck und Kreis berechnen, mit beschrifteten Figuren — für 1 bis 4 Lernende am selben Gerät.",
+    excerpt: "Umfang und Fläche von Rechteck, Dreieck, Parallelogramm, Trapez, Kreis und zusammengesetzten Figuren mit beschrifteten Zeichnungen. Wähle Themen und Niveau – allein, zu mehreren an einem Gerät, über mehrere Geräte oder als Klassenquiz mit Host (wie Kahoot).",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -234,11 +234,11 @@ const posts = [
     emoji: "🦊",
     tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Area Fox",
-    excerptEn: "Calculate the perimeter and area of rectangles, squares, triangles and circles, with labelled shapes — for 1 to 4 learners on the same device."
+    excerptEn: "Perimeter and area of rectangles, triangles, parallelograms, trapezoids, circles and composite shapes with labelled drawings. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
    {
     title: "Zahlen-Detektiv",
-    excerpt: "Zahlenrätsel mit natürlichen Zahlen lösen: Aus mehreren Hinweisen (gerade/ungerade, Teilbarkeit, Quersumme, Ziffernanzahl) die gesuchte Zahl knacken — für 1 bis 4 Lernende am selben Gerät.",
+    excerpt: "Zahlenrätsel lösen: Aus Hinweisen zu gerade/ungerade, Teilbarkeit, Quersumme und Primzahlen die gesuchte Zahl finden. Wähle Themen und Niveau – allein, zu mehreren an einem Gerät, über mehrere Geräte oder als Klassenquiz mit Host (wie Kahoot).",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -247,11 +247,11 @@ const posts = [
     featured: true,
     tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Number Detective",
-    excerptEn: "Solve number puzzles with natural numbers: crack the hidden number from several clues (odd/even, divisibility, digit sum, number of digits) — for 1 to 4 learners on the same device."
+    excerptEn: "Solve number puzzles: find the hidden number from clues about odd/even, divisibility, digit sum and primes. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
    {
     title: "Kopfrechen-Quiz",
-    excerpt: "Blitzschnelles Kopfrechnen mit Plus, Minus, Mal und Geteilt gegen die Uhr, mit Countdown pro Frage — für 1 bis 4 Lernende am selben Gerät.",
+    excerpt: "Blitzschnelles Kopfrechnen mit Plus, Minus, Mal, Geteilt, Potenzen und Schätzen. Wähle Themen und Niveau – allein, zu mehreren an einem Gerät, über mehrere Geräte oder als Klassenquiz mit Host (wie Kahoot).",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -260,7 +260,7 @@ const posts = [
     featured: true,
     tags: ["spiel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "vertretung"],
     titleEn: "Mental Maths Quiz",
-    excerptEn: "Lightning-fast mental maths with addition, subtraction, multiplication and division against the clock, with a countdown per question — for 1 to 4 learners on the same device."
+    excerptEn: "Lightning-fast mental maths: addition, subtraction, multiplication, division, powers and estimating. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
    {
     title: "Das Praktikumsspiel",
