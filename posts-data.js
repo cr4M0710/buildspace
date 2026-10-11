@@ -781,7 +781,7 @@ const posts = [
    },
    {
     title: "Jelly Rush",
-    excerpt: "Wackeliges Party-Knockout in 3D: Hindernislauf, Wabenfall, Teamrunde Farbkampf und Finale um die Krone. Allein gegen Bots, mit Freunden per QR-Code oder im Trainingsmodus; Festhalten, Hechtsprung und eigene Bohnen-Figur.",
+    excerpt: "Wackeliges Party-Knockout in 3D mit 9 Karten von leicht bis schwer: drei Hindernisläufe, Wabenfall, Wirbelwind, Farbkampf, Schweifjagd und zwei Finals. Allein gegen Bots, mit Freunden per QR-Code oder im Trainingsmodus; Festhalten, Hechtsprung und eigene Bohnen-Figur.",
     date: "2026-10-11",
     category: "freizeit",
     subcategory: null,
@@ -789,6 +789,6 @@ const posts = [
     emoji: "🫘",
     tags: ["spiel", "gruppenarbeit"],
     titleEn: "Jelly Rush",
-    excerptEn: "Wobbly 3D party knockout: obstacle race, falling hex tiles, the team round Colour Clash and a crown final. Play solo against bots, with friends via QR code or in training mode; grab, dive and customise your bean."
+    excerptEn: "Wobbly 3D party knockout with 9 maps from easy to hard: three obstacle races, falling hex tiles, a spinning-bar survival, a team ball round, tail tag and two finals. Play solo against bots, with friends via QR code or in training mode; grab, dive and customise your bean."
    },
 ];
