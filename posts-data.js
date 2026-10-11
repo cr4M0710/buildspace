@@ -779,4 +779,16 @@ const posts = [
     titleEn: "Skills Course",
     excerptEn: "Experience career-related skills through play: 20 stations (KomPo7 key skills and vocational skills, 2D and 3D), self- and peer assessment via code, a skills test and a results page with career field and internship suggestions."
    },
+   {
+    title: "Jelly Rush",
+    excerpt: "Wackeliges Party-Knockout in 3D: Hindernislauf, Wabenfall, Teamrunde Farbkampf und Finale um die Krone. Allein gegen Bots, mit Freunden per QR-Code oder im Trainingsmodus; Festhalten, Hechtsprung und eigene Bohnen-Figur.",
+    date: "2026-10-11",
+    category: "freizeit",
+    subcategory: null,
+    url: "jelly-rush.html",
+    emoji: "🫘",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Jelly Rush",
+    excerptEn: "Wobbly 3D party knockout: obstacle race, falling hex tiles, the team round Colour Clash and a crown final. Play solo against bots, with friends via QR code or in training mode; grab, dive and customise your bean."
+   },
 ];

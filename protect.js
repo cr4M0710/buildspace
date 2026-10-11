@@ -754,7 +754,8 @@
     "zahlen-detektiv.html",
     "flaechen-fuchs.html",
     "gleichungs-duell.html",
-    "prozent-rennen.html"
+    "prozent-rennen.html",
+    "jelly-rush.html"
   ];
   function isMultiplayerPage_() { return MULTIPLAYER_FILES.indexOf(currentPageFile()) !== -1; }
   function joinKey_() { return "buildspace_join_" + currentPageFile(); }
