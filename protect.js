@@ -756,7 +756,8 @@
     "gleichungs-duell.html",
     "prozent-rennen.html",
     "jelly-rush.html",
-    "millionenquiz.html"
+    "millionenquiz.html",
+    "turnier-arena.html"
   ];
   function isMultiplayerPage_() { return MULTIPLAYER_FILES.indexOf(currentPageFile()) !== -1; }
   function joinKey_() { return "buildspace_join_" + currentPageFile(); }

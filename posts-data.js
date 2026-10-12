@@ -805,4 +805,16 @@ const posts = [
     titleEn: "Millionaire-Style Quiz",
     excerptEn: "Quiz in the style of the well-known TV show: 15 questions with a prize ladder, safe levels and three lifelines, as a practice mode (keep playing after mistakes, with a review) or a class game (teacher hosts, students join via QR code, a wrong answer knocks you out). 150 questions across 12 topics, or import your own quiz via file, pasted text or form."
    },
+   {
+    title: "Turnier-Arena",
+    excerpt: "K.-o.-Turnier mit 9 Minispielen, Quiz-Runden und Duellen (Vier gewinnt, Tauziehen, Schere-Stein-Papier, Nim): per QR-Code beitreten oder gegen Bots in 3 Stufen spielen. Nur wer gewinnt, kommt weiter – wer ausscheidet, schaut live zu.",
+    date: "2026-10-12",
+    category: "freizeit",
+    subcategory: null,
+    url: "turnier-arena.html",
+    emoji: "🏆",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete"],
+    titleEn: "Tournament Arena",
+    excerptEn: "Knockout tournament with 9 mini games, quiz rounds and duels (Connect Four, tug of war, rock-paper-scissors, Nim): join via QR code or play against bots on 3 levels. Only winners advance – eliminated players spectate live."
+   },
 ];
