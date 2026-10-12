@@ -64,7 +64,7 @@ const posts = [
     subcategory: "mathematik",
     url: "mathe-warmup-generator.html",
     emoji: "🔥",
-    tags: ["tool", "kopfrechnen"],
+    tags: ["tool", "kopfrechnen", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Math Warm-Up Generator",
     excerptEn: "Generates warm-up exercises across 18 topic areas with A/B/C differentiation, exportable straight to PDF."
    },
@@ -184,7 +184,7 @@ const posts = [
     subcategory: "mathematik",
     url: "https://sikore.schiffner-tischer.de/",
     emoji: "🧠",
-    tags: ["tool", "kopfrechnen"],
+    tags: ["tool", "kopfrechnen", "jg5", "jg6", "jg7"],
     titleEn: "SIKORE – Mental Maths Trainer",
     excerptEn: "Free online tool and worksheet generator with 39 difficulty levels, from simple addition and subtraction to complex multiplication. (External site)"
    },
@@ -196,7 +196,7 @@ const posts = [
     subcategory: "mathematik",
     url: "bruch-quiz-fussball.html",
     emoji: "⚽",
-    tags: ["spiel", "bruchrechnung", "partnerarbeit", "vertretung"],
+    tags: ["spiel", "bruchrechnung", "partnerarbeit", "vertretung", "jg6", "jg7"],
     titleEn: "Fraction Quiz (Football)",
     excerptEn: "A maths penalty shoot-out for 2 players: solve fraction problems — get it right and you take the shot."
    },
@@ -208,7 +208,7 @@ const posts = [
     subcategory: "mathematik",
     url: "prozent-rennen.html",
     emoji: "📊",
-    tags: ["spiel", "prozent", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung"],
+    tags: ["spiel", "prozent", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg6", "jg7", "jg8", "jg9"],
     titleEn: "Percentage Race",
     excerptEn: "Race through percentages: percentage value, rate, base value, discounts, VAT and interest. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
@@ -220,7 +220,7 @@ const posts = [
     subcategory: "mathematik",
     url: "gleichungs-duell.html",
     emoji: "⚔️",
-    tags: ["spiel", "gleichungen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung"],
+    tags: ["spiel", "gleichungen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg7", "jg8", "jg9"],
     titleEn: "Equation Duel",
     excerptEn: "Solve linear equations for x – from one step to x on both sides, brackets, fractions and word problems. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
@@ -232,7 +232,7 @@ const posts = [
     subcategory: "mathematik",
     url: "flaechen-fuchs.html",
     emoji: "🦊",
-    tags: ["spiel", "geometrie", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung"],
+    tags: ["spiel", "geometrie", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg5", "jg6", "jg7", "jg8"],
     titleEn: "Area Fox",
     excerptEn: "Perimeter and area of rectangles, triangles, parallelograms, trapezoids, circles and composite shapes with labelled drawings. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
@@ -245,7 +245,7 @@ const posts = [
     url: "zahlen-detektiv.html",
     emoji: "🕵️",
     featured: true,
-    tags: ["spiel", "zahlen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung"],
+    tags: ["spiel", "zahlen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg5", "jg6", "jg7"],
     titleEn: "Number Detective",
     excerptEn: "Solve number puzzles: find the hidden number from clues about odd/even, divisibility, digit sum and primes. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
@@ -258,7 +258,7 @@ const posts = [
     url: "kopfrechen-quiz.html",
     emoji: "⚡",
     featured: true,
-    tags: ["spiel", "kopfrechnen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung"],
+    tags: ["spiel", "kopfrechnen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg5", "jg6", "jg7", "jg8"],
     titleEn: "Mental Maths Quiz",
     excerptEn: "Lightning-fast mental maths: addition, subtraction, multiplication, division, powers and estimating. Pick topics and level – solo, several players on one device, several devices, or as a class quiz with a host (like Kahoot)."
    },
@@ -271,7 +271,7 @@ const posts = [
     url: "praktikumsspiel.html",
     emoji: "🎲",
     featured: true,
-    tags: ["spiel", "berufsorientierung", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "berufsorientierung", "partnerarbeit", "gruppenarbeit", "jg8", "jg9"],
     titleEn: "The Internship Game",
     excerptEn: "A board game for reflecting on work experience: roll the dice, land on reflection spaces and talk about your own internship experiences — for 2 to 6 players."
    },
@@ -283,7 +283,7 @@ const posts = [
     subcategory: "faecheruebergreifend",
     url: "https://morgenkreis.mzgivb.de/",
     emoji: "☀️",
-    tags: ["tool", "organisation"],
+    tags: ["tool", "organisation", "jg5", "jg6"],
     titleEn: "Morning Circle Board",
     excerptEn: "Digital morning-circle board for the classroom: date, weather, word of the day, daily schedule and attendance at a glance. (External site, Medienzentrum Gießen-Vogelsberg)"
    },
@@ -295,7 +295,7 @@ const posts = [
     subcategory: "faecheruebergreifend",
     url: "https://digiscreen.mzgivb.de/",
     emoji: "🖥️",
-    tags: ["tool", "organisation"],
+    tags: ["tool", "organisation", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Digiscreen",
     excerptEn: "Interactive whiteboard surface with building blocks for any subject: randomiser, group generator, timer, quiz, traffic light, calculator and more. (External site, Medienzentrum Gießen-Vogelsberg)"
    },
@@ -331,7 +331,7 @@ const posts = [
     subcategory: "mathematik",
     url: "parabel-werkstatt.html",
     emoji: "📈",
-    tags: ["tool", "funktionen", "einzelarbeit"],
+    tags: ["tool", "funktionen", "einzelarbeit", "jg9", "jg10"],
     titleEn: "Parabola Workshop",
     excerptEn: "Enter quadratic functions in standard, vertex or intercept form and compare the graph and value table side by side."
    },
@@ -343,7 +343,7 @@ const posts = [
     subcategory: "mathematik",
     url: "mathe-fussball.html",
     emoji: "⚽",
-    tags: ["spiel", "kopfrechnen", "partnerarbeit", "vertretung"],
+    tags: ["spiel", "kopfrechnen", "partnerarbeit", "vertretung", "jg5", "jg6", "jg7"],
     titleEn: "Math Football",
     excerptEn: "Two teams face off in an animated football match, advancing the ball by solving mental-math, word and puzzle problems. Difficulty, operation and end condition are all adjustable."
    },
@@ -355,7 +355,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "kanban-board.html",
     emoji: "🗂️",
-    tags: ["tool", "projektarbeit", "gruppenarbeit"],
+    tags: ["tool", "projektarbeit", "gruppenarbeit", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Team Kanban",
     excerptEn: "A shared Kanban board unlocked with a team passcode instead of individual logins: create multiple boards, name your own columns and move cards by drag and drop — ideal for organising project or internship work together."
    },
@@ -367,7 +367,7 @@ const posts = [
     subcategory: "faecheruebergreifend",
     url: "kanban-board.html",
     emoji: "🗂️",
-    tags: ["tool", "projektarbeit", "gruppenarbeit"],
+    tags: ["tool", "projektarbeit", "gruppenarbeit", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Team Kanban",
     excerptEn: "A shared Kanban board unlocked with a team passcode instead of individual logins: create multiple boards, name your own columns and move cards by drag and drop — usable for project work in any subject."
    },
@@ -415,7 +415,7 @@ const posts = [
     subcategory: "mathematik",
     url: "funktionsleiter.html",
     emoji: "🪜",
-    tags: ["spiel", "funktionen", "mehrgeraete", "klassenquiz"],
+    tags: ["spiel", "funktionen", "mehrgeraete", "klassenquiz", "jg8", "jg9", "jg10"],
     titleEn: "Function Ladder",
     excerptEn: "A quiz on linear and quadratic functions where you climb a ladder – solo or live with the class."
    },
@@ -451,7 +451,7 @@ const posts = [
     subcategory: "mathematik",
     url: "klecks-wache.html",
     emoji: "🎒",
-    tags: ["spiel", "prozent", "gruppenarbeit", "mehrgeraete", "jg7"],
+    tags: ["spiel", "prozent", "gruppenarbeit", "mehrgeraete", "jg6", "jg7", "jg8"],
     titleEn: "Blob Guard",
     excerptEn: "Percentage learning game: the class defends the school bag against the blobs together, or two students face off in a duel."
    },
@@ -475,7 +475,7 @@ const posts = [
     subcategory: "mathematik",
     url: "prozentinsel.html",
     emoji: "🏝️",
-    tags: ["spiel", "prozent", "einzelarbeit"],
+    tags: ["spiel", "prozent", "einzelarbeit", "jg6", "jg7", "jg8"],
     titleEn: "Percent Island",
     excerptEn: "3D learning game on percentages: explore the island, solve puzzles and conquer the castle at the end."
    },
@@ -487,7 +487,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "schokoladenfabrik.html",
     emoji: "🍫",
-    tags: ["spiel", "berufsorientierung", "einzelarbeit", "jg8"],
+    tags: ["spiel", "berufsorientierung", "einzelarbeit", "jg8", "jg9"],
     titleEn: "You and the Chocolate Factory",
     excerptEn: "3D company tour for work studies and career orientation: explore a chocolate factory and solve tasks (about 45–60 minutes)."
    },
@@ -499,7 +499,7 @@ const posts = [
     subcategory: "mathematik",
     url: "bruch-domino-memory.html",
     emoji: "🎲",
-    tags: ["spiel", "bruchrechnung", "einzelarbeit", "partnerarbeit", "gruppenarbeit"],
+    tags: ["spiel", "bruchrechnung", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5", "jg6", "jg7"],
     titleEn: "Fraction Domino & Fraction Memory",
     excerptEn: "Match fractions, decimals, percentages and pictures as domino or memory, solo or with up to 4 players, in three levels."
    },
@@ -511,7 +511,7 @@ const posts = [
     subcategory: "mathematik",
     url: "gleichungs-waage.html",
     emoji: "⚖️",
-    tags: ["spiel", "gleichungen", "einzelarbeit", "partnerarbeit", "mehrgeraete"],
+    tags: ["spiel", "gleichungen", "einzelarbeit", "partnerarbeit", "mehrgeraete", "jg7", "jg8"],
     titleEn: "Equation Balance",
     excerptEn: "Solve equations like a balance scale: apply the same step to both sides until x stands alone. Solo, two players on one device or online in a room."
    },
@@ -523,7 +523,7 @@ const posts = [
     subcategory: "mathematik",
     url: "koordinaten-schiffe.html",
     emoji: "🚢",
-    tags: ["spiel", "funktionen", "einzelarbeit", "partnerarbeit", "mehrgeraete"],
+    tags: ["spiel", "funktionen", "einzelarbeit", "partnerarbeit", "mehrgeraete", "jg5", "jg6", "jg7"],
     titleEn: "Coordinate Battleships",
     excerptEn: "Battleships with coordinates: read points in the coordinate system correctly, solo against the computer or online against a classmate."
    },
@@ -535,7 +535,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "budget-lebensspiel.html",
     emoji: "💶",
-    tags: ["spiel", "wirtschaft", "einzelarbeit"],
+    tags: ["spiel", "wirtschaft", "einzelarbeit", "jg8", "jg9", "jg10"],
     titleEn: "My Budget Life",
     excerptEn: "Consumer education hands-on: pay rent, phone contract and insurance from an income and cope with surprises. The game adapts to you."
    },
@@ -547,7 +547,7 @@ const posts = [
     subcategory: "mathematik",
     url: "zufalls-labor.html",
     emoji: "🎲",
-    tags: ["tool", "wahrscheinlichkeit"],
+    tags: ["tool", "wahrscheinlichkeit", "jg7", "jg8", "jg9"],
     titleEn: "Chance Lab",
     excerptEn: "Spin, roll, draw: run random experiments and watch how chance turns into reliability – with relative frequencies and tree diagrams."
    },
@@ -559,7 +559,7 @@ const posts = [
     subcategory: "faecheruebergreifend",
     url: "raetsel-des-tages.html",
     emoji: "🧩",
-    tags: ["tool", "raetsel", "einzelarbeit", "vertretung"],
+    tags: ["tool", "raetsel", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Puzzle of the Day",
     excerptEn: "A new brain teaser every day, with hints, stars and streaks. For different grade levels."
    },
@@ -571,7 +571,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "werkstatt-check.html",
     emoji: "🛠️",
-    tags: ["spiel", "werkstatt", "einzelarbeit"],
+    tags: ["spiel", "werkstatt", "einzelarbeit", "jg7", "jg8"],
     titleEn: "Workshop Check: Safety and Tools",
     excerptEn: "Find hazards in the workshop, match tools to their use and test safety signs. Three games in one."
    },
@@ -583,7 +583,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "escape-room-baukasten-3d.html",
     emoji: "🔐",
-    tags: ["spiel", "gruppenarbeit", "mehrgeraete"],
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Escape Room Kit 3D",
     excerptEn: "Crack the code together: solve puzzles, collect code parts and open the door, now in 3D. With your own rooms to create, save and export."
    },
@@ -595,7 +595,7 @@ const posts = [
     subcategory: "mathematik",
     url: "escape-room-baukasten-3d.html",
     emoji: "🔐",
-    tags: ["spiel", "gruppenarbeit", "mehrgeraete"],
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Escape Room Kit 3D",
     excerptEn: "Crack the code together: solve puzzles, collect code parts and open the door, now in 3D. With your own rooms to create, save and export."
    },
@@ -607,7 +607,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "berufe-kompass.html",
     emoji: "🧭",
-    tags: ["spiel", "berufsorientierung", "einzelarbeit"],
+    tags: ["spiel", "berufsorientierung", "einzelarbeit", "jg8", "jg9", "jg10"],
     titleEn: "Careers Compass",
     excerptEn: "Find out what suits you and test how well you know different jobs. Several levels for career orientation."
    },
@@ -619,7 +619,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "vorstellungsgespraech.html",
     emoji: "🤝",
-    tags: ["spiel", "berufsorientierung", "einzelarbeit"],
+    tags: ["spiel", "berufsorientierung", "einzelarbeit", "jg9", "jg10"],
     titleEn: "Job Interview Simulator",
     excerptEn: "Practise the job interview in 3D: answer questions, see reactions and try typical situations before the real thing."
    },
@@ -631,7 +631,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "gehaltszettel-detektiv.html",
     emoji: "🕵️",
-    tags: ["spiel", "wirtschaft", "einzelarbeit"],
+    tags: ["spiel", "wirtschaft", "einzelarbeit", "jg9", "jg10"],
     titleEn: "Payslip Detective",
     excerptEn: "Where does the money go between gross and net? Solve five cases: track down deductions on real payslips, sort, calculate, compare and find mistakes."
    },
@@ -643,7 +643,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "ki-fuehrerschein.html",
     emoji: "🪪",
-    tags: ["spiel", "ki", "einzelarbeit"],
+    tags: ["spiel", "ki", "einzelarbeit", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "AI Driving Licence – The Data Centre",
     excerptEn: "How does AI work? Visit stations on training, data, language models and fact-checking in a 3D data centre and earn the AI licence in two classes (Basic and Pro)."
    },
@@ -669,7 +669,7 @@ const posts = [
     gate: "material",
     url: "kerncurriculum-mathematik.html",
     emoji: "📚",
-    tags: ["tool"],
+    tags: ["tool", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Mathematics Core Curriculum 5–10",
     excerptEn: "The school's internal maths curriculum, interactive: filter, search and sort by grade, topic area and course level (A/B/C) – with competencies, textbook pages and digital skills."
    },
@@ -717,7 +717,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "kochfaul.html",
     emoji: "🍝",
-    tags: ["tool", "ernaehrung", "einzelarbeit"],
+    tags: ["tool", "ernaehrung", "einzelarbeit", "jg7", "jg8", "jg9"],
     titleEn: "Kochfaul – Cooking for the Lazy",
     excerptEn: "Cooking for the lazy: pick a supermarket, weekly budget and laziness level to get a weekly plan with easy recipes and a shopping list sorted by store route."
    },
@@ -729,7 +729,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "kompo7-formulierungshilfe.html",
     emoji: "📝",
-    tags: ["tool", "berufsorientierung", "einzelarbeit"],
+    tags: ["tool", "berufsorientierung", "einzelarbeit", "jg7", "jg8"],
     titleEn: "KomPo7 – Writing Aid",
     excerptEn: "Assign observations to the nine key competencies and turn them into sentence building blocks for a report – third person, past tense, classmates anonymised."
    },
@@ -753,7 +753,7 @@ const posts = [
     subcategory: "weiterefaecher",
     url: "vokabel-arena.html",
     emoji: "🗣️",
-    tags: ["spiel", "tool", "sprachen", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz"],
+    tags: ["spiel", "tool", "sprachen", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Vocab Arena",
     excerptEn: "Learn vocabulary in 9 languages with an adaptive flashcard box, A1–B1 core vocabulary, custom lists with import/export, digital or printable tests with grades, games for 1–4 players and a live class quiz via QR code."
    },
@@ -777,7 +777,7 @@ const posts = [
     subcategory: "arbeitslehre",
     url: "kompetenz-parcours.html",
     emoji: "🎯",
-    tags: ["spiel", "tool", "berufsorientierung", "einzelarbeit", "partnerarbeit"],
+    tags: ["spiel", "tool", "berufsorientierung", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9"],
     titleEn: "Skills Course",
     excerptEn: "Experience career-related skills through play: 20 stations (KomPo7 key skills and vocational skills, 2D and 3D), self- and peer assessment via code, a skills test and a results page with career field and internship suggestions."
    },
@@ -801,7 +801,7 @@ const posts = [
     subcategory: "sonstiges",
     url: "millionenquiz.html",
     emoji: "💰",
-    tags: ["spiel", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz"],
+    tags: ["spiel", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Millionaire-Style Quiz",
     excerptEn: "Quiz in the style of the well-known TV show: 15 questions with a prize ladder, safe levels and three lifelines, as a practice mode (keep playing after mistakes, with a review) or a class game (teacher hosts, students join via QR code, a wrong answer knocks you out). 150 questions across 12 topics, or import your own quiz via file, pasted text or form."
    },
