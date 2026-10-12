@@ -795,14 +795,14 @@ const posts = [
    },
    {
     title: "Millionenquiz",
-    excerpt: "Quiz im Stil der bekannten Fernsehshow: 15 Fragen mit Gewinnleiter, Sicherheitsstufen sowie 50:50-, Publikums- und Telefonjoker. 150 Fragen aus 12 Themenbereichen oder ein eigenes Quiz per Datei, Text oder Formular importieren; mit Moderatorenmodus für den Beamer.",
+    excerpt: "Quiz im Stil der bekannten Fernsehshow: 15 Fragen mit Gewinnleiter, Sicherheitsstufen und drei Jokern, als Übungsmodus (weiter nach Fehlern, mit Auswertung) oder als Klassenspiel (Lehrkraft hostet, Lernende treten per QR-Code bei, wer falsch liegt, scheidet aus). 150 Fragen aus 12 Themenbereichen oder ein eigenes Quiz per Datei, Text oder Formular importieren.",
     date: "2026-10-12",
     category: "schule",
     subcategory: "sonstiges",
     url: "millionenquiz.html",
     emoji: "💰",
-    tags: ["spiel", "gruppenarbeit"],
+    tags: ["spiel", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz"],
     titleEn: "Millionaire-Style Quiz",
-    excerptEn: "Quiz in the style of the well-known TV show: 15 questions with a prize ladder, safe levels and 50:50, audience and phone-a-friend lifelines. 150 questions across 12 topics, or import your own quiz via file, pasted text or form; includes a host mode for the projector."
+    excerptEn: "Quiz in the style of the well-known TV show: 15 questions with a prize ladder, safe levels and three lifelines, as a practice mode (keep playing after mistakes, with a review) or a class game (teacher hosts, students join via QR code, a wrong answer knocks you out). 150 questions across 12 topics, or import your own quiz via file, pasted text or form."
    },
 ];
