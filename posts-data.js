@@ -817,4 +817,16 @@ const posts = [
     titleEn: "Tournament Arena",
     excerptEn: "Knockout tournament with 9 mini games, quiz rounds and duels (Connect Four, tug of war, rock-paper-scissors, Nim): join via QR code or play against bots on 3 levels. Only winners advance – eliminated players spectate live."
    },
+   {
+    title: "Spielesalon",
+    excerpt: "Zehn klassische Gesellschaftsspiele – Schach, Dame, Mühle, Mensch ärgere dich nicht, Mau-Mau, Vier gewinnt und mehr. Allein gegen Bots in drei Stufen oder mit Freunden per Code und QR-Code, jeweils mit Spielanleitung.",
+    date: "2026-10-12",
+    category: "freizeit",
+    subcategory: null,
+    url: "spielesalon.html",
+    emoji: "🎲",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete"],
+    titleEn: "Game Salon",
+    excerptEn: "Ten classic board and card games – chess, checkers, nine men's morris, Ludo, Mau-Mau, Connect Four and more. Play alone against bots on three levels or with friends via code and QR code, each with a rules guide."
+   },
 ];
