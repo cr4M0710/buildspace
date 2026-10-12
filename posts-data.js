@@ -791,4 +791,16 @@ const posts = [
     titleEn: "Jelly Rush",
     excerptEn: "Wobbly 3D party knockout with 9 maps from easy to hard: three obstacle races, falling hex tiles, a spinning-bar survival, a team ball round, tail tag and two finals. Play solo against bots, with friends via QR code or in training mode; grab, dive and customise your bean."
    },
+   {
+    title: "Millionenquiz",
+    excerpt: "Quiz im Stil der bekannten Fernsehshow: 15 Fragen mit Gewinnleiter, Sicherheitsstufen sowie 50:50-, Publikums- und Telefonjoker. 150 Fragen aus 12 Themenbereichen oder ein eigenes Quiz per Datei, Text oder Formular importieren; mit Moderatorenmodus für den Beamer.",
+    date: "2026-10-12",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "millionenquiz.html",
+    emoji: "💰",
+    tags: ["spiel", "gruppenarbeit"],
+    titleEn: "Millionaire-Style Quiz",
+    excerptEn: "Quiz in the style of the well-known TV show: 15 questions with a prize ladder, safe levels and 50:50, audience and phone-a-friend lifelines. 150 questions across 12 topics, or import your own quiz via file, pasted text or form; includes a host mode for the projector."
+   },
 ];

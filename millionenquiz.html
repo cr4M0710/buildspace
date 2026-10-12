@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Millionenquiz</title>
+<style>
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+/* Konzept: Bühne mit Sechsecken. Frage und Antworten sitzen auf einer durchgehenden Linie, rechts steht die Gewinnleiter. */
+:root{
+  --bg-0:#060822; --bg-1:#0e1245; --bg-2:#2a1a72;
+  --ink:#f2f4ff; --muted:#a8b0e6; --dim:#6b74b8;
+  --edge:#cfd8ff; --edge-glow:rgba(110,140,255,.5); --line:#7f93f5;
+  --hex-a:#1d2494; --hex-b:#080b3f;
+  --gold:#f6c94c; --orange:#f28c1c; --orange-deep:#b95700;
+  --green:#22b04f; --green-deep:#0c6d2d; --red:#d9362f; --red-deep:#861410;
+  --panel:#0b0f4d; --panel-line:#8a9cf5;
+  --font-display:'Barlow Condensed','Avenir Next Condensed','Roboto Condensed','Arial Narrow',Arial,sans-serif;
+  --font-body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --cut:26px; --hex-h:64px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg-0);color:var(--ink);font:400 1rem/1.45 var(--font-body);overflow-x:hidden}
+html.t-l{font-size:19px} html.t-xl{font-size:22px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hex:focus-visible{outline:none;--bd:var(--gold)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+   radial-gradient(60% 50% at 50% 38%,rgba(70,60,200,.45),transparent 70%),
+   radial-gradient(80% 60% at 20% 110%,rgba(130,40,170,.35),transparent 70%),
+   linear-gradient(180deg,var(--bg-1),var(--bg-0) 75%)}
+.bg::after{content:"";position:absolute;inset:-20%;opacity:.35;
+  background:conic-gradient(from 0deg at 50% 40%,transparent 0 8%,rgba(150,170,255,.18) 10%,transparent 13% 33%,rgba(150,170,255,.14) 35%,transparent 38% 58%,rgba(150,170,255,.16) 60%,transparent 63% 83%,rgba(150,170,255,.12) 85%,transparent 88%);
+  animation:spin 60s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.app{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;padding-inline:16px;padding-block:12px}
+.screen{flex:1;display:flex;flex-direction:column;min-height:0}
+
+/* Sechsecke */
+.slot{position:relative;filter:drop-shadow(0 0 8px var(--edge-glow));z-index:1}
+.hex{--c1:var(--hex-a);--c2:var(--hex-b);--bd:var(--edge);
+  display:block;width:100%;border:0;margin:0;padding:3px;background:var(--bd);text-align:left;
+  clip-path:polygon(var(--cut) 0,calc(100% - var(--cut)) 0,100% 50%,calc(100% - var(--cut)) 100%,var(--cut) 100%,0 50%);
+  transition:background .15s}
+.hex .in{display:flex;align-items:center;gap:.6em;min-height:var(--hex-h);padding:.45em calc(var(--cut) + .3em);
+  background:linear-gradient(180deg,var(--c1),var(--c2));
+  clip-path:polygon(calc(var(--cut)*.9) 0,calc(100% - var(--cut)*.9) 0,100% 50%,calc(100% - var(--cut)*.9) 100%,calc(var(--cut)*.9) 100%,0 50%)}
+.hex .letter{font-family:var(--font-display);font-weight:700;color:var(--gold);font-size:1.35em;flex:none}
+.hex .txt{font-weight:500;font-size:1.1rem;line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.hex.sel{--c1:#ffb54d;--c2:var(--orange-deep);--bd:#ffe3b8;color:#1b0e00}
+.hex.sel .letter{color:#3a1c00}
+.hex.correct{--c1:#3bd873;--c2:var(--green-deep);--bd:#cdfbdc}
+.hex.correct .letter{color:#fff}
+.hex.wrong{--c1:#ff6a60;--c2:var(--red-deep);--bd:#ffd0cc}
+.hex.wrong .letter{color:#fff}
+.hex.pulse{animation:pulse .7s ease-in-out infinite alternate}
+.hex.blink{animation:blink .45s steps(1) 6}
+@keyframes pulse{from{filter:brightness(1)}to{filter:brightness(1.4)}}
+@keyframes blink{0%{filter:brightness(1)}50%{filter:brightness(.45)}}
+.slot.gone{opacity:0;visibility:hidden;transition:opacity .4s}
+.slot.dim .hex{opacity:.55}
+
+/* Startbildschirm */
+.start{align-items:center;justify-content:center;gap:22px;padding-block:20px;text-align:center}
+.logo{display:grid;place-items:center;gap:6px}
+.logo .ring{width:min(210px,52vw);aspect-ratio:1.15;display:grid;place-items:center;
+  background:conic-gradient(var(--gold),#fff3c2,var(--gold),#b8861b,var(--gold));
+  clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%)}
+.logo .ring i{width:calc(100% - 10px);height:calc(100% - 10px);display:grid;place-items:center;font-style:normal;
+  background:radial-gradient(circle at 50% 35%,#3b36c8,#0b0e50 70%);
+  clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);
+  font-family:var(--font-display);font-weight:700;font-size:clamp(3rem,12vw,4.6rem);color:var(--gold)}
+h1.title{margin:6px 0 0;font:700 clamp(2.2rem,8vw,3.8rem)/1 var(--font-display);text-transform:uppercase;letter-spacing:.08em;
+  background:linear-gradient(180deg,#fff6cf,var(--gold) 55%,#b8861b);-webkit-background-clip:text;background-clip:text;color:transparent;text-wrap:balance}
+.sub{margin:0;color:var(--muted);max-width:46ch;text-wrap:balance}
+.card{width:min(720px,100%);background:rgba(10,14,70,.72);border:1.5px solid var(--panel-line);border-radius:12px;padding:16px;text-align:left;display:grid;gap:12px}
+.card h2{margin:0;font:600 1.15rem var(--font-display);letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:.5em;padding:.4em .85em;border-radius:999px;border:1.5px solid var(--panel-line);background:transparent;color:var(--ink);font-size:.92rem;min-height:40px}
+.chip small{color:var(--muted)}
+.chip[aria-pressed="true"],.chip[aria-checked="true"]{background:var(--gold);border-color:var(--gold);color:#241800}
+.chip[aria-pressed="true"] small,.chip[aria-checked="true"] small{color:#5a4210}
+.srcrow{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.srcrow .chip{flex:1 1 220px;justify-content:space-between;text-align:left}
+.mini{border:1.5px solid var(--panel-line);background:transparent;border-radius:8px;min-height:40px;padding:.3em .7em;font-size:.88rem}
+.mini.danger{border-color:var(--red);color:#ffb3ae}
+.note{margin:0;font-size:.9rem;color:var(--muted)}
+.row-btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.btn{--b:var(--gold);min-height:48px;padding:.6em 1.5em;border-radius:999px;border:2px solid var(--b);background:transparent;color:var(--ink);font:600 1.05rem var(--font-display);letter-spacing:.08em;text-transform:uppercase}
+.btn.primary{background:linear-gradient(180deg,#ffd873,#e0a21f);color:#2a1b00;border-color:#ffe9a8;box-shadow:0 0 18px rgba(246,201,76,.35)}
+.btn.sec{--b:var(--panel-line)}
+.btn.danger{--b:var(--red)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* Spielbildschirm */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:10px}
+.jokers{display:flex;gap:10px;flex-wrap:wrap}
+.joker{position:relative;width:66px;height:44px;border-radius:50%;border:2px solid var(--edge);padding:0;
+  background:radial-gradient(ellipse at 50% 30%,#3a44c8,var(--hex-b));display:grid;place-items:center;
+  font:700 1.05rem var(--font-display);filter:drop-shadow(0 0 6px var(--edge-glow))}
+.joker svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.joker.used{opacity:.6;cursor:not-allowed}
+.joker.used::after{content:"";position:absolute;inset:-2px;border-radius:50%;
+  background:linear-gradient(to top right,transparent calc(50% - 2px),var(--red) calc(50% - 1px),var(--red) calc(50% + 1px),transparent calc(50% + 2px)),
+             linear-gradient(to top left,transparent calc(50% - 2px),var(--red) calc(50% - 1px),var(--red) calc(50% + 1px),transparent calc(50% + 2px))}
+.status{font:600 1.1rem var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center;flex:1 1 auto;min-width:0}
+.status b{color:var(--gold);font-weight:700}
+.tools{display:flex;gap:8px}
+.ico{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--panel-line);background:rgba(10,14,70,.6);display:grid;place-items:center;padding:0}
+.ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ico.laddertoggle{display:none}
+.game{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:22px;min-height:0}
+.stage{display:flex;flex-direction:column;justify-content:flex-end;gap:20px;min-width:0;padding-bottom:6px}
+.topic{text-align:center;font:600 .95rem var(--font-display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);min-height:1.2em}
+.row{position:relative;padding-inline:3%}
+.row::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:var(--line);box-shadow:0 0 8px var(--edge-glow)}
+.qrow .hex .in{justify-content:center;text-align:center;min-height:calc(var(--hex-h)*1.45);padding-inline:calc(var(--cut) + 1.2em)}
+.qrow .hex{cursor:default}
+.qrow .txt{font-size:clamp(1.1rem,1.2vw + .9rem,1.9rem);font-weight:500;line-height:1.28;text-wrap:balance}
+.answers{display:grid;gap:14px}
+.arow{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+.bar{min-height:58px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;text-align:center}
+.bar .q{font:600 1.35rem var(--font-display);letter-spacing:.04em}
+.bar .msg{font:600 1.35rem var(--font-display);letter-spacing:.05em}
+.bar .msg.ok{color:#7dffa6}.bar .msg.bad{color:#ff9a93}
+.actions{display:flex;justify-content:center}
+.ladder{background:rgba(8,11,62,.78);border:2px solid var(--panel-line);border-radius:12px;padding:10px 8px;align-self:end;max-height:100%;overflow:auto}
+.ladder h3{margin:0 0 6px;text-align:center;font:600 .95rem var(--font-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ladder ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse}
+.ladder li{display:flex;justify-content:space-between;gap:10px;padding:.18em .8em;font:600 1.2rem/1.35 var(--font-display);color:var(--orange);border-radius:6px;font-variant-numeric:tabular-nums}
+.ladder li .n{color:var(--dim);min-width:1.6em}
+.ladder li.safe{color:#fff}
+.ladder li.passed{opacity:.45}
+.ladder li.now{background:var(--orange);color:#201000}
+.ladder li.now .n{color:#4a2600}
+.ladder .close{display:none;margin:8px auto 0}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(3,4,24,.82);overflow:auto}
+.panel{width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:2px solid var(--panel-line);border-radius:14px;padding:18px;display:grid;gap:14px;box-shadow:0 0 40px rgba(60,80,255,.35)}
+.panel.wide{width:min(820px,100%)}
+.panel h2{margin:0;font:700 1.6rem var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);text-wrap:balance}
+.panel .qline{margin:0;color:var(--muted);font-size:.95rem}
+.panel-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;height:230px}
+.bcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.bcol .pct{font:700 1.3rem var(--font-display);font-variant-numeric:tabular-nums}
+.bcol .col{width:70%;max-width:70px;height:0;background:linear-gradient(180deg,#ffd873,var(--orange));border-radius:6px 6px 0 0;transition:height 1.4s cubic-bezier(.2,.8,.2,1)}
+.bcol.off .col{background:#3a3f8a}
+.bcol .lt{font:700 1.3rem var(--font-display);color:var(--gold)}
+.bcol .at{font-size:.75rem;color:var(--muted);text-align:center;overflow-wrap:anywhere;line-height:1.2;max-height:3.6em;overflow:hidden}
+.phone{display:grid;gap:12px;justify-items:center;text-align:center}
+.count{width:130px;height:130px;border-radius:50%;display:grid;place-items:center;font:700 3.2rem var(--font-display);font-variant-numeric:tabular-nums;
+  background:conic-gradient(var(--gold) calc(var(--p,100)*1%),#2a2f80 0)}
+.count span{width:112px;height:112px;border-radius:50%;background:var(--panel);display:grid;place-items:center}
+.bubble{background:#17207a;border:1.5px solid var(--panel-line);border-radius:14px;padding:.7em 1em;text-align:left;width:100%}
+.bubble b{color:var(--gold)}
+.field{display:grid;gap:4px}
+.field label,.lab{font-size:.85rem;color:var(--muted);letter-spacing:.04em}
+input[type=text],input[type=search],select,textarea{width:100%;background:#0a0e46;border:1.5px solid var(--panel-line);border-radius:8px;padding:.55em .7em;min-height:44px}
+textarea{min-height:170px;font:.9rem/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;resize:vertical}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:.45em 0;border-bottom:1px solid rgba(138,156,245,.25)}
+.switch input{width:22px;height:22px;accent-color:var(--gold)}
+.errs{background:rgba(217,54,47,.15);border:1.5px solid var(--red);border-radius:8px;padding:10px 14px;font-size:.92rem;display:grid;gap:4px}
+.errs ul{margin:0;padding-left:1.1em}
+.prev{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:300px;overflow:auto}
+.prev li{display:grid;gap:2px;padding:.5em .7em;background:#0a0e46;border-radius:8px;font-size:.92rem}
+.prev .meta{font-size:.78rem;color:var(--muted)}
+.prev .ok{color:#7dffa6}
+.formgrid{display:grid;gap:10px}
+.ansrow{display:flex;align-items:center;gap:8px}
+.ansrow input[type=radio]{width:22px;height:22px;accent-color:var(--gold);flex:none}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.end{text-align:center}
+.end .big{font:700 clamp(2.4rem,9vw,4rem)/1 var(--font-display);color:var(--gold);font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:70;background:#fff;color:#16183a;border-radius:999px;padding:.6em 1.2em;font-weight:600;max-width:calc(100vw - 32px);text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+#confetti{position:fixed;inset:0;z-index:60;pointer-events:none;width:100%;height:100%}
+
+@media (max-width:900px){
+  .game{grid-template-columns:minmax(0,1fr)}
+  .ico.laddertoggle{display:grid}
+  .ladder{display:none;position:fixed;z-index:45;right:12px;top:calc(12px + env(safe-area-inset-top,0px));bottom:12px;width:min(300px,calc(100vw - 24px));background:#080b3e;box-shadow:0 0 40px rgba(0,0,0,.7)}
+  .ladder.open{display:block}
+  .ladder .close{display:block}
+}
+@media (max-width:640px){
+  :root{--cut:20px;--hex-h:58px}
+  .arow{grid-template-columns:1fr;gap:12px}
+  .row{padding-inline:10px}
+  .twocol{grid-template-columns:1fr}
+  .bars{height:200px;gap:6px}
+  .status{order:3;flex-basis:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .bg::after{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="app" id="app">
+
+<!-- ===== Startbildschirm ===== -->
+<main class="screen start" id="screen-start">
+  <div class="logo">
+    <div class="ring" aria-hidden="true"><i>€</i></div>
+    <h1 class="title" id="gameTitle">Millionenquiz</h1>
+  </div>
+  <p class="sub">15 Fragen, vier Antworten, drei Joker. Spiele mit dem eingebauten Fragenpool oder importiere dein eigenes Quiz.</p>
+
+  <section class="card" aria-labelledby="h-src">
+    <h2 id="h-src">Fragenquelle</h2>
+    <div class="srcrow" id="srcList" role="radiogroup" aria-label="Fragenquelle"></div>
+    <p class="note" id="srcNote"></p>
+  </section>
+
+  <section class="card" id="topicCard" aria-labelledby="h-top">
+    <h2 id="h-top">Themenbereiche</h2>
+    <div class="chips" id="topicChips"></div>
+    <div class="row-btns" style="justify-content:flex-start;gap:8px">
+      <button class="mini" id="topicAll" type="button">Alle</button>
+      <button class="mini" id="topicNone" type="button">Keine</button>
+    </div>
+    <p class="note" id="topicNote"></p>
+  </section>
+
+  <div class="row-btns">
+    <button class="btn primary" id="btnStart" type="button">Spiel starten</button>
+    <button class="btn sec" id="btnImport" type="button">Eigenes Quiz importieren</button>
+    <button class="btn sec" id="btnSettings" type="button">Einstellungen</button>
+  </div>
+</main>
+
+<!-- ===== Spielbildschirm ===== -->
+<main class="screen" id="screen-game" hidden>
+  <div class="topbar">
+    <div class="jokers" id="jokers">
+      <button class="joker" type="button" data-j="fifty" aria-label="50:50-Joker">50:50</button>
+      <button class="joker" type="button" data-j="audience" aria-label="Publikumsjoker">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V6M16 20V10M22 20H2"/></svg></button>
+      <button class="joker" type="button" data-j="phone" aria-label="Telefonjoker">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></button>
+      <button class="joker" type="button" data-j="swap" aria-label="Austauschjoker" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></button>
+    </div>
+    <div class="status" id="status" aria-live="off"></div>
+    <div class="tools">
+      <button class="ico laddertoggle" id="btnLadder" type="button" aria-label="Gewinnleiter anzeigen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8"/></svg></button>
+      <button class="ico" id="btnSound" type="button" aria-label="Ton ein- oder ausschalten" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="sndWave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+      <button class="ico" id="btnGameSettings" type="button" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button>
+      <button class="ico" id="btnHome" type="button" aria-label="Zurück zum Start">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></button>
+    </div>
+  </div>
+
+  <div class="game">
+    <section class="stage" aria-label="Frage">
+      <div class="topic" id="topic"></div>
+      <div class="row qrow"><div class="slot"><div class="hex" id="qhex"><div class="in"><span class="txt" id="qtext"></span></div></div></div></div>
+      <div class="answers" id="answers">
+        <div class="row arow" id="arow1"></div>
+        <div class="row arow" id="arow2"></div>
+      </div>
+      <div class="bar" id="bar" aria-live="polite"></div>
+      <div class="actions"><button class="btn danger" id="btnQuit" type="button">Aussteigen</button></div>
+    </section>
+    <aside class="ladder" id="ladder" aria-label="Gewinnleiter">
+      <h3>Gewinnleiter</h3>
+      <ol id="ladderList"></ol>
+      <button class="btn sec close" id="ladderClose" type="button">Schließen</button>
+    </aside>
+  </div>
+</main>
+</div>
+
+<!-- ===== Overlays ===== -->
+<div class="overlay" id="ov-quit" hidden role="dialog" aria-modal="true" aria-labelledby="quit-h">
+  <div class="panel end">
+    <h2 id="quit-h">Aussteigen?</h2>
+    <p id="quit-text"></p>
+    <div class="panel-actions" style="justify-content:center">
+      <button class="btn danger" id="quitYes" type="button">Ja, aussteigen</button>
+      <button class="btn sec" id="quitNo" type="button">Weiterspielen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-audience" hidden role="dialog" aria-modal="true" aria-labelledby="aud-h">
+  <div class="panel">
+    <h2 id="aud-h">Das Publikum hat abgestimmt</h2>
+    <p class="qline" id="aud-q"></p>
+    <div class="bars" id="aud-bars"></div>
+    <div class="panel-actions"><button class="btn primary" id="audClose" type="button">Weiter</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-phone" hidden role="dialog" aria-modal="true" aria-labelledby="ph-h">
+  <div class="panel">
+    <h2 id="ph-h">Telefonjoker</h2>
+    <p class="qline" id="ph-q"></p>
+    <div class="phone">
+      <div class="count" id="ph-count"><span id="ph-sec">30</span></div>
+      <div class="bubble" id="ph-bubble" aria-live="polite">Anruf bei <b id="ph-name"></b> …</div>
+    </div>
+    <div class="panel-actions"><button class="btn sec" id="phClose" type="button">Auflegen</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-settings" hidden role="dialog" aria-modal="true" aria-labelledby="set-h">
+  <div class="panel">
+    <h2 id="set-h">Einstellungen</h2>
+    <label class="switch"><span>Ton</span><input type="checkbox" id="s-sound"></label>
+    <label class="switch"><span>Antworten mischen</span><input type="checkbox" id="s-shuffle"></label>
+    <label class="switch"><span>Austauschjoker als vierten Joker</span><input type="checkbox" id="s-swap"></label>
+    <label class="switch"><span>Moderatorenmodus (Auflösung und Weiter per Klick)</span><input type="checkbox" id="s-mod"></label>
+    <label class="switch"><span>Themenbereich bei der Frage anzeigen</span><input type="checkbox" id="s-topic"></label>
+    <div class="field"><label for="s-susp">Spannungspause vor der Auflösung</label>
+      <select id="s-susp"><option value="0">Keine</option><option value="1500">Kurz</option><option value="3000">Normal</option><option value="5000">Lang</option></select></div>
+    <div class="field"><label for="s-size">Schriftgröße</label>
+      <select id="s-size"><option value="">Normal</option><option value="t-l">Groß</option><option value="t-xl">Sehr groß (Beamer)</option></select></div>
+    <div class="panel-actions" style="justify-content:space-between">
+      <button class="mini" id="s-reset" type="button">Fragenverlauf zurücksetzen</button>
+      <button class="btn primary" id="setClose" type="button">Fertig</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-import" hidden role="dialog" aria-modal="true" aria-labelledby="imp-h">
+  <div class="panel wide">
+    <h2 id="imp-h">Eigenes Quiz importieren</h2>
+    <div id="imp-step1" class="formgrid">
+      <div class="tabs" role="tablist" aria-label="Importweg">
+        <button class="chip" type="button" role="tab" data-tab="file" aria-pressed="true">Datei hochladen</button>
+        <button class="chip" type="button" role="tab" data-tab="text" aria-pressed="false">Text einfügen</button>
+        <button class="chip" type="button" role="tab" data-tab="form" aria-pressed="false">Formular</button>
+      </div>
+      <div id="tab-file" class="formgrid">
+        <div class="field"><label for="impFile">Datei (.json oder .csv)</label>
+          <input type="file" id="impFile" accept=".json,.csv,.txt,application/json,text/csv,text/plain"></div>
+        <p class="note" id="impFileName"></p>
+      </div>
+      <div id="tab-text" class="formgrid" hidden>
+        <div class="field"><label for="impText">JSON oder CSV (Semikolon-getrennt) hier einfügen</label>
+          <textarea id="impText" spellcheck="false"></textarea></div>
+        <div class="row-btns" style="justify-content:flex-start;gap:8px">
+          <button class="mini" id="fillJson" type="button">JSON-Beispiel einfügen</button>
+          <button class="mini" id="fillCsv" type="button">CSV-Beispiel einfügen</button>
+        </div>
+      </div>
+      <div id="tab-form" class="formgrid" hidden>
+        <div class="field"><label for="fQ">Frage</label><textarea id="fQ" style="min-height:70px;font-family:var(--font-body)"></textarea></div>
+        <div class="formgrid" id="fAns"></div>
+        <div class="twocol">
+          <div class="field"><label for="fLevel">Stufe (optional)</label><select id="fLevel"></select></div>
+          <div class="field"><label for="fTopic">Thema (optional)</label><input type="text" id="fTopic" maxlength="60"></div>
+        </div>
+        <div class="panel-actions" style="justify-content:flex-start"><button class="btn sec" id="fAdd" type="button">Frage hinzufügen</button></div>
+        <ul class="prev" id="fList"></ul>
+      </div>
+      <div class="errs" id="imp-errs" hidden role="alert"></div>
+      <p class="note">Mindestens 5 Fragen, jede mit genau 4 verschiedenen Antworten. Stufe 1–15 und Thema sind optional.</p>
+      <div class="panel-actions">
+        <button class="mini" id="impTemplate" type="button">Vorlage herunterladen</button>
+        <button class="btn sec" id="impCancel" type="button">Abbrechen</button>
+        <button class="btn primary" id="impCheck" type="button">Prüfen</button>
+      </div>
+    </div>
+    <div id="imp-step2" class="formgrid" hidden>
+      <div class="field"><label for="impTitle">Name des Quiz</label><input type="text" id="impTitle" maxlength="80"></div>
+      <div class="field"><span class="lab">Reihenfolge der Fragen</span>
+        <div class="chips" role="radiogroup" aria-label="Reihenfolge">
+          <button class="chip" type="button" role="radio" data-ord="keep" aria-checked="true">Reihenfolge beibehalten</button>
+          <button class="chip" type="button" role="radio" data-ord="random" aria-checked="false">Zufällig</button>
+        </div></div>
+      <div class="errs" id="imp-warn" hidden></div>
+      <p class="note" id="impSummary"></p>
+      <ul class="prev" id="impPrev"></ul>
+      <div class="panel-actions">
+        <button class="btn sec" id="impBack" type="button">Zurück</button>
+        <button class="btn sec" id="impSave" type="button">Speichern</button>
+        <button class="btn primary" id="impPlay" type="button">Speichern und spielen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-text" hidden role="dialog" aria-modal="true" aria-labelledby="tx-h">
+  <div class="panel wide">
+    <h2 id="tx-h">Text</h2>
+    <div class="tabs" id="tx-switch" hidden>
+      <button class="chip" type="button" data-fmt="json" aria-pressed="true">JSON</button>
+      <button class="chip" type="button" data-fmt="csv" aria-pressed="false">CSV</button>
+    </div>
+    <textarea id="tx-area" readonly spellcheck="false"></textarea>
+    <p class="note" id="tx-note"></p>
+    <div class="panel-actions">
+      <button class="btn sec" id="txCopy" type="button">Kopieren</button>
+      <button class="btn sec" id="txDl" type="button">Herunterladen</button>
+      <button class="btn primary" id="txClose" type="button">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-end" hidden role="dialog" aria-modal="true" aria-labelledby="end-h">
+  <div class="panel end">
+    <h2 id="end-h"></h2>
+    <div class="big" id="end-amount"></div>
+    <p id="end-text"></p>
+    <div class="panel-actions" style="justify-content:center">
+      <button class="btn primary" id="endAgain" type="button">Nochmal spielen</button>
+      <button class="btn sec" id="endHome" type="button">Zum Start</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti" hidden aria-hidden="true"></canvas>
+<div class="toast" id="toast" hidden role="status"></div>
+<div class="vh" id="live" role="status" aria-live="polite"></div>
+<script>
+/* Eingebauter Fragenpool. Format: [Themenkürzel, Stufe, Frage, richtige Antwort, falsch, falsch, falsch] */
+const RAW=[
+// Stufe 1
+["AW",1,"Welche Farbe entsteht, wenn man Blau und Gelb mischt?","Grün","Orange","Violett","Braun"],
+["GE",1,"Wie heißt die Hauptstadt von Deutschland?","Berlin","München","Hamburg","Frankfurt"],
+["TN",1,"Welches Tier wird als „König der Tiere“ bezeichnet?","Löwe","Tiger","Bär","Wolf"],
+["MA",1,"Wie viel ist 6 mal 7?","42","36","48","49"],
+["ET",1,"Woraus wird Apfelmus hergestellt?","Äpfeln","Birnen","Pflaumen","Bananen"],
+["SP",1,"Wie viele Spieler einer Mannschaft stehen beim Fußball gleichzeitig auf dem Feld?","11","9","10","12"],
+["MU",1,"Wie viele Saiten hat eine klassische Gitarre?","6","4","5","8"],
+["FF",1,"Welche Farbe haben die Schlümpfe?","Blau","Grün","Rot","Gelb"],
+["LK",1,"Welche Märchenfigur besucht ihre Großmutter und trifft dabei im Wald den Wolf?","Rotkäppchen","Aschenputtel","Dornröschen","Schneewittchen"],
+["NT",1,"Um welchen Stern kreist die Erde?","Sonne","Mond","Polarstern","Sirius"],
+// Stufe 2
+["GE",2,"In welchem Land steht der Eiffelturm?","Frankreich","Italien","Spanien","Belgien"],
+["TN",2,"Wie nennt man ein junges Pferd?","Fohlen","Kalb","Ferkel","Lamm"],
+["NT",2,"Bei wie viel Grad Celsius gefriert Wasser unter normalem Luftdruck?","0 °C","10 °C","32 °C","100 °C"],
+["SP",2,"In welcher Sportart gibt es den „Slam Dunk“?","Basketball","Volleyball","Handball","Tennis"],
+["PG",2,"Wie viele Bundesländer hat Deutschland?","16","12","14","18"],
+["MA",2,"Wie viele Grad hat ein rechter Winkel?","90°","45°","100°","180°"],
+["LK",2,"Wie heißt der junge Zauberer mit der Blitznarbe auf der Stirn?","Harry Potter","Percy Jackson","Peter Pan","Luke Skywalker"],
+["ET",2,"Aus welchem Land stammt die Pizza ursprünglich?","Italien","Frankreich","Griechenland","Spanien"],
+["MU",2,"Welches Instrument hat schwarze und weiße Tasten?","Klavier","Geige","Trompete","Querflöte"],
+["AW",2,"Welcher Monat hat in einem Schaltjahr 29 Tage?","Februar","Januar","April","Juni"],
+// Stufe 3
+["GE",3,"Welcher Fluss fließt durch Köln?","Rhein","Elbe","Donau","Main"],
+["GS",3,"In welchem Jahr fiel die Berliner Mauer?","1989","1961","1990","1985"],
+["TN",3,"Welches ist das größte lebende Landtier?","Afrikanischer Elefant","Nashorn","Giraffe","Flusspferd"],
+["NT",3,"Welches Gas braucht der Mensch zum Atmen?","Sauerstoff","Stickstoff","Helium","Wasserstoff"],
+["SP",3,"In welcher Stadt fanden die Olympischen Sommerspiele 2024 statt?","Paris","London","Tokio","Los Angeles"],
+["MU",3,"Wie hieß die britische Band um John Lennon und Paul McCartney?","The Beatles","The Rolling Stones","Queen","Pink Floyd"],
+["FF",3,"Wie heißt die Eiskönigin im gleichnamigen Animationsfilm?","Elsa","Anna","Ariel","Jasmin"],
+["LK",3,"Von welchem Dichter stammt das Drama „Faust“?","Johann Wolfgang von Goethe","Friedrich Schiller","Bertolt Brecht","Heinrich Heine"],
+["ET",3,"Welches Gemüse bringt beim Schneiden oft zum Weinen?","Zwiebel","Karotte","Gurke","Paprika"],
+["MA",3,"Wie viel sind 25 % von 200?","50","25","40","75"],
+// Stufe 4
+["AW",4,"Wie viele Felder hat ein Schachbrett?","64","48","81","100"],
+["GE",4,"Wie heißt der höchste Berg Deutschlands?","Zugspitze","Brocken","Feldberg","Watzmann"],
+["GS",4,"Welcher Seefahrer erreichte 1492 im Auftrag Spaniens Amerika?","Christoph Kolumbus","Vasco da Gama","Ferdinand Magellan","James Cook"],
+["NT",4,"Welcher Planet wird wegen seiner Farbe „der Rote Planet“ genannt?","Mars","Venus","Jupiter","Merkur"],
+["PG",4,"Wie heißt das Parlament auf Bundesebene in Deutschland?","Bundestag","Bundesrat","Landtag","Kreistag"],
+["SP",4,"Gegen welche Mannschaft gewann Deutschland 2014 das WM-Finale?","Argentinien","Brasilien","Niederlande","Spanien"],
+["MU",4,"Wie nennt man die Person, die ein Orchester leitet?","Dirigent","Komponist","Solist","Regisseur"],
+["FF",4,"Wie heißt der graue Zauberer in „Der Herr der Ringe“?","Gandalf","Dumbledore","Merlin","Saruman"],
+["TN",4,"Welches Säugetier kann aktiv fliegen?","Fledermaus","Flughörnchen","Pinguin","Känguru"],
+["MA",4,"Wie viele Ecken hat ein Würfel?","8","6","12","4"],
+// Stufe 5
+["LK",5,"Wer schrieb die Dramen „Die Räuber“ und „Wilhelm Tell“?","Friedrich Schiller","Johann Wolfgang von Goethe","Gotthold Ephraim Lessing","Georg Büchner"],
+["AW",5,"Wie nennt man die Angst vor engen Räumen?","Klaustrophobie","Arachnophobie","Akrophobie","Agoraphobie"],
+["NT",5,"Welches chemische Symbol hat Gold?","Au","Ag","Go","Gd"],
+["SP",5,"Wie viele Ringe zeigt das Symbol der Olympischen Spiele?","5","4","6","7"],
+["ET",5,"Aus welchem Land stammt das Reisgericht Paella?","Spanien","Italien","Portugal","Mexiko"],
+["PG",5,"In welcher Stadt hat die Europäische Kommission ihren Sitz?","Brüssel","Straßburg","Luxemburg","Den Haag"],
+["GS",5,"In welcher Stadt wurde Karl der Große im Jahr 800 zum Kaiser gekrönt?","Rom","Aachen","Paris","Ravenna"],
+["MU",5,"Welcher Komponist schrieb die „Mondscheinsonate“?","Ludwig van Beethoven","Wolfgang Amadeus Mozart","Johann Sebastian Bach","Frédéric Chopin"],
+["TN",5,"Wie viele Beine hat eine Spinne?","8","6","10","12"],
+["FF",5,"Welcher Superheld wurde von einer radioaktiven Spinne gebissen?","Spider-Man","Batman","Hulk","Thor"],
+// Stufe 6
+["GE",6,"Welcher Fluss ist der längste Europas?","Wolga","Donau","Rhein","Dnepr"],
+["GS",6,"In welchem Jahr begann der Zweite Weltkrieg?","1939","1936","1941","1914"],
+["NT",6,"Wie viele Kammern hat das menschliche Herz?","4","2","3","6"],
+["SP",6,"Wie lang ist eine Marathonstrecke?","42,195 km","40 km","45 km","50 km"],
+["MU",6,"Welche Band veröffentlichte „Bohemian Rhapsody“?","Queen","Led Zeppelin","Pink Floyd","The Who"],
+["FF",6,"Wer führte Regie bei „Jurassic Park“ (1993)?","Steven Spielberg","George Lucas","James Cameron","Ridley Scott"],
+["LK",6,"Wie heißt der berühmte Detektiv aus den Romanen von Arthur Conan Doyle?","Sherlock Holmes","Hercule Poirot","Miss Marple","Philip Marlowe"],
+["ET",6,"Welche Zutat färbt das klassische Pesto alla Genovese grün?","Basilikum","Petersilie","Spinat","Rucola"],
+["MA",6,"Wie lautet die Kreiszahl Pi auf zwei Nachkommastellen gerundet?","3,14","3,12","3,16","3,41"],
+["AW",6,"In welchem Monat beginnt das Münchner Oktoberfest traditionell?","September","Oktober","August","November"],
+// Stufe 7
+["AW",7,"Wie viele Karten hat ein Skatblatt?","32","36","52","40"],
+["GS",7,"Wer war der erste Bundeskanzler der Bundesrepublik Deutschland?","Konrad Adenauer","Willy Brandt","Ludwig Erhard","Helmut Schmidt"],
+["NT",7,"Welches Element ist das leichteste im Periodensystem?","Wasserstoff","Helium","Lithium","Sauerstoff"],
+["PG",7,"Wie viele Mitgliedstaaten hatte die EU nach dem Brexit im Jahr 2020?","27","28","25","30"],
+["LK",7,"Welche Erzählung von Franz Kafka beginnt damit, dass Gregor Samsa als Ungeziefer erwacht?","Die Verwandlung","Der Prozess","Das Schloss","Der Heizer"],
+["SP",7,"In welcher Sportart wird der Davis Cup ausgetragen?","Tennis","Golf","Badminton","Tischtennis"],
+["MU",7,"Welcher Komponist schrieb „Eine kleine Nachtmusik“?","Wolfgang Amadeus Mozart","Joseph Haydn","Franz Schubert","Johann Strauss"],
+["FF",7,"In welcher US-Stadt spielt die Sitcom „Friends“?","New York","Los Angeles","Chicago","Boston"],
+["ET",7,"Aus welchem Land stammt der Käse Gouda ursprünglich?","Niederlande","Schweiz","Frankreich","Deutschland"],
+["TN",7,"Wie nennt man Tiere, die sowohl Pflanzen als auch Fleisch fressen?","Allesfresser","Pflanzenfresser","Fleischfresser","Insektenfresser"],
+// Stufe 8
+["MA",8,"Wie viele Primzahlen gibt es zwischen 1 und 10?","4","3","5","6"],
+["AW",8,"Welche Sprache hat weltweit die meisten Muttersprachler?","Mandarin-Chinesisch","Englisch","Spanisch","Hindi"],
+["GS",8,"Welches Ereignis begann 1789 mit dem Sturm auf die Bastille?","Die Französische Revolution","Die Russische Revolution","Der Amerikanische Unabhängigkeitskrieg","Die Novemberrevolution"],
+["NT",8,"Welches Organ bildet den Harn?","Niere","Leber","Milz","Bauchspeicheldrüse"],
+["PG",8,"Wer wählt in Deutschland den Bundeskanzler?","Der Bundestag","Das Volk direkt","Der Bundesrat","Die Bundesversammlung"],
+["SP",8,"Wer lief 2009 in Berlin die 100 Meter in 9,58 Sekunden?","Usain Bolt","Carl Lewis","Tyson Gay","Justin Gatlin"],
+["LK",8,"Welcher Künstler malte die „Mona Lisa“?","Leonardo da Vinci","Michelangelo","Raffael","Sandro Botticelli"],
+["ET",8,"Aus welcher Pflanze wird Tequila hergestellt?","Agave","Zuckerrohr","Mais","Kaktusfeige"],
+["MU",8,"Welcher Sänger trug den Beinamen „King of Pop“?","Michael Jackson","Elvis Presley","Prince","Freddie Mercury"],
+["TN",8,"Welches Meerestier hat drei Herzen?","Oktopus","Hai","Delfin","Seestern"],
+// Stufe 9
+["GS",9,"Welcher Friedensschluss beendete 1648 den Dreißigjährigen Krieg?","Westfälischer Friede","Augsburger Religionsfriede","Wiener Kongress","Versailler Vertrag"],
+["AW",9,"Welcher Wochentag geht auf den germanischen Gott Donar zurück?","Donnerstag","Dienstag","Mittwoch","Freitag"],
+["NT",9,"Wie heißt die Einheit der elektrischen Spannung?","Volt","Ampere","Ohm","Watt"],
+["TN",9,"Welches Landsäugetier hat mit rund 22 Monaten die längste Tragzeit?","Elefant","Giraffe","Nashorn","Flusspferd"],
+["LK",9,"Wer schrieb den Roman „Die Blechtrommel“?","Günter Grass","Heinrich Böll","Siegfried Lenz","Thomas Mann"],
+["SP",9,"Welches Land gewann 1998 die Fußball-WM im eigenen Land?","Frankreich","Brasilien","Italien","Deutschland"],
+["FF",9,"Wer spielte 1997 die Rolle des Jack Dawson in „Titanic“?","Leonardo DiCaprio","Brad Pitt","Tom Cruise","Johnny Depp"],
+["MA",9,"Wie viel ist 2 hoch 10?","1024","512","2048","1000"],
+["PG",9,"Wie viele ständige Mitglieder hat der UN-Sicherheitsrat?","5","3","7","10"],
+["ET",9,"Welche Hauptzutat hat Marzipan?","Mandeln","Haselnüsse","Pistazien","Walnüsse"],
+// Stufe 10
+["GS",10,"In welchem Jahr wurde die Bundesrepublik Deutschland gegründet?","1949","1945","1955","1990"],
+["GE",10,"Welcher Staat hat die Hauptstadt Ulaanbaatar?","Mongolei","Kasachstan","Nepal","Bhutan"],
+["NT",10,"Welches chemische Element hat die Ordnungszahl 26?","Eisen","Kupfer","Nickel","Zink"],
+["TN",10,"Welches ist das größte Säugetier der Erde?","Blauwal","Pottwal","Afrikanischer Elefant","Finnwal"],
+["MU",10,"Wie viele Sinfonien hat Ludwig van Beethoven vollendet?","9","5","7","12"],
+["LK",10,"Welcher Schriftsteller erhielt 1929 den Literaturnobelpreis, insbesondere für „Buddenbrooks“?","Thomas Mann","Hermann Hesse","Gerhart Hauptmann","Bertolt Brecht"],
+["AW",10,"Welches dieser Jahre war kein Schaltjahr?","1900","2000","1996","2024"],
+["FF",10,"Wer führte Regie bei „Pulp Fiction“?","Quentin Tarantino","Martin Scorsese","Christopher Nolan","David Fincher"],
+["MA",10,"Wie viele Diagonalen hat ein Sechseck?","9","6","12","15"],
+["PG",10,"Welches Organ der EU wird direkt von den Bürgern gewählt?","Europäisches Parlament","Europäische Kommission","Europäischer Rat","Europäischer Gerichtshof"],
+// Stufe 11
+["GE",11,"Wie heißt der höchste Berg Afrikas?","Kilimandscharo","Mount Kenia","Ruwenzori","Toubkal"],
+["GS",11,"Wer gilt als erster römischer Kaiser?","Augustus","Julius Caesar","Nero","Konstantin"],
+["NT",11,"Wie viele Chromosomen hat der Mensch normalerweise in jeder Körperzelle?","46","23","48","44"],
+["TN",11,"Welche dieser Tiergruppen ist wechselwarm?","Reptilien","Vögel","Säugetiere","Beuteltiere"],
+["LK",11,"Wer schrieb die „Göttliche Komödie“?","Dante Alighieri","Giovanni Boccaccio","Francesco Petrarca","Niccolò Machiavelli"],
+["AW",11,"In welcher Stadt wird der Friedensnobelpreis verliehen?","Oslo","Stockholm","Genf","Kopenhagen"],
+["MU",11,"Welcher Komponist schuf den Opernzyklus „Der Ring des Nibelungen“?","Richard Wagner","Giuseppe Verdi","Richard Strauss","Carl Maria von Weber"],
+["FF",11,"Wer führte Regie bei „Der Pate“ (1972)?","Francis Ford Coppola","Martin Scorsese","Brian De Palma","Sidney Lumet"],
+["MA",11,"Wie viel Prozent entsprechen dem Bruch 3/8?","37,5 %","33,3 %","35 %","42,5 %"],
+["PG",11,"In welcher Stadt befindet sich der Hauptsitz der Vereinten Nationen?","New York","Genf","Den Haag","Wien"],
+// Stufe 12
+["GE",12,"Welches Land hat die Hauptstadt Ouagadougou?","Burkina Faso","Mali","Niger","Tschad"],
+["GS",12,"Auf welche Insel wurde Napoleon nach seiner endgültigen Niederlage 1815 verbannt?","St. Helena","Elba","Korsika","Malta"],
+["NT",12,"In welcher Schicht der Erdatmosphäre spielt sich das Wettergeschehen ab?","Troposphäre","Stratosphäre","Mesosphäre","Thermosphäre"],
+["TN",12,"Welcher Vogel kann als einziger aktiv rückwärts fliegen?","Kolibri","Adler","Spatz","Schwalbe"],
+["LK",12,"Aus welchem Land stammte der Schriftsteller Gabriel García Márquez?","Kolumbien","Argentinien","Mexiko","Chile"],
+["SP",12,"Welches Land war Gastgeber der ersten Fußball-Weltmeisterschaft 1930?","Uruguay","Brasilien","Italien","Argentinien"],
+["ET",12,"Woraus wird Calvados hauptsächlich gebrannt?","Äpfeln","Trauben","Pflaumen","Kirschen"],
+["MU",12,"Wer komponierte „Die vier Jahreszeiten“?","Antonio Vivaldi","Johann Sebastian Bach","Georg Friedrich Händel","Arcangelo Corelli"],
+["AW",12,"Wie viele Sterne zeigt die Flagge der Europäischen Union?","12","15","27","28"],
+["MA",12,"Wie nennt man im Deutschen die Zahl 10 hoch 9?","Milliarde","Million","Billion","Billiarde"],
+// Stufe 13
+["GE",13,"Welcher See ist der tiefste der Erde?","Baikalsee","Tanganjikasee","Titicacasee","Victoriasee"],
+["GS",13,"Wer war der letzte deutsche Kaiser?","Wilhelm II.","Wilhelm I.","Friedrich III.","Franz Joseph I."],
+["NT",13,"Wie nennt man den direkten Übergang vom gasförmigen in den festen Zustand?","Resublimation","Sublimation","Kondensation","Erstarrung"],
+["AW",13,"Welcher Zahl entspricht die römische Zahl MCMXC?","1990","1890","1900","2090"],
+["LK",13,"Wer schrieb den Roman „Don Quijote“?","Miguel de Cervantes","Lope de Vega","Federico García Lorca","Pedro Calderón de la Barca"],
+["SP",13,"Mit welchem Fahrer teilt sich Michael Schumacher den Rekord von sieben Formel-1-Weltmeistertiteln?","Lewis Hamilton","Sebastian Vettel","Ayrton Senna","Alain Prost"],
+["PG",13,"Welcher Artikel des Grundgesetzes schützt die Würde des Menschen?","Artikel 1","Artikel 2","Artikel 5","Artikel 20"],
+["MU",13,"Wie viele Tasten hat ein Standard-Klavier?","88","76","92","100"],
+["FF",13,"Wer führte Regie bei dem Stummfilm „Metropolis“ (1927)?","Fritz Lang","Friedrich Wilhelm Murnau","Robert Wiene","Georg Wilhelm Pabst"],
+["ET",13,"In welchem Land liegt der Ursprung des Kaffees nach der Legende vom Hirten Kaldi?","Äthiopien","Kolumbien","Brasilien","Jemen"],
+// Stufe 14
+["GE",14,"Welche ist die größte Insel der Erde, die kein Kontinent ist?","Grönland","Neuguinea","Borneo","Madagaskar"],
+["GS",14,"Welche Dynastie herrschte von 1368 bis 1644 in China?","Ming","Qing","Tang","Han"],
+["NT",14,"Welcher Stern ist der Sonne am nächsten, wenn man die Sonne selbst nicht mitzählt?","Proxima Centauri","Sirius","Alpha Centauri A","Barnards Pfeilstern"],
+["TN",14,"Welches Säugetier legt Eier?","Schnabeltier","Gürteltier","Ameisenbär","Erdferkel"],
+["LK",14,"Welcher irische Autor schrieb den Roman „Ulysses“?","James Joyce","Samuel Beckett","Oscar Wilde","Jonathan Swift"],
+["SP",14,"Wer gewann 1985 als erster Deutscher das Herreneinzel in Wimbledon?","Boris Becker","Michael Stich","Gottfried von Cramm","Tommy Haas"],
+["PG",14,"Welcher 1992 unterzeichnete Vertrag begründete die Europäische Union?","Vertrag von Maastricht","Römische Verträge","Vertrag von Lissabon","Vertrag von Nizza"],
+["FF",14,"Wer führte Regie bei dem U-Boot-Film „Das Boot“ (1981)?","Wolfgang Petersen","Roland Emmerich","Wim Wenders","Werner Herzog"],
+["MA",14,"Wie groß ist die Wahrscheinlichkeit, mit zwei fairen Würfeln zwei Sechsen zu werfen?","1/36","1/12","1/6","1/18"],
+["ET",14,"Welches Gewürz gilt als das teuerste der Welt?","Safran","Vanille","Zimt","Kardamom"],
+// Stufe 15
+["GE",15,"In welchem Land liegt die antike Felsenstadt Petra?","Jordanien","Syrien","Ägypten","Israel"],
+["GS",15,"Wer ließ sich 221 v. Chr. zum ersten Kaiser des vereinten Chinas ausrufen?","Qin Shihuangdi","Kublai Khan","Liu Bang","Sun Yat-sen"],
+["NT",15,"Wie nennt man den programmierten, kontrollierten Zelltod?","Apoptose","Mitose","Meiose","Nekrose"],
+["TN",15,"Welcher Fisch galt als ausgestorben, bis 1938 vor Südafrika ein Exemplar gefangen wurde?","Quastenflosser","Riesenhai","Stör","Neunauge"],
+["LK",15,"Wer schrieb den Roman „Der Name der Rose“?","Umberto Eco","Italo Calvino","Primo Levi","Alberto Moravia"],
+["SP",15,"In welchem Stadion fand das Finale der Fußball-WM 1954 („Wunder von Bern“) statt?","Wankdorfstadion","Olympiastadion","Maracanã","Stade de Colombes"],
+["FF",15,"Welcher Film von Stanley Kubrick basiert auf einem Roman von Stephen King?","Shining","Uhrwerk Orange","Barry Lyndon","Full Metal Jacket"],
+["PG",15,"Wie heißt der Vertrag von 1990, der die äußeren Aspekte der deutschen Wiedervereinigung regelte?","Zwei-plus-Vier-Vertrag","Einigungsvertrag","Grundlagenvertrag","Moskauer Vertrag"],
+["MA",15,"Wie viele Nullen hat eine Billion in der deutschen Zählweise?","12","9","15","18"],
+["ET",15,"Aus welcher Milch wird echter Roquefort hergestellt?","Schafsmilch","Kuhmilch","Ziegenmilch","Büffelmilch"]
+];
+</script>
+<script>
+(function(){
+'use strict';
+/* ====== Konstanten ====== */
+const GAME_TITLE='Millionenquiz'; // Name im Spiel; hier änderbar
+const AMOUNTS=[50,100,200,300,500,1000,2000,4000,8000,16000,32000,64000,125000,500000,1000000];
+const TOPICS={AW:'Allgemeinwissen',GE:'Geografie',GS:'Geschichte',NT:'Naturwissenschaft & Technik',SP:'Sport',MU:'Musik',FF:'Film & Fernsehen',LK:'Literatur & Kultur',PG:'Politik & Gesellschaft',ET:'Essen & Trinken',TN:'Tiere & Natur',MA:'Mathematik'};
+const LETTERS=['A','B','C','D'];
+const FRIENDS=['Thomas','Lena','Jonas','Sabine','Markus','Mia','Oma Hilde','Ben','Katrin','Onkel Paul'];
+
+/* ====== Helfer ====== */
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rnd(a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=n=>new Intl.NumberFormat('de-DE').format(n)+' €';
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+};
+let toastT=0;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},3200);}
+function live(msg){const l=$('#live');l.textContent='';setTimeout(()=>{l.textContent=msg;},30);}
+
+/* ====== Zustand ====== */
+const DEFAULTS={sound:true,shuffle:true,swap:false,mod:false,topic:true,susp:3000,size:''};
+function validStored(q){return q&&typeof q.titel==='string'&&Array.isArray(q.questions)&&q.questions.every(x=>x&&typeof x.frage==='string'&&Array.isArray(x.antworten)&&x.antworten.length===4);}
+const S={
+  settings:Object.assign({},DEFAULTS,store.get('mq.settings.v1',{})),
+  quizzes:(store.get('mq.quizzes.v1',[])||[]).filter(validStored),
+  source:'builtin',topics:new Set(),game:null,phase:'start',timers:[],
+  seen:new Set(store.get('mq.seen.v1',[]))
+};
+function saveSettings(){store.set('mq.settings.v1',S.settings);}
+function saveQuizzes(){store.set('mq.quizzes.v1',S.quizzes);}
+function later(fn,ms){const id=setTimeout(fn,ms);S.timers.push(id);return id;}
+function clearTimers(){S.timers.forEach(clearTimeout);S.timers=[];}
+
+/* ====== Fragenpool ====== */
+const POOL=RAW.map((r,i)=>({id:'b'+i,code:r[0],thema:TOPICS[r[0]],stufe:r[1],frage:r[2],antworten:[r[3],r[4],r[5],r[6]],richtig:0}));
+
+/* ====== Gewinnleiter ====== */
+function ladderFor(n){
+  const idx=[];for(let k=0;k<n;k++)idx.push(n===1?0:Math.round(k*14/(n-1)));
+  let s1=Math.max(1,Math.round(n/3)),s2=Math.round(n*2/3);
+  s2=Math.min(n-1,Math.max(s1+1,s2));
+  return {levels:idx.map(i=>i+1),amounts:idx.map(i=>AMOUNTS[i]),safe:[s1,s2]};
+}
+
+/* ====== Sound (Web Audio, rein synthetisch) ====== */
+const Snd={
+  ctx:null,master:null,drone:null,
+  init(){
+    if(this.ctx)return;
+    try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      this.ctx=new AC();this.master=this.ctx.createGain();this.master.gain.value=.55;this.master.connect(this.ctx.destination);}catch(e){this.ctx=null;}
+  },
+  ok(){if(!S.settings.sound||!this.ctx)return false;if(this.ctx.state==='suspended')this.ctx.resume();return true;},
+  tone(f,t0,d,type,g,f2){
+    const c=this.ctx,o=c.createOscillator(),a=c.createGain();
+    o.type=type||'sine';o.frequency.setValueAtTime(f,t0);
+    if(f2)o.frequency.exponentialRampToValueAtTime(f2,t0+d);
+    a.gain.setValueAtTime(0.0001,t0);a.gain.linearRampToValueAtTime(g||.2,t0+.015);a.gain.exponentialRampToValueAtTime(0.0001,t0+d);
+    o.connect(a);a.connect(this.master);o.start(t0);o.stop(t0+d+.05);
+  },
+  click(){if(!this.ok())return;this.tone(700,this.ctx.currentTime,.07,'triangle',.14);},
+  select(){if(!this.ok())return;const t=this.ctx.currentTime;this.tone(392,t,.12,'triangle',.18);this.tone(587,t+.09,.18,'triangle',.18);},
+  fifty(){if(!this.ok())return;const t=this.ctx.currentTime;this.tone(880,t,.12,'square',.08);this.tone(660,t+.12,.12,'square',.08);this.tone(440,t+.24,.2,'square',.08);},
+  sweep(){if(!this.ok())return;const t=this.ctx.currentTime;this.tone(200,t,.7,'sawtooth',.07,900);},
+  ring(){if(!this.ok())return;const t=this.ctx.currentTime;for(let i=0;i<3;i++){this.tone(440,t+i*.5,.18,'sine',.15);this.tone(480,t+i*.5,.18,'sine',.15);this.tone(440,t+i*.5+.22,.18,'sine',.15);this.tone(480,t+i*.5+.22,.18,'sine',.15);}},
+  tick(){if(!this.ok())return;this.tone(1200,this.ctx.currentTime,.04,'square',.05);},
+  right(){if(!this.ok())return;const t=this.ctx.currentTime;[523.25,659.25,783.99,1046.5].forEach((f,i)=>this.tone(f,t+i*.11,.35,'triangle',.2));
+    [523.25,659.25,783.99].forEach(f=>this.tone(f,t+.5,.7,'sine',.12));},
+  wrong(){if(!this.ok())return;const t=this.ctx.currentTime;this.tone(220,t,.9,'sawtooth',.16,60);this.tone(165,t,.9,'square',.08,45);},
+  fanfare(){if(!this.ok())return;const t=this.ctx.currentTime;
+    const seq=[[392,0,.16],[392,.18,.16],[392,.36,.16],[523.25,.56,.6],[392,1.2,.16],[523.25,1.38,.16],[659.25,1.56,.9],[587.33,2.6,.2],[659.25,2.82,.2],[783.99,3.04,1.3]];
+    seq.forEach(([f,s,d])=>{this.tone(f,t+s,d,'sawtooth',.09);this.tone(f/2,t+s,d,'sawtooth',.06);this.tone(f*1.5,t+s,d,'triangle',.05);});},
+  droneStart(){
+    if(!this.ok()||this.drone)return;
+    const c=this.ctx,t=c.currentTime,g=c.createGain(),lp=c.createBiquadFilter();
+    lp.type='lowpass';lp.frequency.value=380;g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(.16,t+.5);
+    const o1=c.createOscillator(),o2=c.createOscillator(),lfo=c.createOscillator(),lg=c.createGain();
+    o1.type='sawtooth';o1.frequency.value=65.41;o2.type='sawtooth';o2.frequency.value=98;
+    lfo.frequency.value=2.2;lg.gain.value=.07;lfo.connect(lg);lg.connect(g.gain);
+    o1.connect(lp);o2.connect(lp);lp.connect(g);g.connect(this.master);
+    [o1,o2,lfo].forEach(o=>o.start(t));this.drone={g,nodes:[o1,o2,lfo]};
+  },
+  droneStop(){
+    if(!this.drone||!this.ctx)return;const d=this.drone;this.drone=null;const t=this.ctx.currentTime;
+    try{d.g.gain.cancelScheduledValues(t);d.g.gain.setValueAtTime(Math.max(d.g.gain.value,.0001),t);d.g.gain.exponentialRampToValueAtTime(.0001,t+.15);}catch(e){}
+    d.nodes.forEach(n=>{try{n.stop(t+.2);}catch(e){}});
+  }
+};
+
+/* ====== Fragenauswahl ====== */
+function pickBuiltin(level,sel,used,seen){
+  let c=POOL.filter(q=>!used.has(q.id)&&sel.has(q.code));
+  let ex=c.filter(q=>q.stufe===level);
+  if(!ex.length){const near=c.filter(q=>Math.abs(q.stufe-level)<=2);
+    if(near.length){const m=Math.min(...near.map(q=>Math.abs(q.stufe-level)));ex=near.filter(q=>Math.abs(q.stufe-level)===m);}}
+  if(!ex.length)ex=POOL.filter(q=>!used.has(q.id)&&q.stufe===level);
+  if(!ex.length)return null;
+  const un=ex.filter(q=>!seen.has(q.id));
+  return pick(un.length?un:ex);
+}
+function arrangeCustom(qs,order){
+  const n=Math.min(15,qs.length),lad=ladderFor(n);
+  let lv=qs.filter(q=>q.stufe),un=qs.filter(q=>!q.stufe);
+  if(order==='random'){lv=shuffle(lv);un=shuffle(un);}
+  const out=[];
+  for(let k=0;k<n;k++){
+    const t=lad.levels[k];let best=-1,bd=99;
+    lv.forEach((q,i)=>{const d=Math.abs(q.stufe-t);if(d<bd){bd=d;best=i;}});
+    if(best>=0&&(bd<=2||!un.length))out.push(lv.splice(best,1)[0]);
+    else if(un.length)out.push(un.shift());
+    else if(best>=0)out.push(lv.splice(best,1)[0]);
+  }
+  return {list:out,lad,spare:lv.concat(un)};
+}
+function mkPlay(q,shuf){
+  let order=[0,1,2,3];if(shuf)order=shuffle(order);
+  return {id:q.id,text:q.frage,topic:q.thema||'',level:q.stufe||0,answers:order.map(i=>({t:q.antworten[i],ok:i===q.richtig}))};
+}
+function sourceQuiz(){return S.quizzes.find(q=>q.id===S.source)||null;}
+function buildGame(){
+  const shuf=S.settings.shuffle;
+  if(S.source==='builtin'){
+    const lad=ladderFor(15),used=new Set(),qs=[];
+    for(let k=0;k<15;k++){const q=pickBuiltin(lad.levels[k],S.topics,used,S.seen);if(!q)throw new Error('Nicht genug Fragen im Pool.');used.add(q.id);qs.push(mkPlay(q,shuf));}
+    return {qs,lad,n:15,idx:0,builtin:true,used,spare:[],jokers:{fifty:false,audience:false,phone:false,swap:false},sel:-1,hidden:new Set(),result:null};
+  }
+  const quiz=sourceQuiz();if(!quiz)throw new Error('Quiz nicht gefunden.');
+  const qs=quiz.questions.filter(q=>S.topics.has(q.thema||''));
+  if(qs.length<5)throw new Error('Mit dieser Auswahl bleiben weniger als 5 Fragen übrig.');
+  const a=arrangeCustom(qs,quiz.order||'keep');
+  return {qs:a.list.map(q=>mkPlay(q,shuf)),lad:a.lad,n:a.list.length,idx:0,builtin:false,used:new Set(),spare:a.spare,jokers:{fifty:false,audience:false,phone:false,swap:false},sel:-1,hidden:new Set(),result:null};
+}
+
+/* ====== Overlays ====== */
+const focusStack=[];
+function openOv(id,focusSel){
+  const o=$(id);focusStack.push(document.activeElement);o.hidden=false;
+  const f=(focusSel&&o.querySelector(focusSel))||o.querySelector('button:not([hidden]),input,select,textarea');
+  if(f&&f.focus)f.focus();
+}
+function closeOv(id){
+  const o=$(id);if(o.hidden)return;o.hidden=true;
+  const f=focusStack.pop();if(f&&document.contains(f)&&f.focus&&!f.closest('[hidden]'))f.focus();
+}
+function topOverlay(){const all=$$('.overlay').filter(o=>!o.hidden);return all.length?all[all.length-1]:null;}
+
+/* ====== Spiel: Anzeige ====== */
+function game(){return S.game;}
+function ansBtn(i){return $('#answers .ans[data-i="'+i+'"]');}
+function setBar(...nodes){const b=$('#bar');b.replaceChildren(...nodes);}
+function btn(label,cls,fn){const b=el('button','btn '+(cls||''),label);b.type='button';b.addEventListener('click',fn);return b;}
+function renderLadder(){
+  const g=game(),ol=$('#ladderList');ol.replaceChildren();
+  for(let k=0;k<g.n;k++){
+    const li=el('li');li.append(el('span','n',String(k+1)),el('span','a',fmt(g.lad.amounts[k])));
+    if(g.lad.safe.includes(k+1))li.classList.add('safe');
+    if(k<g.idx)li.classList.add('passed');
+    if(k===g.idx&&!g.over){li.classList.add('now');li.setAttribute('aria-current','step');}
+    ol.append(li);
+  }
+}
+function renderStatus(){
+  const g=game(),s=$('#status');s.replaceChildren();
+  s.append('Frage ',el('b',null,String(g.idx+1)),' von '+g.n+' · ',el('b',null,fmt(g.lad.amounts[g.idx])));
+}
+function swapPossible(){const g=game();return g.builtin||g.spare.length>0;}
+function updateJokers(){
+  const g=game();
+  $$('#jokers .joker').forEach(b=>{
+    const j=b.dataset.j;
+    if(j==='swap'){b.hidden=!S.settings.swap;}
+    const used=g.jokers[j]||(j==='swap'&&!swapPossible());
+    b.classList.toggle('used',!!used);b.disabled=!!used;
+    b.setAttribute('aria-disabled',used?'true':'false');
+    if(j==='swap'&&!g.jokers.swap&&!swapPossible())b.title='Keine Ersatzfrage vorhanden';
+  });
+}
+function showQuestion(){
+  const g=game(),q=g.qs[g.idx];
+  clearTimers();Snd.droneStop();
+  S.phase='question';g.sel=-1;g.hidden=new Set();
+  $('#qtext').textContent=q.text;
+  $('#topic').textContent=(S.settings.topic&&q.topic)?q.topic:'';
+  const r1=$('#arow1'),r2=$('#arow2');r1.replaceChildren();r2.replaceChildren();
+  q.answers.forEach((a,i)=>{
+    const slot=el('div','slot'),b=el('button','hex ans');b.type='button';b.dataset.i=i;
+    b.setAttribute('aria-label','Antwort '+LETTERS[i]+': '+a.t);
+    const inn=el('span','in');inn.append(el('span','letter',LETTERS[i]+':'),el('span','txt',a.t));b.append(inn);
+    b.addEventListener('click',()=>selectAnswer(i));
+    slot.append(b);(i<2?r1:r2).append(slot);
+  });
+  setBar();renderLadder();renderStatus();updateJokers();
+  if(g.builtin){S.seen.add(q.id);store.set('mq.seen.v1',Array.from(S.seen).slice(-400));}
+  live('Frage '+(g.idx+1)+' für '+fmt(g.lad.amounts[g.idx])+': '+q.text+' '+q.answers.map((a,i)=>LETTERS[i]+': '+a.t).join('. '));
+}
+function clearSel(){const g=game();if(g.sel>=0){const b=ansBtn(g.sel);if(b)b.classList.remove('sel','pulse');}g.sel=-1;}
+function selectAnswer(i){
+  const g=game();if(!g||(S.phase!=='question'&&S.phase!=='confirm'))return;
+  if(g.hidden.has(i)||g.sel===i)return;
+  clearSel();g.sel=i;ansBtn(i).classList.add('sel');S.phase='confirm';Snd.init();Snd.select();
+  const q=el('span','q','Ist das die endgültige Antwort?');
+  const yes=btn('Ja','primary',lockAnswer),no=btn('Nein','sec',cancelSelect);
+  setBar(q,yes,no);yes.focus();
+}
+function cancelSelect(){
+  if(S.phase!=='confirm')return;clearSel();S.phase='question';setBar();Snd.click();
+}
+function lockAnswer(){
+  const g=game();if(S.phase!=='confirm')return;
+  S.phase='locked';const b=ansBtn(g.sel);b.classList.add('pulse');setBar();
+  const susp=S.settings.mod?0:Number(S.settings.susp)||0;
+  if(S.settings.mod||susp>0)Snd.droneStart();
+  if(S.settings.mod){const r=btn('Auflösen','primary',reveal);setBar(r);r.focus();}
+  else if(susp>0)later(reveal,susp);else reveal();
+}
+function reveal(){
+  const g=game();if(S.phase!=='locked')return;
+  S.phase='reveal';Snd.droneStop();
+  const q=g.qs[g.idx],ci=q.answers.findIndex(a=>a.ok),ok=g.sel===ci;
+  const cb=ansBtn(ci),sb=ansBtn(g.sel);
+  sb.classList.remove('pulse','sel');
+  $$('#answers .slot').forEach((s,i)=>{if(i!==ci&&i!==g.sel)s.classList.add('dim');});
+  g.result=ok?'ok':'bad';
+  const last=g.idx===g.n-1;
+  if(ok){cb.classList.add('correct','blink');Snd.right();
+    const m=el('span','msg ok',last?'Richtig! Das war die Millionenfrage!':'Richtig! '+fmt(g.lad.amounts[g.idx]));
+    setBar(m,btn(last?'Zum Gewinn':'Weiter','primary',proceed));live('Richtig. '+fmt(g.lad.amounts[g.idx]));}
+  else{sb.classList.add('wrong');cb.classList.add('correct','blink');Snd.wrong();
+    setBar(el('span','msg bad','Leider falsch. Richtig ist '+LETTERS[ci]+'.'),btn('Weiter','primary',proceed));
+    live('Falsch. Richtig ist '+LETTERS[ci]+': '+q.answers[ci].t);}
+  if(!S.settings.mod)later(proceed,ok?(last?2200:3200):3800);
+  else{const b=$('#bar .btn');if(b)b.focus();}
+}
+function proceed(){
+  const g=game();if(!g||S.phase!=='reveal')return;
+  clearTimers();
+  if(g.result==='ok'){if(g.idx===g.n-1)endGame('win');else{g.idx++;showQuestion();}}
+  else endGame('lose');
+}
+function safeAmount(g){let a=0;g.lad.safe.forEach(s=>{if(g.idx>=s)a=g.lad.amounts[s-1];});return a;}
+function askQuit(){
+  const g=game();if(!g||(S.phase!=='question'&&S.phase!=='confirm'))return;
+  const a=g.idx>0?g.lad.amounts[g.idx-1]:0;
+  $('#quit-text').textContent=a>0?'Du nimmst '+fmt(a)+' mit nach Hause und beendest das Spiel.':'Du gehst ohne Gewinn nach Hause und beendest das Spiel.';
+  S.prevPhase=S.phase;S.phase='joker';openOv('#ov-quit','#quitNo');
+}
+function quitNo(){closeOv('#ov-quit');S.phase=S.prevPhase||'question';}
+function quitYes(){closeOv('#ov-quit');endGame('quit');}
+function endGame(kind){
+  const g=game();clearTimers();Snd.droneStop();stopPhone();
+  S.phase='end';g.over=true;
+  const q=g.qs[g.idx],ci=q.answers.findIndex(a=>a.ok);
+  let title,amount,text;
+  if(kind==='win'){title='Herzlichen Glückwunsch!';amount=g.lad.amounts[g.n-1];text=g.n===15?'Du bist Millionär!':'Du hast alle '+g.n+' Fragen richtig beantwortet!';}
+  else if(kind==='quit'){title='Ausgestiegen';amount=g.idx>0?g.lad.amounts[g.idx-1]:0;text='Die richtige Antwort wäre '+LETTERS[ci]+': '+q.answers[ci].t+' gewesen.';}
+  else{title='Leider falsch';amount=safeAmount(g);text='Richtig war '+LETTERS[ci]+': '+q.answers[ci].t+'.';}
+  $('#end-h').textContent=title;$('#end-amount').textContent=fmt(amount);$('#end-text').textContent=text;
+  renderLadder();
+  openOv('#ov-end','#endAgain');
+  live(title+' '+fmt(amount)+'. '+text);
+  if(kind==='win'){Snd.init();Snd.fanfare();confetti();}
+}
+function startGame(){
+  Snd.init();
+  try{S.game=buildGame();}catch(e){toast(e.message);return;}
+  $('#screen-start').hidden=true;$('#screen-game').hidden=false;
+  $('#ov-end').hidden=true;
+  showQuestion();
+}
+function toStart(){
+  clearTimers();Snd.droneStop();stopPhone();stopConfetti();
+  $$('.overlay').forEach(o=>{o.hidden=true;});focusStack.length=0;
+  S.phase='start';S.game=null;
+  $('#screen-game').hidden=true;$('#screen-start').hidden=false;$('#ladder').classList.remove('open');
+  renderStart();window.scrollTo(0,0);
+}
+
+/* ====== Joker ====== */
+function useJoker(name){
+  const g=game();if(!g)return;
+  if(S.phase!=='question'&&S.phase!=='confirm')return;
+  if(g.jokers[name])return;
+  Snd.init();
+  if(name==='fifty')jokerFifty();
+  else if(name==='audience')jokerAudience();
+  else if(name==='phone')jokerPhone();
+  else if(name==='swap')jokerSwap();
+}
+function availIdx(){const g=game();return [0,1,2,3].filter(i=>!g.hidden.has(i));}
+function jokerFifty(){
+  const g=game(),q=g.qs[g.idx],ci=q.answers.findIndex(a=>a.ok);
+  const w=availIdx().filter(i=>i!==ci);if(w.length<2){toast('Es sind nicht mehr genug falsche Antworten übrig.');return;}
+  if(S.phase==='confirm')cancelSelect();
+  shuffle(w).slice(0,2).forEach(i=>{g.hidden.add(i);ansBtn(i).closest('.slot').classList.add('gone');ansBtn(i).tabIndex=-1;});
+  g.jokers.fifty=true;Snd.fifty();updateJokers();live('50:50: Zwei falsche Antworten wurden entfernt.');
+}
+function audienceDist(q,avail,p){
+  const ci=q.answers.findIndex(a=>a.ok),wr=avail.filter(i=>i!==ci);
+  let c=clamp(.88-.5*p+(Math.random()-.5)*.16,.2,.95);
+  const misled=Math.random()<(.03+.25*p*p);
+  const sh={};
+  const wts=wr.map(()=>.3+Math.random()),sw=wts.reduce((a,b)=>a+b,0);
+  if(misled&&wr.length){
+    const di=rnd(wr.length),cs=Math.max(.12,c*.55),ds=Math.min(.7,c+.05),rest=Math.max(0,1-cs-ds);
+    sh[ci]=cs;const ow=wts.filter((_,i)=>i!==di),so=ow.reduce((a,b)=>a+b,0)||1;let k=0;
+    wr.forEach((i,j)=>{if(j===di)sh[i]=ds;else{sh[i]=rest*ow[k++]/so;}});
+  }else{sh[ci]=c;wr.forEach((i,j)=>{sh[i]=(1-c)*wts[j]/sw;});}
+  const tot=avail.reduce((a,i)=>a+sh[i],0);
+  const raw=avail.map(i=>({i,v:sh[i]/tot*100}));
+  const out={};let sum=0;raw.forEach(r=>{out[r.i]=Math.floor(r.v);sum+=out[r.i];});
+  raw.sort((a,b)=>(b.v-Math.floor(b.v))-(a.v-Math.floor(a.v)));
+  for(let k=0;sum<100;k=(k+1)%raw.length){out[raw[k].i]++;sum++;}
+  return out;
+}
+function jokerAudience(){
+  const g=game(),q=g.qs[g.idx];
+  if(S.phase==='confirm')cancelSelect();
+  g.jokers.audience=true;updateJokers();
+  const p=g.n>1?g.idx/(g.n-1):0,avail=availIdx(),d=audienceDist(q,avail,p);
+  $('#aud-q').textContent=q.text;
+  const bars=$('#aud-bars');bars.replaceChildren();const cols=[];
+  for(let i=0;i<4;i++){
+    const on=avail.includes(i),c=el('div','bcol'+(on?'':' off'));
+    const pct=el('div','pct',on?'0 %':'–'),col=el('div','col'),lt=el('div','lt',LETTERS[i]),at=el('div','at',q.answers[i].t);
+    c.append(pct,col,lt,at);bars.append(c);if(on)cols.push({i,col,pct});
+  }
+  S.prevPhase=S.phase==='confirm'?'question':S.phase;S.phase='joker';
+  openOv('#ov-audience','#audClose');Snd.sweep();
+  setTimeout(()=>{cols.forEach(({i,col,pct})=>{col.style.height=Math.max(2,d[i]*1.5)+'px';
+    const t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/1400);pct.textContent=Math.round(d[i]*k)+' %';if(k<1)requestAnimationFrame(step);})(t0);});},120);
+  live('Publikumsjoker: '+avail.map(i=>LETTERS[i]+' '+d[i]+' Prozent').join(', '));
+}
+function closeAudience(){closeOv('#ov-audience');S.phase='question';}
+
+let phoneIv=0,phoneT=[];
+function stopPhone(){clearInterval(phoneIv);phoneT.forEach(clearTimeout);phoneT=[];}
+function jokerPhone(){
+  const g=game(),q=g.qs[g.idx];
+  if(S.phase==='confirm')cancelSelect();
+  g.jokers.phone=true;updateJokers();
+  const p=g.n>1?g.idx/(g.n-1):0,avail=availIdx(),ci=q.answers.findIndex(a=>a.ok);
+  const acc=clamp(.93-.62*p+(Math.random()-.5)*.1,.22,.96),knows=Math.random()<acc;
+  const wr=avail.filter(i=>i!==ci),ans=(knows||!wr.length)?ci:pick(wr);
+  let conf=knows?clamp(90-45*p+rnd(11)-5,50,98):clamp(75-35*p+rnd(21)-10,35,90);conf=Math.round(conf/5)*5;
+  const L=LETTERS[ans],T=q.answers[ans].t;
+  let msg;
+  if(conf>=90)msg='Das weiß ich! Es ist '+L+': '+T+'. Ich bin mir zu '+conf+' % sicher.';
+  else if(conf>=70)msg='Ich würde '+L+' sagen: '+T+'. Ich bin mir zu etwa '+conf+' % sicher.';
+  else if(conf>=50)msg='Hm, schwierig. Ich tippe auf '+L+': '+T+', bin mir aber nur zu '+conf+' % sicher.';
+  else msg='Puh, keine Ahnung. Wenn ich raten muss: '+L+': '+T+'. Vielleicht '+conf+' %.';
+  const name=pick(FRIENDS);
+  $('#ph-q').textContent=q.text;
+  const bub=$('#ph-bubble');bub.replaceChildren('Anruf bei ',el('b',null,name),' …');
+  const secEl=$('#ph-sec'),ring=$('#ph-count');let sec=30;secEl.textContent='30';ring.style.setProperty('--p',100);
+  $('#phClose').textContent='Auflegen';
+  S.prevPhase='question';S.phase='joker';openOv('#ov-phone','#phClose');Snd.ring();
+  stopPhone();
+  let answered=false;
+  phoneT.push(setTimeout(()=>{answered=true;bub.replaceChildren(el('b',null,name+': '),msg);live('Telefonjoker, '+name+': '+msg);},4500));
+  phoneIv=setInterval(()=>{
+    sec--;secEl.textContent=String(Math.max(0,sec));ring.style.setProperty('--p',Math.max(0,sec)/30*100);
+    if(sec<=10&&sec>0)Snd.tick();
+    if(sec<=0){clearInterval(phoneIv);Snd.wrong();$('#phClose').textContent='Schließen';
+      if(!answered)bub.replaceChildren('Die Verbindung wurde getrennt.');}
+  },1000);
+}
+function closePhone(){stopPhone();closeOv('#ov-phone');S.phase='question';}
+function jokerSwap(){
+  const g=game(),cur=g.qs[g.idx];
+  let nq=null;
+  if(g.builtin){const lvl=cur.level;const used=new Set(g.used);nq=pickBuiltin(lvl,S.topics,used,S.seen);if(nq)g.used.add(nq.id);}
+  else if(g.spare.length){const t=g.lad.levels[g.idx];let bi=0,bd=99;g.spare.forEach((q,i)=>{const d=q.stufe?Math.abs(q.stufe-t):1.5;if(d<bd){bd=d;bi=i;}});nq=g.spare.splice(bi,1)[0];}
+  if(!nq){toast('Es gibt keine Ersatzfrage mehr.');return;}
+  if(S.phase==='confirm')cancelSelect();
+  g.jokers.swap=true;g.qs[g.idx]=mkPlay(nq,S.settings.shuffle);
+  Snd.sweep();showQuestion();live('Austauschjoker: neue Frage.');
+}
+
+/* ====== Konfetti ====== */
+let confettiRaf=0;
+function stopConfetti(){cancelAnimationFrame(confettiRaf);const c=$('#confetti');c.hidden=true;}
+function confetti(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cv=$('#confetti');cv.hidden=false;
+  const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;
+  const ctx=cv.getContext('2d');if(!ctx)return;ctx.scale(dpr,dpr);
+  const cols=['#f6c94c','#ffffff','#f28c1c','#4f7bff','#3bd873','#ff6a60'];
+  const ps=Array.from({length:170},()=>({x:Math.random()*innerWidth,y:-20-Math.random()*innerHeight*.8,w:6+Math.random()*7,h:9+Math.random()*9,
+    vx:(Math.random()-.5)*2.2,vy:2+Math.random()*3.5,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:pick(cols)}));
+  const t0=performance.now();
+  (function frame(t){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});
+    if(t-t0<7500)confettiRaf=requestAnimationFrame(frame);else stopConfetti();
+  })(t0);
+}
+
+/* ====== Startbildschirm ====== */
+function topicKeys(){
+  if(S.source==='builtin')return Object.keys(TOPICS).map(c=>({key:c,label:TOPICS[c],count:POOL.filter(q=>q.code===c).length}));
+  const quiz=sourceQuiz(),m=new Map();
+  quiz.questions.forEach(q=>{const k=q.thema||'';m.set(k,(m.get(k)||0)+1);});
+  return Array.from(m,([k,c])=>({key:k,label:k||'Ohne Thema',count:c}));
+}
+function resetTopics(){S.topics=new Set(topicKeys().map(t=>t.key));}
+function setSource(id){S.source=id;resetTopics();renderStart();}
+function renderSources(){
+  const list=$('#srcList');list.replaceChildren();
+  const mk=(id,title,sub)=>{
+    const b=el('button','chip');b.type='button';b.setAttribute('role','radio');b.setAttribute('aria-checked',S.source===id?'true':'false');
+    b.append(el('span',null,title),el('small',null,sub));b.addEventListener('click',()=>{Snd.init();Snd.click();setSource(id);});return b;
+  };
+  const bi=el('div');bi.style.flex='1 1 220px';bi.append(mk('builtin','Eingebauter Fragenpool',POOL.length+' Fragen'));bi.firstChild.style.width='100%';list.append(bi);
+  S.quizzes.forEach(q=>{
+    const box=el('div');box.style.cssText='flex:1 1 220px;display:grid;gap:6px';
+    const c=mk(q.id,q.titel,q.questions.length+' Fragen');c.style.width='100%';
+    const tools=el('div','chips');tools.style.gap='6px';
+    const ren=el('button','mini','Umbenennen');ren.type='button';
+    const exp=el('button','mini','Exportieren');exp.type='button';
+    const ord=el('button','mini','Reihenfolge: '+(q.order==='random'?'zufällig':'wie importiert'));ord.type='button';
+    const del=el('button','mini danger','Löschen');del.type='button';
+    ren.addEventListener('click',()=>startRename(q,box));
+    exp.addEventListener('click',()=>showText({title:'Quiz exportieren',text:quizToJSON(q),filename:slug(q.titel)+'.json',note:'Diesen Text kannst du als .json-Datei speichern und später wieder importieren.'}));
+    ord.addEventListener('click',()=>{q.order=q.order==='random'?'keep':'random';saveQuizzes();renderStart();});
+    let armed=0;del.addEventListener('click',()=>{
+      if(!armed){armed=1;del.textContent='Wirklich löschen?';setTimeout(()=>{armed=0;del.textContent='Löschen';},3000);return;}
+      S.quizzes=S.quizzes.filter(x=>x.id!==q.id);saveQuizzes();if(S.source===q.id){S.source='builtin';resetTopics();}renderStart();toast('Quiz gelöscht.');
+    });
+    tools.append(ren,exp,ord,del);box.append(c,tools);list.append(box);
+  });
+}
+function startRename(q,box){
+  box.replaceChildren();const inp=el('input');inp.type='text';inp.value=q.titel;inp.maxLength=80;inp.setAttribute('aria-label','Neuer Name');
+  const ok=el('button','mini','Speichern');ok.type='button';const no=el('button','mini','Abbrechen');no.type='button';
+  const go=()=>{const v=inp.value.trim();if(v){q.titel=v.slice(0,80);saveQuizzes();}renderStart();};
+  ok.addEventListener('click',go);no.addEventListener('click',renderStart);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go();}});
+  const row=el('div','chips');row.append(ok,no);box.append(inp,row);inp.focus();inp.select();
+}
+function renderTopics(){
+  const keys=topicKeys(),card=$('#topicCard'),chips=$('#topicChips');
+  card.hidden=S.source!=='builtin'&&keys.length<2;
+  chips.replaceChildren();
+  keys.forEach(t=>{
+    const b=el('button','chip');b.type='button';b.setAttribute('aria-pressed',S.topics.has(t.key)?'true':'false');
+    b.append(el('span',null,t.label),el('small',null,String(t.count)));
+    b.addEventListener('click',()=>{Snd.init();Snd.click();if(S.topics.has(t.key))S.topics.delete(t.key);else S.topics.add(t.key);renderStart();});
+    chips.append(b);
+  });
+}
+function renderStart(){
+  if(S.source!=='builtin'&&!sourceQuiz())S.source='builtin';
+  renderSources();renderTopics();
+  const start=$('#btnStart'),srcNote=$('#srcNote'),tn=$('#topicNote');let ok=true;
+  if(S.source==='builtin'){
+    const avail=POOL.filter(q=>S.topics.has(q.code)).length;
+    srcNote.textContent=POOL.length+' Fragen in '+Object.keys(TOPICS).length+' Themenbereichen, mit je 10 Fragen pro Stufe der Gewinnleiter.';
+    if(!S.topics.size){tn.textContent='Wähle mindestens einen Themenbereich aus.';ok=false;}
+    else if(avail<15)tn.textContent='Mit dieser Auswahl gibt es nur '+avail+' Fragen. Fehlende Stufen werden mit Fragen aus anderen Themen aufgefüllt.';
+    else tn.textContent=avail+' Fragen im Pool. Pro Spiel werden 15 davon zufällig gezogen.';
+  }else{
+    const quiz=sourceQuiz(),n=quiz.questions.filter(q=>S.topics.has(q.thema||'')).length;
+    const lev=quiz.questions.filter(q=>q.stufe).length;
+    srcNote.textContent='„'+quiz.titel+'“: '+quiz.questions.length+' Fragen'+(lev?', davon '+lev+' mit Stufenangabe':', ohne Stufenangabe (gleichmäßig auf die Leiter verteilt)')+'.';
+    if(n<5){tn.textContent='Mit dieser Auswahl bleiben weniger als 5 Fragen übrig.';ok=false;}
+    else tn.textContent=n+' Fragen gewählt. Die Gewinnleiter hat '+Math.min(15,n)+' Stufen.';
+  }
+  start.disabled=!ok;
+}
+
+/* ====== Einstellungen ====== */
+function applySettings(){
+  const r=document.documentElement;r.classList.remove('t-l','t-xl');if(S.settings.size)r.classList.add(S.settings.size);
+  const b=$('#btnSound');b.setAttribute('aria-pressed',S.settings.sound?'true':'false');$('#sndWave').style.opacity=S.settings.sound?1:.15;
+  if(S.game)updateJokers();
+}
+function syncSettingsUI(){
+  $('#s-sound').checked=!!S.settings.sound;$('#s-shuffle').checked=!!S.settings.shuffle;$('#s-swap').checked=!!S.settings.swap;
+  $('#s-mod').checked=!!S.settings.mod;$('#s-topic').checked=!!S.settings.topic;$('#s-susp').value=String(S.settings.susp);$('#s-size').value=S.settings.size||'';
+}
+function openSettings(){
+  if(S.game&&(S.phase==='locked'||S.phase==='reveal'||S.phase==='end'))return;
+  syncSettingsUI();openOv('#ov-settings','#setClose');
+}
+function bindSettings(){
+  const on=(id,key,conv)=>$(id).addEventListener('change',e=>{
+    S.settings[key]=conv?conv(e.target):e.target.checked;saveSettings();applySettings();
+    if(key==='sound'&&!S.settings.sound)Snd.droneStop();
+    if(key==='topic'&&S.game){const q=S.game.qs[S.game.idx];$('#topic').textContent=(S.settings.topic&&q.topic)?q.topic:'';}
+  });
+  on('#s-sound','sound');on('#s-shuffle','shuffle');on('#s-swap','swap');on('#s-mod','mod');on('#s-topic','topic');
+  on('#s-susp','susp',t=>Number(t.value));on('#s-size','size',t=>t.value);
+  $('#s-reset').addEventListener('click',()=>{S.seen=new Set();store.set('mq.seen.v1',[]);toast('Fragenverlauf zurückgesetzt.');});
+  $('#setClose').addEventListener('click',()=>closeOv('#ov-settings'));
+}
+
+/* ====== Dateien: Download, Kopieren ====== */
+async function downloadFile(name,text){
+  try{
+    const bl=new Blob([text],{type:'text/plain;charset=utf-8'}),u=URL.createObjectURL(bl),a=document.createElement('a');
+    a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);
+    toast('Download gestartet. Falls nichts passiert: Text kopieren und als Datei speichern.');
+  }catch(e){toast('Download nicht möglich. Bitte den Text kopieren.');}
+}
+async function copyText(text,ta){
+  try{await navigator.clipboard.writeText(text);toast('In die Zwischenablage kopiert.');return;}catch(e){}
+  try{ta.focus();ta.select();document.execCommand('copy');toast('Kopiert.');}catch(e){toast('Bitte den Text markieren und selbst kopieren.');}
+}
+const slug=s=>(String(s||'quiz').toLowerCase().replace(/[^a-z0-9äöüß]+/gi,'-').replace(/^-+|-+$/g,'')||'quiz');
+let txState=null;
+function showText(o){
+  txState=o;$('#tx-h').textContent=o.title;$('#tx-note').textContent=o.note||'';
+  const sw=$('#tx-switch');sw.hidden=!o.formats;
+  if(o.formats){$$('#tx-switch .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.fmt===o.fmt?'true':'false'));}
+  $('#tx-area').value=o.text;openOv('#ov-text','#txClose');
+}
+function quizToJSON(q){
+  return JSON.stringify({titel:q.titel,fragen:q.questions.map(x=>{const o={frage:x.frage,antworten:x.antworten,richtig:x.richtig};if(x.stufe)o.stufe=x.stufe;if(x.thema)o.thema=x.thema;return o;})},null,2);
+}
+const TPL_JSON=JSON.stringify({titel:'Mein Quiz',fragen:[
+  {frage:'Wie heißt die Hauptstadt von Frankreich?',antworten:['Berlin','Paris','Rom','Madrid'],richtig:1,stufe:1,thema:'Geografie'},
+  {frage:'Wie viele Minuten hat eine Stunde?',antworten:['50','60','90','100'],richtig:1,stufe:2,thema:'Allgemeinwissen'},
+  {frage:'Welches Gas atmen Pflanzen bei der Fotosynthese auf?',antworten:['Sauerstoff','Stickstoff','Kohlenstoffdioxid','Helium'],richtig:2,thema:'Biologie'}
+]},null,2);
+const TPL_CSV='frage;A;B;C;D;richtig;stufe;thema\n'+
+  'Wie heißt die Hauptstadt von Frankreich?;Berlin;Paris;Rom;Madrid;B;1;Geografie\n'+
+  'Wie viele Minuten hat eine Stunde?;50;60;90;100;B;2;Allgemeinwissen\n'+
+  '"Welches Gas atmen Pflanzen bei der Fotosynthese auf?";Sauerstoff;Stickstoff;Kohlenstoffdioxid;Helium;C;;Biologie\n';
+function showTemplate(fmtName){
+  const f=fmtName||'json';
+  showText({title:'Vorlage',fmt:f,formats:true,text:f==='json'?TPL_JSON:TPL_CSV,filename:f==='json'?'quiz-vorlage.json':'quiz-vorlage.csv',
+    note:'Beim CSV trennt ein Semikolon die Spalten, „richtig“ ist A, B, C oder D. Stufe und Thema dürfen leer bleiben.'});
+}
+
+/* ====== Import: Parser ====== */
+function normQ(r,label,errors){
+  if(!r||typeof r!=='object'||Array.isArray(r)){errors.push(label+': Der Eintrag ist keine Frage.');return null;}
+  const errs=[];
+  const frage=String(r.frage!=null?r.frage:(r.question!=null?r.question:'')).trim();
+  if(!frage)errs.push('Die Frage fehlt oder ist leer.');
+  let ans=r.antworten!=null?r.antworten:r.answers;
+  if(!Array.isArray(ans)){errs.push('Die Liste „antworten“ fehlt.');ans=null;}
+  else{
+    ans=ans.map(a=>String(a==null?'':a).trim());
+    if(ans.length<4)errs.push('Nur '+ans.length+' Antworten, erforderlich sind genau 4.');
+    else if(ans.length>4)errs.push(ans.length+' Antworten angegeben, erforderlich sind genau 4.');
+    if(ans.some(a=>!a))errs.push('Mindestens eine Antwort ist leer.');
+    const low=ans.map(a=>a.toLowerCase());if(new Set(low).size<low.length)errs.push('Es gibt doppelte Antworten.');
+  }
+  let ri=r.richtig!=null?r.richtig:r.correct;
+  if(typeof ri==='string'){const t=ri.trim().toUpperCase();if(/^[A-D]$/.test(t))ri=t.charCodeAt(0)-65;else if(/^\d+$/.test(t))ri=Number(t);}
+  if(!Number.isInteger(ri)||ri<0||ri>3)errs.push('„richtig“ muss 0 bis 3 (oder A bis D) sein.');
+  let st=r.stufe!=null?r.stufe:r.level,stufe=null;
+  if(st!=null&&String(st).trim()!==''){const n=Number(st);if(Number.isInteger(n)&&n>=1&&n<=15)stufe=n;else errs.push('„stufe“ muss eine ganze Zahl von 1 bis 15 sein.');}
+  const thema=String(r.thema!=null?r.thema:(r.topic!=null?r.topic:'')).trim().slice(0,60);
+  if(errs.length){errors.push(label+': '+errs.join(' '));return null;}
+  return {frage,antworten:ans,richtig:ri,stufe,thema};
+}
+function parseJSONText(text){
+  const errors=[],out=[];let data;
+  try{data=JSON.parse(text);}catch(e){return {title:'',questions:[],errors:['Das JSON ist ungültig: '+e.message]};}
+  const arr=Array.isArray(data)?data:(data&&(data.fragen||data.questions));
+  if(!Array.isArray(arr))return {title:'',questions:[],errors:['Im JSON fehlt die Liste „fragen“.']};
+  arr.forEach((r,i)=>{const q=normQ(r,'Frage '+(i+1),errors);if(q)out.push(q);});
+  return {title:String((!Array.isArray(data)&&(data.titel||data.title))||'').slice(0,80),questions:out,errors};
+}
+function csvRows(t,d){
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"'&&f==='')q=true;
+    else if(c===d){row.push(f);f='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';rows.push(row);row=[];}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+function parseCSVText(text){
+  const first=text.split(/\r?\n/,1)[0]||'';
+  const cnt=ch=>first.split(ch).length-1;
+  const d=cnt(';')>=cnt(',')&&cnt(';')>=cnt('\t')?';':(cnt('\t')>cnt(',')?'\t':',');
+  let rows=csvRows(text,d);const errors=[],out=[];
+  let off=1;
+  if(rows.length&&/^(frage|question)$/i.test(rows[0][0].trim())){rows=rows.slice(1);off=2;}
+  rows.forEach((r,i)=>{
+    const label='Zeile '+(i+off);
+    if(r.length<6){errors.push(label+': Es fehlen Spalten (erwartet: frage;A;B;C;D;richtig;stufe;thema).');return;}
+    const q=normQ({frage:r[0],antworten:[r[1],r[2],r[3],r[4]],richtig:r[5],stufe:r[6],thema:r[7]},label,errors);if(q)out.push(q);
+  });
+  if(!rows.length)errors.push('Die CSV enthält keine Fragen.');
+  return {title:'',questions:out,errors};
+}
+function parseAny(text){
+  const t=String(text||'').replace(/^﻿/,'').trim();
+  if(!t)return {title:'',questions:[],errors:['Es wurde kein Inhalt gefunden.']};
+  return (t[0]==='{'||t[0]==='[')?parseJSONText(t):parseCSVText(t);
+}
+
+/* ====== Import: Oberfläche ====== */
+const imp={tab:'file',fileText:null,fileName:'',draft:[],result:null,order:'keep'};
+function impTab(name){
+  imp.tab=name;
+  $$('#imp-step1 [data-tab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===name?'true':'false'));
+  ['file','text','form'].forEach(n=>{$('#tab-'+n).hidden=n!==name;});
+  impErrors([]);
+}
+function impErrors(list){
+  const box=$('#imp-errs');box.replaceChildren();box.hidden=!list.length;if(!list.length)return;
+  box.append(el('strong',null,list.length===1?'Es gibt ein Problem:':'Es gibt '+list.length+' Probleme:'));
+  const ul=el('ul');list.slice(0,12).forEach(m=>ul.append(el('li',null,m)));
+  if(list.length>12)ul.append(el('li',null,'… und '+(list.length-12)+' weitere.'));box.append(ul);
+}
+function openImport(){
+  imp.result=null;$('#imp-step1').hidden=false;$('#imp-step2').hidden=true;impTab(imp.tab);renderDraft();openOv('#ov-import','#impCheck');
+}
+function buildForm(){
+  const wrap=$('#fAns');wrap.replaceChildren();
+  LETTERS.forEach((L,i)=>{
+    const row=el('div','ansrow'),r=el('input');r.type='radio';r.name='fRight';r.value=String(i);r.id='fR'+i;r.setAttribute('aria-label','Antwort '+L+' ist richtig');if(i===0)r.checked=true;
+    const t=el('input');t.type='text';t.id='fA'+i;t.maxLength=200;t.placeholder='Antwort '+L;t.setAttribute('aria-label','Antwort '+L);
+    row.append(r,t);wrap.append(row);
+  });
+  const sel=$('#fLevel');sel.replaceChildren();
+  const o0=el('option',null,'Automatisch');o0.value='';sel.append(o0);
+  for(let i=1;i<=15;i++){const o=el('option',null,i+' ('+fmt(AMOUNTS[i-1])+')');o.value=String(i);sel.append(o);}
+}
+function renderDraft(){
+  const ul=$('#fList');ul.replaceChildren();
+  imp.draft.forEach((q,i)=>{
+    const li=el('li');li.append(el('span',null,(i+1)+'. '+q.frage));
+    const m=el('span','meta','Richtig: '+LETTERS[q.richtig]+': '+q.antworten[q.richtig]+(q.stufe?' · Stufe '+q.stufe:'')+(q.thema?' · '+q.thema:''));
+    const d=el('button','mini','Entfernen');d.type='button';d.style.justifySelf='start';
+    d.addEventListener('click',()=>{imp.draft.splice(i,1);renderDraft();});
+    li.append(m,d);ul.append(li);
+  });
+}
+function addDraft(){
+  const errors=[];
+  const q=normQ({frage:$('#fQ').value,antworten:[0,1,2,3].map(i=>$('#fA'+i).value),richtig:(document.querySelector('input[name="fRight"]:checked')||{value:0}).value,stufe:$('#fLevel').value,thema:$('#fTopic').value},'Die Frage',errors);
+  if(!q){impErrors(errors);return;}
+  impErrors([]);imp.draft.push(q);renderDraft();
+  $('#fQ').value='';[0,1,2,3].forEach(i=>{$('#fA'+i).value='';});$('#fR0').checked=true;$('#fQ').focus();
+}
+function readFile(file){
+  imp.fileText=null;imp.fileName=file.name;$('#impFileName').textContent='Wird gelesen …';
+  const fr=new FileReader();
+  fr.onload=()=>{
+    const buf=fr.result;let text;
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf);}
+    catch(e){try{text=new TextDecoder('windows-1252').decode(buf);}catch(e2){text=null;}}
+    if(text==null){$('#impFileName').textContent='Die Datei konnte nicht gelesen werden.';return;}
+    imp.fileText=text;$('#impFileName').textContent=file.name+' ('+Math.max(1,Math.round(buf.byteLength/1024))+' KB) bereit zum Prüfen.';
+  };
+  fr.onerror=()=>{$('#impFileName').textContent='Die Datei konnte nicht gelesen werden.';};
+  fr.readAsArrayBuffer(file);
+}
+function checkImport(){
+  let res;
+  if(imp.tab==='file'){
+    if(imp.fileText==null){impErrors(['Bitte zuerst eine Datei auswählen.']);return;}
+    res=parseAny(imp.fileText);if(!res.title&&imp.fileName)res.title=imp.fileName.replace(/\.[^.]+$/,'');
+  }else if(imp.tab==='text'){res=parseAny($('#impText').value);}
+  else{
+    if(!imp.draft.length){impErrors(['Bitte zuerst mindestens eine Frage hinzufügen.']);return;}
+    res={title:'',questions:imp.draft.slice(),errors:[]};
+  }
+  if(!res.questions.length){impErrors(res.errors.length?res.errors:['Es wurden keine gültigen Fragen gefunden.']);return;}
+  impErrors([]);imp.result=res;showPreview();
+}
+function showPreview(){
+  const res=imp.result;$('#imp-step1').hidden=true;$('#imp-step2').hidden=false;
+  $('#impTitle').value=res.title||'Mein Quiz';imp.order='keep';
+  $$('#imp-step2 [data-ord]').forEach(b=>b.setAttribute('aria-checked',b.dataset.ord==='keep'?'true':'false'));
+  const warn=$('#imp-warn');warn.replaceChildren();warn.hidden=!res.errors.length;
+  if(res.errors.length){
+    warn.append(el('strong',null,res.errors.length+' Einträge werden übersprungen:'));
+    const ul=el('ul');res.errors.slice(0,8).forEach(m=>ul.append(el('li',null,m)));
+    if(res.errors.length>8)ul.append(el('li',null,'… und '+(res.errors.length-8)+' weitere.'));warn.append(ul);
+  }
+  const n=res.questions.length,lev=res.questions.filter(q=>q.stufe).length;
+  const sum=$('#impSummary');
+  sum.textContent=n<5?'Nur '+n+' gültige Fragen. Für ein Spiel sind mindestens 5 nötig.':
+    n+' gültige Fragen'+(lev?', '+lev+' mit Stufe':', ohne Stufenangabe')+'. Das Spiel hat '+Math.min(15,n)+' Stufen.';
+  $('#impSave').disabled=n<5;$('#impPlay').disabled=n<5;
+  const ul=$('#impPrev');ul.replaceChildren();
+  res.questions.forEach((q,i)=>{
+    const li=el('li');li.append(el('span',null,(i+1)+'. '+q.frage));
+    li.append(el('span','meta',q.antworten.map((a,k)=>LETTERS[k]+': '+a+(k===q.richtig?' ✓':'')).join('  ·  ')+(q.stufe?'  ·  Stufe '+q.stufe:'')+(q.thema?'  ·  '+q.thema:'')));
+    ul.append(li);
+  });
+}
+function saveImport(){
+  const res=imp.result;if(!res||res.questions.length<5)return null;
+  const id='q'+Date.now().toString(36)+rnd(1296).toString(36);
+  const quiz={id,titel:($('#impTitle').value.trim()||'Mein Quiz').slice(0,80),order:imp.order,created:Date.now(),
+    questions:res.questions.map((q,i)=>({id:id+'-'+i,frage:q.frage,antworten:q.antworten,richtig:q.richtig,stufe:q.stufe,thema:q.thema}))};
+  S.quizzes.push(quiz);
+  if(!store.set('mq.quizzes.v1',S.quizzes))toast('Speichern im Browser ist nicht möglich. Das Quiz bleibt nur bis zum Schließen der Seite verfügbar.');
+  imp.draft=[];imp.fileText=null;imp.fileName='';
+  return quiz;
+}
+function bindImport(){
+  buildForm();
+  $('#btnImport').addEventListener('click',()=>{Snd.init();Snd.click();openImport();});
+  $$('#imp-step1 [data-tab]').forEach(b=>b.addEventListener('click',()=>impTab(b.dataset.tab)));
+  $('#impFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)readFile(f);});
+  $('#fillJson').addEventListener('click',()=>{$('#impText').value=TPL_JSON;});
+  $('#fillCsv').addEventListener('click',()=>{$('#impText').value=TPL_CSV;});
+  $('#fAdd').addEventListener('click',addDraft);
+  $('#impTemplate').addEventListener('click',()=>showTemplate('json'));
+  $('#impCancel').addEventListener('click',()=>closeOv('#ov-import'));
+  $('#impCheck').addEventListener('click',checkImport);
+  $$('#imp-step2 [data-ord]').forEach(b=>b.addEventListener('click',()=>{imp.order=b.dataset.ord;
+    $$('#imp-step2 [data-ord]').forEach(x=>x.setAttribute('aria-checked',x===b?'true':'false'));}));
+  $('#impBack').addEventListener('click',()=>{$('#imp-step2').hidden=true;$('#imp-step1').hidden=false;});
+  $('#impSave').addEventListener('click',()=>{const q=saveImport();if(q){closeOv('#ov-import');S.source=q.id;resetTopics();renderStart();toast('Quiz gespeichert.');}});
+  $('#impPlay').addEventListener('click',()=>{const q=saveImport();if(q){closeOv('#ov-import');S.source=q.id;resetTopics();renderStart();startGame();}});
+  $$('#tx-switch .chip').forEach(b=>b.addEventListener('click',()=>{if(txState&&txState.formats)showTemplateKeep(b.dataset.fmt);}));
+  $('#txCopy').addEventListener('click',()=>copyText($('#tx-area').value,$('#tx-area')));
+  $('#txDl').addEventListener('click',()=>{if(txState)downloadFile(txState.filename,$('#tx-area').value);});
+  $('#txClose').addEventListener('click',()=>closeOv('#ov-text'));
+}
+function showTemplateKeep(f){
+  txState.fmt=f;txState.text=f==='json'?TPL_JSON:TPL_CSV;txState.filename=f==='json'?'quiz-vorlage.json':'quiz-vorlage.csv';
+  $('#tx-area').value=txState.text;$$('#tx-switch .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.fmt===f?'true':'false'));
+}
+
+/* ====== Steuerung ====== */
+let homeArmed=0,homeT=0;
+function bindGame(){
+  $$('#jokers .joker').forEach(b=>b.addEventListener('click',()=>useJoker(b.dataset.j)));
+  $('#btnQuit').addEventListener('click',askQuit);
+  $('#quitYes').addEventListener('click',quitYes);$('#quitNo').addEventListener('click',quitNo);
+  $('#audClose').addEventListener('click',closeAudience);$('#phClose').addEventListener('click',closePhone);
+  $('#btnLadder').addEventListener('click',()=>{$('#ladder').classList.toggle('open');});
+  $('#ladderClose').addEventListener('click',()=>$('#ladder').classList.remove('open'));
+  $('#btnSound').addEventListener('click',()=>{S.settings.sound=!S.settings.sound;saveSettings();Snd.init();if(!S.settings.sound)Snd.droneStop();applySettings();Snd.click();});
+  $('#btnGameSettings').addEventListener('click',openSettings);
+  $('#btnHome').addEventListener('click',()=>{
+    const b=$('#btnHome');
+    if(!homeArmed){homeArmed=1;b.style.background='var(--red-deep)';toast('Noch einmal tippen, um zum Start zurückzukehren.');
+      clearTimeout(homeT);homeT=setTimeout(()=>{homeArmed=0;b.style.background='';},3000);return;}
+    homeArmed=0;b.style.background='';toStart();
+  });
+  $('#endAgain').addEventListener('click',()=>{closeOv('#ov-end');stopConfetti();startGame();});
+  $('#endHome').addEventListener('click',()=>{stopConfetti();toStart();});
+  $('#btnStart').addEventListener('click',startGame);
+  $('#btnSettings').addEventListener('click',()=>{Snd.init();Snd.click();openSettings();});
+  $('#topicAll').addEventListener('click',()=>{resetTopics();renderStart();});
+  $('#topicNone').addEventListener('click',()=>{S.topics=new Set();S.topicsTouched=true;renderStart();});
+}
+function escOverlay(o){
+  const id=o.id;
+  if(id==='ov-quit')quitNo();else if(id==='ov-audience')closeAudience();else if(id==='ov-phone')closePhone();
+  else if(id==='ov-end'){}else closeOv('#'+id);
+}
+document.addEventListener('keydown',e=>{
+  if(e.altKey||e.ctrlKey||e.metaKey)return;
+  const top=topOverlay();
+  if(e.key==='Tab'&&top){
+    const f=Array.from(top.querySelectorAll('button:not([disabled]):not([hidden]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])')).filter(x=>x.offsetParent!==null);
+    if(f.length){const first=f[0],last=f[f.length-1];
+      if(e.shiftKey&&(document.activeElement===first||!top.contains(document.activeElement))){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&(document.activeElement===last||!top.contains(document.activeElement))){e.preventDefault();first.focus();}}
+    return;
+  }
+  if(e.key==='Escape'){
+    if(top){e.preventDefault();escOverlay(top);return;}
+    if(S.phase==='confirm'){cancelSelect();return;}
+    $('#ladder').classList.remove('open');return;
+  }
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select')return;
+  if(top||!S.game||$('#screen-game').hidden)return;
+  const k=e.key.length===1?e.key.toUpperCase():'';
+  if(k&&'ABCD'.indexOf(k)>=0){e.preventDefault();selectAnswer(LETTERS.indexOf(k));return;}
+  if(e.key==='Enter'||e.key===' '){
+    if(S.phase==='confirm'){
+      if(document.activeElement&&document.activeElement.closest('#bar'))return;
+      e.preventDefault();lockAnswer();
+    }else if(S.phase==='locked'&&S.settings.mod){e.preventDefault();reveal();}
+    else if(S.phase==='reveal'&&S.settings.mod){e.preventDefault();proceed();}
+  }
+});
+
+/* ====== Start ====== */
+function init(){
+  $('#gameTitle').textContent=GAME_TITLE;document.title=GAME_TITLE;
+  resetTopics();bindSettings();bindImport();bindGame();applySettings();renderStart();
+}
+init();
+})();
+</script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
