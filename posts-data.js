@@ -681,7 +681,7 @@ const posts = [
     subcategory: "weiterefaecher",
     url: "https://tueren-challenge-around-town-holle.sebastianholle.chatgpt.site/",
     emoji: "🚪",
-    tags: ["sprachen"],
+    tags: ["sprachen", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Doors Challenge: Around Town",
     excerptEn: "Interactive learning challenge \"Around Town\" as a standalone website. (External site, not buildspace content)"
    },
