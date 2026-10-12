@@ -99,6 +99,21 @@ const I18N = {
     promptlabLabel: "Promptlabor",
     slashLabel: "Slash-Codes",
     emptyState: "Hier gibt es noch keine Beiträge.",
+    filterTitle: "Filtern",
+    filterReset: "Zurücksetzen",
+    filterCount: (n, m) => `${n} von ${m} Beiträgen`,
+    filterNone: "Zu dieser Auswahl gibt es noch keine Beiträge. Nimm einen Filter heraus.",
+    filterGroups: { art: "Art", thema: "Thema", form: "Sozialform", nutzung: "Einsatz", jahrgang: "Jahrgang" },
+    tagLabels: {
+      spiel: "Spiel", tool: "Tool",
+      zahlen: "Zahlen", bruchrechnung: "Brüche", prozent: "Prozent", gleichungen: "Gleichungen", funktionen: "Funktionen & Koordinaten", geometrie: "Geometrie", kopfrechnen: "Kopfrechnen", wahrscheinlichkeit: "Zufall & Wahrscheinlichkeit",
+      berufsorientierung: "Berufsorientierung", wirtschaft: "Wirtschaft & Geld", werkstatt: "Werkstatt & Technik", ernaehrung: "Ernährung", ki: "KI", projektarbeit: "Projektarbeit",
+      organisation: "Unterrichtsorganisation", raetsel: "Rätsel",
+      geschichte: "Geschichte", naturwissenschaften: "Naturwissenschaften", sprachen: "Sprachen",
+      einzelarbeit: "Einzelarbeit", partnerarbeit: "Partnerarbeit", gruppenarbeit: "Gruppenarbeit",
+      mehrgeraete: "Mehrere Geräte", klassenquiz: "Klassenquiz mit Host", vertretung: "Ohne Lehrkraft nutzbar",
+      jg5: "Jg. 5", jg6: "Jg. 6", jg7: "Jg. 7", jg8: "Jg. 8", jg9: "Jg. 9", jg10: "Jg. 10"
+    },
     searchResults: (n, raw) => `${n} Treffer für „${raw}“`,
     searchEmpty: (raw) => `Keine Treffer für „${raw}“. Versuch es mit einem anderen Suchbegriff.`,
     latestTitle: "Neueste Beiträge",
@@ -146,6 +161,21 @@ const I18N = {
     promptlabLabel: "Prompt lab",
     slashLabel: "Slash codes",
     emptyState: "There are no posts here yet.",
+    filterTitle: "Filter",
+    filterReset: "Reset",
+    filterCount: (n, m) => `${n} of ${m} posts`,
+    filterNone: "No posts match this selection yet. Remove a filter.",
+    filterGroups: { art: "Type", thema: "Topic", form: "Group size", nutzung: "Use", jahrgang: "Grade" },
+    tagLabels: {
+      spiel: "Game", tool: "Tool",
+      zahlen: "Numbers", bruchrechnung: "Fractions", prozent: "Percentages", gleichungen: "Equations", funktionen: "Functions & coordinates", geometrie: "Geometry", kopfrechnen: "Mental maths", wahrscheinlichkeit: "Chance & probability",
+      berufsorientierung: "Career orientation", wirtschaft: "Economy & money", werkstatt: "Workshop & technology", ernaehrung: "Nutrition", ki: "AI", projektarbeit: "Project work",
+      organisation: "Class organisation", raetsel: "Puzzles",
+      geschichte: "History", naturwissenschaften: "Science", sprachen: "Languages",
+      einzelarbeit: "Solo", partnerarbeit: "Pairs", gruppenarbeit: "Groups",
+      mehrgeraete: "Several devices", klassenquiz: "Class quiz with host", vertretung: "No teacher needed",
+      jg5: "Gr. 5", jg6: "Gr. 6", jg7: "Gr. 7", jg8: "Gr. 8", jg9: "Gr. 9", jg10: "Gr. 10"
+    },
     searchResults: (n, raw) => `${n} result${n === 1 ? "" : "s"} for “${raw}”`,
     searchEmpty: (raw) => `No results for “${raw}”. Try a different search term.`,
     latestTitle: "Latest posts",
@@ -319,6 +349,92 @@ function renderPostList(list, opts) {
 }
 
 /* ---------------------------------------------------------
+   Tag-Filter: Chips über der Beitragsliste eines Fachs/Ordners.
+   Innerhalb einer Gruppe gilt ODER, zwischen Gruppen UND. Es werden nur
+   Tags angeboten, die in der Liste vorkommen (und nicht bei allen
+   Beiträgen gleich sind). Auswahl bleibt pro Ordner in sessionStorage.
+--------------------------------------------------------- */
+const TAG_GROUPS = [
+  { id: "art", tags: ["spiel", "tool"] },
+  { id: "thema", tags: ["zahlen", "bruchrechnung", "prozent", "gleichungen", "funktionen", "geometrie", "kopfrechnen", "wahrscheinlichkeit", "berufsorientierung", "wirtschaft", "werkstatt", "ernaehrung", "ki", "projektarbeit", "organisation", "raetsel", "geschichte", "naturwissenschaften", "sprachen"] },
+  { id: "form", tags: ["einzelarbeit", "partnerarbeit", "gruppenarbeit"] },
+  { id: "nutzung", tags: ["mehrgeraete", "klassenquiz", "vertretung"] },
+  { id: "jahrgang", tags: ["jg5", "jg6", "jg7", "jg8", "jg9", "jg10"] }
+];
+const FILTER_MIN_POSTS = 5;
+let filterCtx = null;
+
+function getFilterState(key) {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem("buildspace_filter_v1:" + key) || "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setFilterState(key, arr) {
+  try {
+    sessionStorage.setItem("buildspace_filter_v1:" + key, JSON.stringify(arr));
+  } catch (e) {}
+}
+
+function applyTagFilter(list, active) {
+  return list.filter((p) =>
+    TAG_GROUPS.every((g) => {
+      const sel = g.tags.filter((tg) => active.includes(tg));
+      return !sel.length || sel.some((tg) => (p.tags || []).includes(tg));
+    })
+  );
+}
+
+function renderFilterable(list, key, opts) {
+  filterCtx = { list, key, opts };
+  if (list.length < FILTER_MIN_POSTS) return renderPostList(list, opts);
+  const counts = {};
+  list.forEach((p) => (p.tags || []).forEach((tg) => (counts[tg] = (counts[tg] || 0) + 1)));
+  const saved = getFilterState(key);
+  const labels = I18N[getLang()].tagLabels;
+  const groupLabels = I18N[getLang()].filterGroups;
+  const groups = TAG_GROUPS.map((g) => ({
+    id: g.id,
+    tags: g.tags.filter((tg) => counts[tg] && (counts[tg] < list.length || saved.includes(tg)))
+  })).filter((g) => g.tags.length);
+  if (!groups.length) return renderPostList(list, opts);
+  const visible = groups.reduce((a, g) => a.concat(g.tags), []);
+  const active = saved.filter((tg) => visible.includes(tg));
+  const shown = active.length ? applyTagFilter(list, active) : list;
+  const bar = groups
+    .map(
+      (g) => `<div class="tf-group" role="group" aria-label="${escapeHtml(groupLabels[g.id])}"><span class="tf-label">${escapeHtml(groupLabels[g.id])}</span>${g.tags
+        .map((tg) => `<button type="button" class="tf-chip${active.includes(tg) ? " is-on" : ""}" data-tag="${tg}" aria-pressed="${active.includes(tg)}">${escapeHtml(labels[tg] || tg)}<span class="tf-n">${counts[tg]}</span></button>`)
+        .join("")}</div>`
+    )
+    .join("");
+  return `<div class="filter-block">
+    <div class="tag-filter"><div class="tf-head"><span class="tf-title">${t("filterTitle")}</span>${active.length ? `<span class="tf-count" aria-live="polite">${t("filterCount")(shown.length, list.length)}</span><button type="button" class="tf-reset">${t("filterReset")}</button>` : ""}</div>${bar}</div>
+    ${shown.length ? renderPostList(shown, opts) : `<p class="empty-state">${t("filterNone")}</p>`}
+  </div>`;
+}
+
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".tf-chip, .tf-reset");
+  if (!chip || !filterCtx) return;
+  const cur = getFilterState(filterCtx.key);
+  let next;
+  if (chip.classList.contains("tf-reset")) next = [];
+  else next = cur.includes(chip.dataset.tag) ? cur.filter((x) => x !== chip.dataset.tag) : cur.concat(chip.dataset.tag);
+  setFilterState(filterCtx.key, next);
+  const block = document.querySelector(".filter-block");
+  if (!block) return;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = renderFilterable(filterCtx.list, filterCtx.key, filterCtx.opts);
+  block.replaceWith(tmp.firstElementChild);
+  const again = chip.dataset.tag ? document.querySelector(`.tf-chip[data-tag="${chip.dataset.tag}"]`) : null;
+  if (again) again.focus();
+});
+
+/* ---------------------------------------------------------
    Favoriten — im Unterschied zu "Zuletzt geöffnet" eine bewusste,
    dauerhafte Auswahl per Stern-Symbol auf jeder Karte, unabhängig
    vom Verlauf. Ebenfalls rein lokal im Browser gespeichert.
@@ -461,7 +577,7 @@ function renderFolderUnlocked(id) {
     const list = posts.filter((p) => p.category === id);
     content.innerHTML = `
       <h1 class="section-label">${folderLabel(id)}</h1>
-      ${renderPostList(list, { headingLevel: 2 })}
+      ${renderFilterable(list, id, { headingLevel: 2 })}
     `;
   } else {
     const subCards = folder.subfolders
@@ -567,7 +683,7 @@ function renderSubfolderContent(id, subId, cmAuthInfo, matId) {
     ${cmAuthInfo ? '<div id="cm-account-bar" class="cm-account-bar"></div>' : ""}
     ${cmAuthInfo && cmAuthInfo.isAdmin ? '<div id="cm-admin-panel" class="cm-admin-panel"></div>' : ""}
     ${matCards ? matCards + (list.length ? '<div class="folder-list-gap"></div>' : "") : ""}
-    ${matCards && !list.length ? "" : renderPostList(list, { headingLevel: 2 })}
+    ${matCards && !list.length ? "" : renderFilterable(list, id + "/" + subId + (matId ? "/" + matId : ""), { headingLevel: 2 })}
   `;
   if (window.Protect) window.Protect.addShareButton(id);
   if (cmAuthInfo) renderCmAccountBar(cmAuthInfo);

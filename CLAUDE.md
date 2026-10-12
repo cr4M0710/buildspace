@@ -43,7 +43,13 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
   - `schule` → `mathematik` | `arbeitslehre` | `faecheruebergreifend` (= „Classroom Management“) | `weiterefaecher` | `sonstiges`
   - `handball` → `jugend` | `maenner1` | `maenner2` | `hallendienst` | `training`
   - `freizeit` → `subcategory: null`
-- `tags` (optional): `spiel` oder `tool`; Gruppengröße `einzelarbeit` | `partnerarbeit` | `gruppenarbeit`; `vertretung` = ohne Lehrkraft selbsterklärend nutzbar; `jg5`–`jg10` **nur**, wenn das Tool eindeutig für einen Jahrgang gedacht ist – nicht raten.
+- `tags` (optional, werden als Filter-Chips über der Liste jedes Fachs/Ordners angeboten – ab 5 Beiträgen; Gruppen ODER, zwischen Gruppen UND). Nur diese Werte (Reihenfolge: Art, Thema, Sozialform, Einsatz, Jahrgang):
+  - Art: `spiel` | `tool`
+  - Thema: Mathematik `zahlen` `bruchrechnung` `prozent` `gleichungen` `funktionen` (inkl. Koordinaten) `geometrie` `kopfrechnen` `wahrscheinlichkeit`; Arbeitslehre `berufsorientierung` `wirtschaft` `werkstatt` `ernaehrung` `ki` `projektarbeit`; Fächerübergreifend `organisation` `raetsel` (+ `ki`, `projektarbeit`); Weitere Fächer `geschichte` `naturwissenschaften` `sprachen`
+  - Sozialform: `einzelarbeit` | `partnerarbeit` | `gruppenarbeit`
+  - Einsatz: `mehrgeraete` (Seite steht in `MULTIPLAYER_FILES`), `klassenquiz` (Host zeigt Aufgaben am Beamer), `vertretung` = ohne Lehrkraft selbsterklärend nutzbar
+  - Jahrgang: `jg5`–`jg10` **nur**, wenn das Tool eindeutig für einen Jahrgang gedacht ist – nicht raten.
+  - Neue Tags: Label in `I18N.<sprache>.tagLabels` und Gruppe in `TAG_GROUPS` (app.js) sowie `KNOWN_TAGS` in `tools/check-site.js` ergänzen.
 - `folder` (optional): legt den Beitrag in einen Ordner **innerhalb** des Unterordners, z. B. `folder: "unterrichtsmaterialien"` unter Schule → Mathematik (dritte Ebene, siehe `renderSubfolderContent` in `app.js`; neue Ordner-Namen in `I18N.subfolders` eintragen). Beiträge mit `folder` erscheinen nicht in der Hauptliste des Unterordners, sondern nur im Ordner. Der Ordner „Unterrichtsmaterialien“ ist passwortgeschützt (nur voller Zugang): Beiträge darin tragen `gate: "material"` und `data-category="material"` im `protect.js`-Tag (siehe `GATED_FOLDERS` in `app.js`, `LABELS` in `protect.js`).
 - `titleEn` / `excerptEn` immer mitliefern.
 - `featured: true` hat seit dem Liquid-Glass-Umbau keine sichtbare Wirkung mehr (Bereich „Empfohlen“ und Tag-Filter wurden entfernt); nicht setzen.

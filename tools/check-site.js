@@ -87,6 +87,8 @@ posts.forEach((p, i) => {
     if (/@latest|\/latest\//.test(u)) warn(`${id}: ${file} nutzt unversionierte Bibliothek ${u}`);
   });
 
+  const KNOWN_TAGS = ["spiel", "tool", "zahlen", "bruchrechnung", "prozent", "gleichungen", "funktionen", "geometrie", "kopfrechnen", "wahrscheinlichkeit", "berufsorientierung", "wirtschaft", "werkstatt", "ernaehrung", "ki", "projektarbeit", "organisation", "raetsel", "geschichte", "naturwissenschaften", "sprachen", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "mehrgeraete", "klassenquiz", "vertretung", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"];
+  (p.tags || []).forEach((tg) => { if (!KNOWN_TAGS.includes(tg)) err(`${id}: unbekannter Tag "${tg}" (Filter-Tags stehen in TAG_GROUPS in app.js und KNOWN_TAGS in tools/check-site.js)`); });
   const tagged = (p.tags || []).includes("vertretung");
   const listed = vertretungFiles.includes(file);
   if (tagged && !listed) err(`${id}: Tag "vertretung", aber ${file} fehlt in VERTRETUNG_FILES (protect.js)`);
