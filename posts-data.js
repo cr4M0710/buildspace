@@ -829,4 +829,52 @@ const posts = [
     titleEn: "Game Salon",
     excerptEn: "Ten classic board and card games – chess, checkers, nine men's morris, Ludo, Mau-Mau, Connect Four and more. Play alone against bots on three levels or with friends via code and QR code, each with a rules guide."
    },
+   {
+    title: "Morgenkreis-Tafel",
+    excerpt: "Digitale Morgenkreis-Tafel fürs Klassenzimmer: Datum, Wetter, Wort des Tages, Tagesplan und Anwesenheit auf einen Blick. (Externe Seite, Medienzentrum Gießen-Vogelsberg)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "https://morgenkreis.mzgivb.de/",
+    emoji: "☀️",
+    tags: ["tool", "organisation", "jg5", "jg6"],
+    titleEn: "Morning Circle Board",
+    excerptEn: "Digital morning-circle board for the classroom: date, weather, word of the day, daily schedule and attendance at a glance. (External site, Medienzentrum Gießen-Vogelsberg)"
+   },
+   {
+    title: "Digiscreen",
+    excerpt: "Interaktive Tafel-Oberfläche mit Bausteinen für jedes Fach: Zufallsgenerator, Gruppeneinteilung, Timer, Quiz, Ampel, Taschenrechner und mehr. (Externe Seite, Medienzentrum Gießen-Vogelsberg)",
+    date: "2026-09-20",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "https://digiscreen.mzgivb.de/",
+    emoji: "🖥️",
+    tags: ["tool", "organisation", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Digiscreen",
+    excerptEn: "Interactive whiteboard surface with building blocks for any subject: randomiser, group generator, timer, quiz, traffic light, calculator and more. (External site, Medienzentrum Gießen-Vogelsberg)"
+   },
+   {
+    title: "Rätsel des Tages",
+    excerpt: "Jeden Tag ein neues Rätsel zum Knobeln, mit Hinweisen, Sternen und Serie. Für verschiedene Klassenstufen.",
+    date: "2026-10-03",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "raetsel-des-tages.html",
+    emoji: "🧩",
+    tags: ["tool", "raetsel", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Puzzle of the Day",
+    excerptEn: "A new brain teaser every day, with hints, stars and streaks. For different grade levels."
+   },
+   {
+    title: "KI-Guide für Lehrkräfte",
+    excerpt: "Beispielkatalog mit 56 kopierbaren Prompts für Unterricht, E-Mails, Lernspiele, Visualisierungen und Differenzierung, mit Datenschutz-Ampel, Filtern, Favoriten, Prompt-Baukasten und Druckansicht.",
+    date: "2026-10-09",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "ki-guide-lehrkraefte.html",
+    emoji: "🧭",
+    tags: ["tool", "ki", "einzelarbeit"],
+    titleEn: "AI Guide for Teachers",
+    excerptEn: "Catalogue of 56 copyable prompts for lessons, emails, learning games, visualisations and differentiation, with a privacy traffic light, filters, favourites, a prompt builder and print view."
+   },
 ];
