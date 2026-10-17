@@ -276,6 +276,13 @@ function isWithinLast30Days(iso) {
    entweder nichts mehr markiert oder (bei einem frischen Stapel wie
    diesem hier) fast alles. Dadurch bleibt der Hinweis immer knapp und
    zeigt genau das, was zuletzt hinzugekommen ist. */
+/* Beiträge, die in mehreren Ordnern gelistet sind (gleiche url), zählen für
+   Zähler und "Neueste" nur einmal. */
+function uniqueByUrl(list) {
+  const seen = new Set();
+  return list.filter((p) => (seen.has(p.url) ? false : (seen.add(p.url), true)));
+}
+
 function latestPostDate(list) {
   return list.reduce((max, p) => (p.date > max ? p.date : max), "0000-00-00");
 }
@@ -484,12 +491,12 @@ function renderTopLevel() {
   document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = "";
   const cards = [
-    { id: "neueste", href: "#/neueste", icon: ICONS.neueste, count: posts.filter((p) => isWithinLast30Days(p.date)).length },
+    { id: "neueste", href: "#/neueste", icon: ICONS.neueste, count: uniqueByUrl(posts.filter((p) => isWithinLast30Days(p.date))).length },
     ...Object.entries(folderStructure).map(([id, f]) => ({
       id,
       href: `#/${id}`,
       icon: f.icon,
-      count: posts.filter((p) => p.category === id).length
+      count: uniqueByUrl(posts.filter((p) => p.category === id)).length
     }))
   ].map((c) => ({
     ...c,
@@ -547,7 +554,7 @@ function renderNeueste() {
 function renderNeuesteUnlocked() {
   document.documentElement.classList.remove("share-mode");
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${folderLabel("neueste")}</span>`;
-  const recent = posts.filter((p) => isWithinLast30Days(p.date));
+  const recent = uniqueByUrl(posts.filter((p) => isWithinLast30Days(p.date)));
   content.innerHTML = `
     <h1 class="section-label">${t("latestTitle")}</h1>
     <p style="color:var(--ink-soft); margin-top:-10px; margin-bottom: 28px;">${t("latestSub")}</p>
@@ -766,7 +773,7 @@ function renderVertretung() {
   // Route ist. Ruft Marc die Seite normal (voller Zugang) auf, ist die
   // Klasse ohnehin nicht gesetzt.
   breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">Vertretungsstunde</span>`;
-  const list = posts.filter((p) => (p.tags || []).includes("vertretung"));
+  const list = uniqueByUrl(posts.filter((p) => (p.tags || []).includes("vertretung")));
   const shortLink = location.origin + "/vertretung/";
   content.innerHTML = `
     <div class="section-label-row no-print">
@@ -816,7 +823,7 @@ function renderKursmappeView() {
     content.innerHTML = `<p class="empty-state">${t("emptyState")}</p>`;
     return;
   }
-  const list = posts.filter((p) => km.urls.indexOf(p.url) !== -1);
+  const list = uniqueByUrl(posts.filter((p) => km.urls.indexOf(p.url) !== -1));
   content.innerHTML = `
     <h1 class="section-label">${km.title ? escapeHtml(km.title) : "Kursmappe"}</h1>
     ${renderPostList(list, { preserveOrder: true })}
@@ -1231,9 +1238,9 @@ function initHero() {
 
   const statsEl = document.getElementById("hero-stats");
   if (!statsEl) return;
-  const total = posts.length;
+  const total = uniqueByUrl(posts).length;
   const categories = Object.keys(folderStructure).length;
-  const recent = posts.filter((p) => isWithinLast30Days(p.date)).length;
+  const recent = uniqueByUrl(posts.filter((p) => isWithinLast30Days(p.date))).length;
   const stats = [
     { value: total, label: t("statPost")(total) },
     { value: categories, label: t("statAreas") },
@@ -1421,14 +1428,14 @@ function renderSidebarNav() {
 
   let html = "";
   html += `<div class="side-row"><a class="${cls(route === "", false)}" href="#/"${cur(route === "")}>${sideIcon("home")}<span class="side-text">${escapeHtml(t("home"))}</span></a></div>`;
-  const newCount = posts.filter((p) => isWithinLast30Days(p.date)).length;
+  const newCount = uniqueByUrl(posts.filter((p) => isWithinLast30Days(p.date))).length;
   html += `<div class="side-row"><a class="${cls(route === "neueste", lockOf("neueste"))}" href="#/neueste"${cur(route === "neueste")}>${sideIcon("neueste")}<span class="side-text">${escapeHtml(folderLabel("neueste"))}</span>${lockMark("neueste")}<span class="side-count">${newCount}</span></a></div>`;
 
   Object.entries(folderStructure).forEach(([id, f]) => {
     const subs = f.subfolders
       .map((sf) => ({ id: sf.id, count: posts.filter((p) => p.category === id && p.subcategory === sf.id).length }))
       .filter((s2) => s2.count > 0);
-    const total = posts.filter((p) => p.category === id).length;
+    const total = uniqueByUrl(posts.filter((p) => p.category === id)).length;
     const active = seg[0] === id;
     if (active) openGroups.add(id);
     const open = openGroups.has(id);
@@ -1469,13 +1476,13 @@ function renderSearchResults() {
   sideResultsEl.hidden = false;
   // Suche läuft über den gerade angezeigten (lokalisierten) Text, damit
   // Treffer und sichtbarer Titel/Beschreibung immer zusammenpassen.
-  const matches = posts
+  const matches = uniqueByUrl(posts
     .filter((p0) => {
       if (!isPostAllowed(p0)) return false;
       const p = localizePost(p0);
       return p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q);
     })
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => b.date.localeCompare(a.date)));
   if (!matches.length) {
     sideResultsEl.innerHTML = `<p class="side-empty">${t("searchEmpty")(escapeHtml(raw))}</p>`;
     return;

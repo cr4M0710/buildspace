@@ -877,4 +877,52 @@ const posts = [
     titleEn: "AI Guide for Teachers",
     excerptEn: "Catalogue of 56 copyable prompts for lessons, emails, learning games, visualisations and differentiation, with a privacy traffic light, filters, favourites, a prompt builder and print view."
    },
+   {
+    title: "Wizard – Das Kartenspiel",
+    excerpt: "Wizard digital spielen: Mehrspieler per PeerJS oder gegen eine KI in drei Schwierigkeitsstufen.",
+    date: "2026-09-18",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "wizard-kartenspiel.html",
+    emoji: "🧙",
+    tags: ["spiel", "einzelarbeit", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Wizard – The Card Game",
+    excerptEn: "Play Wizard digitally: multiplayer via PeerJS or against an AI on three difficulty levels."
+   },
+   {
+    title: "Blockwerk",
+    excerpt: "Eine Welt aus Blöcken, die du Stück für Stück umbaust: bauen, abbauen und erkunden im Einzelspieler oder gemeinsam im Mehrspieler-Modus, mit Maus und Tastatur oder per Touch.",
+    date: "2026-10-07",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "blockwerk.html",
+    emoji: "🧱",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Blockwerk",
+    excerptEn: "A world of blocks that you rebuild piece by piece: build, mine and explore alone or together in multiplayer, with mouse and keyboard or touch."
+   },
+   {
+    title: "Spielesalon",
+    excerpt: "Zehn klassische Gesellschaftsspiele – Schach, Dame, Mühle, Mensch ärgere dich nicht, Mau-Mau, Vier gewinnt und mehr. Allein gegen Bots in drei Stufen oder mit Freunden per Code und QR-Code, jeweils mit Spielanleitung.",
+    date: "2026-10-12",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "spielesalon.html",
+    emoji: "🎲",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Game Salon",
+    excerptEn: "Ten classic board and card games – chess, checkers, nine men's morris, Ludo, Mau-Mau, Connect Four and more. Play alone against bots on three levels or with friends via code and QR code, each with a rules guide."
+   },
+   {
+    title: "Turnier-Arena",
+    excerpt: "K.-o.-Turnier mit 9 Minispielen, Quiz-Runden und Duellen (Vier gewinnt, Tauziehen, Schere-Stein-Papier, Nim): per QR-Code beitreten oder gegen Bots in 3 Stufen spielen. Nur wer gewinnt, kommt weiter – wer ausscheidet, schaut live zu.",
+    date: "2026-10-12",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "turnier-arena.html",
+    emoji: "🏆",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Tournament Arena",
+    excerptEn: "Knockout tournament with 9 mini games, quiz rounds and duels (Connect Four, tug of war, rock-paper-scissors, Nim): join via QR code or play against bots on 3 levels. Only winners advance – eliminated players spectate live."
+   },
 ];
