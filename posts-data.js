@@ -469,7 +469,7 @@ const posts = [
    },
    {
     title: "Prozentinsel",
-    excerpt: "3D-Lernspiel zur Prozentrechnung: Die Insel erkunden, Rätsel lösen und am Ende die Burg erobern.",
+    excerpt: "3D-Lernspiel zur Prozentrechnung – komplett: Die Insel mit Marktplatz, Supermarkt, Schatzhöhle, Fabrik und Burg erkunden, Aufgaben lösen und Bereiche freischalten. Spielstand wird gespeichert.",
     date: "2026-10-01",
     category: "schule",
     subcategory: "mathematik",
@@ -477,7 +477,7 @@ const posts = [
     emoji: "🏝️",
     tags: ["spiel", "prozent", "einzelarbeit", "jg6", "jg7", "jg8"],
     titleEn: "Percent Island",
-    excerptEn: "3D learning game on percentages: explore the island, solve puzzles and conquer the castle at the end."
+    excerptEn: "Complete 3D learning game on percentages: explore the island with market square, supermarket, treasure cave, factory and castle, solve tasks and unlock areas. Progress is saved."
    },
    {
     title: "Du und die Schokoladenfabrik",
