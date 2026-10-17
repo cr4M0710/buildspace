@@ -9,7 +9,7 @@
    einmal online besucht wurden. Fremd-Herkunft (z. B. das PeerJS-CDN im
    Wizard-Kartenspiel) wird nicht angefasst — die geht immer direkt ins
    Netz, ganz ohne Cache. */
-const CACHE = 'buildspace-v19';
+const CACHE = 'buildspace-v20';
 /* Bibliotheken von Fremd-Servern (three.js, PeerJS, QR, Schriften) landen in
    einem eigenen Cache, der Versions-Wechsel überlebt — sie sind fest
    versioniert und ändern sich nicht. */
@@ -40,6 +40,7 @@ const SHELL = [
   'space.js',
   'stars.js',
   'micro.js',
+  'orbi.js',
   '404.html',
   'impressum.html',
   'datenschutz.html',
@@ -167,6 +168,10 @@ self.addEventListener('fetch', (event) => {
     }
     return; // alles andere: direkt ins Netz
   }
+
+  // Videos (z. B. Orbi) laufen am Service Worker vorbei: Safari lädt sie
+  // in Teilstücken (Range-Anfragen), die sich nicht sinnvoll cachen lassen.
+  if (/\.mp4$/i.test(url.pathname)) return;
 
   event.respondWith((async () => {
     try {
