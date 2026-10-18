@@ -54,6 +54,7 @@
      halten dieselbe Auswahl fest (getrennt, weil diese Datei auch auf
      einzelnen Werkzeug-Seiten ohne posts-data.js läuft). */
   const VERTRETUNG_FILES = [
+    "zahlenstrahl-werkstatt.html",
     "minigolf-winkel.html",
     "zahlen-werkstatt.html",
     "bruch-quiz-fussball.html",

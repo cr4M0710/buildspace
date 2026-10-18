@@ -925,4 +925,16 @@ const posts = [
     titleEn: "Tournament Arena",
     excerptEn: "Knockout tournament with 9 mini games, quiz rounds and duels (Connect Four, tug of war, rock-paper-scissors, Nim): join via QR code or play against bots on 3 levels. Only winners advance – eliminated players spectate live."
    },
+   {
+    title: "Zahlenstrahl-Werkstatt",
+    excerpt: "Zahlenstrahl für natürliche, ganze, Bruch- und rationale Zahlen: Knackpunkte entdecken, Vorgehen Schritt für Schritt, Übungen auf drei Niveaus mit Tipps (Ablesen, Markieren, Einteilen, Schrittweite, Vergleichen, Abstand), Rätsel-Rallye mit Lösungswort und Zahlenstrahl-Generator.",
+    date: "2026-10-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "zahlenstrahl-werkstatt.html",
+    emoji: "📏",
+    tags: ["tool", "zahlen", "bruchrechnung", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7"],
+    titleEn: "Number Line Workshop",
+    excerptEn: "Number lines for natural numbers, integers, fractions and rationals: discover common pitfalls, step-by-step methods, practice on three levels with hints (reading, marking, dividing, step size, comparing, distance), a puzzle rally with a secret word and a number line generator."
+   },
 ];
