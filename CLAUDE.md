@@ -20,7 +20,17 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
 
 1. **HTML-Datei anlegen** im Root, Dateiname = kurzer Slug, Kleinbuchstaben, Bindestriche, keine Umlaute (`bruch-memory.html`).
 2. **Freigabe-Schutz einbauen**: vor `</body>` der neuen Seite `<script defer data-category="schule" src="protect.js"></script>` einfügen (`data-category` = `category` des Eintrags). Nur so gilt die zeitlich begrenzte Freigabe für Lernende („Für Lernende freigeben“, Kursmappe) auch auf der Tool-Seite und läuft automatisch ab. Externe Links sind davon ausgenommen. Trägt der Eintrag das Tag `vertretung`, den Dateinamen zusätzlich in `VERTRETUNG_FILES` in `protect.js` eintragen. Ist es ein Mehrspieler-Spiel (PeerJS), den Dateinamen zusätzlich in `MULTIPLAYER_FILES` eintragen – dort erscheint statt Login der Ein-Klick „Mitspielen“ (gilt nur für diese Seite und diesen Tab).
-3. **Eintrag in `posts-data.js` ergänzen** – ans **Ende** des Arrays anhängen, im selben Format wie die bestehenden Einträge (3 Leerzeichen Einrückung, doppelte Anführungszeichen, Komma nach jedem Objekt).
+3. **Anleitung einbauen** (Schul-Tools): vor dem `protect.js`-Tag eine kurze Einführung mit 4–7 Schritten ergänzen, die die wichtigsten Bereiche markiert:
+   ```html
+   <script>window.TOUR = { steps: [
+     { title: "Willkommen", text: "<p>Was das Tool macht.</p>" },
+     { sel: "#startBtn", title: "Starten", text: "<p>…</p>" },
+     { sel: "button.mode", has: "Allein", title: "Allein spielen", text: "<p>…</p>" }
+   ]};</script>
+   <script defer src="tour.js"></script>
+   ```
+   `tour.js` startet beim ersten Besuch automatisch (einmal pro Gerät), lässt sich überspringen und hängt oben rechts einen „?“-Knopf an. Felder und Optionen (`has`, `click`, `pos`, `btnStyle`, `button`) stehen oben in `tour.js`. Selektoren müssen auf dem Startbildschirm sichtbar sein, sonst erscheint der Schritt mittig.
+4. **Eintrag in `posts-data.js` ergänzen** – ans **Ende** des Arrays anhängen, im selben Format wie die bestehenden Einträge (3 Leerzeichen Einrückung, doppelte Anführungszeichen, Komma nach jedem Objekt).
 
 ### Felder eines Eintrags
 

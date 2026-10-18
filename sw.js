@@ -36,6 +36,7 @@ const SHELL = [
   'posts-data.js',
   'protect.js',
   'cursor.js',
+  'tour.js',
   'hero-draw.js',
   'space.js',
   'stars.js',
