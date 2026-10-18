@@ -375,7 +375,7 @@
 <header>
   <div class="logo-badge"><img id="kopf-logo" alt="HSG Wettenberg"></div>
   <div class="kopf-text">
-    <h1>Strafenkasse Männer 2</h1>
+    <h1>Strafenkasse</h1>
     <div class="sub">HSG Wettenberg</div>
   </div>
   <button class="kopf-btn" id="team-btn" title="Team wechseln" onclick="App.profilModal()"></button>
@@ -503,9 +503,9 @@
     <h2>Cloud-Sync</h2>
     <div class="card" style="padding:14px">
       <div class="sync-status" id="sync-status-text"><span class="punkt grau"></span>Nicht eingerichtet</div>
-      <div class="hinweis" id="sync-hinweis" style="margin-top:2px">Richte den Sync ein, damit mehrere Kassenwarte denselben Stand sehen.</div>
+      <div class="hinweis" id="sync-hinweis" style="margin-top:2px">Optional: Daten online speichern, damit mehrere Kassenwarte denselben Stand sehen.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px">
-        <button class="btn klein sekundaer" onclick="App.syncModal()">Einrichten</button>
+        <button class="btn klein sekundaer" id="sync-einrichten-btn" onclick="App.syncModal()">Einrichten</button>
         <button class="btn klein sekundaer" id="sync-jetzt-btn" onclick="App.syncJetzt()" style="display:none">Jetzt synchronisieren</button>
       </div>
       <button class="btn klein sekundaer" id="team-link-btn" onclick="App.teamAnsichtLink()" style="display:none;width:100%;margin-top:9px">Team-Ansicht teilen (nur Lesen)</button>
@@ -517,7 +517,10 @@
         <input type="search" id="sp-suche" class="suchfeld" placeholder="Spieler suchen …" oninput="App.rendernVerwalten()"></div>
     </div>
     <div class="card" id="spieler-liste"></div>
-    <button class="btn sekundaer" onclick="App.spielerModal()">Spieler hinzufügen</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <button class="btn klein sekundaer" onclick="App.spielerModal()">Spieler hinzufügen</button>
+      <button class="btn klein sekundaer" onclick="App.spielerImportModal()">Spielerliste importieren</button>
+    </div>
 
     <h2>Strafenkatalog</h2>
     <div class="werkzeug">
@@ -595,7 +598,10 @@ const PROFILE = {
   m1: {
     id: 'm1', titel: 'Strafenkasse Männer 1', verein: 'HSG Wettenberg', paypal: '',
     seedHistorie: false,
-    spieler: [
+    // Bewusst leer: Die Spielerliste wird unter „Verwalten → Spielerliste importieren“ eingelesen.
+    spieler: [],
+    // Frühere Standardliste – wird auf bestehenden Geräten einmalig entfernt (siehe laden()).
+    alteSpieler: [
       'Aron Weise', 'Dragan Nenad', 'Fabian Weide', 'Felix Kreutz', 'Finn Stoppel',
       'Florian Hartmann', 'Jan Becker', 'Jan Hämmerle', 'Jan Reuschling', 'Jannis Merz',
       'Johannes Schwarz', 'Jonas Müller', 'Kai Olbert', 'Luca Weber', 'Lucy Weingarten',
@@ -605,6 +611,11 @@ const PROFILE = {
   },
 };
 function ermittleAktivesProfil() {
+  // Direktlink auf ein Team möglich: strafenkasse/index.html?team=m1
+  try {
+    const t = new URLSearchParams(location.search).get('team');
+    if (t && PROFILE[t]) { try { localStorage.setItem(PROFIL_KEY, t); } catch (e) {} return t; }
+  } catch (e) {}
   try { const p = localStorage.getItem(PROFIL_KEY); return (p && PROFILE[p]) ? p : 'm2'; }
   catch (e) { return 'm2'; }
 }
@@ -837,11 +848,32 @@ function laden() {
       if (d.titel == null) d.titel = STD_TITEL;
       if (d.verein == null) d.verein = STD_VEREIN;
       if (d.paypal == null) d.paypal = STD_PAYPAL;
+      alteSpielerEntfernen(d);
       return d;
     }
   } catch (e) { /* defekte Daten -> Neustart */ }
   // Frische Installation: mit aktuellem Stand (Spieler, Katalog, Historie 07/2026) starten
   return standardDaten();
+}
+// Entfernt einmalig pro Gerät die frühere Standard-Spielerliste eines Teams (aktuell: Männer 1).
+// Spieler mit Buchungen bleiben erhalten (werden nur deaktiviert), damit keine Historie verloren geht.
+// Der Zeitstempel wird nur minimal erhöht: So gewinnt die Bereinigung gegen den alten Stand,
+// aber nie gegen eine neu importierte Liste von einem anderen Gerät (Cloud-Sync).
+function alteSpielerEntfernen(d) {
+  const alt = PROFIL.alteSpieler;
+  if (!alt || !alt.length) return;
+  const flag = `hsg-${PROFIL_ID}-alte-spieler-entfernt-v1`;
+  try { if (localStorage.getItem(flag)) return; } catch (e) { return; }
+  const mitBuchung = new Set((d.buchungen || []).map(b => b.spielerId));
+  let geaendert = false;
+  d.spieler = (d.spieler || []).filter(s => {
+    if (!alt.includes(s.name)) return true;
+    geaendert = true;
+    if (mitBuchung.has(s.id)) { s.aktiv = false; return true; }
+    return false;
+  });
+  if (geaendert) d.spielerTs = (d.spielerTs || 0) + 1;
+  try { localStorage.setItem(flag, '1'); localStorage.setItem(SPEICHER_KEY, JSON.stringify(d)); } catch (e) {}
 }
 function speichernNurLokal() { try { localStorage.setItem(SPEICHER_KEY, JSON.stringify(daten)); } catch (e) { /* Speicher gesperrt (z. B. privater Modus) */ } }
 function speichern() { speichernNurLokal(); if (typeof Sync !== 'undefined') Sync.plane(); }
@@ -914,7 +946,8 @@ function stabil(o) {
 // Spieler/Katalog: ganze Sammlung, neuerer Zeitstempel (spielerTs/katalogTs) gewinnt.
 function mergeDaten(remote, local) {
   const m = {};
-  m.spielerTs = Math.max(local.spielerTs || 0, remote.spielerTs || 0);
+  ['titel', 'verein', 'paypal'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
+  m.spielerTs =Math.max(local.spielerTs || 0, remote.spielerTs || 0);
   m.spieler = (local.spielerTs || 0) >= (remote.spielerTs || 0) ? local.spieler : remote.spieler;
   m.spielerVersion = Math.max(local.spielerVersion || 1, remote.spielerVersion || 1);
   m.katalogTs = Math.max(local.katalogTs || 0, remote.katalogTs || 0);
@@ -935,17 +968,148 @@ function mergeDaten(remote, local) {
   return m;
 }
 
-// ================= Cloud-Sync (Supabase REST) =================
+// ================= Firebase (optional, Anmeldung per Google-Konto) =================
+// Dasselbe Firebase-Projekt wie protect.js/cm-auth.js. Wird nur geladen, wenn jemand
+// die Firebase-Speicherung nutzt. Zugriff regeln die Firestore-Regeln (Sammlung
+// „strafenkasse“): nur Google-Konten, deren Adresse beim Team eingetragen ist.
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus',
+  authDomain: 'kanban-board-281da.firebaseapp.com',
+  projectId: 'kanban-board-281da',
+  storageBucket: 'kanban-board-281da.firebasestorage.app',
+  messagingSenderId: '210909884248',
+  appId: '1:210909884248:web:10ffacb3a74f7b3c887f2d',
+};
+const FIRESTORE_REGELN = `match /strafenkasse/{team} {
+  function angemeldet() { return request.auth != null && request.auth.token.email_verified == true; }
+  function mail() { return request.auth.token.email.lower(); }
+  allow get: if angemeldet() && (resource == null || mail() in resource.data.members);
+  allow create: if angemeldet() && request.resource.data.owner == request.auth.uid
+    && request.resource.data.members == [mail()];
+  allow update: if angemeldet() && mail() in resource.data.members
+    && request.resource.data.owner == resource.data.owner
+    && (request.resource.data.members == resource.data.members
+        || resource.data.owner == request.auth.uid);
+  allow delete: if angemeldet() && resource.data.owner == request.auth.uid;
+}`;
+const Fb = {
+  user: null, db: null, auth: null, bereit: false, _p: null,
+  _skript(src) {
+    return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  },
+  laden() {
+    if (this._p) return this._p;
+    const basis = 'https://www.gstatic.com/firebasejs/10.13.2/';
+    this._p = (window.firebase ? Promise.resolve() : this._skript(basis + 'firebase-app-compat.js'))
+      .then(() => Promise.all([
+        firebase.firestore ? null : this._skript(basis + 'firebase-firestore-compat.js'),
+        firebase.auth ? null : this._skript(basis + 'firebase-auth-compat.js'),
+      ]))
+      .then(() => {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        this.db = firebase.firestore();
+        this.auth = firebase.auth();
+        // Abschluss einer per Weiterleitung begonnenen Anmeldung (Homescreen-App)
+        this.auth.getRedirectResult().catch(e => App.toast('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')));
+        this.auth.onAuthStateChanged(u => {
+          // Anonyme Sitzungen (Feedback-Widget von protect.js) zählen nicht als Anmeldung
+          this.user = (u && !u.isAnonymous && u.email) ? u : null;
+          this.bereit = true;
+          Sync.authGeaendert();
+        });
+        return this;
+      });
+    this._p.catch(() => { this._p = null; });
+    return this._p;
+  },
+  standalone() {
+    return !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  },
+  async anmelden() {
+    try { await this.laden(); } catch (e) { App.toast('Firebase konnte nicht geladen werden (offline?)'); return; }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    // Als Homescreen-App gibt es keine Popup-Fenster -> direkt Weiterleitung
+    if (this.standalone()) { await this.auth.signInWithRedirect(provider); return; }
+    try { await this.auth.signInWithPopup(provider); }
+    catch (err) {
+      const c = err && err.code;
+      if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
+      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { await this.auth.signInWithRedirect(provider); return; }
+      App.toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''));
+    }
+  },
+  async abmelden() { if (this.auth) await this.auth.signOut(); },
+  email() { return this.user ? String(this.user.email).toLowerCase() : ''; },
+  ref(code) { return this.db.collection('strafenkasse').doc(code); },
+};
+
+// ================= Cloud-Sync (Supabase REST oder Firebase) =================
 const Sync = {
   cfg: null,
   timer: null,
   laufend: false,
+  meta: null, // Firebase: { owner, ownerEmail, members } des Team-Dokuments
 
   init() {
     try { this.cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { this.cfg = null; }
+    if (this.istFirebase()) Fb.laden().catch(() => this.status('fehler', 'Firebase nicht erreichbar'));
   },
   speichernCfg() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.cfg)); } catch (e) {} },
-  aktiv() { return !!(this.cfg && this.cfg.url && this.cfg.key && this.cfg.code); },
+  istFirebase() { return !!(this.cfg && this.cfg.typ === 'firebase'); },
+  aktiv() {
+    if (!this.cfg) return false;
+    if (this.cfg.typ === 'firebase') return !!(this.cfg.code && Fb.user);
+    return !!(this.cfg.url && this.cfg.key && this.cfg.code);
+  },
+  istBesitzer() { return !!(this.meta && Fb.user && this.meta.owner === Fb.user.uid); },
+
+  // Wird bei jeder Änderung des Google-Anmeldestatus aufgerufen
+  authGeaendert() {
+    if (this.istFirebase() && !nurLesen) {
+      this.status(this.aktiv() ? 'ok' : 'aus');
+      if (this.aktiv()) this.synchronisieren(false);
+    }
+    App.rendernVerwaltenSyncKnopf();
+    if (document.getElementById('fb-modal')) App.syncFirebaseModal();
+  },
+
+  // ---- Firebase-Varianten von Lesen/Schreiben ----
+  async pullFirebase() {
+    try {
+      const snap = await Fb.ref(this.cfg.code).get();
+      if (!snap.exists) { this.meta = null; return undefined; }
+      const d = snap.data();
+      this.meta = { owner: d.owner, ownerEmail: d.ownerEmail || '', members: d.members || [] };
+      return { data: normalisieren(JSON.parse(d.json)), rev: d.rev, updated_at: d.updated_at };
+    } catch (e) {
+      if (e && e.code === 'permission-denied') return { keinZugriff: true };
+      return null;
+    }
+  },
+  async schreibenFirebase(stand, erwarteteRev) {
+    const ref = Fb.ref(this.cfg.code);
+    const jetzt = new Date().toISOString();
+    const json = JSON.stringify(stand);
+    return Fb.db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (erwarteteRev == null) {
+        if (snap.exists) return { konflikt: true };
+        const email = Fb.email();
+        tx.set(ref, { json, rev: 1, updated_at: jetzt, owner: Fb.user.uid, ownerEmail: email, members: [email] });
+        this.meta = { owner: Fb.user.uid, ownerEmail: email, members: [email] };
+        return { rev: 1, updated_at: jetzt };
+      }
+      if (!snap.exists || snap.data().rev !== erwarteteRev) return { konflikt: true };
+      tx.update(ref, { json, rev: erwarteteRev + 1, updated_at: jetzt });
+      return { rev: erwarteteRev + 1, updated_at: jetzt };
+    });
+  },
+  async mitgliederAendern(email, hinzu) {
+    const fv = firebase.firestore.FieldValue;
+    await Fb.ref(this.cfg.code).update({ members: hinzu ? fv.arrayUnion(email) : fv.arrayRemove(email) });
+    await this.pullFirebase();
+  },
 
   headers() {
     return { apikey: this.cfg.key, Authorization: 'Bearer ' + this.cfg.key, 'Content-Type': 'application/json' };
@@ -999,6 +1163,10 @@ const Sync = {
   statusText(text) {
     const el = document.getElementById('sync-status-text');
     if (!el) return;
+    if (this.istFirebase() && !Fb.user) {
+      el.innerHTML = '<span class="punkt grau"></span>' + (Fb.bereit ? 'Abgemeldet – mit Google anmelden' : 'Anmeldung wird geprüft …');
+      return;
+    }
     if (!this.aktiv()) { el.innerHTML = '<span class="punkt grau"></span>Nicht eingerichtet'; return; }
     const farbe = { ok: 'gruen', laedt: 'grau', ausstehend: 'grau', fehler: 'rot' }[this._zustand] || 'grau';
     const standard = { ok: 'Synchron', laedt: 'Synchronisiere …', ausstehend: 'Änderungen ausstehend', fehler: 'Sync-Fehler' }[this._zustand] || 'Verbunden';
@@ -1015,6 +1183,7 @@ const Sync = {
   },
 
   async pullRow() {
+    if (this.istFirebase()) return this.pullFirebase();
     try {
       const r = await fetch(this.basis() + '?id=eq.' + encodeURIComponent(this.cfg.code) + '&select=data,rev,updated_at', { headers: this.headers() });
       if (!r.ok) return null;
@@ -1030,6 +1199,7 @@ const Sync = {
   // Schreibt einen Stand konditional (nur wenn der Server noch bei erwarteteRev steht).
   // Rückgabe: {rev, updated_at} bei Erfolg, {konflikt:true} wenn jemand dazwischenkam.
   async schreiben(stand, erwarteteRev) {
+    if (this.istFirebase()) return this.schreibenFirebase(stand, erwarteteRev);
     const jetzt = new Date().toISOString();
     const nutz = this.cfg.pin ? await this.verschluesseln(stand) : stand;
     if (erwarteteRev == null) {
@@ -1075,6 +1245,11 @@ const Sync = {
         const remote = await this.pullRow();
         if (remote === null) { this.status('fehler'); if (zeigeToast) App.toast('Sync fehlgeschlagen (offline?)'); return; }
         if (remote && remote.pinFehler) { this.status('fehler'); App.toast('Falscher Team-PIN – Daten nicht entschlüsselbar.'); return; }
+        if (remote && remote.keinZugriff) {
+          this.status('fehler', 'Kein Zugriff auf Team-Code „' + this.cfg.code + '“');
+          if (zeigeToast) App.toast('Kein Zugriff: Der Besitzer muss deine Google-Adresse freigeben.', null, null, 8000);
+          return;
+        }
 
         // Server noch leer -> lokalen Stand anlegen
         if (remote === undefined) {
@@ -1113,7 +1288,10 @@ const Sync = {
       }
       this.status('fehler'); if (zeigeToast) App.toast('Sync gerade ausgelastet – bitte gleich erneut versuchen');
     } catch (e) {
-      this.status('fehler');
+      if (e && e.code === 'permission-denied') {
+        this.status('fehler', 'Kein Schreibzugriff');
+        if (zeigeToast) App.toast('Kein Schreibzugriff in Firebase (Regeln/Freigabe prüfen).', null, null, 8000);
+      } else this.status('fehler');
     } finally {
       this.laufend = false;
     }
@@ -1123,7 +1301,7 @@ const Sync = {
   abgleichen(zeigeToast) { return this.synchronisieren(zeigeToast); },
 
   trennen() {
-    this.cfg = null; localStorage.removeItem(SYNC_KEY);
+    this.cfg = null; this.meta = null; localStorage.removeItem(SYNC_KEY);
     this.status('aus'); this.statusText(); App.rendernVerwaltenSyncKnopf();
   },
 };
@@ -1716,7 +1894,7 @@ const App = {
           <button class="icon-btn" title="${s.aktiv === false ? 'Aktivieren' : 'Deaktivieren'}" onclick="App.spielerUmschalten('${s.id}')">${s.aktiv === false ? ICON.play : ICON.pause}</button>
           <button class="icon-btn rot" title="Löschen" onclick="App.spielerLoeschen('${s.id}')">${ICON.del}</button>
         </div>
-      </div>`).join('') : '<div class="leer">Kein Spieler gefunden.</div>') : '<div class="leer">Noch keine Spieler.</div>';
+      </div>`).join('') : '<div class="leer">Kein Spieler gefunden.</div>') : '<div class="leer">Noch keine Spieler – füge sie einzeln hinzu oder importiere eine Liste.</div>';
 
     const katSuche = (document.getElementById('kat-suche').value || '').trim().toLowerCase();
     const sortK = prefs.sortKat;
@@ -1739,15 +1917,22 @@ const App = {
   },
 
   rendernVerwaltenSyncKnopf() {
+    const fb = Sync.istFirebase();
     const jetztBtn = document.getElementById('sync-jetzt-btn');
     if (jetztBtn) jetztBtn.style.display = Sync.aktiv() ? '' : 'none';
     const teamBtn = document.getElementById('team-link-btn');
-    if (teamBtn) teamBtn.style.display = Sync.aktiv() ? '' : 'none';
+    if (teamBtn) teamBtn.style.display = (Sync.aktiv() && !fb) ? '' : 'none';
+    const einBtn = document.getElementById('sync-einrichten-btn');
+    if (einBtn) einBtn.textContent = fb ? (Fb.user ? 'Konto & Zugriff' : 'Mit Google anmelden') : 'Einrichten';
     Sync.statusText();
     const hinweis = document.getElementById('sync-hinweis');
-    if (hinweis) hinweis.textContent = Sync.aktiv()
-      ? 'Verbunden mit Team-Code „' + Sync.cfg.code + '“. Änderungen werden automatisch synchronisiert.'
-      : 'Richte den Sync ein, damit mehrere Kassenwarte denselben Stand sehen.';
+    if (!hinweis) return;
+    if (fb) hinweis.textContent = Fb.user
+      ? 'Firebase · Team-Code „' + Sync.cfg.code + '“ · angemeldet als ' + Fb.email() + '. Änderungen werden automatisch gespeichert.'
+      : 'Firebase ist eingerichtet. Melde dich mit deinem Google-Konto an, um zu synchronisieren – bis dahin wird nur auf diesem Gerät gespeichert.';
+    else hinweis.textContent = Sync.aktiv()
+      ? 'Supabase · Team-Code „' + Sync.cfg.code + '“. Änderungen werden automatisch synchronisiert.'
+      : 'Optional: Daten online speichern, damit mehrere Kassenwarte denselben Stand sehen.';
   },
 
   spielerModal(id) {
@@ -1788,6 +1973,85 @@ const App = {
     daten.buchungen = daten.buchungen.filter(b => b.spielerId !== id);
     daten.spielerTs = t;
     this.rendern();
+  },
+
+  // ===== Spielerliste importieren =====
+  spielerImportModal() {
+    const leer = daten.spieler.length === 0;
+    this.modal(`
+      <h3>Spielerliste importieren</h3>
+      <div class="feld"><label>Ein Spieler pro Zeile</label>
+        <textarea id="m-sp-import" rows="10" placeholder="Max Mustermann&#10;Erika Musterfrau&#10;…"></textarea>
+      </div>
+      <div class="hinweis" style="margin-top:0">Auch kommagetrennt oder als CSV/TXT-Datei (erste Spalte = Name, z.&nbsp;B. aus Excel oder SpielerPlus). Nummerierungen und doppelte Namen werden ignoriert.</div>
+      <div style="margin-top:9px"><button class="btn klein sekundaer" onclick="document.getElementById('m-sp-datei').click()">CSV/TXT-Datei laden</button></div>
+      <input type="file" id="m-sp-datei" accept=".csv,.txt" style="display:none" onchange="App.spielerDateiLaden(event)">
+      <div class="feld" style="margin-top:12px"><label>Vorhandene Spieler (${daten.spieler.length})</label>
+        <select id="m-sp-modus">
+          <option value="ersetzen"${leer ? '' : ' selected'}>Liste ersetzen</option>
+          <option value="ergaenzen"${leer ? ' selected' : ''}>Ergänzen</option>
+        </select>
+      </div>
+      <div class="hinweis" style="margin-top:0">„Ersetzen“ entfernt alle Spieler, die nicht in der neuen Liste stehen. Wer schon Buchungen hat, wird nur deaktiviert – die Historie bleibt erhalten.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.spielerImportieren()">Importieren</button>
+      </div>`);
+  },
+
+  spielerDateiLaden(event) {
+    const datei = event.target.files[0];
+    if (!datei) return;
+    const leser = new FileReader();
+    leser.onload = () => { document.getElementById('m-sp-import').value = String(leser.result).replace(/^﻿/, ''); };
+    leser.readAsText(datei);
+    event.target.value = '';
+  },
+
+  spielerNamenParsen(text) {
+    const zeilen = String(text).split(/\r?\n/);
+    // Eine einzelne Zeile mit Kommas = kommagetrennte Liste
+    const teile = (zeilen.filter(z => z.trim()).length === 1 && zeilen.join('').includes(',') && !zeilen.join('').includes(';'))
+      ? zeilen.join('').split(',') : zeilen.map(z => z.split(/[;\t]/)[0]);
+    const namen = [], gesehen = new Set();
+    for (let t of teile) {
+      t = t.replace(/^["'\s]+|["'\s]+$/g, '').replace(/^\d+\s*[.)]\s*/, '').replace(/\s+/g, ' ').trim();
+      if (!t || /^(name|spieler|vorname|nachname)$/i.test(t)) continue;
+      const k = t.toLowerCase();
+      if (gesehen.has(k)) continue;
+      gesehen.add(k); namen.push(t);
+    }
+    return namen;
+  },
+
+  spielerImportieren() {
+    const namen = this.spielerNamenParsen(document.getElementById('m-sp-import').value);
+    if (!namen.length) { this.toast('Keine Namen erkannt. Bitte einen Namen pro Zeile eingeben.'); return; }
+    const ersetzen = document.getElementById('m-sp-modus').value === 'ersetzen';
+    const neuSet = new Set(namen.map(n => n.toLowerCase()));
+    const mitBuchung = new Set(daten.buchungen.map(b => b.spielerId));
+    let neu = 0, reaktiviert = 0, entfernt = 0, deaktiviert = 0;
+    if (ersetzen) {
+      const entfernte = daten.spieler.filter(s => !neuSet.has(s.name.toLowerCase()));
+      if (entfernte.length && !confirm(`${entfernte.length} Spieler stehen nicht in der neuen Liste und werden entfernt (mit Buchungen: nur deaktiviert). Fortfahren?`)) return;
+      daten.spieler = daten.spieler.filter(s => {
+        if (neuSet.has(s.name.toLowerCase())) return true;
+        if (mitBuchung.has(s.id)) { if (s.aktiv !== false) { s.aktiv = false; deaktiviert++; } return true; }
+        entfernt++; return false;
+      });
+    }
+    for (const name of namen) {
+      const vorhanden = daten.spieler.find(s => s.name.toLowerCase() === name.toLowerCase());
+      if (vorhanden) { if (vorhanden.aktiv === false) { vorhanden.aktiv = true; reaktiviert++; } }
+      else { daten.spieler.push({ id: neueId(), name, aktiv: true }); neu++; }
+    }
+    daten.spielerTs = Date.now();
+    this.modalZu(); this.rendern();
+    const teile = [`${neu} neu`];
+    if (reaktiviert) teile.push(`${reaktiviert} reaktiviert`);
+    if (entfernt) teile.push(`${entfernt} entfernt`);
+    if (deaktiviert) teile.push(`${deaktiviert} deaktiviert`);
+    this.toast('Spieler-Import: ' + teile.join(', '));
   },
 
   katalogModal(id) {
@@ -1930,7 +2194,7 @@ const App = {
     const code = btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.url, k: c.key, c: c.code, p: c.pin || '' }))));
     const link = location.origin + location.pathname + '#v=' + code;
     if (navigator.share) {
-      try { await navigator.share({ title: 'Strafenkasse – Team-Ansicht', text: 'Strafenkasse Männer 2 – live ansehen (nur Lesen):', url: link }); return; }
+      try { await navigator.share({ title: 'Strafenkasse – Team-Ansicht', text: (daten.titel || 'Strafenkasse') + ' – live ansehen (nur Lesen):', url: link }); return; }
       catch (e) { if (e.name === 'AbortError') return; }
     }
     this.modal(`
@@ -1941,8 +2205,119 @@ const App = {
       <div class="knoepfe"><button class="btn" onclick="App.modalZu()">Schließen</button></div>`);
   },
 
+  // Auswahl, wo die Daten (optional) online gespeichert werden
   syncModal() {
-    const c = Sync.cfg || {};
+    if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
+    if (Sync.istFirebase()) { this.syncFirebaseModal(); return; }
+    if (Sync.cfg && Sync.cfg.url) { this.syncSupabaseModal(); return; }
+    this.modal(`
+      <h3>Daten online speichern?</h3>
+      <div class="hinweis" style="margin-top:0">Ganz freiwillig. Ohne Cloud bleiben die Daten nur auf diesem Gerät (dann regelmäßig ein Backup speichern).</div>
+      <button class="btn" style="width:100%;margin-top:12px" onclick="App.syncFirebaseModal()">Mit Google-Konto speichern (Firebase)</button>
+      <div class="hinweis">Empfohlen. Jede Person meldet sich mit dem eigenen Google-Konto an. Wer das Team anlegt, gibt weitere Kassenwarte per E-Mail-Adresse frei.</div>
+      <button class="btn sekundaer" style="width:100%;margin-top:12px" onclick="App.syncSupabaseModal()">Eigenes Supabase-Projekt</button>
+      <div class="hinweis">Bisherige Variante mit Team-Code und optionalem PIN. Ermöglicht zusätzlich den Link „Team-Ansicht (nur Lesen)“.</div>
+      <div class="knoepfe"><button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button></div>`);
+  },
+
+  async syncFirebaseModal() {
+    if (!Fb.db) {
+      this.modal('<div id="fb-modal"><h3>Mit Google-Konto speichern</h3><div class="hinweis" style="margin-top:0">Lade Anmeldung …</div></div>');
+      try { await Fb.laden(); } catch (e) {
+        this.modal('<div id="fb-modal"><h3>Mit Google-Konto speichern</h3><div class="hinweis" style="margin-top:0">Firebase konnte nicht geladen werden. Bitte Internetverbindung prüfen und erneut versuchen.</div><div class="knoepfe"><button class="btn sekundaer" onclick="App.modalZu()">Schließen</button></div></div>');
+        return;
+      }
+      if (!Fb.bereit) return; // onAuthStateChanged rendert gleich erneut
+    }
+    const fb = Sync.istFirebase();
+    const code = fb ? Sync.cfg.code : ('hsg-' + PROFIL_ID);
+    const regeln = `
+      <details style="margin-top:14px"><summary class="hinweis" style="cursor:pointer">Einmalige Einrichtung (nur Admin): Firestore-Regeln</summary>
+        <div class="hinweis">In der Firebase-Konsole unter „Firestore → Regeln“ innerhalb von <code>match /databases/{database}/documents { … }</code> ergänzen:</div>
+        <div class="code-box">${esc(FIRESTORE_REGELN)}</div>
+      </details>`;
+    let inhalt;
+    if (!Fb.user) {
+      inhalt = `
+        <div class="hinweis" style="margin-top:0">Melde dich mit deinem eigenen Google-Konto an. Die Daten werden dann online gespeichert und auf allen Geräten abgeglichen, auf denen du (oder ein freigegebener Kassenwart) angemeldet bist.</div>
+        <button class="btn" style="width:100%;margin-top:12px" onclick="App.fbAnmelden()">Mit Google anmelden</button>
+        <div class="knoepfe">
+          <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+          ${fb ? '<button class="btn gefahr" onclick="App.syncTrennen()">Firebase trennen</button>' : ''}
+        </div>`;
+    } else if (!fb) {
+      inhalt = `
+        <div class="sync-status"><span class="punkt gruen"></span>Angemeldet als ${esc(Fb.email())}</div>
+        <div class="feld" style="margin-top:10px"><label>Team-Code</label><input type="text" id="fb-code" value="${esc(code)}" placeholder="z. B. hsg-${PROFIL_ID}"></div>
+        <div class="hinweis" style="margin-top:0">Gibt es den Team-Code noch nicht, wird er mit deinen aktuellen Daten angelegt und du bist Besitzer. Gibt es ihn schon, wird der Online-Stand geladen – dafür muss dich der Besitzer vorher freigeben.</div>
+        <div class="knoepfe">
+          <button class="btn sekundaer" onclick="App.fbAbmelden()">Abmelden</button>
+          <button class="btn" onclick="App.fbVerbinden()">Verbinden</button>
+        </div>`;
+    } else {
+      const m = Sync.meta;
+      const besitzer = Sync.istBesitzer();
+      let zugriff;
+      if (!m) zugriff = '<div class="hinweis" style="margin-top:0">Zugriffsliste noch nicht geladen. Tippe auf „Jetzt synchronisieren“.</div>';
+      else {
+        zugriff = '<div class="card" style="margin:6px 0 0">' + m.members.map(e => `
+          <div class="zeile">
+            <div class="haupt">${esc(e)}${e === m.ownerEmail ? ' <small>(Besitzer)</small>' : ''}${e === Fb.email() ? ' <small>(du)</small>' : ''}</div>
+            ${besitzer && e !== m.ownerEmail ? `<div class="aktionen"><button class="icon-btn rot" title="Zugriff entfernen" onclick="App.fbMitgliedEntfernen('${esc(e)}')">${ICON.del}</button></div>` : ''}
+          </div>`).join('') + '</div>';
+        zugriff += besitzer
+          ? `<div class="feld" style="margin-top:10px"><label>Weiteren Kassenwart freigeben (Google-Adresse)</label><input type="email" id="fb-neu" placeholder="name@gmail.com" autocapitalize="off"></div>
+             <button class="btn klein sekundaer" onclick="App.fbMitgliedHinzu()">Freigeben</button>
+             <div class="hinweis">Die Person meldet sich danach in ihrer App mit diesem Google-Konto an und verbindet sich mit Team-Code „${esc(Sync.cfg.code)}“.</div>`
+          : `<div class="hinweis">Nur der Besitzer (${esc(m.ownerEmail)}) kann weitere Personen freigeben.</div>`;
+      }
+      inhalt = `
+        <div class="sync-status"><span class="punkt gruen"></span>Angemeldet als ${esc(Fb.email())}</div>
+        <div class="hinweis" style="margin-top:2px">Verbunden mit Team-Code „${esc(Sync.cfg.code)}“.</div>
+        <h4 style="margin:14px 0 4px">Zugriff</h4>
+        ${zugriff}
+        <div class="knoepfe">
+          <button class="btn sekundaer" onclick="App.fbAbmelden()">Abmelden</button>
+          <button class="btn gefahr" onclick="App.syncTrennen()">Verbindung trennen</button>
+        </div>`;
+    }
+    const offen = document.getElementById('modal-hg').classList.contains('offen') && document.getElementById('fb-modal');
+    const html = `<div id="fb-modal"><h3>Mit Google-Konto speichern</h3>${inhalt}${regeln}</div>`;
+    if (offen) offen.outerHTML = html; else this.modal(html);
+  },
+
+  fbAnmelden() { Fb.anmelden(); },
+  async fbAbmelden() {
+    if (!confirm('Vom Google-Konto abmelden? Die Daten bleiben auf diesem Gerät, werden aber bis zur nächsten Anmeldung nicht mehr abgeglichen.')) return;
+    await Fb.abmelden();
+    this.toast('Abgemeldet');
+  },
+  fbVerbinden() {
+    const code = document.getElementById('fb-code').value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+    if (!code) { this.toast('Bitte einen Team-Code angeben.'); return; }
+    Sync._key = null; Sync.meta = null;
+    Sync.cfg = { typ: 'firebase', code, autoSync: true, rev: null, lastJson: null, lastAt: null };
+    Sync.speichernCfg();
+    this.toast('Verbunden – synchronisiere …');
+    Sync.abgleichen(true).then(() => { this.rendernVerwaltenSyncKnopf(); if (document.getElementById('fb-modal')) this.syncFirebaseModal(); });
+    this.syncFirebaseModal();
+  },
+  async fbMitgliedHinzu() {
+    const email = (document.getElementById('fb-neu').value || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.toast('Bitte eine gültige E-Mail-Adresse eingeben.'); return; }
+    try { await Sync.mitgliederAendern(email, true); this.toast(email + ' freigegeben'); }
+    catch (e) { this.toast('Freigabe fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); }
+    this.syncFirebaseModal();
+  },
+  async fbMitgliedEntfernen(email) {
+    if (!confirm(email + ' den Zugriff entziehen?')) return;
+    try { await Sync.mitgliederAendern(email, false); this.toast('Zugriff entfernt'); }
+    catch (e) { this.toast('Entfernen fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); }
+    this.syncFirebaseModal();
+  },
+
+  syncSupabaseModal() {
+    const c = (Sync.cfg && !Sync.istFirebase()) ? Sync.cfg : {};
     const sql = 'create table if not exists strafenkasse (\n  id text primary key,\n  data jsonb,\n  rev bigint default 0,\n  updated_at timestamptz default now()\n);\nalter table strafenkasse enable row level security;\ncreate policy "team" on strafenkasse for all using (true) with check (true);\ngrant select, insert, update, delete on table strafenkasse to anon;';
     this.modal(`
       <h3>Cloud-Sync einrichten</h3>
@@ -1962,7 +2337,7 @@ const App = {
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.syncSpeichern()">Verbinden</button>
       </div>
-      ${Sync.aktiv() ? '<div class="knoepfe"><button class="btn gefahr" onclick="App.syncTrennen()">Verbindung trennen</button></div>' : ''}`);
+      ${(Sync.aktiv() && !Sync.istFirebase()) ? '<div class="knoepfe"><button class="btn gefahr" onclick="App.syncTrennen()">Verbindung trennen</button></div>' : ''}`);
   },
 
   syncSpeichern() {
@@ -1976,6 +2351,7 @@ const App = {
     // Bei Wechsel von URL/Code/PIN die Revisionsverfolgung zurücksetzen
     const gleich = alt.url === url && alt.code === code && (alt.pin || '') === pin;
     Sync._key = null;
+    Sync.meta = null;
     Sync.cfg = { url, key, code, pin, autoSync: true, rev: gleich ? alt.rev : null, lastJson: gleich ? alt.lastJson : null, lastAt: gleich ? alt.lastAt : null };
     Sync.speichernCfg();
     this.modalZu();
@@ -1984,7 +2360,7 @@ const App = {
   },
 
   syncTrennen() {
-    if (!confirm('Cloud-Sync auf diesem Gerät trennen? Die Daten bleiben lokal erhalten.')) return;
+    if (!confirm('Cloud-Sync auf diesem Gerät trennen? Die Daten bleiben lokal erhalten (online bleiben sie ebenfalls gespeichert).')) return;
     Sync.trennen(); this.modalZu(); this.toast('Sync getrennt');
   },
 
