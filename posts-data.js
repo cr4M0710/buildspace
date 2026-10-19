@@ -949,4 +949,16 @@ const posts = [
     titleEn: "Cover Lesson Folder",
     excerptEn: "Plan cover material for a school day: enter lessons, topics, lesson plans and notes, then print it as an A4 sheet, save it as PDF or Word, or send it as text."
    },
+   {
+    title: "LernWerk – Lernspiele-Baukasten",
+    excerpt: "Wordwall-Prinzip zum Selberbauen: Inhalte einmal eingeben und als Quiz, Zuordnung, Memory, Glücksrad, Lückentext und 7 weitere Vorlagen spielen – mit Google-Anmeldung und Cloud-Speicher, Schüler-Link per QR-Code (ohne Anmeldung) und Arbeitsblatt-Druck.",
+    date: "2026-10-19",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "lernwerk.html",
+    emoji: "🧩",
+    tags: ["tool", "spiel", "einzelarbeit", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "LernWerk – Learning Game Builder",
+    excerptEn: "Build-your-own Wordwall: enter content once and play it as a quiz, match-up, memory, spin wheel, cloze text and 7 more templates – with Google sign-in and cloud storage, a student link via QR code (no sign-in) and printable worksheets."
+   },
 ];
