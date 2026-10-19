@@ -937,4 +937,16 @@ const posts = [
     titleEn: "Number Line Workshop",
     excerptEn: "Number lines for natural numbers, integers, fractions and rationals: discover common pitfalls, step-by-step methods, practice on three levels with hints (reading, marking, dividing, step size, comparing, distance), a puzzle rally with a secret word and a number line generator."
    },
+   {
+    title: "Vertretungsmappe",
+    excerpt: "Vertretungsmaterial für einen Unterrichtstag planen: Stunden, Thema, Ablaufplan und Hinweise eintragen und als A4-Zettel drucken, als PDF oder Word-Datei speichern oder als Text verschicken.",
+    date: "2026-10-19",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "vertretungsmappe.html",
+    emoji: "📋",
+    tags: ["tool", "organisation"],
+    titleEn: "Cover Lesson Folder",
+    excerptEn: "Plan cover material for a school day: enter lessons, topics, lesson plans and notes, then print it as an A4 sheet, save it as PDF or Word, or send it as text."
+   },
 ];

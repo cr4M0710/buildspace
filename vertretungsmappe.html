@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<title>Vertretungsmappe</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Vertretungsmappe – buildspace">
+<meta property="og:description" content="Vertretungsmaterial für einen Unterrichtstag planen und als A4-Zettel drucken, als PDF oder Word-Datei speichern.">
+<meta property="og:url" content="https://buildspaceos.de/vertretungsmappe.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/vertretungsmappe.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vertretungsmappe – buildspace">
+<meta name="twitter:description" content="Vertretungsmaterial für einen Unterrichtstag planen und als A4-Zettel drucken, als PDF oder Word-Datei speichern.">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/vertretungsmappe.jpg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+/* Layout: schlicht und weiß – oben Werkzeugleiste, links Formular, rechts der A4-Zettel */
+:root{
+  --bg:#ffffff; --surface:#ffffff; --surface-2:#ffffff; --line:#d9d9d9; --fg:#1a1a1a; --muted:#666666;
+  --accent:#1a1a1a; --accent-fg:#ffffff; --accent-soft:#f2f2f2; --mark:transparent; --warn:#b3261e; --warn-soft:#fdecea; --ok:#2e7d32;
+  --paper:#ffffff; --ink:#111111; --ink-2:#555555; --rule:#c8c8c8; --tint:#ffffff; --paper-accent:#111111;
+  --f-display:Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --f-body:Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --r:8px;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Kopfleiste */
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));padding-top:max(10px,env(safe-area-inset-top,0px))}
+.top-in{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;max-width:1600px;margin:0 auto}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font:700 20px/1 var(--f-display);margin:0;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:13px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
+.btn.ghost{background:transparent}
+.btn.small{min-height:32px;padding:4px 10px;font-size:13px}
+.btn.danger:hover{border-color:var(--warn);color:var(--warn)}
+.btn svg{width:16px;height:16px;flex:none}
+
+.tabs{display:none;gap:6px;max-width:1600px;margin:10px auto 0}
+.tabs button{flex:1;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px;font-weight:700;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;max-width:1600px;margin:0 auto;
+  padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.editor{display:flex;flex-direction:column;gap:18px;min-width:0}
+.previewCol{min-width:0}
+.previewSticky{position:sticky;top:84px}
+.previewHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.previewHead h2{font:700 15px var(--f-display);margin:0;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.board{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;overflow:auto;max-height:calc(100vh - 150px)}
+.zoomWrap{margin:0 auto;transform-origin:top left}
+
+@media (max-width:1050px){
+  .tabs{display:flex}
+  main{grid-template-columns:minmax(0,1fr)}
+  main[data-view="edit"] .previewCol{display:none}
+  main[data-view="preview"] .editor{display:none}
+  .previewSticky{position:static}
+  .board{max-height:none}
+}
+
+/* Formular */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.panel > h2{font:700 18px var(--f-display);margin:0 0 14px;display:flex;align-items:center;gap:10px}
+.panel > h2 small{font:400 13px var(--f-body);color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:9px 10px;min-height:40px}
+.f textarea{resize:vertical;min-height:64px}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--accent);background:var(--surface)}
+.hint{font-size:13px;color:var(--muted)}
+.hint.warn{color:var(--warn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.lesson{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.lessonHead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.lessonNo{font:700 18px/1 var(--f-display);color:var(--accent);min-width:2.6em}
+.lessonTitle{font-weight:700;flex:1;min-width:140px;overflow-wrap:anywhere}
+.badge{font-size:12px;border-radius:99px;padding:3px 9px;font-weight:700;white-space:nowrap}
+.badge.ok{background:var(--accent-soft);color:var(--ok)}
+.badge.miss{background:var(--warn-soft);color:var(--warn)}
+.lessonBody{padding:14px;display:flex;flex-direction:column;gap:14px}
+.lesson.collapsed .lessonBody{display:none}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:7px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{border-color:var(--accent)}
+.iconbtn svg{width:16px;height:16px}
+.sub{font:700 13px var(--f-display);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:4px 0 -4px}
+
+.phases{display:flex;flex-direction:column;gap:8px}
+.phase{display:grid;grid-template-columns:64px 130px minmax(0,1fr) 120px 34px;gap:6px;align-items:start}
+.phase input,.phase textarea,.phase select{border:1px solid var(--line);border-radius:7px;background:var(--surface-2);padding:7px 8px;width:100%;min-height:38px}
+.phase textarea{min-height:38px;resize:vertical}
+.phase .mat{grid-column:3/5}
+.phHead{display:grid;grid-template-columns:64px 130px minmax(0,1fr) 120px 34px;gap:6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+@media (max-width:640px){
+  .phase,.phHead{grid-template-columns:56px minmax(0,1fr) 34px}
+  .phHead{display:none}
+  .phase .what,.phase .soz,.phase .mat{grid-column:1/-1}
+  .phase{padding:8px;border:1px dashed var(--line);border-radius:8px}
+}
+.sum{font-size:13px;font-weight:700}
+.sum.over{color:var(--warn)} .sum.fit{color:var(--ok)}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.chk{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:6px 12px;cursor:pointer;background:var(--surface-2);font-size:14px}
+.chk input{accent-color:var(--accent);width:16px;height:16px}
+.chk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
+.addLesson{border:2px dashed var(--line);background:transparent;border-radius:var(--r);padding:16px;font-weight:700;cursor:pointer;color:var(--accent)}
+.addLesson:hover{border-color:var(--accent)}
+
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:0;width:min(560px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,20,15,.45)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:14px;max-height:80vh;overflow:auto}
+.dlg h3{margin:0;font:700 19px var(--f-display)}
+.raster{display:grid;grid-template-columns:50px 1fr 1fr;gap:6px;align-items:center}
+.raster input{border:1px solid var(--line);border-radius:7px;background:var(--surface-2);padding:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+/* ---------- Der Zettel (immer Papierfarben) ---------- */
+.sheet{width:210mm;background:var(--paper);color:var(--ink);font:10pt/1.4 var(--f-body);padding:13mm 14mm;border:1px solid var(--line)}
+.sheet *{box-sizing:border-box}
+.sh-head{display:grid;grid-template-columns:1fr auto;gap:6mm;align-items:end;border-bottom:1pt solid var(--ink);padding-bottom:3mm}
+.sh-kicker{font:700 8pt var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-accent)}
+.sh-title{font:700 20pt/1.05 var(--f-display);margin:1mm 0 0;letter-spacing:-.01em}
+.sh-meta{text-align:right;font-size:9pt;color:var(--ink-2)}
+.sh-meta b{color:var(--ink)}
+.sh-info{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm 6mm;margin:3mm 0;font-size:9pt}
+.sh-info div span{display:block;font-size:7pt;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);font-weight:700}
+.sh-note{background:var(--tint);border:.5pt solid var(--rule);padding:2.5mm 3.5mm;margin:3mm 0;white-space:pre-wrap}
+.sh-note strong{display:block;font-size:7.5pt;text-transform:uppercase;letter-spacing:.1em;color:var(--paper-accent);margin-bottom:.8mm}
+table.sh-t{width:100%;border-collapse:collapse;font-size:9pt;margin:2mm 0}
+.sh-t th{text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2);border-bottom:1pt solid var(--ink);padding:1.2mm 1.5mm}
+.sh-t td{border-bottom:.5pt solid var(--rule);padding:1.4mm 1.5mm;vertical-align:top;white-space:pre-wrap}
+.sh-t td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sh-les{margin-top:5mm;border:1pt solid var(--rule);border-radius:2mm;padding:3.5mm 4mm;break-inside:avoid;page-break-inside:avoid}
+.sh-les.pb{break-before:page;page-break-before:always;margin-top:0}
+.sh-lh{display:flex;gap:4mm;align-items:baseline;flex-wrap:wrap;border-bottom:.5pt solid var(--rule);padding-bottom:2mm;margin-bottom:2mm}
+.sh-std{font:700 14pt/1 var(--f-display);color:var(--paper-accent)}
+.sh-fach{font:700 12.5pt var(--f-display)}
+.sh-lh .sh-sm{color:var(--ink-2);font-size:9pt}
+.sh-topic{font-size:10.5pt;margin:1mm 0}
+.sh-topic span{font-size:7.5pt;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);font-weight:700;margin-right:2mm}
+.sh-mark{font-weight:700}
+.sh-two{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm 5mm;margin-top:2.5mm}
+.sh-box{font-size:9pt;white-space:pre-wrap}
+.sh-box strong{display:block;font-size:7.5pt;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:.5mm}
+.sh-tasks{display:flex;flex-wrap:wrap;gap:1.5mm 5mm;margin-top:3mm;font-size:9pt}
+.sh-tasks span::before{content:"";display:inline-block;width:3mm;height:3mm;border:.8pt solid var(--ink);margin-right:1.5mm;vertical-align:-.4mm}
+.sh-fb{margin-top:3mm;border-top:.5pt dashed var(--ink-2);padding-top:2mm;font-size:8.5pt;color:var(--ink-2)}
+.sh-fb .ln{display:grid;grid-template-columns:auto 1fr;gap:2mm;margin-top:2.2mm}
+.sh-fb .ln i{border-bottom:.5pt solid var(--rule);font-style:normal}
+.sh-foot{margin-top:5mm;font-size:7.5pt;color:var(--ink-2);display:flex;justify-content:space-between}
+.sh-empty{color:var(--ink-2);font-style:italic;text-align:center;padding:12mm 0}
+
+/* Druck */
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  body > *:not(#printArea){display:none!important}
+  #printArea{display:block}
+  #printArea .sheet{box-shadow:none;width:auto;min-height:0}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><h1>Vertretungsmappe</h1><span id="saveState">Entwurf gespeichert</span></div>
+    <div class="actions">
+      <button class="btn ghost" id="bHelp" type="button" title="Anleitung" aria-label="Anleitung">?</button>
+      <button class="btn ghost" id="bTemplates" type="button" title="Vorlagen verwalten">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>Vorlagen</button>
+      <button class="btn ghost" id="bSettings" type="button" title="Stundenraster einstellen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Stundenraster</button>
+      <button class="btn" id="bCopy" type="button" title="Als Text für Mail oder Messenger kopieren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>Text</button>
+      <button class="btn" id="bDocx" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13l1.5 5L12 14l1.5 4L15 13"/></svg>DOCX</button>
+      <button class="btn" id="bPdf" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M12 11v6m-3-3 3 3 3-3"/></svg>PDF</button>
+      <button class="btn primary" id="bPrint" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2"/><rect x="6" y="14" width="12" height="7"/></svg>Drucken</button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tEdit" aria-selected="true">Bearbeiten</button>
+    <button type="button" role="tab" id="tPrev" aria-selected="false">Zettel ansehen</button>
+  </div>
+</header>
+
+<main id="main" data-view="edit">
+  <section class="editor" id="editor" aria-label="Eingabe"></section>
+  <section class="previewCol" aria-label="Vorschau">
+    <div class="previewSticky">
+      <div class="previewHead">
+        <h2>Vorschau · A4</h2>
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="optPb"> Jede Stunde auf eigene Seite</label>
+          <label class="chk"><input type="checkbox" id="optFb"> Rückmeldefeld</label>
+        </div>
+      </div>
+      <div class="board" id="board"><div class="zoomWrap" id="zoomWrap"></div></div>
+    </div>
+  </section>
+</main>
+
+<div id="printArea"></div>
+
+<dialog id="dlgSettings">
+  <form method="dialog" class="dlg">
+    <h3>Stundenraster</h3>
+    <p class="hint">Die Uhrzeiten erscheinen auf dem Zettel und werden in diesem Browser gespeichert. Felder leer lassen, wenn in dieser Stunde kein Unterricht ist (z. B. 7. Stunde = Mittagspause).</p>
+    <div class="f"><label for="setMin">Minuten pro Stunde</label><input id="setMin" type="number" min="30" max="90" step="5"></div>
+    <div class="raster" id="rasterGrid"></div>
+    <div class="row"><button class="btn primary" value="ok" id="setSave">Übernehmen</button><button class="btn ghost" value="cancel">Abbrechen</button><button class="btn ghost" type="button" id="setReset">Standard</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgTpl">
+  <form method="dialog" class="dlg">
+    <h3>Vorlagen &amp; Archiv</h3>
+    <p class="hint">Vorlagen speichern den kompletten Tag (z. B. „Montag – Stundenplan“) in diesem Browser. Zum Übertragen auf ein anderes Gerät als Datei exportieren.</p>
+    <div class="f"><label for="tplName">Aktuellen Stand speichern als</label>
+      <div class="row"><input id="tplName" placeholder="z. B. Montag 7b / 8a" style="flex:1"><button class="btn primary" type="button" id="tplSave">Speichern</button></div></div>
+    <div class="f"><label for="tplList">Gespeicherte Vorlagen</label>
+      <select id="tplList"></select>
+      <div class="row"><button class="btn" type="button" id="tplLoad">Laden</button><button class="btn" type="button" id="tplLoadNoContent">Nur Stundenplan laden</button><button class="btn danger" type="button" id="tplDel">Löschen</button></div>
+      <span class="hint">„Nur Stundenplan“ übernimmt Stunden, Fächer, Klassen und Räume ohne Inhalte – praktisch als Wochentags-Gerüst.</span></div>
+    <div class="f"><label>Datei</label>
+      <div class="row"><button class="btn" type="button" id="jsonExp">Als Datei exportieren (.json)</button>
+      <label class="btn" for="jsonImp" style="cursor:pointer">Datei importieren</label><input type="file" id="jsonImp" accept=".json,application/json" hidden></div></div>
+    <div class="f"><label>Neu beginnen</label>
+      <div class="row"><button class="btn" type="button" id="bExample">Beispiel laden</button><button class="btn danger" type="button" id="bClear">Alles leeren</button></div>
+      <span class="hint" id="clearHint"></span></div>
+    <div class="row"><button class="btn ghost" value="close">Schließen</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<datalist id="dlFach">
+  <option>Mathematik</option><option>Deutsch</option><option>Englisch</option><option>Französisch</option><option>Spanisch</option><option>Latein</option>
+  <option>Arbeitslehre</option><option>Berufsorientierung</option><option>Gesellschaftslehre</option><option>Naturwissenschaften</option><option>Biologie</option><option>Chemie</option><option>Physik</option>
+  <option>Erdkunde</option><option>Geschichte</option><option>Politik und Wirtschaft</option><option>Religion</option><option>Ethik</option><option>Kunst</option><option>Musik</option><option>Darstellendes Spiel</option><option>Sport</option><option>Informatik</option><option>Klassenlehrerstunde</option><option>Förderunterricht</option>
+</datalist>
+<datalist id="dlPhase"><option>Einstieg</option><option>Wiederholung</option><option>Erarbeitung</option><option>Übung</option><option>Sicherung</option><option>Präsentation</option><option>Reflexion</option><option>Abschluss</option></datalist>
+<datalist id="dlSoz"><option>Plenum</option><option>EA</option><option>PA</option><option>GA</option><option>Stationen</option><option>L-Vortrag</option></datalist>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+
+// 7. Stunde = Mittagspause (13:00–13:45), leere Zeiten = keine Unterrichtsstunde
+const RASTER_DEFAULT = [["07:50","08:35"],["08:35","09:20"],["09:40","10:25"],["10:25","11:10"],["11:30","12:15"],["12:15","13:00"],["",""],["13:45","14:30"],["14:30","15:15"]];
+const TASKS = [
+  ["anwesenheit","Anwesenheit eintragen"],["kopien","Kopien liegen bereit"],["geraete","iPads/Geräte ausgeben"],
+  ["einsammeln","Ergebnisse einsammeln"],["ha","Hausaufgaben kontrollieren"],["tafel","Tafelbild fotografieren"],["raum","Raum aufräumen lassen"]
+];
+let settings = store.get("vm_settings_v2", { min:45, raster: RASTER_DEFAULT.map(r=>[...r]) });
+
+const today = () => { const d = new Date(); return d.toISOString().slice(0,10); };
+const blankLesson = () => ({ id:uid(), von:1, bis:1, fach:"", klasse:"", kurs:"", raum:"", einheit:"", thema:"", ziel:"",
+  phasen:[], material:"", ha:"", schnell:"", hinweise:"", tasks:{}, open:true });
+const blankState = () => ({ meta:{ lehrkraft:"", kuerzel:"", datum:today(), schule:"", kontakt:"", ansprech:"", allgemein:"" },
+  opt:{ pb:false, fb:true }, stunden:[blankLesson()] });
+
+function example(){
+  return { meta:{ lehrkraft:"Marc S.", kuerzel:"STR", datum:today(), schule:"Gesamtschule Gleiberger Land",
+      kontakt:"Bis 7:30 Uhr per Schulmail erreichbar", ansprech:"Fachschaft Mathematik: Frau K. (Raum 112)",
+      allgemein:"Sitzpläne liegen im Klassenbuch.\nMaterial für alle Stunden liegt in meinem Fach im Lehrerzimmer (grüne Mappe).\nHandys bleiben in den Taschen." },
+    opt:{ pb:false, fb:true },
+    stunden:[
+      { id:uid(), von:1, bis:2, fach:"Mathematik", klasse:"7b", kurs:"B", raum:"204", einheit:"Prozentrechnung",
+        thema:"Grundwert berechnen", ziel:"Die SuS berechnen den Grundwert mit dem Dreisatz und der Formel.",
+        phasen:[ {min:10,phase:"Einstieg",was:"Kopfrechenübung von der Folie (Material 1), Lösungen vergleichen.",soz:"Plenum",mat:"Folie M1"},
+                 {min:15,phase:"Erarbeitung",was:"Merkkasten im Buch S. 112 lesen, Beispiel ins Heft übertragen.",soz:"EA",mat:"Buch S. 112"},
+                 {min:45,phase:"Übung",was:"AB „Grundwert“ Aufgabe 1–6. Lösungen liegen am Pult zur Selbstkontrolle.",soz:"PA",mat:"AB Grundwert"},
+                 {min:20,phase:"Sicherung",was:"Zwei Paare stellen Aufgabe 5 an der Tafel vor.",soz:"Plenum",mat:"Tafel"} ],
+        material:"AB Grundwert (30×) und Lösungsblätter in der grünen Mappe", ha:"AB Aufgabe 7 und 8", schnell:"Knobelaufgabe auf der Rückseite des ABs",
+        hinweise:"Die Klasse arbeitet ruhig in Partnerarbeit. Partner wie im Sitzplan.", tasks:{anwesenheit:true,einsammeln:true}, open:true },
+      { id:uid(), von:4, bis:4, fach:"Arbeitslehre", klasse:"8a", kurs:"", raum:"Werkraum 1", einheit:"Berufsorientierung",
+        thema:"Praktikumsbewerbung: Anschreiben", ziel:"",
+        phasen:[ {min:5,phase:"Einstieg",was:"Kurz besprechen: Wo seid ihr mit der Praktikumssuche?",soz:"Plenum",mat:""},
+                 {min:35,phase:"Erarbeitung",was:"Anschreiben auf dem iPad mit der Vorlage fertigstellen.",soz:"EA",mat:"iPads, Vorlage in Teams"},
+                 {min:5,phase:"Abschluss",was:"Speichern und in Teams abgeben.",soz:"EA",mat:""} ],
+        material:"iPad-Koffer 3 im Sekretariat abholen", ha:"", schnell:"Lebenslauf überarbeiten",
+        hinweise:"Bitte nicht in den Werkraum-Maschinenbereich lassen.", tasks:{anwesenheit:true,geraete:true}, open:false }
+    ]};
+}
+
+let S = store.get("vm_draft_v2", null) || blankState();
+
+/* ---------- Helpers ---------- */
+const fmtDate = iso => { if(!iso) return ""; const d = new Date(iso+"T12:00:00"); if(isNaN(d)) return iso;
+  return d.toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); };
+const isWeekend = iso => { const d = new Date(iso+"T12:00:00"); return d.getDay()===0 || d.getDay()===6; };
+const stdLabel = l => l.bis > l.von ? `${l.von}./${l.bis}.` : `${l.von}.`;
+const zeit = l => { const a = settings.raster[l.von-1], b = settings.raster[l.bis-1]; return a && b && a[0] && b[1] ? `${a[0]}–${b[1]}` : ""; };
+const dauer = l => (l.bis - l.von + 1) * settings.min;
+const kursTxt = l => l.kurs ? `${l.kurs}-Kurs` : "";
+const gruppe = l => [l.klasse, kursTxt(l)].filter(Boolean).join(" · ");
+const missing = l => { const m=[]; if(!l.fach) m.push("Fach"); if(!l.klasse) m.push("Klasse"); if(!l.thema) m.push("Thema"); if(!l.phasen.length && !l.hinweise) m.push("Ablauf"); return m; };
+const sumMin = l => l.phasen.reduce((a,p)=>a+(+p.min||0),0);
+const sortLessons = () => S.stunden.sort((a,b)=>a.von-b.von || a.bis-b.bis);
+
+let saveT;
+function persist(){
+  clearTimeout(saveT);
+  $("#saveState").textContent = "Speichert …";
+  saveT = setTimeout(()=>{ $("#saveState").textContent = store.set("vm_draft_v2", S) ? "Entwurf gespeichert" : "Speichern im Browser nicht möglich"; }, 400);
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+
+/* ---------- Editor ---------- */
+const ico = {
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+  dup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
+  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  fold:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>',
+  open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M12 4v16"/></svg>'
+};
+const field = (label, key, val, o={}) => {
+  const id = (o.l!=null?`l${o.l}_`:"m_")+key;
+  const data = o.l!=null ? `data-l="${o.l}" data-k="${key}"` : `data-m="${key}"`;
+  const ctrl = o.area
+    ? `<textarea id="${id}" ${data} rows="${o.rows||3}" placeholder="${esc(o.ph||"")}">${esc(val)}</textarea>`
+    : `<input id="${id}" ${data} type="${o.type||"text"}" value="${esc(val)}" placeholder="${esc(o.ph||"")}" ${o.list?`list="${o.list}"`:""}>`;
+  return `<div class="f ${o.wide?"wide":""}"><label for="${id}">${label}</label>${ctrl}${o.hint||""}</div>`;
+};
+const stdOpts = sel => settings.raster.map((r,i)=> (r[0] || i+1==sel) ? `<option value="${i+1}" ${i+1==sel?"selected":""}>${i+1}.${r[0]?` (${r[0]})`:""}</option>` : "").join("");
+
+function renderEditor(){
+  const m = S.meta;
+  const we = m.datum && isWeekend(m.datum) ? `<span class="hint warn">Das Datum fällt auf ein Wochenende.</span>` : `<span class="hint">${esc(fmtDate(m.datum))}</span>`;
+  let h = `<div class="panel"><h2>Unterrichtstag</h2><div class="grid">
+    ${field("Datum","datum",m.datum,{type:"date",hint:we})}
+    ${field("Abwesende Lehrkraft","lehrkraft",m.lehrkraft,{ph:"Name"})}
+    ${field("Kürzel","kuerzel",m.kuerzel,{ph:"z. B. STR"})}
+    ${field("Schule","schule",m.schule,{ph:"optional"})}
+    ${field("Erreichbarkeit","kontakt",m.kontakt,{ph:"z. B. bis 7:30 per Mail"})}
+    ${field("Ansprechpartner:in vor Ort","ansprech",m.ansprech,{ph:"Fachkolleg:in, Raum"})}
+    ${field("Allgemeine Hinweise für den ganzen Tag","allgemein",m.allgemein,{area:true,wide:true,ph:"Sitzpläne, Fundort Material, Regeln, Schlüssel …"})}
+  </div></div>`;
+  h += `<div class="panel" style="padding-bottom:12px"><h2>Stunden <small>${S.stunden.length} geplant</small></h2>
+        <div style="display:flex;flex-direction:column;gap:14px">`;
+  S.stunden.forEach((l,i)=>{
+    const miss = missing(l), sm = sumMin(l), d = dauer(l);
+    const sumCls = !l.phasen.length ? "" : sm>d ? "over" : sm===d ? "fit" : "";
+    const sumTxt = !l.phasen.length ? "" : `${sm} von ${d} Minuten verplant` + (sm>d?" – zu viel":"");
+    h += `<article class="lesson ${l.open?"":"collapsed"}" data-idx="${i}">
+      <div class="lessonHead">
+        <span class="lessonNo">${stdLabel(l)}</span>
+        <span class="lessonTitle">${esc([l.fach||"Neue Stunde", gruppe(l)].filter(Boolean).join(" · "))}${l.thema?`<br><span class="hint">${esc(l.thema)}</span>`:""}</span>
+        ${miss.length?`<span class="badge miss">fehlt: ${miss.join(", ")}</span>`:`<span class="badge ok">vollständig</span>`}
+        <div class="row">
+          <button type="button" class="iconbtn" data-act="toggle" data-i="${i}" title="${l.open?"Einklappen":"Aufklappen"}" aria-label="${l.open?"Einklappen":"Aufklappen"}">${l.open?ico.fold:ico.open}</button>
+          <button type="button" class="iconbtn" data-act="dup" data-i="${i}" title="Duplizieren" aria-label="Duplizieren">${ico.dup}</button>
+          <button type="button" class="iconbtn" data-act="del" data-i="${i}" title="Löschen" aria-label="Löschen">${ico.del}</button>
+        </div>
+      </div>
+      <div class="lessonBody">
+        <div class="grid">
+          <div class="f"><label for="l${i}_von">Stunde von</label><select id="l${i}_von" data-l="${i}" data-k="von" data-num>${stdOpts(l.von)}</select></div>
+          <div class="f"><label for="l${i}_bis">bis</label><select id="l${i}_bis" data-l="${i}" data-k="bis" data-num>${stdOpts(l.bis)}</select><span class="hint">${zeit(l)} · ${d} Min.</span></div>
+          ${field("Fach","fach",l.fach,{l:i,list:"dlFach",ph:"Fach"})}
+          ${field("Klasse / Lerngruppe","klasse",l.klasse,{l:i,ph:"z. B. 7b"})}
+          <div class="f"><label for="l${i}_kurs">Kursniveau</label><select id="l${i}_kurs" data-l="${i}" data-k="kurs">
+            ${["","A","B","C","A/B","B/C","A/B/C"].map(k=>`<option value="${k}" ${l.kurs===k?"selected":""}>${k?k+"-Kurs":"ohne / Klassenverband"}</option>`).join("")}</select></div>
+          ${field("Raum","raum",l.raum,{l:i,ph:"z. B. 204"})}
+        </div>
+        <div class="grid two">
+          ${field("Aktuelle Einheit","einheit",l.einheit,{l:i,ph:"z. B. Prozentrechnung"})}
+          ${field("Thema der Stunde","thema",l.thema,{l:i,ph:"z. B. Grundwert berechnen"})}
+          ${field("Stundenziel (optional)","ziel",l.ziel,{l:i,wide:true,ph:"Die SuS können …"})}
+        </div>
+        <p class="sub">Ablaufplan</p>
+        <div class="phases">
+          ${l.phasen.length?`<div class="phHead"><span>Min.</span><span>Phase</span><span>Was passiert?</span><span>Sozialform</span><span></span></div>`:""}
+          ${l.phasen.map((p,j)=>`<div class="phase">
+            <input aria-label="Minuten" type="number" min="0" max="180" step="5" value="${esc(p.min)}" data-l="${i}" data-p="${j}" data-k="min" data-num>
+            <input aria-label="Phase" list="dlPhase" value="${esc(p.phase)}" data-l="${i}" data-p="${j}" data-k="phase" placeholder="Phase">
+            <textarea class="what" aria-label="Was passiert" rows="1" data-l="${i}" data-p="${j}" data-k="was" placeholder="Was passiert? Arbeitsauftrag …">${esc(p.was)}</textarea>
+            <input class="soz" aria-label="Sozialform" list="dlSoz" value="${esc(p.soz)}" data-l="${i}" data-p="${j}" data-k="soz" placeholder="Sozialform">
+            <button type="button" class="iconbtn" data-act="delPh" data-i="${i}" data-j="${j}" aria-label="Phase löschen" title="Phase löschen">${ico.x}</button>
+            <input class="mat" aria-label="Material" value="${esc(p.mat)}" data-l="${i}" data-p="${j}" data-k="mat" placeholder="Material zu dieser Phase (optional)">
+          </div>`).join("")}
+          <div class="row">
+            <button type="button" class="btn small" data-act="addPh" data-i="${i}">+ Phase</button>
+            ${!l.phasen.length?`<button type="button" class="btn small" data-act="stdPh" data-i="${i}">Standardablauf einfügen</button>`:""}
+            <span class="sum ${sumCls}">${sumTxt}</span>
+          </div>
+        </div>
+        <div class="grid two">
+          ${field("Material & Fundort","material",l.material,{l:i,area:true,rows:2,ph:"Was liegt wo?"})}
+          ${field("Hausaufgabe","ha",l.ha,{l:i,area:true,rows:2,ph:"leer lassen = keine"})}
+          ${field("Wer früher fertig ist …","schnell",l.schnell,{l:i,area:true,rows:2,ph:"Zusatzaufgabe"})}
+          ${field("Sonstige Hinweise","hinweise",l.hinweise,{l:i,area:true,rows:2,ph:"Besonderheiten der Lerngruppe, Regeln …"})}
+        </div>
+        <p class="sub">Aufgaben für die Vertretung</p>
+        <div class="checks">${TASKS.map(([k,t])=>`<label class="chk"><input type="checkbox" data-l="${i}" data-task="${k}" ${l.tasks[k]?"checked":""}> ${t}</label>`).join("")}</div>
+      </div>
+    </article>`;
+  });
+  h += `<button type="button" class="addLesson" data-act="add">+ Stunde hinzufügen</button></div></div>`;
+  $("#editor").innerHTML = h;
+  $("#optPb").checked = !!S.opt.pb; $("#optFb").checked = !!S.opt.fb;
+}
+
+/* ---------- Zettel ---------- */
+function sheetHTML(){
+  const m = S.meta, L = [...S.stunden].sort((a,b)=>a.von-b.von);
+  const info = [["Lehrkraft", [m.lehrkraft, m.kuerzel&&`(${m.kuerzel})`].filter(Boolean).join(" ")],["Erreichbar", m.kontakt],["Ansprechpartner:in", m.ansprech]].filter(x=>x[1]);
+  let h = `<div class="sheet">
+    <div class="sh-head"><div><div class="sh-kicker">Vertretungsmaterial${m.schule?" · "+esc(m.schule):""}</div>
+      <h1 class="sh-title">${esc(fmtDate(m.datum)||"Datum fehlt")}</h1></div>
+      <div class="sh-meta">${L.length} ${L.length===1?"Stunde":"Stunden"}<br><b>${(n=>`${n} ${n===1?"Unterrichtsstunde":"Unterrichtsstunden"}`)(L.reduce((a,l)=>a+(l.bis-l.von+1),0))}</b></div></div>
+    ${info.length?`<div class="sh-info">${info.map(([k,v])=>`<div><span>${k}</span>${esc(v)}</div>`).join("")}</div>`:""}`;
+  if(!L.length) return h + `<p class="sh-empty">Noch keine Stunde geplant.</p></div>`;
+  h += `<table class="sh-t"><thead><tr><th>Std.</th><th>Zeit</th><th>Fach</th><th>Lerngruppe</th><th>Raum</th><th>Thema</th></tr></thead><tbody>
+    ${L.map(l=>`<tr><td class="num"><b>${stdLabel(l)}</b></td><td class="num">${zeit(l)}</td><td>${esc(l.fach)}</td><td>${esc(gruppe(l))}</td><td>${esc(l.raum)}</td><td>${esc(l.thema)}</td></tr>`).join("")}
+    </tbody></table>`;
+  if(m.allgemein) h += `<div class="sh-note"><strong>Allgemeine Hinweise</strong>${esc(m.allgemein)}</div>`;
+  L.forEach((l,i)=>{
+    let t = 0;
+    const rows = l.phasen.map(p=>{ const a=t; t+= (+p.min||0); return `<tr><td class="num">${p.min?`${a}–${t}′`:""}</td><td><b>${esc(p.phase)}</b></td><td>${esc(p.was)}</td><td>${esc(p.soz)}</td><td>${esc(p.mat)}</td></tr>`; }).join("");
+    const boxes = [["Material & Fundort",l.material],["Hausaufgabe",l.ha],["Wer früher fertig ist",l.schnell],["Hinweise",l.hinweise]].filter(b=>b[1]);
+    const tasks = TASKS.filter(([k])=>l.tasks[k]).map(([,t])=>`<span>${t}</span>`).join("");
+    h += `<section class="sh-les ${S.opt.pb?"pb":""}">
+      <div class="sh-lh"><span class="sh-std">${stdLabel(l)} Std.</span><span class="sh-fach">${esc(l.fach||"Fach")}</span>
+        <span class="sh-sm">${esc([gruppe(l), l.raum&&"Raum "+l.raum, zeit(l)].filter(Boolean).join(" · "))}</span></div>
+      ${S.opt.pb && m.lehrkraft ? `<div class="sh-topic"><span>Für</span>${esc(m.lehrkraft)}${m.kuerzel?` (${esc(m.kuerzel)})`:""} · ${esc(fmtDate(m.datum))}</div>`:""}
+      ${l.einheit?`<div class="sh-topic"><span>Einheit</span>${esc(l.einheit)}</div>`:""}
+      ${l.thema?`<div class="sh-topic"><span>Thema</span><span class="sh-mark" style="font-size:10.5pt;text-transform:none;letter-spacing:0;color:inherit">${esc(l.thema)}</span></div>`:""}
+      ${l.ziel?`<div class="sh-topic"><span>Ziel</span>${esc(l.ziel)}</div>`:""}
+      ${rows?`<table class="sh-t"><thead><tr><th style="width:13%">Zeit</th><th style="width:15%">Phase</th><th>Was passiert?</th><th style="width:11%">Form</th><th style="width:18%">Material</th></tr></thead><tbody>${rows}</tbody></table>`:""}
+      ${boxes.length?`<div class="sh-two">${boxes.map(([k,v])=>`<div class="sh-box"><strong>${k}</strong>${esc(v)}</div>`).join("")}</div>`:""}
+      ${tasks?`<div class="sh-tasks">${tasks}</div>`:""}
+      ${S.opt.fb?`<div class="sh-fb"><b>Rückmeldung der Vertretung</b>
+        <div class="ln"><span>Vertretung durch:</span><i>&nbsp;</i></div>
+        <div class="ln"><span>Geschafft bis:</span><i>&nbsp;</i></div>
+        <div class="ln"><span>Fehlende SuS / Besonderes:</span><i>&nbsp;</i></div></div>`:""}
+    </section>`;
+  });
+  h += `<div class="sh-foot"><span>${esc([m.lehrkraft,m.kuerzel&&`(${m.kuerzel})`].filter(Boolean).join(" "))}</span><span>Bitte Zettel nach der Stunde ins Fach zurücklegen. Danke!</span></div></div>`;
+  return h;
+}
+
+function fitPreview(){
+  const board = $("#board"), wrap = $("#zoomWrap"), sheet = wrap.firstElementChild;
+  if(!sheet || !board.clientWidth) return;
+  const w = sheet.offsetWidth, avail = board.clientWidth - 36;
+  const z = Math.min(1, avail / w);
+  wrap.style.transform = `scale(${z})`;
+  wrap.style.width = w+"px";
+  wrap.style.height = (sheet.offsetHeight * z) + "px";
+}
+let prevT;
+function renderPreview(){ clearTimeout(prevT); prevT = setTimeout(()=>{ $("#zoomWrap").innerHTML = sheetHTML(); fitPreview(); }, 120); }
+function refreshAll(){ renderEditor(); renderPreview(); persist(); }
+
+/* ---------- Events ---------- */
+$("#editor").addEventListener("input", e=>{
+  const el = e.target, k = el.dataset.k;
+  if(el.dataset.m){ S.meta[el.dataset.m] = el.value; if(el.dataset.m==="datum"){ renderEditor(); } }
+  else if(el.dataset.task){ S.stunden[+el.dataset.l].tasks[el.dataset.task] = el.checked; }
+  else if(k){
+    const l = S.stunden[+el.dataset.l];
+    const v = el.hasAttribute("data-num") ? (el.value===""?"":+el.value) : el.value;
+    if(el.dataset.p!=null) l.phasen[+el.dataset.p][k] = v;
+    else {
+      l[k] = v;
+      if(k==="von" && l.bis < l.von) l.bis = l.von;
+      if(k==="bis" && l.bis < l.von) l.von = l.bis;
+      if(k==="von"||k==="bis"){ sortLessons(); renderEditor(); }
+    }
+    if(el.dataset.p!=null && k==="min"){ updateHeadOnly(+el.dataset.l); }
+  }
+  renderPreview(); persist();
+});
+$("#editor").addEventListener("change", e=>{
+  const el = e.target;
+  if(el.dataset.l!=null && !el.dataset.p && ["fach","klasse","thema","kurs"].includes(el.dataset.k)) { const pos = window.scrollY; renderEditor(); window.scrollTo(0,pos); }
+  if(el.dataset.p!=null && el.dataset.k==="was"){ const pos=window.scrollY; renderEditor(); window.scrollTo(0,pos); }
+});
+function updateHeadOnly(i){ // Summe live ohne Fokusverlust
+  const art = document.querySelector(`.lesson[data-idx="${i}"] .sum`); if(!art) return;
+  const l = S.stunden[i], sm = sumMin(l), d = dauer(l);
+  art.className = "sum " + (sm>d?"over":sm===d?"fit":"");
+  art.textContent = `${sm} von ${d} Minuten verplant` + (sm>d?" – zu viel":"");
+}
+$("#editor").addEventListener("click", e=>{
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  const i = +b.dataset.i, act = b.dataset.act;
+  if(act==="add"){
+    const last = S.stunden[S.stunden.length-1];
+    const n = blankLesson(); if(last){ let v = last.bis+1; while(v<=settings.raster.length && !settings.raster[v-1][0]) v++; n.von = Math.min(settings.raster.length, v); n.bis = n.von; }
+    S.stunden.forEach(l=>l.open=false); S.stunden.push(n); sortLessons();
+  }
+  if(act==="toggle") S.stunden[i].open = !S.stunden[i].open;
+  if(act==="dup"){ const c = JSON.parse(JSON.stringify(S.stunden[i])); c.id=uid(); c.open=true; S.stunden[i].open=false; S.stunden.splice(i+1,0,c); toast("Stunde dupliziert – Stunde von/bis anpassen"); }
+  if(act==="del"){
+    if(b.dataset.armed){ S.stunden.splice(i,1); toast("Stunde gelöscht"); }
+    else { b.dataset.armed="1"; b.style.borderColor="var(--warn)"; b.title="Nochmal tippen zum Löschen"; toast("Zum Löschen nochmal tippen"); setTimeout(()=>{ delete b.dataset.armed; b.style.borderColor=""; },2500); return; }
+  }
+  if(act==="addPh"){ S.stunden[i].phasen.push({min:"",phase:"",was:"",soz:"",mat:""}); }
+  if(act==="delPh"){ S.stunden[i].phasen.splice(+b.dataset.j,1); }
+  if(act==="stdPh"){
+    const d = dauer(S.stunden[i]), r = d-20;
+    S.stunden[i].phasen = [{min:5,phase:"Einstieg",was:"",soz:"Plenum",mat:""},{min:r,phase:"Erarbeitung",was:"",soz:"EA",mat:""},{min:10,phase:"Sicherung",was:"",soz:"Plenum",mat:""},{min:5,phase:"Abschluss",was:"Hausaufgabe notieren, aufräumen",soz:"Plenum",mat:""}];
+  }
+  const pos = window.scrollY; refreshAll(); window.scrollTo(0,pos);
+});
+$("#optPb").addEventListener("change", e=>{ S.opt.pb = e.target.checked; renderPreview(); persist(); });
+$("#optFb").addEventListener("change", e=>{ S.opt.fb = e.target.checked; renderPreview(); persist(); });
+window.addEventListener("resize", fitPreview);
+
+// Tabs (schmale Geräte)
+function setView(v){ $("#main").dataset.view=v; $("#tEdit").setAttribute("aria-selected", v==="edit"); $("#tPrev").setAttribute("aria-selected", v==="preview"); if(v==="preview") setTimeout(fitPreview,30); }
+$("#tEdit").onclick = ()=>setView("edit"); $("#tPrev").onclick = ()=>setView("preview");
+
+/* ---------- Dateiname & Download ---------- */
+const fname = ext => { const m=S.meta; return `Vertretung_${m.datum||"ohne-Datum"}${m.kuerzel?"_"+m.kuerzel.replace(/\W+/g,""):""}.${ext}`; };
+function download(blob, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+/* ---------- Drucken ---------- */
+$("#bPrint").onclick = ()=>{
+  $("#printArea").innerHTML = sheetHTML();
+  setTimeout(()=>{ window.print(); }, 50);
+};
+
+/* ---------- PDF ---------- */
+$("#bPdf").onclick = async ()=>{
+  if(typeof html2pdf === "undefined"){ toast("PDF-Modul nicht geladen – bitte Drucken › „Als PDF sichern“ nutzen"); return; }
+  toast("PDF wird erstellt …");
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-10000px;top:0;";
+  host.innerHTML = sheetHTML(); document.body.appendChild(host);
+  const el = host.firstElementChild; el.style.boxShadow="none";
+  try{
+    await document.fonts.ready;
+    await html2pdf().set({
+      margin:0, filename:fname("pdf"),
+      image:{type:"jpeg",quality:0.96},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff"},
+      jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
+      pagebreak:{mode:["css","legacy"],avoid:[".sh-les","tr"]}
+    }).from(el).save();
+    toast("PDF gespeichert");
+  }catch(err){ toast("PDF fehlgeschlagen: "+err.message); }
+  host.remove();
+};
+
+/* ---------- DOCX (echtes Word-Format) ---------- */
+const X = s => String(s ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");
+const ACC = "111111", GREY="555555";
+function run(t,o={}){
+  const rpr = `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${o.b?"<w:b/>":""}${o.i?"<w:i/>":""}${o.caps?"<w:caps/>":""}${o.color?`<w:color w:val="${o.color}"/>`:""}<w:sz w:val="${Math.round((o.sz||10)*2)}"/>${o.hl?'<w:highlight w:val="yellow"/>':""}</w:rPr>`;
+  return String(t ?? "").split("\n").map((line,i)=>(i?`<w:r>${rpr}<w:br/></w:r>`:"")+`<w:r>${rpr}<w:t xml:space="preserve">${X(line)}</w:t></w:r>`).join("");
+}
+function para(runs,o={}){
+  return `<w:p><w:pPr>${o.keep?"<w:keepNext/>":""}${o.pb?"<w:pageBreakBefore/>":""}${o.border?`<w:pBdr><w:bottom w:val="single" w:sz="${o.border}" w:space="2" w:color="${ACC}"/></w:pBdr>`:""}${o.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`:""}<w:spacing w:before="${o.before||0}" w:after="${o.after??60}"/>${o.right?'<w:jc w:val="right"/>':""}</w:pPr>${runs}</w:p>`;
+}
+function cell(content,w,o={}){
+  return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:""}${o.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`:""}</w:tcPr>${content||para("")}</w:tc>`;
+}
+function table(rows,widths,o={}){
+  const bd = o.noBorder ? `<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>`
+    : `<w:tblBorders><w:top w:val="single" w:sz="6" w:color="151A17"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="4" w:color="B9C2BC"/><w:right w:val="nil"/><w:insideH w:val="single" w:sz="4" w:color="B9C2BC"/><w:insideV w:val="nil"/></w:tblBorders>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a,b)=>a+b,0)}" w:type="dxa"/>${bd}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="50" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${widths.map(w=>`<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows}</w:tbl>${para("",{after:40})}`;
+}
+const tr = (cells,head) => `<w:tr><w:trPr><w:cantSplit/>${head?"<w:tblHeader/>":""}</w:trPr>${cells}</w:tr>`;
+const label = t => run(t,{b:true,sz:7.5,color:GREY,caps:true});
+
+function buildDocx(){
+  const m = S.meta, L=[...S.stunden].sort((a,b)=>a.von-b.von), W = 10200;
+  let b = "";
+  b += para(run("Vertretungsmaterial"+(m.schule?" · "+m.schule:""),{b:true,sz:8,color:ACC,caps:true}),{after:0});
+  b += para(run(fmtDate(m.datum)||"Datum fehlt",{b:true,sz:20}),{border:8,after:120});
+  const info = [["Lehrkraft",[m.lehrkraft,m.kuerzel&&`(${m.kuerzel})`].filter(Boolean).join(" ")],["Erreichbar",m.kontakt],["Ansprechpartner:in",m.ansprech]].filter(x=>x[1]);
+  if(info.length){ const w = Math.floor(W/info.length);
+    b += table(tr(info.map(([k,v])=>cell(para(label(k),{after:0})+para(run(v,{sz:9.5})),w)).join("")), info.map(()=>w), {noBorder:true}); }
+  if(L.length){
+    const ws=[900,1400,1900,1700,1000,3300];
+    b += table(tr(["Std.","Zeit","Fach","Lerngruppe","Raum","Thema"].map((h,i)=>cell(para(label(h),{after:0}),ws[i])).join(""),true)
+      + L.map(l=>tr([stdLabel(l),zeit(l),l.fach,gruppe(l),l.raum,l.thema].map((v,i)=>cell(para(run(v,{sz:9.5,b:i===0}),{after:0}),ws[i])).join(""))).join(""), ws);
+  }
+  if(m.allgemein) b += table(tr(cell(para(run("Allgemeine Hinweise",{b:true,sz:7.5,color:ACC,caps:true}),{after:20})+para(run(m.allgemein,{sz:9.5}),{after:0}),W)),[W]);
+  L.forEach((l,i)=>{
+    b += para(run(`${stdLabel(l)} Std.  `,{b:true,sz:14,color:ACC})+run(l.fach||"Fach",{b:true,sz:13})+run("   "+[gruppe(l),l.raum&&"Raum "+l.raum,zeit(l)].filter(Boolean).join(" · "),{sz:9.5,color:GREY}),
+      {keep:true,pb:S.opt.pb,before:S.opt.pb?0:240,border:6,after:80});
+    if(S.opt.pb && m.lehrkraft) b += para(label("Für  ")+run(`${m.lehrkraft}${m.kuerzel?` (${m.kuerzel})`:""} · ${fmtDate(m.datum)}`,{sz:9.5}),{keep:true,after:30});
+    if(l.einheit) b += para(label("Einheit  ")+run(l.einheit,{sz:10}),{keep:true,after:30});
+    if(l.thema) b += para(label("Thema  ")+run(l.thema,{sz:10.5,b:true}),{keep:true,after:30});
+    if(l.ziel) b += para(label("Ziel  ")+run(l.ziel,{sz:10}),{keep:true,after:60});
+    if(l.phasen.length){
+      const ws=[1100,1500,4300,1100,2200]; let t=0;
+      b += table(tr(["Zeit","Phase","Was passiert?","Form","Material"].map((h,k)=>cell(para(label(h),{after:0}),ws[k])).join(""),true)
+        + l.phasen.map(p=>{ const a=t; t+=(+p.min||0); return tr([p.min?`${a}–${t}′`:"",p.phase,p.was,p.soz,p.mat].map((v,k)=>cell(para(run(v,{sz:9.5,b:k===1}),{after:0}),ws[k])).join("")); }).join(""), ws);
+    }
+    const boxes = [["Material & Fundort",l.material],["Hausaufgabe",l.ha],["Wer früher fertig ist",l.schnell],["Hinweise",l.hinweise]].filter(x=>x[1]);
+    if(boxes.length){ const half=W/2, rows=[];
+      for(let k=0;k<boxes.length;k+=2){ rows.push(tr([boxes[k],boxes[k+1]].map(bx=>cell(bx?para(label(bx[0]),{after:10})+para(run(bx[1],{sz:9.5}),{after:0}):"",half)).join(""))); }
+      b += table(rows.join(""),[half,half],{noBorder:true});
+    }
+    const tasks = TASKS.filter(([k])=>l.tasks[k]).map(([,t])=>"☐ "+t);
+    if(tasks.length) b += para(run(tasks.join("     "),{sz:9.5}),{after:80});
+    if(S.opt.fb){
+      b += para(run("Rückmeldung der Vertretung",{b:true,sz:8.5,color:GREY}),{before:60,after:40});
+      ["Vertretung durch:","Geschafft bis:","Fehlende SuS / Besonderes:"].forEach(s=> b += para(run(s+" ",{sz:9,color:GREY})+run("_".repeat(70),{sz:9,color:"B9C2BC"}),{after:60}));
+    }
+  });
+  b += para(run("Bitte Zettel nach der Stunde ins Fach zurücklegen. Danke!",{sz:8,color:GREY,i:true}),{before:200,right:true});
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${b}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850" w:header="400" w:footer="400" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const zip = new JSZip();
+  zip.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`);
+  zip.file("_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  zip.file("word/_rels/document.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  zip.file("word/styles.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:lang w:val="de-DE"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`);
+  zip.file("word/document.xml", doc);
+  return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+$("#bDocx").onclick = async ()=>{
+  if(typeof JSZip === "undefined"){ toast("Word-Modul nicht geladen – Internetverbindung prüfen"); return; }
+  try{ download(await buildDocx(), fname("docx")); toast("Word-Datei gespeichert"); }catch(err){ toast("Fehler: "+err.message); }
+};
+
+/* ---------- Text für Mail/Messenger ---------- */
+function plainText(){
+  const m=S.meta, L=[...S.stunden].sort((a,b)=>a.von-b.von);
+  let t = `VERTRETUNG – ${fmtDate(m.datum)}\n`;
+  if(m.lehrkraft) t += `Lehrkraft: ${m.lehrkraft}${m.kuerzel?` (${m.kuerzel})`:""}\n`;
+  if(m.kontakt) t += `Erreichbar: ${m.kontakt}\n`;
+  if(m.ansprech) t += `Ansprechpartner:in: ${m.ansprech}\n`;
+  if(m.allgemein) t += `\nAllgemein:\n${m.allgemein}\n`;
+  L.forEach(l=>{
+    t += `\n— ${stdLabel(l)} Std. (${zeit(l)}) · ${l.fach} · ${gruppe(l)}${l.raum?" · Raum "+l.raum:""}\n`;
+    if(l.einheit) t += `Einheit: ${l.einheit}\n`;
+    if(l.thema) t += `Thema: ${l.thema}\n`;
+    let z=0; l.phasen.forEach(p=>{ const a=z; z+=(+p.min||0); t += `  ${p.min?`${a}–${z}′ `:""}${p.phase}${p.soz?` (${p.soz})`:""}: ${p.was}${p.mat?` [${p.mat}]`:""}\n`; });
+    if(l.material) t += `Material: ${l.material}\n`;
+    if(l.ha) t += `HA: ${l.ha}\n`;
+    if(l.schnell) t += `Wer früher fertig ist: ${l.schnell}\n`;
+    if(l.hinweise) t += `Hinweise: ${l.hinweise}\n`;
+    const tasks = TASKS.filter(([k])=>l.tasks[k]).map(([,x])=>x); if(tasks.length) t += `Bitte: ${tasks.join(", ")}\n`;
+  });
+  return t;
+}
+$("#bCopy").onclick = async ()=>{
+  const t = plainText();
+  try{ await navigator.clipboard.writeText(t); toast("Text kopiert – in Mail oder Messenger einfügen"); }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); toast("Text kopiert");}catch(_){ toast("Kopieren nicht möglich"); } ta.remove(); }
+};
+
+/* ---------- Stundenraster ---------- */
+$("#bSettings").onclick = ()=>{
+  $("#setMin").value = settings.min;
+  $("#rasterGrid").innerHTML = `<b class="hint">Std.</b><b class="hint">Beginn</b><b class="hint">Ende</b>` +
+    settings.raster.map((r,i)=>`<span>${i+1}.</span><input type="time" id="rs${i}a" value="${r[0]}" aria-label="${i+1}. Stunde Beginn"><input type="time" id="rs${i}b" value="${r[1]}" aria-label="${i+1}. Stunde Ende">`).join("");
+  $("#dlgSettings").showModal();
+};
+$("#setSave").onclick = ()=>{
+  settings.min = Math.max(30, +$("#setMin").value || 45);
+  settings.raster = settings.raster.map((r,i)=>[$(`#rs${i}a`).value||"", $(`#rs${i}b`).value||""]);
+  store.set("vm_settings_v2", settings); refreshAll(); toast("Stundenraster übernommen");
+};
+$("#setReset").onclick = ()=>{ settings = {min:45, raster: RASTER_DEFAULT.map(r=>[...r])}; $("#dlgSettings").close(); $("#bSettings").click(); };
+
+/* ---------- Vorlagen ---------- */
+const tplAll = () => store.get("vm_templates", {});
+function fillTplList(){ const t=tplAll(), n=Object.keys(t).sort(); $("#tplList").innerHTML = n.length ? n.map(k=>`<option>${esc(k)}</option>`).join("") : `<option value="">– noch keine Vorlage –</option>`; }
+$("#bTemplates").onclick = ()=>{ fillTplList(); $("#clearHint").textContent=""; $("#dlgTpl").showModal(); };
+$("#tplSave").onclick = ()=>{
+  const n = $("#tplName").value.trim(); if(!n){ toast("Bitte einen Namen eingeben"); return; }
+  const t = tplAll(); t[n] = JSON.parse(JSON.stringify(S)); store.set("vm_templates", t) ? toast(`Vorlage „${n}“ gespeichert`) : toast("Speichern nicht möglich"); $("#tplName").value=""; fillTplList();
+};
+function loadTpl(skeleton){
+  const n = $("#tplList").value, t = tplAll()[n]; if(!t){ toast("Keine Vorlage ausgewählt"); return; }
+  const c = JSON.parse(JSON.stringify(t));
+  if(skeleton){ c.stunden = c.stunden.map(l=>({...blankLesson(), von:l.von, bis:l.bis, fach:l.fach, klasse:l.klasse, kurs:l.kurs, raum:l.raum, open:false}));
+    c.meta = {...c.meta, datum: today()}; }
+  c.stunden.forEach(l=>{ l.id = uid(); l.tasks = l.tasks||{}; l.phasen = l.phasen||[]; });
+  S = c; $("#dlgTpl").close(); refreshAll(); toast(skeleton ? "Stundenplan geladen – Inhalte ergänzen" : `Vorlage „${n}“ geladen`);
+}
+$("#tplLoad").onclick = ()=>loadTpl(false);
+$("#tplLoadNoContent").onclick = ()=>loadTpl(true);
+$("#tplDel").onclick = ()=>{ const n=$("#tplList").value; if(!n) return; const t=tplAll(); delete t[n]; store.set("vm_templates",t); fillTplList(); toast(`Vorlage „${n}“ gelöscht`); };
+$("#jsonExp").onclick = ()=>{ download(new Blob([JSON.stringify(S,null,2)],{type:"application/json"}), fname("json")); };
+$("#jsonImp").onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{ const d = JSON.parse(r.result); if(!d.meta || !Array.isArray(d.stunden)) throw new Error("Unbekanntes Format");
+      d.opt = d.opt || {pb:false,fb:true}; d.stunden.forEach(l=>{ l.id=uid(); l.tasks=l.tasks||{}; l.phasen=l.phasen||[]; });
+      S = d; $("#dlgTpl").close(); refreshAll(); toast("Datei importiert"); }
+    catch(err){ toast("Import fehlgeschlagen: Die Datei ist keine Vertretungsmappe."); } e.target.value=""; };
+  r.readAsText(f);
+};
+$("#bExample").onclick = ()=>{ S = example(); $("#dlgTpl").close(); refreshAll(); toast("Beispiel geladen"); };
+$("#bClear").onclick = e=>{
+  const b = e.currentTarget;
+  if(!b.dataset.armed){ b.dataset.armed="1"; $("#clearHint").textContent = "Nochmal tippen, um alle Eingaben zu löschen. Vorlagen bleiben erhalten."; setTimeout(()=>{ delete b.dataset.armed; },3000); return; }
+  S = blankState(); $("#dlgTpl").close(); refreshAll(); toast("Neuer, leerer Tag");
+};
+
+/* ---------- Start ---------- */
+S.opt = S.opt || {pb:false, fb:true};
+renderEditor(); $("#zoomWrap").innerHTML = sheetHTML();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(fitPreview);
+setTimeout(fitPreview, 300);
+})();
+</script>
+<script>window.TOUR = { button: "#bHelp", steps: [
+  { title: "Vertretungsmappe", text: "<p>Hier planst du einen Unterrichtstag für die Vertretung. Aus deinen Eingaben entsteht ein A4-Zettel zum Drucken, als PDF oder als Word-Datei.</p>" },
+  { sel: "#editor .panel", title: "Unterrichtstag", text: "<p>Datum, deinen Namen, Erreichbarkeit und allgemeine Hinweise für den ganzen Tag eintragen. Der Wochentag wird automatisch ergänzt.</p>" },
+  { sel: ".lesson", title: "Stunden", text: "<p>Pro Stunde Fach, Klasse, Kurs, Thema und den Ablaufplan ausfüllen. Mit „Standardablauf einfügen“ geht es schneller. Weitere Stunden fügst du unten hinzu.</p>" },
+  { sel: "#board", title: "Vorschau", text: "<p>So sieht der Zettel aus. Leere Felder erscheinen nicht. Optional bekommt jede Stunde eine eigene Seite und ein Rückmeldefeld für die Vertretung.</p>" },
+  { sel: "#bPrint", title: "Ausgeben", text: "<p>Drucken, als PDF oder DOCX speichern oder mit „Text“ für Mail und Messenger kopieren.</p>" },
+  { sel: "#bTemplates", title: "Vorlagen", text: "<p>Speichere einen Tag als Vorlage oder lade nur den Stundenplan eines Wochentags als Gerüst. Eingaben werden automatisch in diesem Browser gesichert.</p>" },
+  { sel: "#bSettings", title: "Stundenraster", text: "<p>Die Uhrzeiten der Stunden kannst du hier anpassen.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
