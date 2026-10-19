@@ -951,7 +951,7 @@ const posts = [
    },
    {
     title: "LernWerk – Lernspiele-Baukasten",
-    excerpt: "Wordwall-Prinzip zum Selberbauen: Inhalte einmal eingeben und als Quiz, Zuordnung, Memory, Glücksrad, Lückentext und 7 weitere Vorlagen spielen – mit Google-Anmeldung und Cloud-Speicher, Schüler-Link per QR-Code (ohne Anmeldung) und Arbeitsblatt-Druck.",
+    excerpt: "Wordwall-Prinzip zum Selberbauen: Inhalte einmal eingeben und in 33 Vorlagen spielen – Quiz, Kreuzworträtsel, Galgenmännchen, Mathe-Generator, Flugzeug, Labyrinth u. v. m. Mit Google-Anmeldung und Cloud-Speicher, Schüler-Link per QR-Code (ohne Anmeldung) und Arbeitsblatt-Druck.",
     date: "2026-10-19",
     category: "schule",
     subcategory: "faecheruebergreifend",
@@ -959,6 +959,6 @@ const posts = [
     emoji: "🧩",
     tags: ["tool", "spiel", "einzelarbeit", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "LernWerk – Learning Game Builder",
-    excerptEn: "Build-your-own Wordwall: enter content once and play it as a quiz, match-up, memory, spin wheel, cloze text and 7 more templates – with Google sign-in and cloud storage, a student link via QR code (no sign-in) and printable worksheets."
+    excerptEn: "Build-your-own Wordwall: enter content once and play it in 33 templates – quiz, crossword, hangman, maths generator, airplane, maze and more. With Google sign-in and cloud storage, a student link via QR code (no sign-in) and printable worksheets."
    },
 ];
