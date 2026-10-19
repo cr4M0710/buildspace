@@ -294,7 +294,12 @@
   .kasse-split b { color: var(--text); font-weight: 700; }
 
   /* Team-Ansicht (nur Lesen) */
-  body.nur-lesen #nav-erfassen, body.nur-lesen #nav-verwalten { display: none; }
+  body.nur-lesen #nav-erfassen, body.nur-lesen #nav-verwalten, body.nur-lesen #team-btn { display: none; }
+  .mein-stand { display: none; }
+  body.nur-lesen .mein-stand { display: block; }
+  .mein-stand select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--rand); background: var(--feld); color: var(--text); font-size: .95rem; }
+  .mein-stand .mein-wert { font-size: 1.6rem; font-weight: 800; margin-top: 10px; text-align: center; }
+  .mein-stand .mein-sub { font-size: .8rem; color: var(--muted); text-align: center; margin-top: 2px; }
   body.nur-lesen .zeile .aktionen .icon-btn { display: none; }
   body.nur-lesen .mb-banner { display: none !important; }
   .lese-hinweis { display: none; }
@@ -416,6 +421,7 @@
   <!-- ============ TAB: ÜBERSICHT ============ -->
   <section id="tab-uebersicht" class="tab">
     <div class="mb-banner"></div>
+    <div class="card mein-stand" id="mein-stand" style="padding:14px;margin-bottom:14px"></div>
     <div class="kennzahlen drei">
       <div class="kennzahl rot"><div class="label">Offene Strafen</div><div class="wert" id="kz-offen">0 €</div></div>
       <div class="kennzahl gruen"><div class="label">Kassenstand</div><div class="wert" id="kz-kasse">0 €</div></div>
@@ -508,7 +514,7 @@
         <button class="btn klein sekundaer" id="sync-einrichten-btn" onclick="App.syncModal()">Einrichten</button>
         <button class="btn klein sekundaer" id="sync-jetzt-btn" onclick="App.syncJetzt()" style="display:none">Jetzt synchronisieren</button>
       </div>
-      <button class="btn klein sekundaer" id="team-link-btn" onclick="App.teamAnsichtLink()" style="display:none;width:100%;margin-top:9px">Team-Ansicht teilen (nur Lesen)</button>
+      <button class="btn klein sekundaer" id="team-link-btn" onclick="App.teamAnsichtLink()" style="display:none;width:100%;margin-top:9px">Spieler-Ansicht teilen (nur Lesen)</button>
     </div>
 
     <h2>Spieler</h2>
@@ -875,7 +881,8 @@ function alteSpielerEntfernen(d) {
   if (geaendert) d.spielerTs = (d.spielerTs || 0) + 1;
   try { localStorage.setItem(flag, '1'); localStorage.setItem(SPEICHER_KEY, JSON.stringify(d)); } catch (e) {}
 }
-function speichernNurLokal() { try { localStorage.setItem(SPEICHER_KEY, JSON.stringify(daten)); } catch (e) { /* Speicher gesperrt (z. B. privater Modus) */ } }
+const ANSICHT_DATEN_KEY = `hsg-${PROFIL_ID}-ansicht-daten-v1`;
+function speichernNurLokal() { try { localStorage.setItem(nurLesen ? ANSICHT_DATEN_KEY : SPEICHER_KEY, JSON.stringify(daten)); } catch (e) { /* Speicher gesperrt (z. B. privater Modus) */ } }
 function speichern() { speichernNurLokal(); if (typeof Sync !== 'undefined') Sync.plane(); }
 function neueId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -991,6 +998,18 @@ const FIRESTORE_REGELN = `match /strafenkasse/{team} {
     && (request.resource.data.members == resource.data.members
         || resource.data.owner == request.auth.uid);
   allow delete: if angemeldet() && resource.data.owner == request.auth.uid;
+}
+// Spieler-Ansicht: Lesen mit geheimem Link (ohne Anmeldung), Schreiben nur Kassenwarte
+match /strafenkasse_ansicht/{token} {
+  function kassenwart(team) {
+    return request.auth != null && request.auth.token.email_verified == true
+      && request.auth.token.email.lower() in get(/databases/$(database)/documents/strafenkasse/$(team)).data.members;
+  }
+  allow get: if true;
+  allow list: if false;
+  allow create: if kassenwart(request.resource.data.team);
+  allow update: if kassenwart(resource.data.team) && request.resource.data.team == resource.data.team;
+  allow delete: if kassenwart(resource.data.team);
 }`;
 const Fb = {
   user: null, db: null, auth: null, bereit: false, _p: null,
@@ -1042,6 +1061,7 @@ const Fb = {
   async abmelden() { if (this.auth) await this.auth.signOut(); },
   email() { return this.user ? String(this.user.email).toLowerCase() : ''; },
   ref(code) { return this.db.collection('strafenkasse').doc(code); },
+  ansichtRef(token) { return this.db.collection('strafenkasse_ansicht').doc(token); },
 };
 
 // ================= Cloud-Sync (Supabase REST oder Firebase) =================
@@ -1060,6 +1080,7 @@ const Sync = {
   aktiv() {
     if (!this.cfg) return false;
     if (this.cfg.typ === 'firebase') return !!(this.cfg.code && Fb.user);
+    if (this.cfg.typ === 'spieleransicht') return !!this.cfg.token;
     return !!(this.cfg.url && this.cfg.key && this.cfg.code);
   },
   istBesitzer() { return !!(this.meta && Fb.user && this.meta.owner === Fb.user.uid); },
@@ -1080,7 +1101,7 @@ const Sync = {
       const snap = await Fb.ref(this.cfg.code).get();
       if (!snap.exists) { this.meta = null; return undefined; }
       const d = snap.data();
-      this.meta = { owner: d.owner, ownerEmail: d.ownerEmail || '', members: d.members || [] };
+      this.meta = { owner: d.owner, ownerEmail: d.ownerEmail || '', members: d.members || [], ansicht: d.ansicht || '' };
       return { data: normalisieren(JSON.parse(d.json)), rev: d.rev, updated_at: d.updated_at };
     } catch (e) {
       if (e && e.code === 'permission-denied') return { keinZugriff: true };
@@ -1105,6 +1126,75 @@ const Sync = {
       return { rev: erwarteteRev + 1, updated_at: jetzt };
     });
   },
+  // ---- Spieler-Ansicht (schreibgeschützter Live-Stand für die Mannschaft) ----
+  ansichtStand() {
+    const { geloescht, ...rest } = daten;
+    return rest;
+  },
+  // Veröffentlicht den aktuellen Stand, falls eine Spieler-Ansicht existiert und sich etwas geändert hat
+  async ansichtVeroeffentlichen(erzwingen) {
+    if (!this.istFirebase() || nurLesen || !Fb.user || !this.meta || !this.meta.ansicht) return;
+    const stand = this.ansichtStand();
+    const json = JSON.stringify(stand);
+    if (!erzwingen && this.cfg.ansichtLast === this.meta.ansicht + ':' + stabil(stand)) return;
+    await Fb.ansichtRef(this.meta.ansicht).set({ team: this.cfg.code, json, updated_at: new Date().toISOString() });
+    this.cfg.ansichtLast = this.meta.ansicht + ':' + stabil(stand);
+    this.speichernCfg();
+  },
+  _ansichtTimer: null,
+  ansichtPlanen() {
+    clearTimeout(this._ansichtTimer);
+    this._ansichtTimer = setTimeout(() => this.ansichtVeroeffentlichen(false).catch(() => {}), 400);
+  },
+  async ansichtAnlegen(neu) {
+    const alt = this.meta && this.meta.ansicht;
+    if (alt && !neu) { await this.ansichtVeroeffentlichen(true); return alt; }
+    const b = crypto.getRandomValues(new Uint8Array(18));
+    const token = Array.from(b, x => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+    await Fb.ref(this.cfg.code).update({ ansicht: token });
+    this.meta.ansicht = token;
+    await this.ansichtVeroeffentlichen(true);
+    if (alt) { try { await Fb.ansichtRef(alt).delete(); } catch (e) {} }
+    return token;
+  },
+  async ansichtBeenden() {
+    const alt = this.meta && this.meta.ansicht;
+    if (!alt) return;
+    await Fb.ref(this.cfg.code).update({ ansicht: '' });
+    this.meta.ansicht = '';
+    try { await Fb.ansichtRef(alt).delete(); } catch (e) {}
+  },
+  ansichtLink(token) {
+    return location.origin + location.pathname + '?team=' + PROFIL_ID + '#s=' + token;
+  },
+  // Spieler-Ansicht: Stand lesen (ohne Anmeldung)
+  async pullAnsicht() {
+    try {
+      await Fb.laden();
+      const snap = await Fb.ansichtRef(this.cfg.token).get();
+      if (!snap.exists) return { weg: true };
+      return this.ansichtAuswerten(snap.data());
+    } catch (e) { return (e && e.code === 'permission-denied') ? { weg: true } : null; }
+  },
+  ansichtAuswerten(d) {
+    const data = normalisieren(JSON.parse(d.json));
+    return { data, rev: 0, updated_at: d.updated_at };
+  },
+  _live: null,
+  async ansichtLive() {
+    try { await Fb.laden(); } catch (e) { this.status('fehler', 'Offline – zuletzt geladener Stand'); return; }
+    if (this._live) this._live();
+    this._live = Fb.ansichtRef(this.cfg.token).onSnapshot(snap => {
+      if (!snap.exists) { this.ansichtWeg(); return; }
+      const r = this.ansichtAuswerten(snap.data());
+      daten = r.data; this.cfg.lastAt = r.updated_at; speichernNurLokal(); App.rendern(); this.status('ok');
+    }, () => this.status('fehler', 'Offline – zuletzt geladener Stand'));
+  },
+  ansichtWeg() {
+    this.status('fehler', 'Ansicht nicht mehr verfügbar');
+    App.toast('Diese Spieler-Ansicht wurde beendet. Bitte beim Kassenwart nach dem neuen Link fragen.', null, null, 10000);
+  },
+
   async mitgliederAendern(email, hinzu) {
     const fv = firebase.firestore.FieldValue;
     await Fb.ref(this.cfg.code).update({ members: hinzu ? fv.arrayUnion(email) : fv.arrayRemove(email) });
@@ -1158,6 +1248,7 @@ const Sync = {
     const ico = { aus: ICON.cloudAus, ok: ICON.cloudOk, laedt: ICON.cloud, ausstehend: ICON.cloud, fehler: ICON.cloudAus }[zustand] || ICON.cloud;
     btn.innerHTML = ico;
     this._zustand = zustand;
+    if (zustand === 'ok' && this.istFirebase() && !nurLesen) this.ansichtPlanen();
     this.statusText(text);
   },
   statusText(text) {
@@ -1183,6 +1274,7 @@ const Sync = {
   },
 
   async pullRow() {
+    if (this.cfg && this.cfg.typ === 'spieleransicht') return this.pullAnsicht();
     if (this.istFirebase()) return this.pullFirebase();
     try {
       const r = await fetch(this.basis() + '?id=eq.' + encodeURIComponent(this.cfg.code) + '&select=data,rev,updated_at', { headers: this.headers() });
@@ -1229,10 +1321,12 @@ const Sync = {
   async synchronisieren(zeigeToast) {
     if (!this.aktiv() || this.laufend) return;
     if (nurLesen) { // Team-Ansicht: nur herunterladen, niemals schreiben
+      if (this.cfg.typ === 'spieleransicht' && this._live) return; // läuft bereits live per onSnapshot
       this.laufend = true; this.status('laedt');
       try {
         const remote = await this.pullRow();
         if (!remote) this.status('fehler');
+        else if (remote.weg) this.ansichtWeg();
         else if (remote.pinFehler) { this.status('fehler'); App.toast('Ansicht nicht lesbar (PIN).'); }
         else { daten = remote.data; this.cfg.rev = remote.rev; this.cfg.lastAt = remote.updated_at; speichernNurLokal(); App.rendern(); this.status('ok'); }
       } catch (e) { this.status('fehler'); } finally { this.laufend = false; }
@@ -1329,6 +1423,7 @@ const App = {
     this.renderMbBanner();
     this.rendernErfassen();
     this.rendernUebersicht();
+    this.rendernMeinStand();
     this.rendernHistorie();
     this.rendernStatistik();
     this.rendernVerwalten();
@@ -1362,6 +1457,7 @@ const App = {
     if (key === 'sortUeb' || key === 'nurOffen') this.rendernUebersicht();
     else if (key === 'sortHist' || key === 'filterHistTyp') this.rendernHistorie();
     else if (key === 'sortKat') this.rendernVerwalten();
+    else if (key === 'ichBin') this.rendernMeinStand();
     else if (key === 'mbErinnerungAus') { this.renderMbBanner(); this.toast(value ? 'Monats-Erinnerung aus' : 'Monats-Erinnerung an'); }
   },
 
@@ -1921,7 +2017,7 @@ const App = {
     const jetztBtn = document.getElementById('sync-jetzt-btn');
     if (jetztBtn) jetztBtn.style.display = Sync.aktiv() ? '' : 'none';
     const teamBtn = document.getElementById('team-link-btn');
-    if (teamBtn) teamBtn.style.display = (Sync.aktiv() && !fb) ? '' : 'none';
+    if (teamBtn) teamBtn.style.display = Sync.aktiv() ? '' : 'none';
     const einBtn = document.getElementById('sync-einrichten-btn');
     if (einBtn) einBtn.textContent = fb ? (Fb.user ? 'Konto & Zugriff' : 'Mit Google anmelden') : 'Einrichten';
     Sync.statusText();
@@ -2190,15 +2286,16 @@ const App = {
 
   async teamAnsichtLink() {
     if (!Sync.aktiv()) { this.toast('Erst Cloud-Sync einrichten.'); return; }
+    if (Sync.istFirebase()) { this.spielerAnsichtModal(); return; }
     const c = Sync.cfg;
     const code = btoa(unescape(encodeURIComponent(JSON.stringify({ u: c.url, k: c.key, c: c.code, p: c.pin || '' }))));
     const link = location.origin + location.pathname + '#v=' + code;
     if (navigator.share) {
-      try { await navigator.share({ title: 'Strafenkasse – Team-Ansicht', text: (daten.titel || 'Strafenkasse') + ' – live ansehen (nur Lesen):', url: link }); return; }
+      try { await navigator.share({ title: 'Strafenkasse – Team-Ansicht', text: (daten.titel || 'Strafenkasse') + ' – Spieler-Ansicht, live (nur Lesen):', url: link }); return; }
       catch (e) { if (e.name === 'AbortError') return; }
     }
     this.modal(`
-      <h3>Team-Ansicht teilen</h3>
+      <h3>Spieler-Ansicht teilen</h3>
       <div class="hinweis" style="margin-top:0">Diesen Link an die Mannschaft schicken. Wer ihn öffnet, sieht den Stand live – kann aber nichts bearbeiten.</div>
       <div class="code-box" style="user-select:all;-webkit-user-select:all">${esc(link)}</div>
       <div class="hinweis">Der Link enthält den Zugang samt Team-PIN – bitte nur an Teammitglieder weitergeben.</div>
@@ -2274,7 +2371,8 @@ const App = {
       inhalt = `
         <div class="sync-status"><span class="punkt gruen"></span>Angemeldet als ${esc(Fb.email())}</div>
         <div class="hinweis" style="margin-top:2px">Verbunden mit Team-Code „${esc(Sync.cfg.code)}“.</div>
-        <h4 style="margin:14px 0 4px">Zugriff</h4>
+        <button class="btn sekundaer klein" style="width:100%;margin-top:12px" onclick="App.spielerAnsichtModal()">Spieler-Ansicht für die Mannschaft (nur Lesen)</button>
+        <h4 style="margin:14px 0 4px">Zugriff (Kassenwarte)</h4>
         ${zugriff}
         <div class="knoepfe">
           <button class="btn sekundaer" onclick="App.fbAbmelden()">Abmelden</button>
@@ -2284,6 +2382,65 @@ const App = {
     const offen = document.getElementById('modal-hg').classList.contains('offen') && document.getElementById('fb-modal');
     const html = `<div id="fb-modal"><h3>Mit Google-Konto speichern</h3>${inhalt}${regeln}</div>`;
     if (offen) offen.outerHTML = html; else this.modal(html);
+  },
+
+  // ===== Spieler-Ansicht (Firebase) =====
+  async spielerAnsichtModal() {
+    if (!Sync.meta) await Sync.pullFirebase();
+    const t = Sync.meta && Sync.meta.ansicht;
+    const link = t ? Sync.ansichtLink(t) : '';
+    this.modal(`
+      <h3>Spieler-Ansicht</h3>
+      <div class="hinweis" style="margin-top:0">Eine eigene Ansicht für die Mannschaft: Jeder Spieler sieht live den Kassenstand, seine offenen Strafen, die Historie und die Statistik – ohne Anmeldung und <b>ohne etwas bearbeiten zu können</b>.</div>
+      ${t ? `
+        <div class="code-box" style="user-select:all;-webkit-user-select:all">${esc(link)}</div>
+        <button class="btn" style="width:100%;margin-top:6px" onclick="App.spielerAnsichtTeilen()">Link teilen</button>
+        <div class="hinweis">Wer den Link hat, kann mitlesen. Gerät der Link in falsche Hände, erzeuge einen neuen – der alte funktioniert dann nicht mehr.</div>
+        <div class="knoepfe">
+          <button class="btn sekundaer" onclick="App.spielerAnsichtNeu()">Neuen Link erzeugen</button>
+          <button class="btn gefahr" onclick="App.spielerAnsichtBeenden()">Ansicht beenden</button>
+        </div>` : `
+        <button class="btn" style="width:100%;margin-top:12px" onclick="App.spielerAnsichtNeu(true)">Spieler-Ansicht erstellen</button>`}
+      <div class="knoepfe"><button class="btn sekundaer" onclick="App.modalZu()">Schließen</button></div>`);
+  },
+  async spielerAnsichtNeu(erstes) {
+    if (!erstes && !confirm('Neuen Link erzeugen? Der bisherige Link funktioniert danach nicht mehr – du musst den neuen an die Mannschaft schicken.')) return;
+    try { await Sync.ansichtAnlegen(true); this.toast(erstes ? 'Spieler-Ansicht erstellt' : 'Neuer Link erzeugt'); }
+    catch (e) { this.toast('Fehlgeschlagen' + (e && e.code ? ' (' + e.code + ') – Firestore-Regeln prüfen' : ''), null, null, 8000); }
+    this.spielerAnsichtModal();
+  },
+  async spielerAnsichtBeenden() {
+    if (!confirm('Spieler-Ansicht beenden? Der Link funktioniert danach nicht mehr.')) return;
+    try { await Sync.ansichtBeenden(); this.toast('Spieler-Ansicht beendet'); }
+    catch (e) { this.toast('Fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); }
+    this.spielerAnsichtModal();
+  },
+  async spielerAnsichtTeilen() {
+    const link = Sync.ansichtLink(Sync.meta.ansicht);
+    const text = (daten.titel || 'Strafenkasse') + ' – hier siehst du live deine offenen Strafen und den Kassenstand:';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Strafenkasse – Spieler-Ansicht', text, url: link }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + link), '_blank');
+  },
+
+  // „Mein Stand“ in der Spieler-Ansicht
+  rendernMeinStand() {
+    const el = document.getElementById('mein-stand');
+    if (!el || !nurLesen) return;
+    const ich = prefs.ichBin && daten.spieler.find(s => s.id === prefs.ichBin);
+    const opts = [...daten.spieler].filter(s => s.aktiv !== false || (ich && s.id === ich.id)).sort(nachName)
+      .map(s => `<option value="${s.id}"${ich && s.id === ich.id ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
+    let unten = '<div class="mein-sub">Wähle deinen Namen, um deinen Stand zu sehen.</div>';
+    if (ich) {
+      const sd = saldo(ich.id);
+      unten = `<div class="mein-wert" style="color:${sd > 0 ? 'var(--rot)' : 'var(--gruen)'}">${eur(Math.max(0, sd))}</div>
+        <div class="mein-sub">${sd > 0 ? 'offen' : (sd < 0 ? 'Guthaben: ' + eur(-sd) : 'alles bezahlt')}${sd > 0 && daten.paypal ? ' · zahlbar per PayPal an ' + esc(daten.paypal) : ''}</div>
+        <button class="btn sekundaer klein" style="width:100%;margin-top:10px" onclick="App.spielerDetail('${ich.id}')">Meine Buchungen</button>`;
+    }
+    el.innerHTML = `<div class="sync-status" style="margin-bottom:8px">Mein Stand</div>
+      <select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>${unten}`;
   },
 
   fbAnmelden() { Fb.anmelden(); },
@@ -2749,9 +2906,25 @@ const ANSICHT_KEY = `hsg-${PROFIL_ID}-ansicht`;
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     return;
   }
+  // Spieler-Ansicht (Firebase): #s=<token>
+  let sToken = null;
+  if (h.indexOf('#s=') === 0) sToken = h.slice(3).replace(/[^a-z0-9]/g, '');
+  else { try { const g = localStorage.getItem(ANSICHT_KEY); if (g && g.indexOf('s:') === 0) sToken = g.slice(2); } catch (e) {} }
+  if (sToken) {
+    nurLesen = true;
+    try { localStorage.setItem(ANSICHT_KEY, 's:' + sToken); } catch (e) {}
+    try {
+      if (h.indexOf('#s=') !== 0) history.replaceState(null, '', location.pathname + location.search + '#s=' + sToken);
+      ansichtManifest();
+    } catch (e) {}
+    Sync.cfg = { typ: 'spieleransicht', token: sToken, autoSync: false };
+    try { const roh = localStorage.getItem(ANSICHT_DATEN_KEY); daten = roh ? normalisieren(JSON.parse(roh)) : normalisieren({ titel: STD_TITEL, verein: STD_VEREIN, paypal: '', spieler: [], katalog: [], buchungen: [] }); } catch (e) {}
+    ansichtOberflaeche();
+    return;
+  }
   let conf = null;
   if (h.indexOf('#v=') === 0) conf = h.slice(3);
-  else { try { conf = localStorage.getItem(ANSICHT_KEY); } catch (e) {} }
+  else { try { conf = localStorage.getItem(ANSICHT_KEY); if (conf && conf.indexOf('s:') === 0) conf = null; } catch (e) {} }
   if (!conf) return;
   let p;
   try { p = JSON.parse(decodeURIComponent(escape(atob(conf)))); } catch (e) { return; }
@@ -2763,29 +2936,39 @@ const ANSICHT_KEY = `hsg-${PROFIL_ID}-ansicht`;
   // dass "Zum Home-Bildschirm" den Ansicht-Modus mitnimmt.
   try {
     if (h.indexOf('#v=') !== 0) history.replaceState(null, '', location.pathname + location.search + '#v=' + conf);
-    const basis = location.href.replace(/#.*$/, '').replace(/[^/]*$/, '');
-    const man = {
-      name: 'Strafenkasse (Ansicht)', short_name: 'Strafenkasse',
-      start_url: location.href, scope: basis, display: 'standalone',
-      background_color: '#111114', theme_color: '#C30606',
-      icons: [{ src: basis + 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: basis + 'icon-512.png', sizes: '512x512', type: 'image/png' }],
-    };
-    const ml = document.querySelector('link[rel="manifest"]');
-    if (ml) ml.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man)));
+    ansichtManifest();
   } catch (e) {}
 
   Sync.cfg = { url: p.u, key: p.k, code: p.c, pin: p.p || '', autoSync: false, rev: null, lastJson: null, lastAt: null };
   Sync._key = null;
-  document.body.classList.add('nur-lesen');
-  const sub = document.querySelector('header .sub'); if (sub) sub.textContent = (daten.verein || '') + ' · Team-Ansicht';
-  const lh = document.getElementById('lese-hinweis'); if (lh) lh.innerHTML = ICON.cloud + 'Team-Ansicht – Live-Stand, schreibgeschützt';
+  try { const roh = localStorage.getItem(ANSICHT_DATEN_KEY); if (roh) daten = normalisieren(JSON.parse(roh)); } catch (e) {}
+  ansichtOberflaeche();
 })();
+
+// Manifest so setzen, dass „Zum Home-Bildschirm“ den Ansicht-Modus mitnimmt
+function ansichtManifest() {
+  const basis = location.href.replace(/#.*$/, '').replace(/[?].*$/, '').replace(/[^/]*$/, '');
+  const man = {
+    name: 'Strafenkasse (Spieler)', short_name: 'Strafenkasse',
+    start_url: location.href, scope: basis, display: 'standalone',
+    background_color: '#111114', theme_color: '#C30606',
+    icons: [{ src: basis + 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: basis + 'icon-512.png', sizes: '512x512', type: 'image/png' }],
+  };
+  const ml = document.querySelector('link[rel="manifest"]');
+  if (ml) ml.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man)));
+}
+function ansichtOberflaeche() {
+  document.body.classList.add('nur-lesen');
+  const sub = document.querySelector('header .sub'); if (sub) sub.textContent = (daten.verein || '') + ' · Spieler-Ansicht';
+  const lh = document.getElementById('lese-hinweis'); if (lh) lh.innerHTML = ICON.cloud + 'Spieler-Ansicht – Live-Stand, nur Lesen';
+}
 
 App.themeAnwenden();
 Sync.status(Sync.aktiv() ? 'ok' : 'aus');
 App.rendern();
 if (nurLesen) App.tab('uebersicht');
-if (Sync.aktiv()) Sync.abgleichen(false);
+if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
+else if (Sync.aktiv()) Sync.abgleichen(false);
 if (!nurLesen) App.monatsbeitragErinnerung();
 
 document.addEventListener('visibilitychange', () => {
