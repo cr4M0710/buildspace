@@ -98,7 +98,7 @@ const posts = [
     date: "2026-09-18",
     category: "handball",
     subcategory: "maenner1",
-    url: "strafenkasse/index.html",
+    url: "strafenkasse/index.html?team=m1",
     emoji: "💰",
     tags: ["tool"],
     titleEn: "Penalty Fund – Men's 1",
