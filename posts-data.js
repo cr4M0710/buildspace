@@ -973,4 +973,16 @@ const posts = [
     titleEn: "Seating Plan Studio",
     excerptEn: "Digital seating plans: set up the classroom with desks, board and more (templates, snap to grid), place students by drag and drop, add levels, smileys, points and notes, pick students at random, build groups and save as image, PDF or printout."
    },
+   {
+    title: "Förderplan-Bausteine",
+    excerpt: "Positiv formulierte Bausteine für Förderpläne: Verhaltensmuster überfachlich sowie für Mathematik und Arbeitslehre wählen, passende Ausgangslage, Ziele und Maßnahmen mit Namen und Pronomen anpassen, kopieren oder in einer Mappe sammeln.",
+    date: "2026-10-20",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "foerderplan-bausteine.html",
+    emoji: "🌱",
+    tags: ["tool", "organisation"],
+    titleEn: "Support Plan Phrase Bank",
+    excerptEn: "Positively worded building blocks for individual support plans: pick a behaviour pattern (cross-curricular, maths, work studies), adapt starting point, goals and measures with name and pronouns, then copy them or collect them in a folder."
+   },
 ];
