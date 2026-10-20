@@ -985,4 +985,16 @@ const posts = [
     titleEn: "Support Plan Phrase Bank",
     excerptEn: "Positively worded building blocks for individual support plans: pick a behaviour pattern (cross-curricular, maths, work studies), adapt starting point, goals and measures with name and pronouns, then copy them or collect them in a folder."
    },
+   {
+    title: "Trigonometrie-Lernpfad",
+    excerpt: "Selbstlernpfad Trigonometrie für Jg. 10: sechs Module von sin, cos, tan bis zu Sinusfunktionen, je mit Einführungsbeispiel, Aufgaben auf drei Niveaus (adaptiv), ausführlicher Fehlerrückmeldung, Selbsteinschätzung, PDF-Arbeitsblättern und einem 3D-Abschlussspiel mit Ampel-Auswertung. Mit Lehrkraftversion (Lösungen, Einstellungen, Klassenübersicht).",
+    date: "2026-10-20",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "trigonometrie-lernpfad.html",
+    emoji: "📐",
+    tags: ["tool", "spiel", "geometrie", "funktionen", "einzelarbeit", "vertretung", "jg10"],
+    titleEn: "Trigonometry Learning Path",
+    excerptEn: "Self-study path on trigonometry for year 10: six modules from sin, cos, tan to sine functions, each with an everyday intro example, adaptive tasks on three levels, detailed error feedback, self-assessment, PDF worksheets and a 3D final game with traffic-light evaluation. Includes a teacher view (solutions, settings, class overview)."
+   },
 ];
