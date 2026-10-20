@@ -961,4 +961,16 @@ const posts = [
     titleEn: "LernWerk – Learning Game Builder",
     excerptEn: "Build-your-own Wordwall: enter content once and play it in 34 templates – quiz, crossword, maths generator, airplane, group maker and more. With a live class mode for all iPads, read-aloud, courses/classes, Google sign-in, student and colleague links via QR code and printable worksheets."
    },
+   {
+    title: "Sitzplan-Studio",
+    excerpt: "Digitale Sitzpläne: Klassenraum mit Tischen, Tafel & Co. einrichten (Vorlagen, Einrasten), Lernende per Drag & Drop setzen, Niveau, Smileys, Punkte und Bemerkungen eintragen, Zufallsauswahl, Gruppen einteilen und als Bild, PDF oder Ausdruck sichern.",
+    date: "2026-10-20",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "sitzplan-studio.html",
+    emoji: "🪑",
+    tags: ["tool", "organisation"],
+    titleEn: "Seating Plan Studio",
+    excerptEn: "Digital seating plans: set up the classroom with desks, board and more (templates, snap to grid), place students by drag and drop, add levels, smileys, points and notes, pick students at random, build groups and save as image, PDF or printout."
+   },
 ];
