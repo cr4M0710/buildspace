@@ -997,4 +997,16 @@ const posts = [
     titleEn: "Trigonometry Learning Path",
     excerptEn: "Self-study path on trigonometry for year 10: six modules from sin, cos, tan to sine functions, each with an everyday intro example, adaptive tasks on three levels, detailed error feedback, self-assessment, PDF worksheets and a 3D final game with traffic-light evaluation. Includes a teacher view (solutions, settings, class overview)."
    },
+   {
+    title: "Formelsammlung interaktiv",
+    excerpt: "Die hessische Formelsammlung Realschule zum Durchsuchen und Aufklappen: zu jeder Formel ein Schritt-für-Schritt-Beispiel und ein Mini-Rechner, dazu Einheiten-Umrechner, Statistik- und p-q-Rechner, Merkliste, Lernkarten und Prüfungsmodus.",
+    date: "2026-10-20",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "formelsammlung.html",
+    emoji: "📘",
+    tags: ["tool", "geometrie", "funktionen", "prozent", "wahrscheinlichkeit", "einzelarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "Interactive Formula Collection",
+    excerptEn: "The Hessian secondary-school formula sheet to search and expand: a step-by-step example and mini calculator for every formula, plus unit converter, statistics and quadratic-formula calculators, bookmarks, flashcards and an exam mode."
+   },
 ];
