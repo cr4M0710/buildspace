@@ -951,14 +951,14 @@ const posts = [
    },
    {
     title: "LernWerk – Lernspiele-Baukasten",
-    excerpt: "Wordwall-Prinzip zum Selberbauen: Inhalte einmal eingeben und in 33 Vorlagen spielen – Quiz, Kreuzworträtsel, Galgenmännchen, Mathe-Generator, Flugzeug, Labyrinth u. v. m. Mit Google-Anmeldung und Cloud-Speicher, Schüler-Link per QR-Code (ohne Anmeldung) und Arbeitsblatt-Druck.",
+    excerpt: "Wordwall-Prinzip zum Selberbauen: Inhalte einmal eingeben und in 34 Vorlagen spielen – Quiz, Kreuzworträtsel, Mathe-Generator, Flugzeug, Gruppen bilden u. v. m. Mit Live-Klassenmodus für alle iPads, Vorlesefunktion, Kursen/Klassen, Google-Anmeldung, Schüler- und Kolleg:innen-Links per QR-Code und Arbeitsblatt-Druck.",
     date: "2026-10-19",
     category: "schule",
     subcategory: "faecheruebergreifend",
     url: "lernwerk.html",
     emoji: "🧩",
-    tags: ["tool", "spiel", "einzelarbeit", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    tags: ["tool", "spiel", "einzelarbeit", "mehrgeraete", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "LernWerk – Learning Game Builder",
-    excerptEn: "Build-your-own Wordwall: enter content once and play it in 33 templates – quiz, crossword, hangman, maths generator, airplane, maze and more. With Google sign-in and cloud storage, a student link via QR code (no sign-in) and printable worksheets."
+    excerptEn: "Build-your-own Wordwall: enter content once and play it in 34 templates – quiz, crossword, maths generator, airplane, group maker and more. With a live class mode for all iPads, read-aloud, courses/classes, Google sign-in, student and colleague links via QR code and printable worksheets."
    },
 ];

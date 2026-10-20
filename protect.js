@@ -383,8 +383,10 @@
       ".protect-poster-url { font-size: 10px; color: #777; word-break: break-all; margin-top: 8px; }",
       ".protect-poster-actions { display: flex; gap: 8px; }",
       "html.embed-mode #protect-back-link, html.embed-mode #protect-poster-btn { display: none !important; }",
+      /* Nur während der QR-Aushang gedruckt wird (Klasse html.protect-poster-printing,
+         gesetzt in printHandout) – sonst würde jede Tool-Seite beim Drucken leer. */
       "@media print {",
-      "  body > *:not(#protect-poster-modal) { display: none !important; }",
+      "  html.protect-poster-printing body > *:not(#protect-poster-modal) { display: none !important; }",
       "  #protect-poster-modal { position: static !important; background: none !important; padding: 0 !important; backdrop-filter: none !important; }",
       "  #protect-poster-modal .protect-card { box-shadow: none !important; background: none !important; border: none !important; max-width: none !important; padding: 0 !important; }",
       "  #protect-poster-modal .protect-card > :not(.protect-poster-out), .protect-poster-actions { display: none !important; }",
@@ -759,7 +761,8 @@
     "jelly-rush.html",
     "millionenquiz.html",
     "turnier-arena.html",
-    "spielesalon.html"
+    "spielesalon.html",
+    "lernwerk.html"
   ];
   function isMultiplayerPage_() { return MULTIPLAYER_FILES.indexOf(currentPageFile()) !== -1; }
   function joinKey_() { return "buildspace_join_" + currentPageFile(); }
@@ -1137,16 +1140,26 @@
   /* Gemeinsamer Einstiegspunkt für alle Drucken-Knöpfe: normal einfach
      window.print(), nur auf iOS-Startbildschirm-Apps stattdessen der
      Bild+Teilen-Weg (siehe Kommentar oben bei isIosHomeScreenApp). */
+  function printPosterOnly() {
+    const root = document.documentElement;
+    root.classList.add("protect-poster-printing");
+    const done = function () { root.classList.remove("protect-poster-printing"); global.removeEventListener("afterprint", done); };
+    global.addEventListener("afterprint", done);
+    global.print();
+    /* Safari feuert afterprint nicht immer – nach dem (blockierenden) Dialog trotzdem aufräumen */
+    setTimeout(done, 1500);
+  }
+
   function printHandout(opts) {
     if (!isIosHomeScreenApp()) {
-      global.print();
+      printPosterOnly();
       return;
     }
     try {
       const canvas = buildHandoutCanvas(opts || {});
       shareOrDownloadCanvas(canvas, (opts && opts.filename) || "handzettel.png", (opts && opts.title) || "buildspace");
     } catch (e) {
-      global.print();
+      printPosterOnly();
     }
   }
 
