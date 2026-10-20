@@ -330,6 +330,39 @@ button.gicon:focus-visible{outline:2px solid var(--diamond)}
   #guide .tabs{margin-bottom:6px}
   .task-intro{font-size:15px}
 }
+/* ---------- Version 1.2: Konto, Aufgabenwelten ---------- */
+.acct-box{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.45);border:3px solid rgba(255,255,255,.12);padding:10px 12px;margin:0 0 18px}
+.acct-box .btn.small{flex:none;margin:0}
+.acct-off{font-size:16px;color:var(--ink-dim);line-height:1.3;flex:1}
+.acct-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.acct-kind{font-size:14px;color:var(--ink-dim)}
+.acct-name{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct-state{align-self:flex-start;font:inherit;font-size:14px;background:none;border:0;padding:0;cursor:pointer;color:var(--grass)}
+.acct-state.busy{color:var(--ink-dim)}
+.acct-state.err{color:#ffb38a;text-decoration:underline}
+.acct-state:focus-visible{outline:2px solid var(--diamond)}
+.sub-h{font-size:22px;margin:22px 0 6px}
+.wgroup{font-size:15px;color:var(--diamond);margin:6px 0 0}
+.wtags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.wtag{font-size:13px;padding:1px 6px;border:2px solid var(--edge);color:var(--ink-dim)}
+.wtag.pub{color:var(--diamond);border-color:#2f6e6a}
+.wtag.warn{color:#ffb38a}
+#tw-info h3{margin:0 0 4px;font-size:22px}
+#tw-info .btn{margin-top:8px}
+#konto-code{font-size:30px;letter-spacing:3px;white-space:nowrap}
+#pub-code{white-space:nowrap}
+#konto-rules{margin-top:14px;font-size:16px}
+#konto-rules .code{max-height:240px;overflow:auto}
+@media (max-height:540px), (max-width:600px){
+  .acct-box{padding:8px 10px;margin-bottom:12px}
+  .acct-name{font-size:16px}
+  #konto-code{font-size:24px;letter-spacing:2px}
+}
+@media (max-width:600px){
+  #menu{padding-left:16px;padding-right:16px}
+  .screen-title{font-size:28px}
+  .code-show{font-size:32px;letter-spacing:5px}
+}
 @media (prefers-reduced-motion:reduce){ .btn:active{transform:none} }
 </style>
 <meta property="og:type" content="website">
@@ -365,18 +398,25 @@ button.gicon:focus-visible{outline:2px solid var(--diamond)}
   <section class="menu-panel" data-screen="main">
     <h1 class="title">Blockwerk</h1>
     <p class="tagline">Eine Welt aus Blöcken, die du Stück für Stück umbaust.</p>
+    <div id="acct-box" class="acct-box"></div>
     <button id="btn-single" class="btn" type="button">Einzelspieler</button>
+    <button id="btn-taskworld" class="btn" type="button">Aufgabenwelt öffnen</button>
     <button id="btn-multi" class="btn stone" type="button">Mehrspieler: Welt beitreten</button>
-    <p class="phase">Version 1.0. Läuft im Browser, mit Maus und Tastatur oder per Touch.</p>
+    <p class="phase">Version 1.2. Läuft im Browser, mit Maus und Tastatur oder per Touch.</p>
     <p id="storage-note" class="note hidden"></p>
   </section>
   <section class="menu-panel hidden" data-screen="worlds">
     <h2 class="screen-title">Deine Welten</h2>
+    <p id="worlds-acct" class="hint tight"></p>
     <div id="world-list" class="world-list"></div>
     <div class="btn-row">
       <button id="btn-play-world" class="btn" type="button">Spielen</button>
       <button id="btn-export" class="btn stone" type="button">Exportieren</button>
       <button id="btn-delete" class="btn stone" type="button">Löschen</button>
+    </div>
+    <div id="world-actions2" class="btn-row hidden">
+      <button id="btn-upload" class="btn hidden" type="button">Ins Konto übernehmen</button>
+      <button id="btn-publish" class="btn hidden" type="button">Für Lernende veröffentlichen</button>
     </div>
     <button id="btn-new" class="btn" type="button">Neue Welt erstellen</button>
     <button id="btn-import" class="btn stone" type="button">Welt importieren</button>
@@ -386,7 +426,7 @@ button.gicon:focus-visible{outline:2px solid var(--diamond)}
   <section class="menu-panel hidden" data-screen="multi">
     <h2 class="screen-title">Mehrspieler</h2>
     <label for="mp-name">Dein Name</label>
-    <input id="mp-name" type="text" maxlength="16" autocomplete="off" spellcheck="false">
+    <input id="mp-name" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Spitzname, nicht dein echter Name">
     <p class="lbl mt">Farbe deiner Figur</p>
     <div id="mp-colors" class="swatches"></div>
     <label for="mp-code" class="mt">Code der Welt</label>
@@ -395,6 +435,83 @@ button.gicon:focus-visible{outline:2px solid var(--diamond)}
     <button id="btn-join" class="btn mt" type="button">Beitreten</button>
     <p class="hint">Eine eigene Welt für andere öffnen: Starte sie im Einzelspieler, drücke Esc und wähle „Für andere öffnen“. Du bekommst einen Code und einen Link zum Teilen.</p>
     <button id="btn-back-main2" class="btn stone" type="button">Zurück</button>
+  </section>
+  <section class="menu-panel hidden" data-screen="konto">
+    <h2 class="screen-title" id="konto-title">Anmelden</h2>
+    <div id="konto-out">
+      <p class="hint tight">Mit einer Anmeldung liegen deine Welten in deinem Konto. So spielst du auf jedem Gerät weiter, zum Beispiel erst auf dem iPad in der Schule und dann zu Hause.</p>
+      <button id="btn-google" class="btn" type="button">Mit Google anmelden</button>
+      <p class="hint tight">Für Lehrkräfte und alle mit Google-Konto. Nur so kannst du Aufgabenwelten für Lernende veröffentlichen.</p>
+      <h3 class="sub-h">Mit Spielercode</h3>
+      <p class="hint tight">Ohne E-Mail und ohne Passwort. Der Code ist dein Schlüssel: Wer ihn kennt, kommt an deine Welten. Gib ihn niemandem weiter.</p>
+      <label for="code-in">Dein Spielercode</label>
+      <input id="code-in" type="text" class="code-input" maxlength="14" autocomplete="off" spellcheck="false" placeholder="z. B. K7QH-2MXP-9RTA" autocapitalize="characters">
+      <div class="btn-row mt">
+        <button id="btn-code-login" class="btn" type="button">Anmelden</button>
+        <button id="btn-code-new" class="btn stone" type="button">Neuen Code erstellen</button>
+      </div>
+    </div>
+    <div id="konto-in" class="hidden">
+      <p id="konto-who" class="lbl"></p>
+      <div id="konto-code-show" class="mp-box hidden">
+        <p id="konto-code" class="code-show"></p>
+        <p class="hint tight">Schreib dir diesen Code auf, zum Beispiel ins Heft. Damit meldest du dich auf jedem Gerät an. Ohne den Code kommt niemand an deine Welten, auch die Lehrkraft nicht.</p>
+        <button id="btn-copy-code" class="btn small" type="button">Code kopieren</button>
+      </div>
+      <p id="konto-status" class="hint"></p>
+      <p id="konto-pub-hint" class="hint tight">Aufgabenwelten für Lernende veröffentlichen kann nur, wer mit Google angemeldet ist.</p>
+      <div class="btn-row">
+        <button id="btn-sync" class="btn stone" type="button">Jetzt abgleichen</button>
+        <button id="btn-logout" class="btn stone" type="button">Abmelden</button>
+      </div>
+    </div>
+    <p id="konto-err" class="note hidden" role="alert"></p>
+    <details id="konto-rules" class="hidden">
+      <summary>Einrichtung für den Admin: Firestore-Regeln</summary>
+      <p class="hint tight">Einmalig in der Firebase-Konsole unter „Firestore, Regeln“ innerhalb von <code>match /databases/{database}/documents { … }</code> ergänzen und veröffentlichen:</p>
+      <pre class="code" id="rules-text"></pre>
+      <button id="btn-copy-rules" class="btn small" type="button">Regeln kopieren</button>
+    </details>
+    <button id="btn-konto-back" class="btn stone mt" type="button">Zurück</button>
+  </section>
+  <section class="menu-panel hidden" data-screen="aufgabe">
+    <h2 class="screen-title">Aufgabenwelt öffnen</h2>
+    <p class="hint tight">Gib den Code ein, den du von deiner Lehrkraft bekommen hast. Du bekommst eine eigene Kopie der Welt mit allen Aufgaben.</p>
+    <label for="tw-code">Code der Aufgabenwelt</label>
+    <input id="tw-code" type="text" class="code-input" maxlength="9" autocomplete="off" spellcheck="false" placeholder="z. B. DORF-7KQ2" autocapitalize="characters">
+    <button id="btn-tw-find" class="btn mt" type="button">Suchen</button>
+    <p id="tw-err" class="note hidden" role="alert"></p>
+    <div id="tw-info" class="mp-box hidden">
+      <h3 id="tw-title"></h3>
+      <p id="tw-meta" class="hint tight"></p>
+      <button id="btn-tw-continue" class="btn hidden" type="button">Weiterspielen</button>
+      <button id="btn-tw-start" class="btn" type="button">Starten</button>
+    </div>
+    <p id="tw-acct-hint" class="hint"></p>
+    <button id="btn-tw-login" class="btn stone" type="button">Anmelden</button>
+    <button id="btn-tw-back" class="btn stone" type="button">Zurück</button>
+  </section>
+  <section class="menu-panel hidden" data-screen="publish">
+    <h2 class="screen-title">Für Lernende veröffentlichen</h2>
+    <p id="pub-world" class="lbl"></p>
+    <p id="pub-tasks-hint" class="hint tight"></p>
+    <div id="pub-off">
+      <p class="hint tight">Du bekommst einen Code und einen Link. Wer ihn öffnet, erhält eine eigene Kopie dieser Welt mit allen Aufgaben und startet am Startpunkt der Welt, ohne dein Inventar. Den Fortschritt speichern die Lernenden in ihrem Konto oder auf ihrem Gerät.</p>
+      <button id="btn-pub" class="btn" type="button">Veröffentlichen</button>
+    </div>
+    <div id="pub-on" class="hidden">
+      <div class="mp-box">
+        <p class="lbl">Code für deine Lernenden</p>
+        <p id="pub-code" class="code-show"></p>
+        <div class="link-row"><input id="pub-link" type="text" readonly aria-label="Link zur Aufgabenwelt"><button id="btn-pub-copy" class="btn small" type="button">Link kopieren</button></div>
+        <button id="btn-pub-copycode" class="btn small mt" type="button">Code kopieren</button>
+      </div>
+      <p class="hint tight">Hast du die Welt weitergebaut oder die Aufgaben geändert? Mit „Aktuellen Stand übernehmen“ bekommen alle, die den Code ab jetzt öffnen, die neue Fassung. Wer schon spielt, behält seine Kopie.</p>
+      <button id="btn-pub-update" class="btn" type="button">Aktuellen Stand übernehmen</button>
+      <button id="btn-pub-stop" class="btn stone" type="button">Veröffentlichung beenden</button>
+    </div>
+    <p id="pub-err" class="note hidden" role="alert"></p>
+    <button id="btn-pub-back" class="btn stone mt" type="button">Zurück zu den Welten</button>
   </section>
   <section class="menu-panel hidden" data-screen="create">
     <h2 class="screen-title">Neue Welt</h2>
@@ -4270,7 +4387,9 @@ const newWorldId = () => 'w' + Date.now().toString(36) + Math.random().toString(
 function serializeWorld() {
   const p = player;
   return {
-    id: currentWorld.id, name: currentWorld.name, seed: currentWorld.seed, mode: p.mode, version: 2,
+    id: currentWorld.id, name: currentWorld.name, seed: currentWorld.seed, mode: p.mode, version: 2, updatedAt: Date.now(),
+    acct: currentWorld.acct || null, dirty: !!currentWorld.acct, cloudAt: currentWorld.cloudAt || 0,
+    shareId: currentWorld.shareId || null, fromShare: currentWorld.fromShare || null,
     created: currentWorld.created, lastPlayed: Date.now(), spawn: currentWorld.spawn, time: sky.time, days: sky.days || 0, bed: p.bed,
     spawnPt: p.spawnPt || null, players: currentWorld.players || {}, tasks: currentWorld.tasks || null,
     edits: [...world.edits].map(([k, id]) => { const q = k.split(','); return [+q[0], +q[1], +q[2], id]; }),
@@ -4280,28 +4399,34 @@ function serializeWorld() {
               stats: { health: p.health, food: p.food, sat: p.sat, exh: p.exh, xp: p.xp } }
   };
 }
-let saving = false;
-async function saveWorld(showToast) {
+let saving = null;
+async function saveWorld(showToast, forceCloud) {
   if (currentWorld && currentWorld.remote) { sendPData(); return; }
-  if (!currentWorld || saving) return;
-  saving = true;
+  // Läuft schon ein Speichervorgang, danach erneut speichern statt den neuen Stand zu verwerfen
+  while (saving) await saving;
+  if (!currentWorld) return;
+  let done;
+  saving = new Promise(r => { done = r; });
   try {
     const rec = serializeWorld();
     await dbPut(rec);
     currentWorld.lastPlayed = rec.lastPlayed;
-    if (showToast) toast('Welt gespeichert');
+    if (rec.acct) Cloud.afterLocalSave(rec, forceCloud);   // läuft im Hintergrund, blockiert das Spiel nicht
+    if (showToast) toast(rec.acct && Acct.state === 'err' ? 'Auf dem Gerät gespeichert, das Konto folgt' : 'Welt gespeichert');
   } catch (e) {
     console.error(e);
     if (showToast) toast('Speichern nicht möglich: Dieser Browser erlaubt hier keinen Speicher.');
   }
-  saving = false;
+  saving = null;
+  done();
 }
 const fixArr = (a, n) => { const r = Array(n).fill(null); if (Array.isArray(a)) for (let i = 0; i < n; i++) r[i] = a[i] || null; return r; };
 const CREATIVE_HOTBAR = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.OAK_PLANKS, B.OAK_LOG, B.GLASS, B.BRICKS, B.TORCH];
 
 function enterWorld(rec) {
   currentWorld = { id: rec.id, name: rec.name, seed: rec.seed, created: rec.created, lastPlayed: rec.lastPlayed, spawn: rec.spawn,
-    mode: rec.mode, players: rec.players || {}, tasks: rec.tasks || null };
+    mode: rec.mode, players: rec.players || {}, tasks: rec.tasks || null,
+    acct: rec.acct || null, cloudAt: rec.cloudAt || 0, shareId: rec.shareId || null, fromShare: rec.fromShare || null };
   setTimeout(() => {
     const url = urlParams.get('aufgaben');
     if (currentWorld && !currentWorld.remote && !currentWorld.tasks && url) loadTasksFromUrl(url);
@@ -4350,32 +4475,67 @@ function setScreen(name) {
   document.querySelectorAll('#menu .menu-panel').forEach(p => p.classList.toggle('hidden', p.dataset.screen !== name));
 }
 function storageNote(msg) { const n = $('storage-note'); n.textContent = msg; n.classList.remove('hidden'); }
-async function showWorlds() {
+async function showWorlds(skipSync) {
   setScreen('worlds');
-  try { worldsCache = await dbAll(); }
-  catch (e) { worldsCache = []; storageNote('Dieser Browser erlaubt hier keinen Speicher. Du kannst spielen, aber Welten bleiben nicht erhalten.'); }
+  let all = [];
+  try { all = await dbAll(); }
+  catch (e) { storageNote('Dieser Browser erlaubt hier keinen Speicher. Du kannst spielen, aber Welten bleiben nicht erhalten.'); }
+  const key = Acct.key();
+  worldsCache = all.filter(w => !w.acct || w.acct === key);
   worldsCache.sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
   if (!worldsCache.some(w => w.id === selWorld)) selWorld = worldsCache.length ? worldsCache[0].id : null;
   renderWorldList();
+  renderAcct();
+  if (key && !skipSync) Cloud.sync().then(() => refreshWorldScreens());
 }
 function disarmDelete() { deleteArmed = false; clearTimeout(deleteTimer); $('btn-delete').textContent = 'Löschen'; }
+function worldItem(w) {
+  const b = h('button', 'world-item' + (w.id === selWorld ? ' sel' : ''));
+  b.type = 'button';
+  b.appendChild(h('span', 'wname', w.name || 'Unbenannte Welt'));
+  b.appendChild(h('span', 'wmeta', `${MODE_NAME[w.mode] || 'Überleben'}, zuletzt gespielt am ${fmtDate(w.lastPlayed)}`));
+  const ti = w.tasks ? tasksInfoOf(w.tasks) : w.tasksInfo;
+  const tags = [];
+  if (ti) tags.push(['', `Aufgaben ${ti.done}/${ti.total}`]);
+  if (w.shareId) tags.push(['pub', 'Veröffentlicht: ' + fmtCode(w.shareId)]);
+  if (w.fromShare) tags.push(['', 'Aufgabenwelt']);
+  if (w.acct && w.dirty) tags.push(['warn', 'Noch nicht im Konto']);
+  if (tags.length) {
+    const row = h('span', 'wtags');
+    tags.forEach(([c, t]) => row.appendChild(h('span', 'wtag ' + c, t)));
+    b.appendChild(row);
+  }
+  b.addEventListener('click', () => { selWorld = w.id; disarmDelete(); renderWorldList(); });
+  b.addEventListener('dblclick', playSelected);
+  return b;
+}
 function renderWorldList() {
   const list = $('world-list');
   list.innerHTML = '';
-  if (!worldsCache.length) list.appendChild(h('p', 'empty', 'Noch keine Welt gespeichert. Erstelle deine erste Welt.'));
-  for (const w of worldsCache) {
-    const b = h('button', 'world-item' + (w.id === selWorld ? ' sel' : ''));
-    b.type = 'button';
-    b.appendChild(h('span', 'wname', w.name || 'Unbenannte Welt'));
-    b.appendChild(h('span', 'wmeta', `${MODE_NAME[w.mode] || 'Überleben'}, zuletzt gespielt am ${fmtDate(w.lastPlayed)}`));
-    b.addEventListener('click', () => { selWorld = w.id; disarmDelete(); renderWorldList(); });
-    b.addEventListener('dblclick', playSelected);
-    list.appendChild(b);
+  const key = Acct.key();
+  const acctW = key ? worldsCache.filter(w => w.acct === key) : [];
+  const localW = worldsCache.filter(w => !w.acct);
+  if (!worldsCache.length) list.appendChild(h('p', 'empty', key
+    ? 'Noch keine Welt in deinem Konto. Erstelle eine neue Welt oder öffne im Hauptmenü eine Aufgabenwelt.'
+    : 'Noch keine Welt gespeichert. Erstelle deine erste Welt.'));
+  if (key && acctW.length) { list.appendChild(h('p', 'wgroup', 'In deinem Konto')); acctW.forEach(w => list.appendChild(worldItem(w))); }
+  if (localW.length) {
+    if (key) list.appendChild(h('p', 'wgroup', 'Nur auf diesem Gerät'));
+    localW.forEach(w => list.appendChild(worldItem(w)));
   }
-  const has = !!selWorld;
-  ['btn-play-world', 'btn-export', 'btn-delete'].forEach(id => { $(id).disabled = !has; });
+  const sel = worldsCache.find(w => w.id === selWorld);
+  ['btn-play-world', 'btn-export', 'btn-delete'].forEach(id => { $(id).disabled = !sel; });
+  $('btn-upload').classList.toggle('hidden', !(key && sel && !sel.acct));
+  $('btn-publish').classList.toggle('hidden', !(sel && sel.acct && Acct.isGoogle()));
+  $('btn-publish').textContent = sel && sel.shareId ? 'Veröffentlichung verwalten' : 'Für Lernende veröffentlichen';
+  $('world-actions2').classList.toggle('hidden', $('btn-upload').classList.contains('hidden') && $('btn-publish').classList.contains('hidden'));
 }
-function playSelected() { const w = worldsCache.find(x => x.id === selWorld); if (w) enterWorld(w); }
+async function playSelected() {
+  const w = worldsCache.find(x => x.id === selWorld);
+  if (!w) return;
+  const rec = await Cloud.ensureFull(w);
+  if (rec) enterWorld(rec);
+}
 function parseSeed(s) {
   s = s.trim();
   if (!s) return (Math.random() * 2147483647) | 0;
@@ -4386,15 +4546,18 @@ function parseSeed(s) {
 async function createWorld() {
   const name = $('new-name').value.trim() || 'Neue Welt';
   const mode = document.querySelector('input[name="mode"]:checked').value;
-  const rec = { id: newWorldId(), name, seed: parseSeed($('seed').value), mode, created: Date.now(), lastPlayed: Date.now(), edits: [], be: [], version: 2 };
+  const rec = { id: newWorldId(), name, seed: parseSeed($('seed').value), mode, created: Date.now(), lastPlayed: Date.now(), updatedAt: Date.now(), edits: [], be: [], version: 2 };
+  if (Acct.key()) { Object.assign(rec, { acct: Acct.key(), dirty: true, cloudAt: 0 }); Cloud.pending = rec; }
   try { await dbPut(rec); } catch (e) { storageNote('Dieser Browser erlaubt hier keinen Speicher. Die Welt wird nicht gespeichert.'); }
   selWorld = rec.id;
   enterWorld(rec);
 }
-function exportWorld() {
-  const w = worldsCache.find(x => x.id === selWorld);
+async function exportWorld() {
+  const w0 = worldsCache.find(x => x.id === selWorld);
+  if (!w0) return;
+  const w = await Cloud.ensureFull(w0);
   if (!w) return;
-  const blob = new Blob([JSON.stringify(w)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(cloudPayload(w))], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = (w.name || 'welt').replace(/[^\w\-äöüÄÖÜß ]/g, '_') + '.blockwerk.json';
@@ -4407,8 +4570,12 @@ async function importWorld(file) {
     if (typeof rec.seed !== 'number' || (rec.edits && !Array.isArray(rec.edits))) throw new Error('format');
     rec.id = newWorldId();
     rec.name = (rec.name || 'Welt') + ' (Import)';
-    rec.lastPlayed = Date.now();
+    rec.lastPlayed = rec.updatedAt = Date.now();
+    LOCAL_ONLY_FIELDS.forEach(k => delete rec[k]);
+    delete rec.shareId;
+    if (Acct.key()) Object.assign(rec, { acct: Acct.key(), dirty: true, cloudAt: 0 });
     await dbPut(rec);
+    if (rec.acct) Cloud.push(rec);
     selWorld = rec.id;
     await showWorlds();
   } catch (e) {
@@ -4416,10 +4583,10 @@ async function importWorld(file) {
   }
 }
 
-$('btn-single').addEventListener('click', showWorlds);
+$('btn-single').addEventListener('click', () => showWorlds());
 $('btn-back-main').addEventListener('click', () => setScreen('main'));
 $('btn-new').addEventListener('click', () => { $('new-name').value = 'Neue Welt'; $('seed').value = ''; setScreen('create'); $('new-name').focus(); });
-$('btn-back-worlds').addEventListener('click', showWorlds);
+$('btn-back-worlds').addEventListener('click', () => showWorlds());
 $('btn-create').addEventListener('click', createWorld);
 $('new-name').addEventListener('keydown', e => { if (e.key === 'Enter') createWorld(); });
 $('seed').addEventListener('keydown', e => { if (e.key === 'Enter') createWorld(); });
@@ -4429,12 +4596,15 @@ $('btn-import').addEventListener('click', () => $('import-file').click());
 $('import-file').addEventListener('change', e => { const f = e.target.files[0]; if (f) importWorld(f); e.target.value = ''; });
 $('btn-delete').addEventListener('click', async () => {
   if (!selWorld) return;
+  const w = worldsCache.find(x => x.id === selWorld);
   if (!deleteArmed) {
-    deleteArmed = true; $('btn-delete').textContent = 'Endgültig löschen';
-    deleteTimer = setTimeout(disarmDelete, 3000);
+    deleteArmed = true;
+    $('btn-delete').textContent = w && w.shareId ? 'Löschen, Code wird ungültig' : w && w.acct ? 'Auch im Konto löschen' : 'Endgültig löschen';
+    deleteTimer = setTimeout(disarmDelete, 4000);
     return;
   }
   disarmDelete();
+  if (w && w.acct && !(await Cloud.remove(w))) { toast('Löschen im Konto hat nicht geklappt. Prüfe die Internetverbindung.'); return; }
   try { await dbDel(selWorld); } catch (e) {}
   selWorld = null;
   showWorlds();
@@ -4508,7 +4678,7 @@ document.addEventListener('pointerlockerror', () => { if (state === 'playing') o
 let menuCenter = new THREE.Vector3(), menuAngle = 0, currentWorldWasRemote = false;
 async function toMenu() {
   if (state === 'inventory') closeInventory(false);
-  await saveWorld(false);
+  await saveWorld(false, true);
   stopNet(true);
   currentWorldWasRemote = !!(currentWorld && currentWorld.remote);
   currentWorld = null;
@@ -4558,9 +4728,9 @@ addEventListener('pagehide', () => {
   // Beim Schließen des Tabs: Gast meldet sich mit Inventar ab, Host verabschiedet alle Gäste
   if (net.mode === 'client' && net.host) { sendPData(); net.host.send({ t: 'bye' }); }
   else if (net.mode === 'host') broadcast({ t: 'bye' });
-  saveWorld(false);
+  saveWorld(false, true);
 });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveWorld(false); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { if (currentWorld) saveWorld(false, true); else Cloud.flush(); } });
 
 // =========================== Eingabe ===========================
 let lastSpace = 0, lastW = 0, mouseL = false, mouseR = false, mouseLFresh = false, breakCD = 0, placeCD = 0, attackCD = 0, attackMode = false;
@@ -6254,6 +6424,766 @@ $('btn-tasks-clear').addEventListener('click', () => {
 bindHold('t-tasks', openTasks);
 bindHold('t-help', openGuide);
 
+// =========================== Konto und Cloud-Speicher ===========================
+// Anmeldung mit Google (Lehrkräfte, alle mit Google-Konto) oder mit Spielercode (Lernende, ohne E-Mail).
+// Welten liegen dann in Firestore unter dem Konto und auf dem Gerät als Zwischenspeicher (IndexedDB).
+// Aufbau in Firestore (Regeln siehe FIRESTORE_REGELN):
+//   blockwerk/{uid}/worlds/{welt}            Kopfdaten einer Welt (Name, Stand, Aufgaben-Fortschritt)
+//   blockwerk/{uid}/worlds/{welt}/parts/{n}  Weltdaten, gepackt und in Stücke geteilt (Firestore: max. 1 MB pro Dokument)
+//   blockwerk_code/{spielercode}/worlds/...  dasselbe für Spielercodes
+//   blockwerk_vorlagen/{code}(/parts/{n})    veröffentlichte Aufgabenwelten, per Code für alle lesbar
+const FB_CONFIG = {
+  apiKey: 'AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus',
+  authDomain: 'kanban-board-281da.firebaseapp.com',
+  projectId: 'kanban-board-281da',
+  storageBucket: 'kanban-board-281da.firebasestorage.app',
+  messagingSenderId: '210909884248',
+  appId: '1:210909884248:web:10ffacb3a74f7b3c887f2d'
+};
+const FB_BASE = 'https://www.gstatic.com/firebasejs/10.13.2/';
+const ADMIN_EMAILS = ['marcstroh11@googlemail.com'];
+const FIRESTORE_REGELN = `match /blockwerk/{uid}/worlds/{world} {
+  allow read, write: if request.auth != null
+    && request.auth.token.firebase.sign_in_provider != 'anonymous'
+    && request.auth.uid == uid;
+  match /parts/{part} {
+    allow read, write: if request.auth != null
+      && request.auth.token.firebase.sign_in_provider != 'anonymous'
+      && request.auth.uid == uid;
+  }
+}
+match /blockwerk_code/{code}/worlds/{world} {
+  allow read, write: if request.auth != null && code.size() >= 12;
+  match /parts/{part} {
+    allow read, write: if request.auth != null && code.size() >= 12;
+  }
+}
+match /blockwerk_vorlagen/{sid} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if request.auth != null
+    && request.auth.token.firebase.sign_in_provider != 'anonymous'
+    && request.resource.data.owner == request.auth.uid;
+  allow update, delete: if request.auth != null && resource.data.owner == request.auth.uid;
+  match /parts/{part} {
+    allow get: if true;
+    allow write: if request.auth != null
+      && get(/databases/$(database)/documents/blockwerk_vorlagen/$(sid)).data.owner == request.auth.uid;
+  }
+}`;
+const LS_ACCT = 'blockwerk.acct';
+const CHUNK = 700000;                 // Zeichen pro Firestore-Dokument (Grenze liegt bei rund 1 MB)
+const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const dbGet = id => dbTx('readonly', s => s.get(id));
+function lsRead(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+function lsWrite(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function randCode(n) {
+  const r = new Uint8Array(n);
+  (window.crypto || window.msCrypto).getRandomValues(r);
+  let s = '';
+  for (const b of r) s += CODE_ALPHA[b % CODE_ALPHA.length];
+  return s;
+}
+const cleanCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const fmtCode = s => s.replace(/(.{4})(?=.)/g, '$1-');
+function withTimeout(p, ms) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => rej({ code: 'timeout' }), ms);
+    p.then(v => { clearTimeout(t); res(v); }, e => { clearTimeout(t); rej(e); });
+  });
+}
+function copyText(t, okMsg) {
+  const done = () => toast(okMsg || 'Kopiert');
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Bitte markieren und von Hand kopieren'); }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+}
+
+// ---------- Weltdaten packen: JSON, dann komprimiert, dann Base64 ----------
+function b64u(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function unb64u(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  const bin = atob(str), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function packData(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  if ('CompressionStream' in window) {
+    try {
+      const buf = await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+      return 'z' + b64u(new Uint8Array(buf));
+    } catch (e) {}
+  }
+  return 'j' + b64u(bytes);
+}
+async function unpackData(s) {
+  const bytes = unb64u(s.slice(1));
+  if (s[0] === 'z') {
+    const buf = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+    return JSON.parse(new TextDecoder().decode(buf));
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function splitParts(str) { const p = []; for (let i = 0; i < str.length; i += CHUNK) p.push(str.slice(i, i + CHUNK)); return p.length ? p : ['']; }
+async function writeBlob(ref, str, oldParts) {
+  const parts = splitParts(str);
+  await withTimeout(Promise.all(parts.map((d, i) => ref.collection('parts').doc(String(i)).set({ d }))), 45000);
+  for (let i = parts.length; i < (oldParts || 0); i++) ref.collection('parts').doc(String(i)).delete().catch(() => {});
+  return parts.length;
+}
+async function readBlob(ref, n) {
+  const snaps = await withTimeout(Promise.all(Array.from({ length: n }, (_, i) => ref.collection('parts').doc(String(i)).get())), 45000);
+  if (snaps.some(s => !s.exists)) throw { code: 'incomplete' };
+  return unpackData(snaps.map(s => s.data().d).join(''));
+}
+const tasksInfoOf = tk => tk && tk.items ? { title: tk.title || 'Aufgaben', done: tk.items.filter(i => i.done).length, total: tk.items.length } : null;
+const LOCAL_ONLY_FIELDS = ['acct', 'dirty', 'cloudAt', 'stub', 'stale', 'remoteAt'];
+function cloudPayload(rec) { const c = Object.assign({}, rec); LOCAL_ONLY_FIELDS.forEach(k => delete c[k]); return c; }
+
+// ---------- Firebase laden (teilt sich die Instanz mit protect.js) ----------
+function ensureFbPart(file, ok) {
+  if (ok()) return Promise.resolve();
+  const src = FB_BASE + file;
+  let tag = document.querySelector(`script[src="${src}"]`);
+  let failed = false;
+  if (!tag) { tag = document.createElement('script'); tag.src = src; tag.onerror = () => { failed = true; }; document.head.appendChild(tag); }
+  return new Promise((res, rej) => {
+    const t0 = Date.now();
+    (function poll() {
+      if (ok()) return res();
+      if (failed || Date.now() - t0 > 20000) return rej({ code: 'load' });
+      setTimeout(poll, 80);
+    })();
+  });
+}
+const Fb = {
+  p: null, db: null, auth: null, user: null, authKnown: false, waiters: [],
+  load() {
+    if (this.p) return this.p;
+    this.p = ensureFbPart('firebase-app-compat.js', () => !!(window.firebase && firebase.initializeApp))
+      .then(() => Promise.all([
+        ensureFbPart('firebase-firestore-compat.js', () => !!firebase.firestore),
+        ensureFbPart('firebase-auth-compat.js', () => !!firebase.auth)
+      ]))
+      .then(() => {
+        if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+        this.db = firebase.firestore();
+        this.auth = firebase.auth();
+        this.auth.getRedirectResult().catch(e => Acct.error(e));
+        this.auth.onAuthStateChanged(u => {
+          this.user = u; this.authKnown = true;
+          const w = this.waiters; this.waiters = []; w.forEach(f => f());
+          Acct.onAuth(u);
+        });
+        return this;
+      });
+    this.p.catch(() => { this.p = null; });
+    return this.p;
+  },
+  // Wartet, bis Firebase den Anmeldestatus kennt, und sorgt für eine (notfalls anonyme) Sitzung
+  async session() {
+    await this.load();
+    if (!this.authKnown) await new Promise(r => this.waiters.push(r));
+    if (!this.auth.currentUser) await withTimeout(this.auth.signInAnonymously(), 15000);
+    return this.auth.currentUser;
+  }
+};
+
+// ---------- Konto ----------
+const Acct = {
+  kind: null, uid: '', email: '', code: '', state: 'off', msg: '', permErr: false, lastPush: 0,
+  key() { return this.kind === 'google' ? 'g:' + this.uid : this.kind === 'code' ? 'c:' + this.code : null; },
+  isGoogle() { return this.kind === 'google'; },
+  authOk() {
+    const u = Fb.auth && Fb.auth.currentUser;
+    return this.kind === 'code' ? !!u : !!(u && !u.isAnonymous && u.uid === this.uid);
+  },
+  isAdmin() { return this.isGoogle() && ADMIN_EMAILS.includes(String(this.email).toLowerCase()); },
+  col() {
+    return this.kind === 'google'
+      ? Fb.db.collection('blockwerk').doc(this.uid).collection('worlds')
+      : Fb.db.collection('blockwerk_code').doc(this.code).collection('worlds');
+  },
+  label() { return this.kind === 'google' ? this.email : this.kind === 'code' ? 'Spielercode ' + fmtCode(this.code) : ''; },
+  set(state, msg) { this.state = state; this.msg = msg || ''; if (state !== 'err') this.permErr = false; renderAcct(); },
+  error(e) {
+    const code = e && (e.code || e.name);
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+    if (code === 'need-google') { this.state = 'err'; this.msg = 'Zum Veröffentlichen mit Google anmelden.'; renderAcct(); return; }
+    this.permErr = code === 'permission-denied';
+    if (this.permErr) this.state = 'err', this.msg = 'Keine Berechtigung: Die Speicherregeln für Blockwerk fehlen noch. Das ist eine einmalige Einrichtung durch den Admin.';
+    else if (code === 'load') this.state = 'err', this.msg = 'Der Anmeldedienst ist nicht erreichbar. Prüfe die Internetverbindung. Gespeichert wird solange auf diesem Gerät.';
+    else if (code === 'timeout' || code === 'unavailable' || code === 'TypeError' || !navigator.onLine || /network|fetch/i.test(String(e && e.message))) this.state = 'err', this.msg = 'Keine Verbindung zum Konto. Gespeichert wird solange auf diesem Gerät und später übertragen.';
+    else if (code === 'auth/unauthorized-domain') this.state = 'err', this.msg = 'Google-Anmeldung ist auf dieser Adresse nicht freigegeben. Öffne Blockwerk über buildspaceos.de.';
+    else this.state = 'err', this.msg = 'Fehler beim Konto' + (code ? ' (' + code + ')' : '') + '.';
+    console.warn('Blockwerk Konto:', e);
+    renderAcct();
+  },
+  onAuth(u) {
+    const google = u && !u.isAnonymous && u.email;
+    const stored = lsRead(LS_ACCT);
+    if (google && stored && stored.kind === 'google') {
+      const changed = !this.confirmed || this.kind !== 'google' || this.uid !== u.uid;
+      this.confirmed = true;
+      Object.assign(this, { kind: 'google', uid: u.uid, email: u.email, code: '' });
+      lsWrite(LS_ACCT, { kind: 'google', uid: u.uid, email: u.email });
+      renderAcct();
+      if (changed) this.afterLogin();
+    } else if (this.kind === 'google' && !google) {
+      // Google-Sitzung wurde anderswo beendet (z. B. Abmelden auf buildspace)
+      Object.assign(this, { kind: null, uid: '', email: '' });
+      lsWrite(LS_ACCT, null);
+      renderAcct(); refreshWorldScreens();
+    }
+  },
+  afterLogin() {
+    this.set('busy', 'Gleiche Welten ab …');
+    Cloud.sync().then(() => refreshWorldScreens());
+  },
+  async googleLogin() {
+    try { await Fb.load(); } catch (e) { this.error(e); return; }
+    if (this.kind === 'code') await this.logout(true);
+    lsWrite(LS_ACCT, { kind: 'google' });
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+    try {
+      if (standalone) { await Fb.auth.signInWithRedirect(provider); return; }
+      await Fb.auth.signInWithPopup(provider);
+    } catch (err) {
+      const c = err && err.code;
+      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { await Fb.auth.signInWithRedirect(provider); return; }
+      lsWrite(LS_ACCT, null);
+      this.error(err);
+    }
+  },
+  async codeLogin(raw, isNew) {
+    const code = cleanCode(raw);
+    if (code.length !== 12) { kontoErr('Ein Spielercode hat 12 Zeichen, zum Beispiel K7QH-2MXP-9RTA.'); return false; }
+    if (!isNew) {
+      $('btn-code-login').disabled = true; $('btn-code-login').textContent = 'Prüfe …';
+      let n = -1;
+      try { await Fb.session(); n = (await withTimeout(Fb.db.collection('blockwerk_code').doc(code).collection('worlds').get(), 15000)).size; }
+      catch (e) { this.error(e); }
+      $('btn-code-login').disabled = false; $('btn-code-login').textContent = 'Anmelden';
+      if (n === 0 && !confirmArm('btn-code-login', 'Trotzdem anmelden')) {
+        kontoErr('Zu diesem Code gibt es noch keine gespeicherten Welten. Prüfe den Code. Ist er richtig, tippe noch einmal auf „Trotzdem anmelden“.');
+        return false;
+      }
+      if (n < 0 && this.permErr) return false;
+    }
+    if (this.kind === 'google') await this.logout(true);
+    Object.assign(this, { kind: 'code', code, uid: '', email: '' });
+    lsWrite(LS_ACCT, { kind: 'code', code });
+    kontoErr('');
+    renderAcct();
+    this.afterLogin();
+    return true;
+  },
+  async logout(silent) {
+    const key = this.key();
+    if (!key) return;
+    await Cloud.flush();
+    let dirty = [];
+    try {
+      const all = await dbAll();
+      dirty = all.filter(r => r.acct === key && r.dirty);
+      for (const r of dirty) await Cloud.push(r);
+      // Auf geteilten Geräten bleiben keine fremden Welten zurück: Zwischenspeicher des Kontos leeren
+      for (const r of (await dbAll()).filter(r => r.acct === key && !r.dirty)) await dbDel(r.id);
+    } catch (e) {}
+    const wasGoogle = this.kind === 'google';
+    Object.assign(this, { kind: null, uid: '', email: '', code: '', confirmed: false });
+    lsWrite(LS_ACCT, null);
+    this.set('off');
+    if (wasGoogle && Fb.auth) { try { await Fb.auth.signOut(); await Fb.auth.signInAnonymously(); } catch (e) {} }
+    if (!silent) { toast('Abgemeldet'); refreshWorldScreens(); }
+  },
+  restore() {
+    const s = lsRead(LS_ACCT);
+    if (s && s.kind === 'code' && cleanCode(s.code).length === 12) {
+      Object.assign(this, { kind: 'code', code: cleanCode(s.code) });
+    } else if (s && s.kind === 'google' && s.uid) {
+      // Bis Firebase die Sitzung bestätigt, die zwischengespeicherten Welten schon anzeigen
+      Object.assign(this, { kind: 'google', uid: s.uid, email: s.email || '' });
+    }
+    renderAcct();
+    if (s) {
+      const go = () => Fb.load().then(() => { if (this.kind === 'code') { Fb.session().then(() => this.afterLogin(), e => this.error(e)); } })
+        .catch(e => this.error(e));
+      // Erst nach dem Seitenaufbau laden, damit protect.js und Blockwerk die Firebase-Skripte nicht doppelt laden
+      if (document.readyState === 'complete') setTimeout(go, 600); else addEventListener('load', () => setTimeout(go, 600));
+    }
+  }
+};
+
+// ---------- Abgleich der Welten ----------
+const Cloud = {
+  pending: null, busy: false, syncing: null,
+  sync() {
+    if (!this.syncing) this.syncing = this._sync().finally(() => { this.syncing = null; });
+    return this.syncing;
+  },
+  async _sync() {
+    const key = Acct.key();
+    if (!key) return;
+    if (Acct.state !== 'err') Acct.set('busy', 'Gleiche Welten ab …');
+    try {
+      await Fb.session();
+      if (!Acct.authOk()) { Acct.set('busy', 'Anmeldung wird geprüft …'); return; }   // Google-Sitzung noch nicht bestätigt
+      const snap = await withTimeout(Acct.col().get(), 20000);
+      if (Acct.key() !== key) return;
+      const metas = snap.docs.map(d => d.data()).filter(m => m && m.id);
+      const remoteIds = new Set(metas.map(m => m.id));
+      const mine = (await dbAll()).filter(r => r.acct === key);
+      const byId = new Map(mine.map(r => [r.id, r]));
+      for (const m of metas) {
+        const l = byId.get(m.id), at = m.updatedAt || 0;
+        if (!l) {
+          await dbPut({ id: m.id, name: m.name, seed: m.seed, mode: m.mode, created: m.created, lastPlayed: m.lastPlayed, updatedAt: at,
+            tasksInfo: m.tasksInfo || null, shareId: m.shareId || null, fromShare: m.fromShare || null,
+            acct: key, stub: true, remoteAt: at, cloudAt: 0 });
+        } else if (!l.dirty && at > (l.cloudAt || 0)) {
+          Object.assign(l, { name: m.name, mode: m.mode, lastPlayed: m.lastPlayed, tasksInfo: m.tasksInfo || null,
+            shareId: m.shareId || null, remoteAt: at, stale: true });
+          await dbPut(l);
+        }
+      }
+      for (const l of mine) {
+        if (remoteIds.has(l.id)) { if (l.dirty && !l.stub) await this.push(l); }
+        else if (l.cloudAt && !l.dirty) await dbDel(l.id);          // anderswo gelöscht
+        else if (!l.stub) await this.push(l);                        // noch nie hochgeladen
+      }
+      Acct.set('ok');
+    } catch (e) { Acct.error(e); }
+  },
+  async push(rec) {
+    const key = rec.acct;
+    if (!key || key !== Acct.key() || rec.stub) return false;
+    try {
+      await Fb.session();
+      if (!Acct.authOk()) return false;
+      const ref = Acct.col().doc(rec.id);
+      const old = await withTimeout(ref.get(), 15000);
+      const oldParts = old.exists ? old.data().parts || 0 : 0;
+      const remoteAt = old.exists ? old.data().updatedAt || 0 : 0;
+      if (remoteAt > (rec.updatedAt || 0)) {
+        // Im Konto liegt schon ein neuerer Stand (anderes Gerät): nicht überschreiben, beim nächsten Öffnen laden
+        const cur = await dbGet(rec.id);
+        if (cur && cur.acct === key && (cur.updatedAt || 0) < remoteAt) { cur.dirty = false; cur.stale = true; cur.remoteAt = remoteAt; await dbPut(cur); }
+        Acct.set('ok');
+        return true;
+      }
+      const str = await packData(cloudPayload(rec));
+      if (str.length > CHUNK * 12) throw { code: 'too-large' };
+      const n = await writeBlob(ref, str, oldParts);
+      const at = rec.updatedAt || rec.lastPlayed || Date.now();
+      await withTimeout(ref.set({ id: rec.id, name: rec.name || 'Welt', seed: rec.seed, mode: rec.mode || 'survival',
+        created: rec.created || at, lastPlayed: rec.lastPlayed || at, updatedAt: at, parts: n, size: str.length,
+        tasksInfo: tasksInfoOf(rec.tasks), shareId: rec.shareId || null, fromShare: rec.fromShare || null }), 15000);
+      const cur = await dbGet(rec.id);
+      if (cur && cur.acct === key) {
+        cur.cloudAt = at;
+        if ((cur.updatedAt || 0) <= at) cur.dirty = false;
+        delete cur.stale;
+        await dbPut(cur);
+      }
+      if (currentWorld && currentWorld.id === rec.id) currentWorld.cloudAt = at;
+      Acct.lastPush = Date.now();
+      Acct.set('ok');
+      return true;
+    } catch (e) {
+      if (e && e.code === 'too-large') { Acct.set('err', 'Diese Welt ist zu groß für das Konto. Sie bleibt auf diesem Gerät gespeichert.'); return false; }
+      Acct.error(e);
+      return false;
+    }
+  },
+  // Wird nach jedem lokalen Speichern aufgerufen; überträgt höchstens alle zwei Minuten, außer bei force
+  async afterLocalSave(rec, force) {
+    this.pending = rec;
+    if (force || Date.now() - Acct.lastPush > 120000) return this.flush();
+    return null;
+  },
+  async flush() {
+    if (!this.pending || this.busy) return true;
+    const rec = this.pending;
+    this.pending = null; this.busy = true;
+    Acct.set('busy', 'Speichere im Konto …');
+    const ok = await this.push(rec);
+    this.busy = false;
+    if (!ok && !this.pending) this.pending = rec;
+    else if (this.pending) return this.flush();
+    if (state === 'menu' && !$('menu').querySelector('[data-screen="worlds"]').classList.contains('hidden')) renderWorldList();
+    return ok;
+  },
+  async download(w) {
+    await Fb.session();
+    const ref = Acct.col().doc(w.id);
+    const ms = await withTimeout(ref.get(), 15000);
+    if (!ms.exists) throw { code: 'not-found' };
+    const m = ms.data();
+    const rec = await readBlob(ref, m.parts || 1);
+    Object.assign(rec, { id: w.id, acct: Acct.key(), cloudAt: m.updatedAt || 0, updatedAt: m.updatedAt || 0, dirty: false });
+    delete rec.stub; delete rec.stale; delete rec.remoteAt;
+    await dbPut(rec);
+    return rec;
+  },
+  // Liefert den vollständigen Stand einer Konto-Welt (lädt ihn bei Bedarf herunter)
+  async ensureFull(w0) {
+    if (!w0.acct) return w0;
+    if (this.syncing) await this.syncing.catch(() => {});
+    let w = w0;
+    try { w = (await dbGet(w0.id)) || w0; } catch (e) {}
+    $('loading-text').textContent = 'Welt wird geöffnet …';
+    show('loading', true);
+    let need = !!(w.stub || w.stale);
+    if (!need) {
+      // Kurz nachsehen, ob ein anderes Gerät inzwischen einen neueren Stand gespeichert hat
+      try {
+        await withTimeout(Fb.session(), 6000);
+        if (Acct.authOk()) {
+          const ms = await withTimeout(Acct.col().doc(w.id).get(), 6000);
+          const at = ms.exists ? ms.data().updatedAt || 0 : 0;
+          if (at > (w.cloudAt || 0) && at > (w.updatedAt || 0)) need = true;
+        }
+      } catch (e) { /* keine Verbindung: Stand von diesem Gerät öffnen */ }
+    }
+    if (!need) { show('loading', false); return w; }
+    $('loading-text').textContent = 'Welt wird aus dem Konto geladen …';
+    try { return await this.download(w); }
+    catch (e) {
+      Acct.error(e);
+      if (!w.stub) { toast('Konto nicht erreichbar, der Stand von diesem Gerät wird geöffnet.'); return w; }
+      toast('Die Welt konnte nicht aus dem Konto geladen werden. Prüfe die Internetverbindung.');
+      return null;
+    } finally { show('loading', false); }
+  },
+  async remove(w) {
+    if (!w.acct) return true;
+    try {
+      await Fb.session();
+      const ref = Acct.col().doc(w.id);
+      const ms = await withTimeout(ref.get(), 15000);
+      if (ms.exists) {
+        const n = ms.data().parts || 0;
+        await withTimeout(Promise.all(Array.from({ length: n }, (_, i) => ref.collection('parts').doc(String(i)).delete())), 20000);
+        await withTimeout(ref.delete(), 15000);
+      }
+      if (w.shareId && Acct.isGoogle()) await Tpl.unpublishCode(w.shareId).catch(() => {});
+      return true;
+    } catch (e) { Acct.error(e); return false; }
+  }
+};
+
+// ---------- Aufgabenwelten für Lernende ----------
+const Tpl = {
+  ref(code) { return Fb.db.collection('blockwerk_vorlagen').doc(code); },
+  payloadOf(rec) {
+    const tasks = rec.tasks ? JSON.parse(JSON.stringify(rec.tasks)) : null;
+    if (tasks) tasks.items.forEach(i => { i.done = false; i.by = ''; });
+    return { version: rec.version || 2, name: rec.name, seed: rec.seed, mode: rec.mode, spawn: rec.spawn || null,
+      time: rec.time, days: 0, edits: rec.edits || [], be: rec.be || [], tasks };
+  },
+  async publish(rec) {
+    await Fb.session();
+    if (!Acct.isGoogle()) throw { code: 'need-google' };
+    let code = rec.shareId, oldParts = 0, created = Date.now();
+    if (code) {
+      const s = await withTimeout(this.ref(code).get(), 15000);
+      if (s.exists) { oldParts = s.data().parts || 0; created = s.data().created || created; } else code = null;
+    }
+    if (!code) {
+      for (let i = 0; i < 6 && !code; i++) {
+        const c = randCode(8);
+        if (!(await withTimeout(this.ref(c).get(), 15000)).exists) code = c;
+      }
+      if (!code) throw { code: 'no-code' };
+    }
+    const str = await packData(this.payloadOf(rec));
+    if (str.length > CHUNK * 12) throw { code: 'too-large' };
+    const n = splitParts(str).length;
+    const meta = { owner: Acct.uid, title: rec.name || 'Aufgabenwelt', mode: rec.mode || 'survival',
+      tasksInfo: tasksInfoOf(rec.tasks), parts: n, size: str.length, updatedAt: Date.now(), created };
+    await withTimeout(this.ref(code).set(meta), 15000);
+    await writeBlob(this.ref(code), str, oldParts);
+    return { code, meta };
+  },
+  async unpublishCode(code) {
+    await Fb.session();
+    const ref = this.ref(code), s = await withTimeout(ref.get(), 15000);
+    if (!s.exists) return;
+    const n = s.data().parts || 0;
+    await withTimeout(Promise.all(Array.from({ length: n }, (_, i) => ref.collection('parts').doc(String(i)).delete())), 20000);
+    await withTimeout(ref.delete(), 15000);
+  },
+  async info(code) {
+    await Fb.load();
+    const s = await withTimeout(this.ref(code).get(), 15000);
+    return s.exists ? s.data() : null;
+  },
+  async fetch(code, meta) { return readBlob(this.ref(code), meta.parts || 1); }
+};
+
+// =========================== Oberfläche: Konto ===========================
+function stateLabel() {
+  if (Acct.state === 'busy') return Acct.msg || 'Speichere …';
+  if (Acct.state === 'err') return 'Nicht gespeichert, tippe für Details';
+  return 'Alles im Konto gespeichert';
+}
+function renderAcct() {
+  const box = $('acct-box');
+  if (!box) return;
+  box.innerHTML = '';
+  if (Acct.kind) {
+    const who = h('div', 'acct-who');
+    who.appendChild(h('span', 'acct-kind', Acct.kind === 'google' ? 'Angemeldet mit Google' : 'Angemeldet mit Spielercode'));
+    who.appendChild(h('span', 'acct-name', Acct.kind === 'google' ? Acct.email : fmtCode(Acct.code)));
+    const st = h('button', 'acct-state ' + Acct.state, stateLabel());
+    st.type = 'button';
+    st.addEventListener('click', openKonto);
+    who.appendChild(st);
+    box.appendChild(who);
+    const b = h('button', 'btn small', 'Konto');
+    b.type = 'button'; b.addEventListener('click', openKonto);
+    box.appendChild(b);
+  } else {
+    box.appendChild(h('span', 'acct-off', 'Nicht angemeldet: Deine Welten liegen nur auf diesem Gerät.'));
+    const b = h('button', 'btn small', 'Anmelden');
+    b.type = 'button'; b.addEventListener('click', openKonto);
+    box.appendChild(b);
+  }
+  const wa = $('worlds-acct');
+  if (wa) wa.textContent = Acct.kind
+    ? (Acct.kind === 'google' ? 'Gespeichert in deinem Konto ' + Acct.email + '.' : 'Gespeichert unter deinem Spielercode ' + fmtCode(Acct.code) + '.')
+    : 'Nicht angemeldet: Welten liegen nur auf diesem Gerät. Melde dich im Hauptmenü an, um auf jedem Gerät weiterzuspielen.';
+  if ($('konto-in')) renderKonto();
+}
+function kontoErr(msg) { const e = $('konto-err'); e.textContent = msg; e.classList.toggle('hidden', !msg); }
+function renderKonto() {
+  const inn = !!Acct.kind;
+  $('konto-out').classList.toggle('hidden', inn);
+  $('konto-in').classList.toggle('hidden', !inn);
+  $('konto-title').textContent = inn ? 'Dein Konto' : 'Anmelden';
+  if (inn) {
+    $('konto-who').textContent = Acct.kind === 'google' ? 'Angemeldet mit Google als ' + Acct.email + '.' : 'Angemeldet mit deinem Spielercode:';
+    $('konto-code-show').classList.toggle('hidden', Acct.kind !== 'code');
+    $('konto-code').textContent = fmtCode(Acct.code || '');
+    $('konto-status').textContent = Acct.state === 'err' ? Acct.msg : Acct.state === 'busy' ? (Acct.msg || 'Speichere …') : 'Alle Welten sind im Konto gespeichert.';
+    $('konto-status').classList.toggle('note', Acct.state === 'err');
+    $('konto-pub-hint').classList.toggle('hidden', Acct.kind === 'google');
+  }
+  $('konto-rules').classList.toggle('hidden', !(Acct.permErr || Acct.isAdmin()));
+  if (Acct.permErr) $('konto-rules').open = true;
+}
+function openKonto() { kontoErr(''); renderKonto(); setScreen('konto'); }
+const armed = {};
+function confirmArm(id, label) {
+  if (armed[id]) { clearTimeout(armed[id].t); delete armed[id]; return true; }
+  const b = $(id), orig = b.textContent;
+  b.textContent = label;
+  armed[id] = { t: setTimeout(() => { b.textContent = orig; delete armed[id]; }, 6000) };
+  return false;
+}
+function refreshWorldScreens() {
+  if (state !== 'menu') return;
+  const vis = s => !$('menu').querySelector(`[data-screen="${s}"]`).classList.contains('hidden');
+  if (vis('worlds')) showWorlds(true);
+}
+$('rules-text').textContent = FIRESTORE_REGELN;
+$('btn-copy-rules').addEventListener('click', () => copyText(FIRESTORE_REGELN, 'Regeln kopiert'));
+$('btn-google').addEventListener('click', () => Acct.googleLogin());
+$('btn-code-login').addEventListener('click', async () => { if (await Acct.codeLogin($('code-in').value, false)) { $('code-in').value = ''; setScreen('main'); toast('Angemeldet'); } });
+$('code-in').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-code-login').click(); });
+$('code-in').addEventListener('input', e => { const c = cleanCode(e.target.value).slice(0, 12); e.target.value = fmtCode(c); });
+$('btn-code-new').addEventListener('click', async () => {
+  const code = randCode(12);
+  await Acct.codeLogin(code, true);
+  openKonto();
+  toast('Neuer Spielercode erstellt. Schreib ihn dir auf!');
+});
+$('btn-copy-code').addEventListener('click', () => copyText(fmtCode(Acct.code), 'Spielercode kopiert'));
+$('btn-sync').addEventListener('click', () => { Acct.set('busy', 'Gleiche Welten ab …'); Cloud.sync().then(renderKonto); });
+$('btn-logout').addEventListener('click', async () => {
+  if (!confirmArm('btn-logout', Acct.kind === 'google' ? 'Wirklich abmelden? (auch auf buildspace)' : 'Wirklich abmelden?')) return;
+  $('btn-logout').textContent = 'Abmelden';
+  await Acct.logout(false);
+  setScreen('main');
+});
+$('btn-konto-back').addEventListener('click', () => setScreen('main'));
+
+// =========================== Oberfläche: Aufgabenwelt öffnen ===========================
+let twFound = null;
+function twErr(msg) { const e = $('tw-err'); e.textContent = msg; e.classList.toggle('hidden', !msg); }
+function openTaskWorldScreen(code) {
+  twFound = null; twErr('');
+  $('tw-info').classList.add('hidden');
+  $('tw-code').value = code ? fmtCode(cleanCode(code).slice(0, 8)) : '';
+  $('tw-acct-hint').textContent = Acct.kind ? 'Dein Fortschritt wird in deinem Konto gespeichert.' : 'Du bist nicht angemeldet: Dein Fortschritt bleibt nur auf diesem Gerät. Melde dich vorher an, wenn du auf anderen Geräten weiterspielen willst.';
+  $('btn-tw-login').classList.toggle('hidden', !!Acct.kind);
+  setScreen('aufgabe');
+  if (code) findTaskWorld();
+}
+async function findTaskWorld() {
+  const code = cleanCode($('tw-code').value);
+  twErr(''); $('tw-info').classList.add('hidden');
+  if (code.length !== 8) { twErr('Der Code einer Aufgabenwelt hat 8 Zeichen, zum Beispiel DORF-7KQ2.'); return; }
+  const btn = $('btn-tw-find');
+  btn.disabled = true; btn.textContent = 'Suche …';
+  let meta = null;
+  try { meta = await Tpl.info(code); }
+  catch (e) { Acct.error(e); twErr(Acct.permErr ? 'Aufgabenwelten sind noch nicht eingerichtet. Sag deiner Lehrkraft Bescheid.' : 'Keine Verbindung. Prüfe das Internet und versuche es noch einmal.'); }
+  btn.disabled = false; btn.textContent = 'Suchen';
+  if (!meta) { if (!$('tw-err').textContent) twErr('Zu diesem Code gibt es keine Aufgabenwelt. Prüfe den Code.'); return; }
+  twFound = { code, meta };
+  $('tw-title').textContent = meta.title;
+  const ti = meta.tasksInfo;
+  $('tw-meta').textContent = `${MODE_NAME[meta.mode] || 'Überleben'}${ti ? ', ' + ti.total + ' Aufgaben: ' + ti.title : ', ohne Aufgaben'}`;
+  let all = [];
+  try { all = await dbAll(); } catch (e) {}
+  const key = Acct.key();
+  const mine = all.filter(r => r.fromShare === code && ((r.acct || null) === key || !r.acct)).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+  twFound.existing = mine[0] || null;
+  $('btn-tw-continue').classList.toggle('hidden', !mine.length);
+  $('btn-tw-start').textContent = mine.length ? 'Neu beginnen' : 'Starten';
+  $('btn-tw-start').classList.toggle('stone', !!mine.length);
+  $('tw-info').classList.remove('hidden');
+}
+async function startTaskWorld() {
+  if (!twFound) return;
+  const btn = $('btn-tw-start');
+  btn.disabled = true;
+  try {
+    const data = await Tpl.fetch(twFound.code, twFound.meta);
+    const key = Acct.key(), now = Date.now();
+    const rec = Object.assign({}, data, { id: newWorldId(), name: twFound.meta.title, created: now, lastPlayed: now, updatedAt: now,
+      fromShare: twFound.code, version: data.version || 2 });
+    if (key) Object.assign(rec, { acct: key, dirty: true, cloudAt: 0 });
+    try { await dbPut(rec); } catch (e) {}
+    if (key) Cloud.pending = rec;
+    enterWorld(rec);
+  } catch (e) {
+    Acct.error(e);
+    twErr('Die Aufgabenwelt konnte nicht geladen werden. Versuche es gleich noch einmal.');
+  }
+  btn.disabled = false;
+}
+async function continueTaskWorld() {
+  if (!twFound || !twFound.existing) return;
+  const rec = await Cloud.ensureFull(twFound.existing);
+  if (rec) enterWorld(rec);
+}
+$('btn-taskworld').addEventListener('click', () => openTaskWorldScreen(''));
+$('btn-tw-find').addEventListener('click', findTaskWorld);
+$('tw-code').addEventListener('keydown', e => { if (e.key === 'Enter') findTaskWorld(); });
+$('tw-code').addEventListener('input', e => { e.target.value = fmtCode(cleanCode(e.target.value).slice(0, 8)); });
+$('btn-tw-start').addEventListener('click', startTaskWorld);
+$('btn-tw-continue').addEventListener('click', continueTaskWorld);
+$('btn-tw-login').addEventListener('click', openKonto);
+$('btn-tw-back').addEventListener('click', () => setScreen('main'));
+
+// =========================== Oberfläche: Veröffentlichen ===========================
+let pubWorld = null;
+function pubErr(msg) { const e = $('pub-err'); e.textContent = msg; e.classList.toggle('hidden', !msg); }
+function taskLink(code) {
+  const u = new URL(location.href);
+  u.search = ''; u.hash = '';
+  u.searchParams.set('welt', code);
+  return u.toString();
+}
+function renderPublish() {
+  const w = pubWorld;
+  $('pub-world').textContent = w.name || 'Welt';
+  const ti = w.tasks ? tasksInfoOf(w.tasks) : w.tasksInfo;
+  $('pub-tasks-hint').textContent = ti ? `Enthält ${ti.total} Aufgaben („${ti.title}“). Beim Veröffentlichen werden alle Haken zurückgesetzt.`
+    : 'Diese Welt hat noch keine Aufgaben. Du kannst sie trotzdem veröffentlichen oder vorher im Spiel unter Pause, Aufgaben, welche laden.';
+  const on = !!w.shareId;
+  $('pub-off').classList.toggle('hidden', on);
+  $('pub-on').classList.toggle('hidden', !on);
+  if (on) {
+    $('pub-code').textContent = fmtCode(w.shareId);
+    $('pub-link').value = taskLink(w.shareId);
+  }
+}
+async function openPublish() {
+  const w = worldsCache.find(x => x.id === selWorld);
+  if (!w) return;
+  if (!Acct.isGoogle()) { openKonto(); kontoErr('Zum Veröffentlichen für Lernende melde dich mit Google an.'); return; }
+  if (!w.acct) { toast('Übernimm die Welt zuerst in dein Konto.'); return; }
+  const full = await Cloud.ensureFull(w);
+  if (!full) return;
+  pubWorld = full;
+  pubErr('');
+  renderPublish();
+  setScreen('publish');
+}
+async function doPublish(btn) {
+  const w = pubWorld;
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = 'Wird veröffentlicht …';
+  try {
+    const { code } = await Tpl.publish(w);
+    w.shareId = code;
+    w.updatedAt = Date.now();
+    w.dirty = true;
+    await dbPut(w);
+    renderPublish();
+    toast('Veröffentlicht');
+    Cloud.push(w);   // Kopfdaten im Konto im Hintergrund aktualisieren
+  } catch (e) {
+    if (e && e.code === 'too-large') pubErr('Diese Welt ist zu groß zum Veröffentlichen.');
+    else { Acct.error(e); pubErr(Acct.msg || 'Veröffentlichen hat nicht geklappt.'); }
+  }
+  btn.disabled = false; btn.textContent = label;
+}
+$('btn-pub').addEventListener('click', e => doPublish(e.currentTarget));
+$('btn-pub-update').addEventListener('click', e => doPublish(e.currentTarget));
+$('btn-pub-copy').addEventListener('click', () => copyText($('pub-link').value, 'Link kopiert'));
+$('btn-pub-copycode').addEventListener('click', () => copyText(fmtCode(pubWorld.shareId), 'Code kopiert'));
+$('btn-pub-stop').addEventListener('click', async () => {
+  if (!confirmArm('btn-pub-stop', 'Wirklich beenden? Der Code funktioniert danach nicht mehr.')) return;
+  $('btn-pub-stop').textContent = 'Veröffentlichung beenden';
+  try {
+    await Tpl.unpublishCode(pubWorld.shareId);
+    pubWorld.shareId = null; pubWorld.updatedAt = Date.now(); pubWorld.dirty = true;
+    await dbPut(pubWorld);
+    Cloud.push(pubWorld);
+    renderPublish();
+    toast('Veröffentlichung beendet');
+  } catch (e) { Acct.error(e); pubErr(Acct.msg); }
+});
+$('btn-pub-back').addEventListener('click', () => showWorlds());
+
+// ---------- Welten ins Konto übernehmen ----------
+$('btn-upload').addEventListener('click', async () => {
+  const w = worldsCache.find(x => x.id === selWorld);
+  if (!w || w.acct || !Acct.key()) return;
+  Object.assign(w, { acct: Acct.key(), dirty: true, cloudAt: 0, updatedAt: Date.now() });
+  try { await dbPut(w); } catch (e) {}
+  renderWorldList();
+  const ok = await Cloud.push(w);
+  toast(ok ? 'Welt ins Konto übernommen' : 'Auf dem Gerät vorgemerkt, das Konto folgt bei Verbindung.');
+  refreshWorldScreens();
+});
+$('btn-publish').addEventListener('click', openPublish);
+
+// Kommt die Verbindung zurück, ausstehende Uploads nachholen
+addEventListener('online', () => { if (Acct.key()) { Cloud.flush(); Cloud.sync().then(() => refreshWorldScreens()); } });
+
+function initTaskWorldLink() {
+  const code = urlParams.get('welt');
+  if (code) openTaskWorldScreen(code);
+}
+
 // =========================== Hauptschleife ===========================
 const initialSeed = (Math.random() * 2147483647) | 0;
 resetWorld(initialSeed);
@@ -6266,6 +7196,8 @@ idb().catch(() => storageNote('Dieser Browser erlaubt hier keinen Speicher. Du k
 let last = performance.now(), fpsAcc = 0, fpsFrames = 0, tickAcc = 0, autosaveT = 0, chatT = 0;
 updateSelfColor();
 initJoinLink();
+Acct.restore();
+initTaskWorldLink();
 applyGraphics();
 function frame(now) {
   requestAnimationFrame(frame);
@@ -6334,6 +7266,16 @@ requestAnimationFrame(frame);
    "sel": "#btn-single",
    "title": "Einzelspieler",
    "text": "<p>Starte deine eigene Welt.<\/p>"
+  },
+  {
+   "sel": "#acct-box",
+   "title": "Anmelden",
+   "text": "<p>Melde dich mit Google oder einem Spielercode an. Dann liegen deine Welten im Konto und du spielst auf jedem Gerät weiter.<\/p>"
+  },
+  {
+   "sel": "#btn-taskworld",
+   "title": "Aufgabenwelt",
+   "text": "<p>Hast du einen Code von deiner Lehrkraft? Hier öffnest du die Aufgabenwelt mit allen Aufgaben.<\/p>"
   },
   {
    "sel": "#btn-multi",
