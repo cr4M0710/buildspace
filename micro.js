@@ -109,4 +109,53 @@
       if (root.classList.contains("is-home")) chip("App speichern: Teilen-Symbol antippen, dann „Zum Home-Bildschirm“.", "", null);
     }, 10000);
   }
+  /* ---------- 5) Seitenleiste per Wischen schließen ----------
+     Wie bei Apple: die Leiste folgt dem Finger 1:1, am Rand gibt es
+     Widerstand (Rubberband). Beim Loslassen entscheidet die auf Basis der
+     Geschwindigkeit vorausberechnete Endposition, ob sie schließt. */
+  var sb = document.querySelector(".sidebar"), bd = document.querySelector(".sidebar-backdrop");
+  if (sb && !reduce) {
+    var drag = null;
+    var project = function (v) { return (v / 1000) * 0.998 / (1 - 0.998); }; /* v in px/s -> px */
+    var rubber = function (o, dim) { return (o * dim * 0.55) / (dim + 0.55 * Math.abs(o)); };
+    sb.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "mouse" || !root.classList.contains("sidebar-open")) return;
+      if (e.target.closest && e.target.closest("input, textarea, select")) return;
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, hist: [{ x: e.clientX, t: e.timeStamp }], w: sb.offsetWidth };
+    });
+    sb.addEventListener("pointermove", function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+      if (!drag.on) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        if (Math.abs(dy) > Math.abs(dx)) { drag = null; return; } /* senkrecht = Scrollen */
+        drag.on = true; sb.classList.add("is-dragging"); if (bd) bd.classList.add("is-dragging");
+        try { sb.setPointerCapture(e.pointerId); } catch (err) {}
+      }
+      drag.hist.push({ x: e.clientX, t: e.timeStamp }); if (drag.hist.length > 6) drag.hist.shift();
+      var x = dx < 0 ? dx : rubber(dx, drag.w);
+      drag.x = x;
+      sb.style.transform = "translateX(" + x.toFixed(1) + "px)";
+      if (bd) bd.style.opacity = String(Math.max(0, 1 + Math.min(0, x) / drag.w));
+    });
+    var end = function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var d = drag; drag = null;
+      if (!d.on) return;
+      sb._swallow = true; setTimeout(function () { sb._swallow = false; }, 60);
+      d.hist.push({ x: e.clientX, t: e.timeStamp });
+      var h = d.hist.filter(function (p) { return e.timeStamp - p.t < 120; }); if (h.length < 2) h = d.hist.slice(-2);
+      var a = h[0], b = h[h.length - 1], dt = Math.max(1, b.t - a.t), v = ((b.x - a.x) / dt) * 1000;
+      var proj = (d.x || 0) + project(v);
+      var close = e.type !== "pointercancel" && (v < -300 || proj < -d.w * 0.4);
+      sb.classList.remove("is-dragging"); if (bd) bd.classList.remove("is-dragging");
+      sb.style.transform = ""; if (bd) bd.style.opacity = "";
+      if (close) { if (typeof window.closeSidebar === "function") window.closeSidebar(false); else root.classList.remove("sidebar-open"); }
+      /* sonst: Inline-Wert entfällt, CSS-Feder führt sanft zurück auf die Ausgangsposition */
+    };
+    sb.addEventListener("pointerup", end);
+    sb.addEventListener("pointercancel", end);
+    /* Ein Wisch darf keinen Link auslösen */
+    sb.addEventListener("click", function (e) { if (sb._swallow) { e.preventDefault(); e.stopPropagation(); sb._swallow = false; } }, true);
+  }
 })();
