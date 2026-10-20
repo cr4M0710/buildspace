@@ -389,7 +389,10 @@ function formatDateTime(ms) {
    Haken wird von protect.js' reveal() nach erfolgreicher allgemeiner
    Freigabe aufgerufen (derselbe Mechanismus, den auch app.js für die
    Startseiten-Navigation nutzt). */
+let booted = false;
 function boot() {
+  if (booted) return;
+  booted = true;
   if (!window.Protect || !window.Protect.guardClassroomManagement) {
     document.getElementById("view-loading").innerHTML = '<p class="msg msg-error">Anmeldung konnte nicht geladen werden. Bitte Seite neu laden.</p>';
     return;
@@ -414,6 +417,17 @@ function signOutAndLeave() {
   location.href = "index.html#/schule/faecheruebergreifend";
 }
 window.render = boot;
+/* protect.js ruft window.render() inzwischen nur noch auf der Startseite
+   auf (isHomeApp_). Deshalb hier selbst warten, bis protect.js die Seite
+   freigegeben hat (Klasse "protect-ready" am <html>), und dann starten. */
+(function waitForProtectReady() {
+  const root = document.documentElement;
+  if (root.classList.contains("protect-ready")) { boot(); return; }
+  const obs = new MutationObserver(() => {
+    if (root.classList.contains("protect-ready")) { obs.disconnect(); boot(); }
+  });
+  obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+})();
 
 /* ---------- Tabs ---------- */
 function switchTab(name) {
