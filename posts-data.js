@@ -1093,4 +1093,16 @@ const posts = [
     titleEn: "Technical Drawing Interactive",
     excerptEn: "From oblique view to workshop drawing: draw front, top and side views and find the right body for three given views."
    },
+   {
+    title: "KI-Bias-Labor",
+    excerpt: "Eine Bewerbungs-KI lernt aus alten, unfairen Entscheidungen. Trainiere sie selbst, finde Stellvertreter-Merkmale (Proxys) und teste mit Zwillings-Bewerbungen, ob sie fair entscheidet.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "ki-bias-labor.html",
+    emoji: "🧪",
+    tags: ["tool", "ki", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "AI Bias Lab",
+    excerptEn: "A hiring AI learns from old, unfair decisions. Train it yourself, spot proxy features and test with twin applications whether it decides fairly."
+   },
 ];

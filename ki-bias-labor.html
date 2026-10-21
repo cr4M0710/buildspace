@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KI-Bias-Labor</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f2f1f8; --ink:#241f3a; --muted:#5f5a78; --line:#d6d2e8; --card:#fdfcff;
+  --v:#6b4fd1; --f:#e0527d; --m:#2a86c9; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --warn:#f0a30a; --focus:#2d5fd1;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#16132a;--ink:#efecfb;--muted:#aaa5c6;--line:#383359;--card:#201c38;--v:#a995ff;--f:#ff86a8;--m:#6cb8f0;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--warn:#ffc04d;--focus:#9db6ff}
+}
+:root[data-theme="dark"]{--bg:#16132a;--ink:#efecfb;--muted:#aaa5c6;--line:#383359;--card:#201c38;--v:#a995ff;--f:#ff86a8;--m:#6cb8f0;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--warn:#ffc04d;--focus:#9db6ff}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:920px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(28px,6vw,42px)}
+header.top p{color:var(--muted);margin:6px 0 4px;max-width:42em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--warn);color:#241f3a}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--v);color:#fff}
+.btn.small{min-height:42px;padding:7px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--line)}
+th{font-family:var(--head);font-size:14px;color:var(--muted)}
+.scroll{overflow-x:auto}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+.bars{display:grid;gap:10px;margin-top:12px}
+.bar{display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center;font-size:16px}
+.bar .tr{height:22px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar .tr i{display:block;height:100%;border-radius:6px;transition:width .25s}
+.bar b{text-align:right;font-family:var(--head)}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+.feat label{display:flex;align-items:center;gap:12px;padding:10px 14px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;min-height:54px;font-weight:700}
+.feat input{width:24px;height:24px;accent-color:var(--v);flex:none}
+.seg{display:inline-flex;flex-wrap:wrap;border:2.5px solid var(--ink);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:9px 16px;font-weight:700;cursor:pointer;min-height:44px;border-right:2px solid var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.gapbox{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.gapbox.big{background:var(--bad-bg);border-color:var(--bad)}
+.gapbox.mid{background:var(--bg);border-color:var(--warn)}
+.gapbox.low{background:var(--ok-bg);border-color:var(--ok)}
+.gapbox h3{font-size:22px;margin-bottom:4px}
+.twins{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:12px}
+.twin{border:2.5px solid var(--ink);border-radius:14px;padding:12px 14px;background:var(--bg)}
+.twin h3{font-size:19px;margin-bottom:6px}
+.twin label{display:block;font-weight:700;font-size:15px;margin:8px 0 2px;color:var(--muted)}
+.twin select{width:100%;min-height:44px;border:2.5px solid var(--ink);border-radius:10px;background:var(--card);padding:6px 10px}
+.score{font-family:var(--head);font-size:34px;font-weight:800;margin-top:8px}
+.m{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:2.5px solid var(--line);border-radius:12px;background:var(--bg);margin-top:10px}
+.m.done{border-color:var(--ok);background:var(--ok-bg)}
+.m .ic{font-size:26px;flex:none}
+.q{margin-top:14px;padding:14px 16px;border:2.5px solid var(--ink);border-radius:14px}
+.opts{display:grid;gap:8px;margin-top:10px}
+.opt{padding:11px 14px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-weight:700;min-height:48px}
+.opt:hover:not(:disabled){background:var(--warn);color:#241f3a}
+.opt.right{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.note{margin-top:12px;padding:10px 14px;border-left:6px solid var(--warn);background:var(--bg);border-radius:6px;font-size:16.5px}
+@media (max-width:520px){.bar{grid-template-columns:100px 1fr 58px;font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="KI-Bias-Labor – buildspace">
+<meta property="og:description" content="Eine Bewerbungs-KI lernt aus alten, unfairen Entscheidungen. Trainiere sie selbst, finde Stellvertreter-Merkmale (Proxys) und teste mit…">
+<meta property="og:url" content="https://buildspaceos.de/ki-bias-labor.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/ki-bias-labor.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="KI-Bias-Labor – buildspace">
+<meta name="twitter:description" content="Eine Bewerbungs-KI lernt aus alten, unfairen Entscheidungen. Trainiere sie selbst, finde Stellvertreter-Merkmale (Proxys) und teste mit…">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/ki-bias-labor.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🧪 KI-Bias-Labor</h1>
+    <p>Die KI einer Firma soll Bewerbungen für eine Ausbildung vorsortieren. Sie lernt aus den Entscheidungen der Vergangenheit. Aber waren die fair?</p>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="data" aria-selected="true">📋 1 Die Daten</button>
+    <button class="tab" role="tab" data-tab="lab" aria-selected="false">🔬 2 Das Labor</button>
+    <button class="tab" role="tab" data-tab="twin" aria-selected="false">👯 3 Zwillings-Test</button>
+    <button class="tab" role="tab" data-tab="quiz" aria-selected="false">❓ 4 Quiz</button>
+  </nav>
+
+  <section class="panel" id="p-data">
+    <div class="card">
+      <h2>Alte Entscheidungen der Firma</h2>
+      <p class="muted" style="margin-top:6px">Das sind 400 echte Beispiele aus der Vergangenheit (hier erfunden). Die KI bekommt sie als Lernmaterial. Sieh dir einige Zeilen an und danach die Einstellungsquote nach Gruppen.</p>
+      <div class="scroll" style="margin-top:12px"><table id="sample"></table></div>
+      <div class="row" style="margin-top:10px"><button class="btn small" id="reSample">Andere Beispiele</button></div>
+      <h3 style="margin-top:20px;font-size:20px">Wer wurde früher eingestellt?</h3>
+      <p class="muted">Anteil der eingeladenen Bewerbungen in den alten Daten:</p>
+      <div class="bars" id="histBars"></div>
+      <div class="note" id="histNote"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-lab" hidden>
+    <div class="card">
+      <h2>KI trainieren</h2>
+      <p class="muted" style="margin-top:6px">Wähle, welche Merkmale die KI sehen darf, und womit sie lernt. Die KI wird sofort neu trainiert und an <b>2 000 neuen Bewerbungen</b> getestet. In dieser Testgruppe sind Frauen und Männer <b>gleich gut qualifiziert</b>. Faire Entscheidungen müssten also gleich ausfallen.</p>
+      <h3 style="margin-top:14px;font-size:18px">Merkmale, die die KI sehen darf</h3>
+      <div class="feat" id="feat"></div>
+      <h3 style="margin-top:16px;font-size:18px">Trainingsdaten</h3>
+      <div class="row" style="margin-top:6px"><div class="seg" id="src" role="group" aria-label="Trainingsdaten"><button data-s="hist" aria-pressed="true">Alte Entscheidungen</button><button data-s="fair" aria-pressed="false">Faire Entscheidungen</button></div></div>
+      <div id="gap"></div>
+      <h3 style="margin-top:18px;font-size:18px">Wie stark nutzt die KI jedes Merkmal?</h3>
+      <div class="bars" id="wBars"></div>
+      <h3 style="margin-top:18px;font-size:18px">Durchschnittliche Einladungs-Chance bei der KI (Testgruppe)</h3>
+      <div class="bars" id="qBars"></div>
+      <p class="muted" style="margin-top:10px" id="agree"></p>
+    </div>
+    <div class="card">
+      <h2>Aufträge</h2>
+      <div id="missions"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-twin" hidden>
+    <div class="card">
+      <h2>Zwillings-Test</h2>
+      <p class="muted" style="margin-top:6px">Zwei Bewerbungen mit gleicher Note und gleichem Praktikum. Sie unterscheiden sich nur beim Geschlecht und evtl. beim Hobby. Wie bewertet deine KI aus dem Labor sie? (Aktuelle Einstellungen aus Schritt 2.)</p>
+      <div class="note" id="twinCfg"></div>
+      <div class="row" style="margin-top:12px"><label for="tNote" style="font-weight:700">Mathe-Note beider Bewerbungen:</label>
+        <select id="tNote" style="min-height:44px;border:2.5px solid var(--ink);border-radius:10px;background:var(--card);padding:6px 10px"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+        <label style="font-weight:700;display:flex;align-items:center;gap:8px"><input type="checkbox" id="tPr" checked style="width:24px;height:24px;accent-color:var(--v)"> Praktikum gemacht</label></div>
+      <div class="twins">
+        <div class="twin" id="tw1"><h3>👩 Bewerberin</h3><label for="h1">Hobby</label><select id="h1"></select><label for="v1">Wohnviertel</label><select id="v1"><option value="0">Nord</option><option value="1">Süd</option></select><div class="score" id="s1"></div><p class="muted">Wahrscheinlichkeit für eine Einladung</p></div>
+        <div class="twin" id="tw2"><h3>👨 Bewerber</h3><label for="h2">Hobby</label><select id="h2"></select><label for="v2">Wohnviertel</label><select id="v2"><option value="0">Nord</option><option value="1">Süd</option></select><div class="score" id="s2"></div><p class="muted">Wahrscheinlichkeit für eine Einladung</p></div>
+      </div>
+      <div class="gapbox mid" id="twRes" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-quiz" hidden>
+    <div class="card"><h2>Quiz</h2><p class="muted" style="margin-top:6px">Fünf Fragen zu dem, was du im Labor gesehen hast.</p><div id="quiz"></div></div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function pc(x){return Math.round(x*100)+" %"}
+function pp(x){return (Math.round(Math.abs(x)*100))+" Prozentpunkte"}
+
+/* ---------- Zufall mit festem Startwert ---------- */
+function rng(seed){var a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){var u=0,v=0;while(u===0)u=r();v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+var HOBBIES=["Fußball","Tanzgruppe","Schach","Gaming"];
+/* Wahrscheinlichkeiten Hobby je Geschlecht: [Fußball,Tanz,Schach,Gaming] */
+var HP={f:[0.08,0.6,0.17,0.15],m:[0.6,0.03,0.12,0.25]};
+function pickIdx(r,p){var x=r(),s=0;for(var i=0;i<p.length;i++){s+=p[i];if(x<s)return i}return p.length-1}
+function person(r){
+  var skill=gauss(r),fem=r()<0.5?1:0;
+  var note=Math.max(1,Math.min(5,Math.round(3-skill*0.9+gauss(r)*0.45)));
+  var prak=r()<Math.max(0.05,Math.min(0.95,0.45+0.2*skill))?1:0;
+  var hob=pickIdx(r,fem?HP.f:HP.m),vie=r()<0.5?1:0;      /* vie: 1=Süd */
+  return {skill:skill,fem:fem,note:note,prak:prak,hob:hob,vie:vie};
+}
+function sig(z){return 1/(1+Math.exp(-z))}
+function decide(p,r,biased){
+  var z=2.2*p.skill-0.1+(biased?(p.fem?-2.0:0)+(p.vie?-1.0:0):0);
+  return r()<sig(z)?1:0;
+}
+function makeSet(seed,n,biased){var r=rng(seed),a=[];for(var i=0;i<n;i++){var p=person(r);p.y=decide(p,r,biased);a.push(p)}return a}
+var HIST=makeSet(11,400,true),FAIR=makeSet(11,400,false);   /* gleiche Personen-Reihenfolge, andere Entscheidung */
+var TEST=makeSet(77,2000,false);                           /* Testgruppe, Qualifikation unabhängig von Gruppe */
+var TESTHIST=makeSet(78,2000,true);
+
+/* ---------- Modell: logistische Regression ---------- */
+var FEATS=[
+  {k:"note",label:"Mathe-Note",desc:"1 bis 5"},
+  {k:"prak",label:"Praktikum",desc:"ja oder nein"},
+  {k:"fem",label:"Geschlecht",desc:"weiblich oder männlich"},
+  {k:"hob",label:"Hobby",desc:"Fußball, Tanz, Schach, Gaming"},
+  {k:"vie",label:"Wohnviertel",desc:"Nord oder Süd"}
+];
+function vec(p,on){
+  var v=[1];
+  if(on.note)v.push((3-p.note)/1.2);
+  if(on.prak)v.push(p.prak?1:0);
+  if(on.fem)v.push(p.fem?1:0);
+  if(on.hob){for(var h=0;h<4;h++)v.push(p.hob===h?1:0)}
+  if(on.vie)v.push(p.vie?1:0);
+  return v;
+}
+function names(on){
+  var n=["Grundwert"];
+  if(on.note)n.push("note");if(on.prak)n.push("prak");if(on.fem)n.push("fem");
+  if(on.hob)HOBBIES.forEach(function(h,i){n.push("hob"+i)});
+  if(on.vie)n.push("vie");return n;
+}
+function train(data,on){
+  var X=data.map(function(p){return vec(p,on)}),y=data.map(function(p){return p.y}),d=X[0].length,w=[],i,j,it;
+  for(j=0;j<d;j++)w.push(0);
+  for(it=0;it<500;it++){
+    var g=[];for(j=0;j<d;j++)g.push(0);
+    for(i=0;i<X.length;i++){var z=0;for(j=0;j<d;j++)z+=w[j]*X[i][j];var e=sig(z)-y[i];for(j=0;j<d;j++)g[j]+=e*X[i][j]}
+    for(j=0;j<d;j++)w[j]-=0.4*(g[j]/X.length+0.003*w[j]);
+  }
+  return {w:w,on:on};
+}
+function prob(m,p){var v=vec(p,m.on),z=0;for(var j=0;j<v.length;j++)z+=m.w[j]*v[j];return sig(z)}
+function evaluate(m){
+  var fi=0,fh=0,mi=0,mh=0,ni=0,nh=0,si=0,sh=0,agree=0,i,p,q;
+  for(i=0;i<TEST.length;i++){p=TEST[i];q=prob(m,p);
+    if(p.fem){fi++;fh+=q}else{mi++;mh+=q}
+    if(p.vie){si++;sh+=q}else{ni++;nh+=q}}
+  for(i=0;i<TESTHIST.length;i++){p=TESTHIST[i];if((prob(m,p)>=0.5?1:0)===p.y)agree++}
+  return {f:fh/fi,m:mh/mi,nord:nh/ni,sued:sh/si,gapG:mh/mi-fh/fi,gapV:nh/ni-sh/si,agree:agree/TESTHIST.length};
+}
+function histRates(){
+  var a={f:[0,0],m:[0,0],n:[0,0],s:[0,0]};
+  HIST.forEach(function(p){var g=p.fem?a.f:a.m,v=p.vie?a.s:a.n;g[0]++;g[1]+=p.y;v[0]++;v[1]+=p.y});
+  return {f:a.f[1]/a.f[0],m:a.m[1]/a.m[0],n:a.n[1]/a.n[0],s:a.s[1]/a.s[0]};
+}
+
+/* ---------- Tabs ---------- */
+function showTab(n){
+  $$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===n?"true":"false")});
+  ["data","lab","twin","quiz"].forEach(function(k){$("#p-"+k).hidden=(k!==n)});
+  if(n==="twin")twinUpdate();
+}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
+
+/* ---------- 1 Daten ---------- */
+function renderSample(){
+  var r=rng(Math.floor(Math.random()*1e6)),rows=[];
+  for(var i=0;i<8;i++)rows.push(HIST[Math.floor(r()*HIST.length)]);
+  var h="<tr><th>Mathe-Note</th><th>Praktikum</th><th>Geschlecht</th><th>Hobby</th><th>Wohnviertel</th><th>Entscheidung</th></tr>";
+  rows.forEach(function(p){h+="<tr><td>"+p.note+"</td><td>"+(p.prak?"ja":"nein")+"</td><td>"+(p.fem?"weiblich":"männlich")+"</td><td>"+HOBBIES[p.hob]+"</td><td>"+(p.vie?"Süd":"Nord")+"</td><td class='"+(p.y?"yes":"no")+"'>"+(p.y?"eingeladen":"abgelehnt")+"</td></tr>"});
+  $("#sample").innerHTML=h;
+}
+function bar(label,val,color,txt){return '<div class="bar"><span>'+label+'</span><span class="tr"><i style="width:'+Math.round(val*100)+'%;background:'+color+'"></i></span><b>'+(txt||pc(val))+'</b></div>'}
+function renderHist(){
+  var r=histRates();
+  $("#histBars").innerHTML=bar("Frauen",r.f,"var(--f)")+bar("Männer",r.m,"var(--m)")+bar("Wohnviertel Nord",r.n,"var(--v)")+bar("Wohnviertel Süd",r.s,"var(--v)");
+  $("#histNote").innerHTML="<b>Auffällig:</b> Früher wurden Männer deutlich häufiger eingeladen als Frauen ("+pc(r.m)+" gegenüber "+pc(r.f)+"). Auch Bewerbungen aus dem Süden hatten es schwerer. Dabei waren die Bewerbungen im Schnitt gleich gut. Die alten Entscheidungen waren also <b>nicht fair</b>. Die KI lernt aus genau diesen Entscheidungen.";
+}
+$("#reSample").addEventListener("click",renderSample);
+
+/* ---------- 2 Labor ---------- */
+var ON={note:true,prak:true,fem:true,hob:true,vie:true},SRC="hist",MODEL=null,EV=null;
+var MS=JSON.parse(store("bias-missions")||"{}");
+function renderFeat(){
+  var box=$("#feat");box.innerHTML="";
+  FEATS.forEach(function(f){
+    var l=document.createElement("label");
+    l.innerHTML='<input type="checkbox" '+(ON[f.k]?"checked":"")+' data-k="'+f.k+'"><span>'+f.label+'<br><small class="muted" style="font-weight:400">'+f.desc+'</small></span>';
+    l.querySelector("input").addEventListener("change",function(e){ON[f.k]=e.target.checked;retrain()});
+    box.appendChild(l);
+  });
+}
+$$("#src button").forEach(function(b){b.addEventListener("click",function(){SRC=b.dataset.s;$$("#src button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});retrain()})});
+function retrain(){
+  var any=Object.keys(ON).some(function(k){return ON[k]});
+  if(!any){$("#gap").innerHTML='<div class="gapbox mid"><b>Wähle mindestens ein Merkmal aus.</b></div>';$("#wBars").innerHTML="";$("#qBars").innerHTML="";$("#agree").textContent="";MODEL=null;return}
+  MODEL=train(SRC==="hist"?HIST:FAIR,ON);EV=evaluate(MODEL);
+  renderLab();checkMissions();twinUpdate();
+}
+function renderLab(){
+  var gp=Math.abs(EV.gapG),cls=gp>=0.12?"big":gp>=0.05?"mid":"low";
+  var txt=gp<0.05?"Die KI behandelt Frauen und Männer in der Testgruppe fast gleich.":("In der Testgruppe gibt die KI "+(EV.gapG>0?"Männern":"Frauen")+" im Schnitt eine um <b>"+pp(gp)+"</b> höhere Einladungs-Chance, obwohl alle gleich gut qualifiziert sind.");
+  $("#gap").innerHTML='<div class="gapbox '+cls+'"><h3>'+(cls==="low"?"✅ Fair":cls==="mid"?"⚠️ Leichte Schieflage":"🚨 Die KI diskriminiert")+'</h3><p>'+txt+'</p></div>';
+  var nm=names(MODEL.on),w=MODEL.w,imp={},i;
+  /* Wichtigkeit pro Merkmal: größter Betrag der zugehörigen Gewichte */
+  nm.forEach(function(n,k){if(n==="Grundwert")return;var key=n.indexOf("hob")===0?"hob":n;imp[key]=Math.max(imp[key]||0,Math.abs(w[k]))});
+  var mx=Math.max.apply(null,Object.keys(imp).map(function(k){return imp[k]}).concat([0.5]));
+  var h="";FEATS.forEach(function(f){if(imp[f.k]===undefined)return;var proxy=(f.k==="hob"||f.k==="vie"||f.k==="fem");
+    h+=bar(f.label,imp[f.k]/mx,proxy?"var(--warn)":"var(--v)",imp[f.k].toFixed(1).replace(".",","))});
+  $("#wBars").innerHTML=h+'<p class="muted" style="font-size:15px">Gelb: Merkmale, die mit Geschlecht oder Herkunftsviertel zusammenhängen können.</p>';
+  $("#qBars").innerHTML=bar("Frauen",EV.f,"var(--f)")+bar("Männer",EV.m,"var(--m)")+bar("Wohnviertel Nord",EV.nord,"var(--v)")+bar("Wohnviertel Süd",EV.sued,"var(--v)");
+  $("#agree").textContent="Die KI entscheidet in "+pc(EV.agree)+" der Fälle so wie die Menschen früher. Mehr Übereinstimmung heißt hier nicht automatisch besser, weil die alten Entscheidungen unfair waren.";
+}
+var MISSIONS=[
+  {id:"m1",ic:"🔎",t:"Bias sichtbar machen",d:"Trainiere mit allen Merkmalen und den alten Entscheidungen. Die Lücke zwischen Frauen und Männern soll über 12 Prozentpunkten liegen.",ok:function(){return SRC==="hist"&&ON.fem&&ON.hob&&ON.note&&ON.prak&&Math.abs(EV.gapG)>=0.12}},
+  {id:"m2",ic:"🕵️",t:"Den Stellvertreter entlarven",d:"Nimm „Geschlecht“ heraus, lass aber „Hobby“ drin. Die Lücke bleibt trotzdem über 5 Prozentpunkten. Das Hobby verrät das Geschlecht (Proxy).",ok:function(){return SRC==="hist"&&!ON.fem&&ON.hob&&ON.note&&ON.prak&&Math.abs(EV.gapG)>=0.05}},
+  {id:"m3",ic:"🛠️",t:"Fairer machen durch Weglassen",d:"Lass Geschlecht, Hobby und Wohnviertel weg. Nur Note und Praktikum bleiben. Die Lücke soll unter 5 Prozentpunkten sein, obwohl die Daten alt sind.",ok:function(){return SRC==="hist"&&!ON.fem&&!ON.hob&&!ON.vie&&ON.note&&ON.prak&&Math.abs(EV.gapG)<0.05&&Math.abs(EV.gapV)<0.05}},
+  {id:"m4",ic:"📚",t:"Das Problem steckt in den Daten",d:"Wähle „Faire Entscheidungen“ als Trainingsdaten und lass alle Merkmale an. Die KI lernt dann, dass Geschlecht egal ist, und die Lücke ist unter 5 Prozentpunkten.",ok:function(){return SRC==="fair"&&ON.fem&&ON.hob&&ON.vie&&ON.note&&ON.prak&&Math.abs(EV.gapG)<0.05}}
+];
+function checkMissions(){
+  var chg=false;
+  MISSIONS.forEach(function(m){if(!MS[m.id]&&m.ok()){MS[m.id]=1;chg=true}});
+  if(chg)store("bias-missions",JSON.stringify(MS));
+  renderMissions();
+}
+function renderMissions(){
+  var h="",n=0;
+  MISSIONS.forEach(function(m){var d=MS[m.id];if(d)n++;h+='<div class="m'+(d?" done":"")+'"><span class="ic" aria-hidden="true">'+(d?"✅":m.ic)+'</span><div><b>'+m.t+'</b><br><span class="muted">'+m.d+'</span></div></div>'});
+  $("#missions").innerHTML='<p class="muted">'+n+' von '+MISSIONS.length+' Aufträgen geschafft.</p>'+h;
+}
+
+/* ---------- 3 Zwillinge ---------- */
+function fillHob(){["h1","h2"].forEach(function(id,i){var s=$("#"+id);s.innerHTML="";HOBBIES.forEach(function(h,k){var o=document.createElement("option");o.value=k;o.textContent=h;s.appendChild(o)});s.value=i===0?1:0})}
+function twinUpdate(){
+  if(!MODEL){$("#twinCfg").textContent="Wähle im Labor mindestens ein Merkmal aus.";return}
+  var on=MODEL.on,used=FEATS.filter(function(f){return on[f.k]}).map(function(f){return f.label}).join(", ");
+  $("#twinCfg").innerHTML="<b>KI-Einstellung:</b> sieht "+used+". Lernt aus: "+(SRC==="hist"?"alten Entscheidungen":"fairen Entscheidungen")+".";
+  var note=+$("#tNote").value,pr=$("#tPr").checked?1:0;
+  function mk(fem,hid,vid){return {note:note,prak:pr,fem:fem,hob:+$("#"+hid).value,vie:+$("#"+vid).value}}
+  var p1=prob(MODEL,mk(1,"h1","v1")),p2=prob(MODEL,mk(0,"h2","v2"));
+  $("#s1").textContent=pc(p1);$("#s2").textContent=pc(p2);
+  var d=p2-p1,el=$("#twRes"),cls,txt;
+  if(Math.abs(d)<0.03){cls="gapbox low";txt="<h3>✅ Gleich bewertet</h3><p>Die beiden Bewerbungen bekommen fast denselben Wert. Prüfe mit anderen Hobbys oder Vierteln, ob das so bleibt.</p>"}
+  else{cls="gapbox big";txt="<h3>🚨 Ungleich bewertet</h3><p>Die "+(d>0?"männliche":"weibliche")+" Bewerbung bekommt <b>"+pp(Math.abs(d))+"</b> mehr, obwohl Note und Praktikum gleich sind. Woran liegt das? Schau dir im Labor die gelben Merkmale an.</p>"}
+  el.className=cls;el.innerHTML=txt;
+}
+["tNote","tPr","h1","h2","v1","v2"].forEach(function(id){$("#"+id).addEventListener("change",twinUpdate)});
+
+/* ---------- 4 Quiz ---------- */
+var QUIZ=[
+  {q:"Warum entscheidet die KI aus den alten Daten unfair?",o:["Weil sie absichtlich böse programmiert wurde","Weil sie aus unfairen Entscheidungen von Menschen lernt","Weil Computer nicht rechnen können","Weil sie zu wenige Merkmale kennt"],a:1,e:"KI lernt Muster aus Daten. Stecken Vorurteile in den Daten, übernimmt die KI sie. Man sagt: Garbage in, garbage out."},
+  {q:"Du entfernst das Merkmal „Geschlecht“. Warum kann die KI trotzdem benachteiligen?",o:["Das Entfernen funktioniert nie","Andere Merkmale wie das Hobby verraten das Geschlecht indirekt (Proxy)","Die KI errät das Geschlecht am Namen der Datei","Die Testgruppe ist zu klein"],a:1,e:"Merkmale, die mit einer geschützten Eigenschaft zusammenhängen, nennt man Proxys. Die KI nutzt sie als Ersatz."},
+  {q:"Welche Maßnahme hilft am besten gegen unfaire KI-Entscheidungen?",o:["Der KI mehr Rechenleistung geben","Die Trainingsdaten prüfen und unfaire Muster beseitigen","Die Ergebnisse nie ansehen","Nur noch Männer testen"],a:1,e:"Am Anfang steht die Frage nach den Daten. Dazu kommen Tests mit Gruppen und ein Mensch, der Entscheidungen kontrollieren kann."},
+  {q:"Zwei Bewerbungen sind bis auf das Geschlecht identisch. Die KI bewertet sie verschieden. Was zeigt das?",o:["Dass die KI Geschlecht als Merkmal benutzt oder über Proxys erkennt","Dass die Bewerbungen nicht identisch waren","Dass die KI besonders genau arbeitet","Dass das Praktikum fehlt"],a:0,e:"Genau dafür ist der Zwillings-Test da. Gleiche Qualifikation, anderes Geschlecht, anderer Wert: Das ist ein Hinweis auf Diskriminierung."},
+  {q:"Die KI stimmt zu 90 % mit den alten Entscheidungen überein. Ist sie deshalb gut?",o:["Ja, 90 % sind immer gut","Nein, wenn die alten Entscheidungen unfair waren, wiederholt sie deren Fehler","Ja, weil Menschen immer recht haben","Nein, weil 90 % zu wenig sind"],a:1,e:"Eine hohe Trefferquote misst nur die Nähe zu den Vorbildern. Ob die Vorbilder fair waren, sagt sie nicht."}
+];
+var QS={i:0,s:0};
+function renderQuiz(){
+  var box=$("#quiz");
+  if(QS.i>=QUIZ.length){box.innerHTML='<div class="q"><h3>'+QS.s+' von '+QUIZ.length+' richtig</h3><p class="muted" style="margin-top:6px">'+(QS.s===QUIZ.length?"Perfekt! Du hast das Prinzip verstanden: Unfaire Daten erzeugen unfaire KI.":"Schau dir im Labor noch einmal die Aufträge an.")+'</p><div class="row" style="margin-top:12px"><button class="btn primary" id="qAgain">Nochmal</button></div></div>';$("#qAgain").addEventListener("click",function(){QS={i:0,s:0};renderQuiz()});return}
+  var q=QUIZ[QS.i],h='<div class="q"><b>Frage '+(QS.i+1)+' von '+QUIZ.length+'</b><p style="margin-top:6px">'+q.q+'</p><div class="opts">';
+  q.o.forEach(function(o,i){h+='<button class="opt" data-i="'+i+'">'+o+'</button>'});
+  box.innerHTML=h+'</div><div id="qfb" aria-live="polite"></div></div>';
+  $$("#quiz .opt").forEach(function(b){b.addEventListener("click",function(){
+    var i=+b.dataset.i,ok=i===q.a;$$("#quiz .opt").forEach(function(x){x.disabled=true;if(+x.dataset.i===q.a)x.classList.add("right");else if(x===b)x.classList.add("wrong")});
+    if(ok)QS.s++;
+    $("#qfb").innerHTML='<div class="gapbox '+(ok?"low":"big")+'" style="margin-top:12px"><h3>'+(ok?"Richtig!":"Nicht ganz")+'</h3><p>'+q.e+'</p><div class="row" style="margin-top:10px"><button class="btn primary small" id="qn">'+(QS.i+1<QUIZ.length?"Weiter":"Ergebnis")+'</button></div></div>';
+    $("#qn").addEventListener("click",function(){QS.i++;renderQuiz()});
+  })});
+}
+
+renderSample();renderHist();renderFeat();fillHob();retrain();renderQuiz();
+window.__kb={HIST:HIST,FAIR:FAIR,TEST:TEST,train:train,evaluate:evaluate,histRates:histRates,set:function(on,src){ON=on;SRC=src;retrain();return EV},MS:function(){return MS},MISSIONS:MISSIONS};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "KI-Bias-Labor", text: "<p>Eine KI soll Bewerbungen vorsortieren und hat aus alten Entscheidungen gelernt. Du untersuchst, ob sie fair ist.</p>" },
+  { sel: "#tabs", title: "Vier Schritte", text: "<ul><li><b>Die Daten:</b> Was war früher los?</li><li><b>Das Labor:</b> KI trainieren und Fairness prüfen</li><li><b>Zwillings-Test:</b> Gleiche Bewerbungen, anderes Geschlecht</li><li><b>Quiz</b></li></ul>" },
+  { title: "Im Labor", text: "<p>Schalte Merkmale an und aus. Die KI lernt sofort neu und du siehst, ob Frauen und Männer gleich behandelt werden.</p>" },
+  { title: "Aufträge", text: "<p>Im Labor findest du vier Aufträge, zum Beispiel einen Stellvertreter (Proxy) zu entlarven.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
