@@ -1129,4 +1129,16 @@ const posts = [
     titleEn: "Prompt Duel",
     excerptEn: "Which prompt is better? Six duels judged by role, task, context, format and privacy, plus a builder to assemble your own prompts."
    },
+   {
+    title: "Fake-News-Werkstatt",
+    excerpt: "Sechs Meldungen mit fünf Prüfwerkzeugen untersuchen (Absender, Datum, Bild, Quelle, Ton) und im Fälschungs-Labor sehen, mit welchen Tricks aus einer harmlosen Meldung eine Falschmeldung wird.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "fake-news-werkstatt.html",
+    emoji: "📰",
+    tags: ["spiel", "ki", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Fake News Workshop",
+    excerptEn: "Investigate six posts with five checking tools (sender, date, image, source, tone) and see in the forgery lab how a harmless message becomes fake news."
+   },
 ];

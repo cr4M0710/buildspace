@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fake-News-Werkstatt</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f5f3ee; --ink:#26262e; --muted:#62626e; --line:#d8d5cb; --card:#fffefb;
+  --acc:#c4392d; --blue:#2c5fb3; --warn:#f0a30a; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#2d5fd1;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#17171c;--ink:#eeeef4;--muted:#a9a9b8;--line:#383842;--card:#202027;--acc:#ff8277;--blue:#8fb0ff;--warn:#ffc04d;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+}
+:root[data-theme="dark"]{--bg:#17171c;--ink:#eeeef4;--muted:#a9a9b8;--line:#383842;--card:#202027;--acc:#ff8277;--blue:#8fb0ff;--warn:#ffc04d;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:820px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(28px,6vw,42px)}
+header.top p{color:var(--muted);margin:6px 0 4px;max-width:42em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--warn);color:#26262e}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:7px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 14px}
+.bar>i{display:block;height:100%;width:0;background:var(--acc);transition:width .3s}
+.post{border:2.5px solid var(--ink);border-radius:14px;padding:14px 16px;background:var(--bg)}
+.post .who{display:flex;gap:10px;align-items:center;font-weight:700;margin-bottom:8px}
+.post .av{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.post .meta{font-size:14px;color:var(--muted);font-weight:400}
+.post h3{font-size:21px;margin-bottom:6px}
+.post .img{margin:8px 0;padding:22px 12px;border:2px dashed var(--line);border-radius:10px;text-align:center;color:var(--muted);font-size:15px}
+.post .link{font-size:14px;color:var(--blue);word-break:break-all}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 8px}
+.tool{padding:10px 12px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:52px;text-align:left}
+.tool:hover{background:var(--warn);color:#26262e}
+.tool.used{background:var(--bg);border-color:var(--blue)}
+.finds{display:grid;gap:8px;margin-top:6px}
+.find{padding:10px 14px;border-left:6px solid var(--blue);background:var(--bg);border-radius:8px;font-size:16.5px}
+.find b{font-family:var(--head)}
+.verd{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px}
+.v{padding:12px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:56px;text-align:left}
+.v:hover:not(:disabled){background:var(--warn);color:#26262e}
+.v small{display:block;font-weight:400;color:var(--muted)}
+.v.right{background:var(--ok-bg);border-color:var(--ok)}
+.v.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:4px}
+.stars{font-size:44px;letter-spacing:6px}
+.sw{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.sw label{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;min-height:52px}
+.sw input{width:24px;height:24px;margin-top:2px;accent-color:var(--acc);flex:none}
+.sw .why{display:block;font-size:15px;color:var(--muted);font-weight:400}
+.sw label.on{background:var(--bad-bg);border-color:var(--bad)}
+.disc{font-size:14.5px;color:var(--muted);margin-top:10px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Fake-News-Werkstatt – buildspace">
+<meta property="og:description" content="Sechs Meldungen mit fünf Prüfwerkzeugen untersuchen (Absender, Datum, Bild, Quelle, Ton) und im Fälschungs-Labor sehen, mit welchen Tricks aus einer…">
+<meta property="og:url" content="https://buildspaceos.de/fake-news-werkstatt.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/fake-news-werkstatt.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fake-News-Werkstatt – buildspace">
+<meta name="twitter:description" content="Sechs Meldungen mit fünf Prüfwerkzeugen untersuchen (Absender, Datum, Bild, Quelle, Ton) und im Fälschungs-Labor sehen, mit welchen Tricks aus einer…">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/fake-news-werkstatt.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>📰 Fake-News-Werkstatt</h1>
+    <p>Ein Bild, eine Schlagzeile, ein Teilen-Knopf: Falschmeldungen verbreiten sich schnell. Prüfe Meldungen wie ein Profi und finde heraus, wie Fälschungen gebaut werden.</p>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="check" aria-selected="true">🔍 Meldungen prüfen</button>
+    <button class="tab" role="tab" data-tab="lab" aria-selected="false">🧪 Fälschungs-Labor</button>
+  </nav>
+
+  <section id="p-check">
+    <div class="card" id="cStart">
+      <h2>Echt, Fake, irreführend oder Satire?</h2>
+      <p class="muted" style="margin-top:6px">Du siehst eine Meldung aus einem sozialen Netzwerk. Mit fünf Prüfwerkzeugen holst du dir Hinweise ein. Danach urteilst du. Für das richtige Urteil gibt es 2 Punkte, für sorgfältiges Prüfen einen Zusatzpunkt. Sechs Meldungen pro Runde.</p>
+      <p class="disc">Alle Konten, Seiten und Personen in diesem Spiel sind erfunden. Ähnlichkeiten mit echten Seiten sind Zufall.</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="cGo">Runde starten</button></div>
+      <p class="muted" style="margin-top:10px" id="cBest"></p>
+    </div>
+    <div class="card" id="cPlay" hidden>
+      <div class="row" style="justify-content:space-between"><span class="pill" id="cCnt"></span><span><b id="cScore">0</b> Punkte</span><button class="btn small" id="cQuit">Abbrechen</button></div>
+      <div class="bar"><i id="cBar"></i></div>
+      <div class="post" id="post"></div>
+      <h3 style="margin-top:16px;font-size:18px">Prüfwerkzeuge</h3>
+      <div class="tools" id="tools"></div>
+      <div class="finds" id="finds"></div>
+      <h3 style="margin-top:16px;font-size:18px">Dein Urteil</h3>
+      <div class="verd" id="verd"></div>
+      <div id="cFb" aria-live="polite"></div>
+    </div>
+    <div class="card" id="cEnd" hidden>
+      <div style="text-align:center"><div class="stars" id="cStars" aria-hidden="true"></div><h2 id="cTitle" style="margin-top:6px"></h2><p class="muted" id="cText" style="margin-top:8px"></p>
+      <div class="row" style="justify-content:center;margin-top:16px"><button class="btn primary" id="cAgain">Neue Runde</button><button class="btn" id="cToLab">Zum Fälschungs-Labor</button></div></div>
+    </div>
+  </section>
+
+  <section id="p-lab" hidden>
+    <div class="card">
+      <h2>Fälschungs-Labor</h2>
+      <p class="muted" style="margin-top:6px">So wird aus einer harmlosen Meldung eine Falschmeldung. Schalte die Tricks ein und beobachte, was passiert. Wer die Tricks kennt, fällt seltener darauf herein.</p>
+      <div class="sw" id="sw"></div>
+      <div class="post" id="labPost" aria-live="polite"></div>
+      <p class="muted" style="margin-top:10px" id="labCount"></p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+var TOOLS=[["abs","👤 Absender prüfen"],["dat","📅 Datum prüfen"],["bild","🖼️ Bild suchen"],["quelle","🔗 Quelle prüfen"],["ton","😡 Ton prüfen"]];
+var VERD=[["echt","✅ Echt","Stimmt und ist belegt"],["fake","❌ Fake","Erfunden oder gefälscht"],["irre","⚠️ Irreführend","Echtes wird falsch eingesetzt"],["satire","🎭 Satire","Nicht ernst gemeint"]];
+/* key: die Werkzeuge, die den Ausschlag geben */
+var CASES=[
+ {av:"W",name:"WahrheitJetzt88",meta:"12 Follower · Konto seit 2 Wochen",h:"😱 SCHOCK! Handystrahlung macht Schüler dümmer – Ärzte schweigen!!!",txt:"Das wollen sie dir nicht sagen! Teile das, bevor es gelöscht wird!",img:"Foto: Schüler mit Handy, Text „GEHEIM!“",link:"",v:"fake",key:["abs","quelle","ton"],
+  f:{abs:"Das Konto ist erst zwei Wochen alt, hat 12 Follower und kein Profilfoto. Es gibt kein Impressum und keinen Namen.",dat:"Ohne Datum veröffentlicht.",bild:"Das Foto ist ein gewöhnliches Archivfoto und hat mit der Behauptung nichts zu tun.",quelle:"Es wird keine Studie, kein Arzt und keine Quelle genannt. „Ärzte schweigen“ lässt sich nicht prüfen.",ton:"Viele Ausrufezeichen, Angstmache („SCHOCK“) und der Druck „Teile das, bevor es gelöscht wird“. Alles Warnsignale."},
+  why:"Typisch Fake: anonymes Konto, keine Quelle, Angst und Druck zum Teilen. Seriöse Meldungen nennen Quellen und müssen nicht zum Teilen drängen."},
+ {av:"S",name:"Stadtwerke Musterstadt ✔",meta:"Offizielles Konto · 8 400 Follower · heute 08:15",h:"Hallenbad am Sonntag wegen Wartung geschlossen",txt:"Am Sonntag, 14. März, bleibt das Hallenbad wegen Wartungsarbeiten geschlossen. Ab Montag gelten die normalen Zeiten.",img:"",link:"stadtwerke-musterstadt.example/hallenbad",v:"echt",key:["abs","quelle"],
+  f:{abs:"Das Konto ist überprüft und im Impressum der Stadtwerke verlinkt. Es veröffentlicht seit Jahren Mitteilungen.",dat:"Heute veröffentlicht. Das Datum passt zum Inhalt.",bild:"Kein Bild vorhanden. Das ist bei so einer Mitteilung normal.",quelle:"Der Link führt zur Webseite der Stadtwerke. Dort steht dieselbe Mitteilung.",ton:"Sachlich und ruhig. Keine Übertreibungen."},
+  why:"Seriös: offizielle Absender, gleiche Information an einer zweiten Stelle, sachlicher Ton."},
+ {av:"R",name:"Lokalnachrichten Schnell",meta:"3 100 Follower · heute 07:40",h:"Überschwemmung in unserer Stadt – so sieht es JETZT aus!",txt:"Das Wasser steht schon in den Straßen. Bleibt zu Hause!",img:"Foto: überflutete Straße mit Autos",link:"",v:"irre",key:["bild","dat"],
+  f:{abs:"Ein bekannter Account, der oft Eilmeldungen aus der Region verbreitet, aber ohne Impressum.",dat:"Die Meldung ist von heute. Beim Foto steht kein Datum.",bild:"Die Bildersuche zeigt dasselbe Foto in Artikeln von 2013. Es stammt von einer Überschwemmung in einer anderen Region.",quelle:"Keine Quelle genannt. Die offizielle Warnseite der Feuerwehr meldet heute keine Überschwemmung.",ton:"Dringlich („JETZT“), aber ohne Hass oder Beleidigung."},
+  why:"Irreführend: Das Foto ist echt, gehört aber zu einem anderen Ereignis. Hier hilft die rückwärtige Bildersuche."},
+ {av:"P",name:"Der Schul-Postillon",meta:"21 000 Follower · gestern",h:"Schulleiter verbietet Montage – „Das ganze Wochenende war schon so schön“",txt:"Ab sofort startet die Woche am Dienstag, teilte der Schulleiter mit. Lehrkräfte seien „erleichtert“.",img:"",link:"schul-postillon.example",v:"satire",key:["abs","quelle"],
+  f:{abs:"Im Profil steht: „Die Zeitung, die nicht ganz stimmen muss. Satire.“",dat:"Von gestern, Datum passt.",bild:"Kein Bild vorhanden.",quelle:"Auf der Webseite steht im Impressum: „Alle Texte sind Satire und erfunden.“ Es gibt keine Aussagen echter Personen.",ton:"Übertrieben und witzig. Das Zitat ist absurd."},
+  why:"Satire ist erfunden, aber ausdrücklich nicht als Tatsache gemeint. Sie wird erst zum Problem, wenn sie ohne den Hinweis weitergeleitet wird."},
+ {av:"N",name:"Nachrichten aktuell",meta:"5 500 Follower · heute",h:"Neues Gesetz: Ab morgen Handyverbot an allen Schulen!",txt:"Die Regelung gilt ab morgen für das ganze Land. Schüler müssen ihre Geräte abgeben.",img:"Screenshot einer Zeitungsseite",link:"nachrichten-aktuell.example/handyverbot",v:"irre",key:["dat","quelle"],
+  f:{abs:"Ein bekannter Nachrichtenkanal mit Impressum.",dat:"Der Beitrag ist von heute, der verlinkte Artikel ist aber vom 3. September 2017. Er wurde neu geteilt.",bild:"Der Screenshot zeigt die alte Zeitungsseite mit Datum 2017.",quelle:"Der Artikel gehört zu einem Vorschlag, der damals diskutiert und nie beschlossen wurde. Aktuell gibt es keine solche Regel.",ton:"Sachlich, ohne Gefühlsdruck."},
+  why:"Irreführend: Ein alter Artikel wird als aktuell verkauft. Beim Datum nicht nur auf das Posting-Datum schauen, sondern auf das Datum der Quelle."},
+ {av:"B",name:"BildungsBlog",meta:"900 Follower · heute",h:"Studie: 9 von 10 Jugendlichen können nicht mehr richtig lesen",txt:"Laut einer aktuellen Studie ist das Leseverständnis am Boden. Die Politik hat versagt.",img:"Grafik: roter Balken, 90 %",link:"",v:"fake",key:["quelle","abs"],
+  f:{abs:"Privater Blog, Name des Autors fehlt, kein Impressum.",dat:"Datum ist heute. Kein Hinweis, wann die Studie erschienen ist.",bild:"Die Grafik hat keine Quellenangabe und keine Beschriftung der Achsen.",quelle:"Die Studie wird nicht genannt. Eine Suche nach „9 von 10 Jugendlichen können nicht lesen“ findet keine Studie. Seriöse Leseuntersuchungen nennen deutlich andere Zahlen.",ton:"Wertend („Politik hat versagt“), die Zahl klingt dramatisch."},
+  why:"Eine Zahl ohne Quelle ist keine Information. Wer sie nicht belegen kann, hat sie vermutlich erfunden oder falsch wiedergegeben."},
+ {av:"H",name:"Handwerkskammer Musterstadt ✔",meta:"Offizielles Konto · 4 200 Follower · gestern",h:"Lehrstellenbörse am 14. März",txt:"Die Lehrstellenbörse findet am 14. März von 9 bis 15 Uhr in der Stadthalle statt. Anmeldung bis 1. März über die Webseite.",img:"",link:"hwk-musterstadt.example/lehrstellenboerse",v:"echt",key:["abs","quelle"],
+  f:{abs:"Offizielles Konto der Kammer, verlinkt auf deren Webseite.",dat:"Gestern veröffentlicht, der Termin liegt in der Zukunft.",bild:"Kein Bild vorhanden.",quelle:"Die Webseite der Kammer nennt denselben Termin mit Anmeldeformular.",ton:"Sachlich. Keine Übertreibung, kein Druck."},
+  why:"Echt: offizieller Absender, Termin wird auf der Webseite bestätigt."},
+ {av:"K",name:"Kettenpost",meta:"Weitergeleitet · unbekannter Absender",h:"WICHTIG: Ab morgen kostet der Messenger 5 € im Monat!",txt:"Leite diese Nachricht an 10 Kontakte weiter, dann bleibt dein Konto kostenlos!!!",img:"",link:"",v:"fake",key:["quelle","ton"],
+  f:{abs:"Die Nachricht wurde schon oft weitergeleitet. Der ursprüngliche Absender ist nicht erkennbar.",dat:"Kein Datum, „ab morgen“ ist unklar.",bild:"Kein Bild vorhanden.",quelle:"Der Anbieter nennt auf seiner Webseite keine Gebühren. Die Behauptung wird nirgends bestätigt.",ton:"Drohung und Aufforderung „an 10 Kontakte weiterleiten“. Das ist ein klassischer Kettenbrief."},
+  why:"Kettenbriefe wollen, dass du sie weiterleitest. Echte Mitteilungen machen das nicht, und Anbieter informieren auf der eigenen Seite."},
+ {av:"F",name:"SportFan-Zitate",meta:"7 800 Follower · heute",h:"Fußballer Tom Berger: „Schule ist Zeitverschwendung“",txt:"Das sagt der Star ganz offen. Und du?",img:"Foto: Spieler im Trikot mit großem Zitat-Text",link:"",v:"fake",key:["quelle","bild"],
+  f:{abs:"Ein Fan-Account, der häufig Zitate verbreitet. Auf Nachfrage nennt er nie Belege.",dat:"Heute, ohne Hinweis, wann der Satz gefallen sein soll.",bild:"Das Foto stammt aus einem Interview von 2021. Das Zitat wurde nachträglich über das Foto gelegt.",quelle:"Im Interview und auf den Seiten des Vereins steht der Satz nirgends. Der Spieler hat sich laut Vereinsseite für Nachwuchsprojekte eingesetzt.",ton:"Provoziert mit der Frage „Und du?“ und soll Streit auslösen."},
+  why:"Zitat-Fälschungen nutzen echte Fotos mit erfundenem Text. Ein Zitat gilt erst, wenn du es im Original (Interview, Video) findest."}
+];
+
+function tab(n){$$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===n?"true":"false")});$("#p-check").hidden=n!=="check";$("#p-lab").hidden=n!=="lab"}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){tab(b.dataset.tab)})});
+function bestLine(){var b=store("fake-best");$("#cBest").textContent=b!==null?"Bestes Ergebnis: "+b+" von 18 Punkten":""}
+
+var R=null;
+function start(){R={list:shuffle(CASES).slice(0,6),i:0,s:0,used:{},locked:false};$("#cStart").hidden=true;$("#cEnd").hidden=true;$("#cPlay").hidden=false;show()}
+function show(){
+  var c=R.list[R.i];R.used={};R.locked=false;
+  $("#cCnt").textContent="Meldung "+(R.i+1)+" von 6";$("#cScore").textContent=R.s;$("#cBar").style.width=(R.i/6*100)+"%";
+  $("#post").innerHTML='<div class="who"><span class="av">'+c.av+'</span><span>'+c.name+'<br><span class="meta">'+c.meta+'</span></span></div><h3>'+c.h+'</h3><p>'+c.txt+'</p>'+(c.img?'<div class="img">🖼️ '+c.img+'</div>':'')+(c.link?'<div class="link">🔗 '+c.link+'</div>':'');
+  var t="";TOOLS.forEach(function(x){t+='<button class="tool" data-k="'+x[0]+'">'+x[1]+'</button>'});$("#tools").innerHTML=t;$("#finds").innerHTML="";
+  $$("#tools .tool").forEach(function(b){b.addEventListener("click",function(){
+    var k=b.dataset.k;if(R.used[k])return;R.used[k]=1;b.classList.add("used");
+    $("#finds").insertAdjacentHTML("beforeend",'<div class="find"><b>'+b.textContent+':</b> '+c.f[k]+'</div>');
+  })});
+  var v="";shuffle(VERD).forEach(function(x){v+='<button class="v" data-v="'+x[0]+'">'+x[1]+'<small>'+x[2]+'</small></button>'});$("#verd").innerHTML=v;$("#cFb").innerHTML="";
+  $$("#verd .v").forEach(function(b){b.addEventListener("click",function(){judge(b)})});
+}
+function judge(b){
+  if(R.locked)return;R.locked=true;var c=R.list[R.i],ok=b.dataset.v===c.v,last=R.i===5;
+  var keyUsed=c.key.some(function(k){return R.used[k]}),pts=(ok?2:0)+(keyUsed?1:0);R.s+=pts;$("#cScore").textContent=R.s;
+  $$("#verd .v").forEach(function(x){x.disabled=true;if(x.dataset.v===c.v)x.classList.add("right");else if(x===b)x.classList.add("wrong")});
+  var missing=c.key.filter(function(k){return !R.used[k]}).map(function(k){return TOOLS.filter(function(t){return t[0]===k})[0][1]});
+  /* alle Hinweise zeigen */
+  TOOLS.forEach(function(t){if(!R.used[t[0]])$("#finds").insertAdjacentHTML("beforeend",'<div class="find" style="opacity:.8"><b>'+t[1]+' (nicht genutzt):</b> '+c.f[t[0]]+'</div>')});
+  $("#cFb").innerHTML='<div class="fb '+(ok?"ok":"no")+'"><h3>'+(ok?"Richtig geurteilt!":"Das Urteil war nicht richtig")+' ('+pts+(pts===1?" Punkt":" Punkte")+')</h3><p>'+c.why+'</p>'+(keyUsed?'':'<p style="margin-top:6px"><b>Zusatzpunkt verpasst:</b> Entscheidend waren hier '+missing.join(", ")+'.</p>')+'<div class="row" style="margin-top:10px"><button class="btn primary" id="cNext">'+(last?"Ergebnis ansehen":"Nächste Meldung")+'</button></div></div>';
+  $("#cNext").addEventListener("click",function(){R.i++;if(R.i>=6)end();else{show();window.scrollTo({top:0,behavior:"smooth"})}});
+}
+function end(){
+  $("#cPlay").hidden=true;$("#cEnd").hidden=false;var s=R.s,prev=store("fake-best"),rec=prev===null||s>+prev;if(rec)store("fake-best",String(s));
+  var st=s>=16?3:s>=12?2:s>=7?1:0;$("#cStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#cTitle").textContent=s+" von 18 Punkten";
+  $("#cText").textContent=(st===3?"Profi-Faktenchecker!":st===2?"Gut geprüft. Achte auf Datum und Bildherkunft, dort liegen die versteckten Fallen.":"Nimm dir bei jeder Meldung Zeit für mindestens zwei Prüfwerkzeuge.")+(rec?" Neuer Bestwert!":"");bestLine();
+}
+$("#cGo").addEventListener("click",start);$("#cAgain").addEventListener("click",start);
+$("#cQuit").addEventListener("click",function(){$("#cPlay").hidden=true;$("#cStart").hidden=false});
+$("#cToLab").addEventListener("click",function(){tab("lab")});
+
+/* Labor */
+var TR=[
+ {k:"gross",l:"Dramatische Schlagzeile",w:"Große Wörter wie SKANDAL und SCHOCK wecken Aufmerksamkeit und stoppen das Nachdenken."},
+ {k:"wut",l:"Wut und Empörung erzeugen",w:"Wer sich ärgert, teilt schneller. Gefühle schlagen Fakten."},
+ {k:"quelle",l:"Die Quelle weglassen",w:"Ohne Quelle kann niemand prüfen, ob es stimmt."},
+ {k:"zahl",l:"Zahlen verändern",w:"Kleine Änderungen bei Zahlen machen aus einer Mitteilung eine Sensation."},
+ {k:"bild",l:"Altes Bild verwenden",w:"Ein echtes Foto aus einem anderen Zusammenhang wirkt wie ein Beweis."},
+ {k:"teilen",l:"Zum Weiterleiten auffordern",w:"„Teilen, bevor es gelöscht wird“ setzt unter Druck und verbreitet die Meldung."}
+];
+var LS={};
+function renderLab(){
+  var sw="";TR.forEach(function(t){sw+='<label class="'+(LS[t.k]?"on":"")+'"><input type="checkbox" data-k="'+t.k+'" '+(LS[t.k]?"checked":"")+'><span><b>'+t.l+'</b><span class="why">'+(LS[t.k]?t.w:"")+'</span></span></label>'});
+  $("#sw").innerHTML=sw;$$("#sw input").forEach(function(i){i.addEventListener("change",function(){LS[i.dataset.k]=i.checked;renderLab()})});
+  var s=LS;
+  var h=(s.gross?"SKANDAL: ":"")+"Stadtbibliothek verlängert Öffnungszeiten am Samstag";
+  var t=s.zahl?"Ab nächstem Monat ist die Stadtbibliothek samstags rund um die Uhr geöffnet. ":"Ab nächstem Monat ist die Stadtbibliothek samstags bis 18 Uhr geöffnet. ";
+  if(!s.quelle)t+="Das teilte die Leiterin in einer Pressemitteilung mit. ";
+  t+=s.zahl?"Die Regelung gilt für immer. ":"Die Regelung gilt zunächst für ein halbes Jahr. ";
+  if(s.wut)t+="Das ist ein Schlag ins Gesicht für alle, die sich bisher an die Regeln gehalten haben! ";
+  if(s.teilen)t+="Teile das, bevor es gelöscht wird!";
+  $("#labPost").innerHTML='<div class="who"><span class="av">?</span><span>'+(s.quelle?"Nachrichten-Konto":"Stadtbibliothek ✔")+'<br><span class="meta">'+(s.quelle?"Unbekannter Absender":"Offizielles Konto")+'</span></span></div><h3>'+h+'</h3><p>'+t+'</p>'+(s.bild?'<div class="img">🖼️ Foto aus einem anderen Zusammenhang (2009)</div>':'');
+  var n=TR.filter(function(x){return s[x.k]}).length;
+  $("#labCount").textContent=n===0?"Diese Meldung ist neutral, sachlich und belegt.":n+" von 6 Tricks eingebaut. "+(n>=4?"Diese Meldung würde sofort misstrauisch machen. Aber viele Fälschungen nutzen nur 1 oder 2 Tricks.":"Merkst du, wie wenig es braucht, damit eine Meldung kippt?");
+}
+renderLab();bestLine();
+window.__fn={CASES:CASES,start:start,R:function(){return R}};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Fake-News-Werkstatt", text: "<p>Prüfe Meldungen wie ein Faktenchecker und lerne, wie Fälschungen gebaut werden.</p>" },
+  { sel: "#tabs", title: "Zwei Bereiche", text: "<ul><li><b>Meldungen prüfen:</b> Sechs Fälle mit fünf Prüfwerkzeugen</li><li><b>Fälschungs-Labor:</b> Tricks einschalten und sehen, was passiert</li></ul>" },
+  { title: "Prüfen vor dem Urteil", text: "<p>Nutze die Werkzeuge: Absender, Datum, Bild, Quelle und Ton. Wer sorgfältig prüft, bekommt Zusatzpunkte.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
