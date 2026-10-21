@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prozent-Detektive</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --navy:#1F2A44; --cream:#F7F4EC; --paper:#FFFDF8; --line:#D9D3C3;
+  --yellow:#FFD25A; --blue:#2E6099; --orange:#C2570C; --purple:#6B3FA0; --lblue:#A9C1E0;
+  --soft:#5A6475;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--cream);color:var(--navy);
+  font-family:"Avenir Next Rounded","Nunito","Trebuchet MS","Segoe UI",Arial,sans-serif;
+  font-size:22px;line-height:1.4;-webkit-tap-highlight-color:transparent;
+}
+h1,h2,h3{margin:0;line-height:1.1}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 24px 48px}
+.screen{display:none}
+.screen.on{display:block}
+
+/* Start */
+.hero{background:var(--navy);color:var(--cream);border-radius:28px;padding:48px 48px 40px;position:relative;overflow:hidden}
+.hero .eyebrow{color:var(--yellow);font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:18px}
+.hero h1{font-size:clamp(40px,7vw,84px);margin:12px 0 16px}
+.hero p{font-size:clamp(20px,2.6vw,28px);color:#D5DCEB;max-width:720px;margin:0}
+.hero .pct{position:absolute;right:28px;top:-10px;font-size:240px;font-weight:800;color:var(--yellow);line-height:1;opacity:.95}
+@media(max-width:800px){.hero .pct{display:none}}
+.panel{background:var(--paper);border:2px solid var(--line);border-radius:24px;padding:28px;margin-top:24px}
+.panel h2{font-size:30px;margin-bottom:14px}
+.rolesrow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:800px){.rolesrow{grid-template-columns:1fr}}
+.role{border-radius:20px;padding:18px 20px;color:#fff}
+.role b{display:block;font-size:26px}
+.role.G{background:var(--blue)} .role.W{background:var(--orange)} .role.p{background:var(--purple)}
+.teams{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
+.tbtn{border:3px solid var(--navy);background:var(--paper);color:var(--navy);border-radius:16px;padding:12px 22px;font-weight:800;font-size:22px}
+.tbtn.sel{background:var(--navy);color:var(--cream)}
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.names input{font:inherit;padding:12px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--navy);width:100%}
+.big{background:var(--yellow);color:var(--navy);border:none;border-radius:20px;padding:18px 36px;font-weight:800;font-size:28px;box-shadow:0 5px 0 #C9A22F}
+.big:active{transform:translateY(3px);box-shadow:0 2px 0 #C9A22F}
+.ghost{background:transparent;border:3px solid var(--navy);color:var(--navy);border-radius:16px;padding:10px 20px;font-weight:800;font-size:20px}
+
+/* Game */
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.round{font-weight:800;color:var(--soft);letter-spacing:2px;text-transform:uppercase;font-size:18px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{border:3px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 18px;font-weight:800;font-size:20px;display:flex;gap:10px;align-items:center}
+.chip.act{border-color:var(--navy);background:var(--yellow)}
+.chip .sc{background:var(--navy);color:var(--cream);border-radius:999px;padding:0 12px;min-width:34px;text-align:center}
+.turn{font-size:24px;font-weight:800;margin:4px 0 10px}
+.prompt{background:var(--navy);color:var(--cream);border-radius:22px;padding:22px 28px;font-size:clamp(24px,3.4vw,38px);font-weight:800}
+.prompt em{font-style:normal;color:var(--yellow)}
+.story{background:var(--paper);border:2px solid var(--line);border-radius:24px;padding:30px 32px;margin-top:18px;font-size:clamp(24px,3.2vw,36px);line-height:2.1}
+.num{display:inline-block;vertical-align:middle;margin:0 2px;padding:2px 14px;border-radius:16px;font-weight:800;border:3px solid transparent;text-align:center;line-height:1.2}
+button.num{background:#fff;color:var(--navy);border-color:var(--navy);font-size:inherit}
+button.num:hover{background:var(--yellow)}
+button.num:active{transform:scale(.96)}
+.num.target{background:var(--yellow);border-color:var(--navy)}
+.num small{display:block;font-size:15px;font-weight:800;letter-spacing:.5px}
+.num.r-G{background:var(--blue);color:#fff}
+.num.r-W{background:var(--orange);color:#fff}
+.num.r-p{background:var(--purple);color:#fff}
+.num.dim{opacity:.55}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+@media(max-width:800px){.choices{grid-template-columns:1fr}}
+.choice{border:none;border-radius:20px;padding:22px 12px;color:#fff;font-weight:800;font-size:clamp(24px,3vw,34px)}
+.choice.G{background:var(--blue)} .choice.W{background:var(--orange)} .choice.p{background:var(--purple)}
+.choice:active{transform:scale(.97)}
+.fb{margin-top:18px;border-radius:24px;padding:24px 28px;border:4px solid var(--navy);background:var(--paper)}
+.fb.ok{border-color:var(--blue)} .fb.no{border-color:var(--orange)}
+.fb h3{font-size:34px;margin-bottom:12px}
+.fb ul{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:8px}
+.fb li{display:flex;gap:14px;align-items:center;font-size:24px}
+.tag{border-radius:12px;color:#fff;font-weight:800;padding:2px 14px;min-width:150px;text-align:center}
+.tag.G{background:var(--blue)} .tag.W{background:var(--orange)} .tag.p{background:var(--purple)}
+.strip{display:flex;border:4px solid var(--navy);border-radius:16px;overflow:hidden;height:56px;margin:6px 0 6px}
+.strip div{flex:1;border-left:2px solid var(--navy);background:var(--lblue)}
+.strip div:first-child{border-left:none}
+.strip div.f{background:var(--orange)}
+.stripnote{font-size:19px;color:var(--soft);margin-bottom:16px}
+.nextrow{display:flex;justify-content:flex-end}
+
+/* End */
+.rank{display:grid;gap:12px;margin:18px 0 26px}
+.rk{display:flex;justify-content:space-between;align-items:center;background:var(--paper);border:3px solid var(--line);border-radius:20px;padding:16px 24px;font-size:30px;font-weight:800}
+.rk.first{background:var(--yellow);border-color:var(--navy)}
+.rk .pts{font-size:34px}
+
+/* Spickzettel */
+.ov{position:fixed;inset:0;background:rgba(31,42,68,.75);display:none;align-items:center;justify-content:center;padding:20px;z-index:10}
+.ov.on{display:flex}
+.card{background:var(--cream);border-radius:28px;padding:30px;max-width:900px;width:100%}
+.card h2{font-size:38px;margin-bottom:16px}
+.card .rolesrow{margin-bottom:20px}
+.card .role{font-size:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- START -->
+<section id="start" class="screen on">
+  <div class="hero">
+    <div class="pct">%</div>
+    <div class="eyebrow">Mathe · Jahrgang 7 · Einstiegsspiel</div>
+    <h1>Prozent-Detektive</h1>
+    <p>Finde heraus, wer in jeder Geschichte welche Rolle spielt: Grundwert, Prozentwert oder Prozentsatz. Gerechnet wird nicht, es wird nur erkannt.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Die drei Rollen</h2>
+    <div class="rolesrow">
+      <div class="role G"><b>Grundwert</b>Das Ganze, das sind 100 %.</div>
+      <div class="role W"><b>Prozentwert</b>Der Teil vom Ganzen.</div>
+      <div class="role p"><b>Prozentsatz</b>Die Zahl mit dem %-Zeichen.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Wie viele Teams spielen?</h2>
+    <div class="teams" id="teamBtns"></div>
+    <div class="names" id="names"></div>
+    <button class="big" id="go">Los geht’s!</button>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game" class="screen">
+  <div class="top">
+    <div class="round" id="roundLbl"></div>
+    <div class="chips" id="chips"></div>
+    <button class="ghost" id="help">Spickzettel</button>
+  </div>
+  <div class="turn" id="turn"></div>
+  <div class="prompt" id="prompt"></div>
+  <div class="story" id="story"></div>
+  <div class="choices" id="choices"></div>
+  <div id="fb"></div>
+</section>
+
+<!-- END -->
+<section id="end" class="screen">
+  <div class="hero">
+    <div class="eyebrow">Spiel beendet</div>
+    <h1 id="endTitle">Geschafft!</h1>
+    <p id="endSub"></p>
+  </div>
+  <div class="panel">
+    <h2>Ergebnis</h2>
+    <div class="rank" id="rank"></div>
+    <button class="big" id="again">Nochmal spielen</button>
+  </div>
+</section>
+
+</div>
+
+<!-- Spickzettel -->
+<div class="ov" id="ov">
+  <div class="card">
+    <h2>Spickzettel</h2>
+    <div class="rolesrow">
+      <div class="role G"><b>Grundwert</b>Das Ganze, das sind 100 %.</div>
+      <div class="role W"><b>Prozentwert</b>Der Teil vom Ganzen.</div>
+      <div class="role p"><b>Prozentsatz</b>Die Zahl mit dem %-Zeichen.</div>
+    </div>
+    <button class="big" id="closeHelp">Weiter spielen</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var ROLE_NAME = {G:"Grundwert", W:"Prozentwert", p:"Prozentsatz"};
+
+  var STORIES = [
+    {t:"Lena sieht einen Hoodie für {G}. Im Sale gibt es {p} Rabatt. Sie spart dadurch {W}.",
+     G:"40 €", W:"10 €", p:"25 %", fill:5,
+     d:{G:"der Preis vor dem Sale, also das Ganze", W:"die gesparten Euro, ein Teil vom Preis", p:"der Rabatt in Prozent"}},
+    {t:"In der Klasse 7c sind {G}. Davon kommen {W} mit dem Bus. Das sind {p}.",
+     G:"20 Schüler", W:"5 Schüler", p:"25 %", fill:5,
+     d:{G:"alle Schüler der Klasse, also das Ganze", W:"die Busfahrer, ein Teil der Klasse", p:"der Anteil der Busfahrer"}},
+    {t:"Jonas spielt ein Spiel mit {G}. Er hat schon {W} geschafft. Der Fortschritt zeigt {p}.",
+     G:"10 Levels", W:"7 Levels", p:"70 %", fill:14,
+     d:{G:"alle Levels, also das Ganze", W:"die geschafften Levels, ein Teil", p:"der Fortschritt in Prozent"}},
+    {t:"Bei einer Umfrage werden {G} gefragt. {W} sagen Ja. Das sind {p}.",
+     G:"30 Personen", W:"12 Personen", p:"40 %", fill:8,
+     d:{G:"alle Befragten, also das Ganze", W:"die Ja-Antworten, ein Teil", p:"der Anteil der Ja-Antworten"}},
+    {t:"Mia wirft {G} auf den Korb. {W} treffen. Ihre Trefferquote beträgt {p}.",
+     G:"20 Freiwürfe", W:"16 Treffer", p:"80 %", fill:16,
+     d:{G:"alle Würfe, also das Ganze", W:"die Treffer, ein Teil der Würfe", p:"die Trefferquote in Prozent"}},
+    {t:"Ben hat {G} Taschengeld. Davon gibt er {W} für Snacks aus. Das sind {p} seines Taschengeldes.",
+     G:"50 €", W:"10 €", p:"20 %", fill:4,
+     d:{G:"das ganze Taschengeld", W:"das Geld für Snacks, ein Teil", p:"der Anteil für Snacks"}},
+    {t:"Dein Handyvertrag hat {G} Datenvolumen. Bisher sind {W} verbraucht. Das sind {p}.",
+     G:"10 GB", W:"3 GB", p:"30 %", fill:6,
+     d:{G:"das gesamte Datenvolumen, also das Ganze", W:"die verbrauchten GB, ein Teil", p:"der verbrauchte Anteil"}},
+    {t:"An der Losbude gibt es {G}. {W} davon sind Gewinne. Die Gewinnchance liegt bei {p}.",
+     G:"200 Lose", W:"30 Gewinne", p:"15 %", fill:3,
+     d:{G:"alle Lose, also das Ganze", W:"die Gewinnlose, ein Teil", p:"die Gewinnchance in Prozent"}},
+    {t:"Sportschuhe kosten {G}. Im Angebot gibt es {p} Rabatt. Das sind {W} weniger.",
+     G:"80 €", W:"8 €", p:"10 %", fill:2,
+     d:{G:"der ursprüngliche Preis, also das Ganze", W:"der Nachlass in Euro, ein Teil", p:"der Rabatt in Prozent"}},
+    {t:"In der Mathearbeit gibt es {G}. Lea erreicht {W}. Das sind {p}.",
+     G:"60 Punkte", W:"45 Punkte", p:"75 %", fill:15,
+     d:{G:"alle möglichen Punkte, also das Ganze", W:"Leas Punkte, ein Teil", p:"Leas Ergebnis in Prozent"}}
+  ];
+
+  var $ = function(id){ return document.getElementById(id); };
+  var S = {n:2, teams:[], rounds:[], i:0, turn:0, locked:false};
+
+  function shuffle(a){
+    a = a.slice();
+    for (var i=a.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var t=a[i]; a[i]=a[j]; a[j]=t;
+    }
+    return a;
+  }
+  function show(id){
+    ["start","game","end"].forEach(function(s){
+      $(s).classList.toggle("on", s===id);
+    });
+    window.scrollTo(0,0);
+  }
+
+  /* ---- Start ---- */
+  function buildTeamUI(){
+    var box = $("teamBtns"); box.innerHTML = "";
+    [1,2,3,4].forEach(function(n){
+      var b = document.createElement("button");
+      b.className = "tbtn" + (n===S.n ? " sel":"");
+      b.textContent = n===1 ? "Einzelspiel" : n + " Teams";
+      b.addEventListener("click", function(){ S.n = n; buildTeamUI(); });
+      box.appendChild(b);
+    });
+    var old = [];
+    Array.prototype.forEach.call($("names").querySelectorAll("input"), function(inp){ old.push(inp.value); });
+    var names = $("names"); names.innerHTML = "";
+    if (S.n === 1) return;
+    for (var i=0;i<S.n;i++){
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.maxLength = 18;
+      inp.placeholder = "Team " + (i+1);
+      if (old[i]) inp.value = old[i];
+      names.appendChild(inp);
+    }
+  }
+
+  function startGame(){
+    var inputs = $("names").querySelectorAll("input");
+    S.teams = [];
+    if (S.n === 1){
+      S.teams.push({name:"Du", score:0});
+    } else {
+      for (var i=0;i<S.n;i++){
+        var v = (inputs[i] && inputs[i].value.trim()) || ("Team " + (i+1));
+        S.teams.push({name:v, score:0});
+      }
+    }
+    var roles = shuffle(["G","W","p","G","W","p","G","W","p", ["G","W","p"][Math.floor(Math.random()*3)]]);
+    var order = shuffle(STORIES.map(function(_,k){ return k; }));
+    S.rounds = order.map(function(k, idx){
+      return {story:STORIES[k], target:roles[idx], type:(Math.random()<0.5 ? "find":"name")};
+    });
+    S.i = 0; S.turn = 0; S.locked = false;
+    show("game");
+    renderRound();
+  }
+
+  /* ---- Game ---- */
+  function chipsRender(){
+    var c = $("chips"); c.innerHTML = "";
+    S.teams.forEach(function(t, idx){
+      var d = document.createElement("div");
+      d.className = "chip" + (idx===S.turn && S.teams.length>1 ? " act":"");
+      var n = document.createElement("span"); n.textContent = t.name;
+      var s = document.createElement("span"); s.className = "sc"; s.textContent = t.score;
+      d.appendChild(n); d.appendChild(s);
+      c.appendChild(d);
+    });
+  }
+
+  function storyHTML(r, revealed){
+    var st = r.story;
+    return st.t.replace(/\{(G|W|p)\}/g, function(_, k){
+      var val = st[k];
+      if (revealed){
+        var dim = (k===r.target) ? "" : " dim";
+        return '<span class="num r-'+k+dim+'">'+val+'<small>'+ROLE_NAME[k]+'</small></span>';
+      }
+      if (r.type === "find"){
+        return '<button class="num" data-r="'+k+'">'+val+'</button>';
+      }
+      return '<span class="num '+(k===r.target ? "target":"")+'">'+val+'</span>';
+    });
+  }
+
+  function renderRound(){
+    var r = S.rounds[S.i];
+    S.locked = false;
+    $("roundLbl").textContent = "Runde " + (S.i+1) + " von " + S.rounds.length;
+    chipsRender();
+    $("turn").textContent = S.teams.length>1 ? (S.teams[S.turn].name + " ist dran") : "";
+    $("fb").innerHTML = "";
+
+    if (r.type === "find"){
+      $("prompt").innerHTML = 'Tippe auf den <em>' + ROLE_NAME[r.target] + '</em>.';
+      $("choices").innerHTML = "";
+    } else {
+      $("prompt").innerHTML = 'Welche Rolle spielt <em>' + r.story[r.target] + '</em>?';
+      var ch = $("choices"); ch.innerHTML = "";
+      ["G","W","p"].forEach(function(k){
+        var b = document.createElement("button");
+        b.className = "choice " + k;
+        b.textContent = ROLE_NAME[k];
+        b.addEventListener("click", function(){ answer(k); });
+        ch.appendChild(b);
+      });
+    }
+    $("story").innerHTML = storyHTML(r, false);
+    Array.prototype.forEach.call($("story").querySelectorAll("button.num"), function(b){
+      b.addEventListener("click", function(){ answer(b.getAttribute("data-r")); });
+    });
+  }
+
+  function answer(role){
+    if (S.locked) return;
+    S.locked = true;
+    var r = S.rounds[S.i];
+    var ok = (role === r.target);
+    if (ok) S.teams[S.turn].score++;
+    chipsRender();
+    $("story").innerHTML = storyHTML(r, true);
+    $("choices").innerHTML = "";
+
+    var st = r.story, strip = "";
+    for (var i=0;i<20;i++) strip += '<div class="' + (i < st.fill ? "f":"") + '"></div>';
+
+    var h = '<div class="fb ' + (ok ? "ok":"no") + '">';
+    h += '<h3>' + (ok ? "✓ Richtig!" : "✗ Nicht ganz.") + '</h3>';
+    if (!ok){
+      h += '<p style="margin:0 0 12px;font-size:24px">Gesucht war der <b>' + ROLE_NAME[r.target] + '</b>: ' + st[r.target] + ' (' + st.d[r.target] + ').</p>';
+    }
+    h += '<ul>';
+    ["G","W","p"].forEach(function(k){
+      h += '<li><span class="tag ' + k + '">' + ROLE_NAME[k] + '</span><span><b>' + st[k] + '</b>, ' + st.d[k] + '</span></li>';
+    });
+    h += '</ul>';
+    h += '<div class="strip">' + strip + '</div>';
+    h += '<div class="stripnote">Der ganze Streifen ist der Grundwert (100 %). Der orange Teil ist der Prozentwert.</div>';
+    h += '<div class="nextrow"><button class="big" id="nextBtn">' + (S.i+1 >= S.rounds.length ? "Ergebnis ansehen" : "Weiter") + '</button></div>';
+    h += '</div>';
+    $("fb").innerHTML = h;
+    $("nextBtn").addEventListener("click", next);
+    $("fb").scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+
+  function next(){
+    S.i++;
+    S.turn = (S.turn + 1) % S.teams.length;
+    if (S.i >= S.rounds.length){ endGame(); return; }
+    renderRound();
+    window.scrollTo(0,0);
+  }
+
+  /* ---- End ---- */
+  function endGame(){
+    var sorted = S.teams.slice().sort(function(a,b){ return b.score - a.score; });
+    var rank = $("rank"); rank.innerHTML = "";
+    sorted.forEach(function(t, idx){
+      var d = document.createElement("div");
+      d.className = "rk" + (t.score === sorted[0].score ? " first":"");
+      var n = document.createElement("span"); n.textContent = (idx+1) + ". " + t.name;
+      var p = document.createElement("span"); p.className = "pts"; p.textContent = t.score + " von " + S.rounds.length;
+      d.appendChild(n); d.appendChild(p);
+      rank.appendChild(d);
+    });
+    if (S.teams.length === 1){
+      var sc = S.teams[0].score;
+      $("endTitle").textContent = sc >= 8 ? "Super Detektiv!" : (sc >= 5 ? "Gut gemacht!" : "Weiter üben!");
+      $("endSub").textContent = "Du hast " + sc + " von " + S.rounds.length + " Rollen richtig erkannt.";
+    } else {
+      var tops = sorted.filter(function(t){ return t.score === sorted[0].score; });
+      if (tops.length === 1){
+        $("endTitle").textContent = tops[0].name + " gewinnt!";
+        $("endSub").textContent = "Mit " + tops[0].score + " richtigen Antworten.";
+      } else {
+        $("endTitle").textContent = "Unentschieden!";
+        $("endSub").textContent = "Mehrere Teams haben gleich viele Punkte erreicht.";
+      }
+    }
+    show("end");
+  }
+
+  /* ---- Events ---- */
+  $("go").addEventListener("click", startGame);
+  $("again").addEventListener("click", function(){ show("start"); });
+  $("help").addEventListener("click", function(){ $("ov").classList.add("on"); });
+  $("closeHelp").addEventListener("click", function(){ $("ov").classList.remove("on"); });
+  $("ov").addEventListener("click", function(e){ if (e.target === $("ov")) $("ov").classList.remove("on"); });
+
+  buildTeamUI();
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Prozent-Detektive", text: "<p>Finde heraus, welche Rolle jede Zahl in einer Geschichte spielt. Gerechnet wird nicht.</p>" },
+  { sel: "#teamBtns", title: "Teams wählen", text: "<p>Spiele allein oder mit bis zu vier Teams. Die Teams sind reihum dran.</p>" },
+  { sel: "#go", title: "Los geht's", text: "<ul><li><b>Grundwert:</b> das Ganze (100 %)</li><li><b>Prozentwert:</b> der Teil vom Ganzen</li><li><b>Prozentsatz:</b> die Zahl mit dem %-Zeichen</li></ul>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

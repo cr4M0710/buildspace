@@ -1141,4 +1141,16 @@ const posts = [
     titleEn: "Fake News Workshop",
     excerptEn: "Investigate six posts with five checking tools (sender, date, image, source, tone) and see in the forgery lab how a harmless message becomes fake news."
    },
+   {
+    title: "Prozent-Detektive",
+    excerpt: "Einstiegsspiel zur Prozentrechnung: In zehn Alltagsgeschichten Grundwert, Prozentwert und Prozentsatz erkennen und zuordnen. Allein oder in bis zu vier Teams, ganz ohne Rechnen.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "prozent-detektive.html",
+    emoji: "🔎",
+    tags: ["spiel", "prozent", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg7", "jg8"],
+    titleEn: "Percentage Detectives",
+    excerptEn: "An introductory percentage game: spot the base value, percentage value and percentage rate in ten everyday stories. Solo or in up to four teams, no calculating needed."
+   },
 ];
