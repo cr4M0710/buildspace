@@ -1081,4 +1081,16 @@ const posts = [
     titleEn: "Cutting Optimiser",
     excerptEn: "Drag parts onto wooden boards so nothing overlaps and as little waste as possible is left. With wood grain, waste calculation and six jobs."
    },
+   {
+    title: "Technisches Zeichnen interaktiv",
+    excerpt: "Vom Schrägbild zur Werkstattzeichnung: Vorderansicht, Draufsicht und Seitenansicht zeichnen und zu drei Ansichten den passenden Körper erkennen.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "technisches-zeichnen.html",
+    emoji: "📐",
+    tags: ["tool", "werkstatt", "geometrie", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9"],
+    titleEn: "Technical Drawing Interactive",
+    excerptEn: "From oblique view to workshop drawing: draw front, top and side views and find the right body for three given views."
+   },
 ];

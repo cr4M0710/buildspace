@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Technisches Zeichnen interaktiv</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#eef3f7; --grid:rgba(30,60,90,.07); --ink:#1d2a36; --muted:#566574; --line:#c9d5de; --card:#fcfeff;
+  --blue:#2a6fb0; --acc:#d9541e; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#2d5fd1;
+  --f-front:#9cc4e8; --f-top:#d3e6f6; --f-left:#6ea3d3; --cell:#8fb8de;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#121920;--grid:rgba(160,200,240,.06);--ink:#e9f0f6;--muted:#a1b0bd;--line:#32404c;--card:#1a232c;--blue:#7db6ee;--acc:#ff9a6b;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff;--f-front:#4e7ea8;--f-top:#7aa6cc;--f-left:#365f84;--cell:#5d8fbb}
+}
+:root[data-theme="dark"]{--bg:#121920;--grid:rgba(160,200,240,.06);--ink:#e9f0f6;--muted:#a1b0bd;--line:#32404c;--card:#1a232c;--blue:#7db6ee;--acc:#ff9a6b;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff;--f-front:#4e7ea8;--f-top:#7aa6cc;--f-left:#365f84;--cell:#5d8fbb}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(28px,6vw,42px)}
+header.top p{color:var(--muted);margin:6px 0 4px;max-width:42em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:#ffd166;color:#1d2a36}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:7px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.seg{display:inline-flex;border:2.5px solid var(--ink);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:9px 16px;font-weight:700;cursor:pointer;min-height:44px;border-right:2px solid var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+svg{display:block}
+.iso{width:100%;max-width:340px;height:auto;margin:0 auto}
+.sheet{display:grid;gap:16px;margin-top:12px}
+.views{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:14px}
+.view{border:2.5px solid var(--line);border-radius:14px;padding:10px;background:var(--bg)}
+.view h3{font-size:18px;margin-bottom:6px}
+.view svg{width:100%;height:auto;touch-action:manipulation}
+.view .gc{cursor:pointer}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:6px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
+.opt{border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px}
+.opt:hover:not(:disabled){background:#ffd166}
+.opt .l{font-weight:800;font-family:var(--head)}
+.opt.right{background:var(--ok-bg);border-color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.opt svg{width:100%;height:auto}
+.stat{display:inline-block;margin-right:14px}
+.stat b{font-family:var(--head);font-size:22px}
+.layout{display:grid;gap:10px;max-width:420px;margin:12px auto 0}
+.note{margin-top:12px;padding:10px 14px;border-left:6px solid #ffd166;background:var(--bg);border-radius:6px;font-size:16.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Technisches Zeichnen interaktiv – buildspace">
+<meta property="og:description" content="Vom Schrägbild zur Werkstattzeichnung: Vorderansicht, Draufsicht und Seitenansicht zeichnen und zu drei Ansichten den passenden Körper erkennen.">
+<meta property="og:url" content="https://buildspaceos.de/technisches-zeichnen.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/technisches-zeichnen.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Technisches Zeichnen interaktiv – buildspace">
+<meta name="twitter:description" content="Vom Schrägbild zur Werkstattzeichnung: Vorderansicht, Draufsicht und Seitenansicht zeichnen und zu drei Ansichten den passenden Körper erkennen.">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/technisches-zeichnen.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>📐 Technisches Zeichnen interaktiv</h1>
+    <p>Ein Körper, drei Ansichten: Vorderansicht, Draufsicht und Seitenansicht. Lerne, wie aus dem Schrägbild die Zeichnung für die Werkstatt wird.</p>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="learn" aria-selected="true">🔍 Verstehen</button>
+    <button class="tab" role="tab" data-tab="draw" aria-selected="false">✏️ Ansichten zeichnen</button>
+    <button class="tab" role="tab" data-tab="find" aria-selected="false">🧩 Körper erkennen</button>
+  </nav>
+
+  <section class="panel" id="p-learn">
+    <div class="card">
+      <h2>So entstehen die drei Ansichten</h2>
+      <p class="muted" style="margin-top:6px">Du schaust von vorn, von oben und von links auf den Körper. In der Zeichnung liegt die Vorderansicht in der Mitte. <b>Die Draufsicht liegt darunter, die Seitenansicht von links rechts daneben.</b> Alle Kanten, die du sehen kannst, werden gezeichnet.</p>
+      <div class="row" style="margin-top:12px"><button class="btn small" id="lNew">🔄 Anderer Körper</button><span class="muted">Tippe auf eine Ansicht, um sie im Schrägbild zu sehen.</span></div>
+      <div class="views" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <div class="view"><h3>Schrägbild</h3><svg id="lIso" class="iso" role="img" aria-label="Schrägbild des Körpers"></svg></div>
+        <div class="view"><h3>Zeichnung (Dreitafelbild)</h3><svg id="lSheet" role="img" aria-label="Die drei Ansichten angeordnet"></svg></div>
+      </div>
+      <div class="note" id="lNote">Vorn ist die Seite, die du im Schrägbild frontal siehst. Rechts oben im Schrägbild liegt die Rückseite.</div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-draw" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Ansichten zeichnen</h2>
+        <div class="seg" id="dLvl" role="group" aria-label="Niveau"><button data-l="0" aria-pressed="true">Basis</button><button data-l="1" aria-pressed="false">Profi</button><button data-l="2" aria-pressed="false">Experte</button></div></div>
+      <p class="muted" style="margin-top:6px">Tippe die Felder an, die in der jeweiligen Ansicht ausgefüllt sind. Ein Feld ist gefüllt, wenn du dort etwas vom Körper siehst.</p>
+      <div class="row" style="margin-top:10px"><svg id="dIso" class="iso" style="margin:0" role="img" aria-label="Schrägbild"></svg></div>
+      <div class="views" id="dViews"></div>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="dCheck">Prüfen ✔</button><button class="btn" id="dNew">Neuer Körper</button><span class="stat">Gelöst: <b id="dSolved">0</b></span></div>
+      <div id="dFb" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-find" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Körper erkennen</h2>
+        <div class="seg" id="fLvl" role="group" aria-label="Niveau"><button data-l="0" aria-pressed="true">Basis</button><button data-l="1" aria-pressed="false">Profi</button><button data-l="2" aria-pressed="false">Experte</button></div></div>
+      <p class="muted" style="margin-top:6px">Hier siehst du die drei Ansichten. Welches Schrägbild gehört dazu?</p>
+      <div class="row" style="margin-top:10px"><svg id="fSheet" style="width:100%;max-width:420px" role="img" aria-label="Gegebene Ansichten"></svg></div>
+      <div class="opts" id="fOpts"></div>
+      <div class="row" style="margin-top:14px"><span class="stat">Serie: <b id="fStreak">0</b></span><span class="stat">Beste Serie: <b id="fBest">0</b></span></div>
+      <div id="fFb" aria-live="polite"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var NS="http://www.w3.org/2000/svg";
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1))}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+
+/* Körper: Höhenkarte h[x][y], x=0..W-1 links nach rechts, y=0 vorn, z nach oben */
+var LV=[{W:2,D:2,H:2,min:3,max:6,name:"Basis"},{W:3,D:3,H:2,min:6,max:12,name:"Profi"},{W:4,D:3,H:3,min:10,max:22,name:"Experte"}];
+function makeBody(lv){
+  var L=LV[lv],tries=0,h;
+  while(tries++<5000){
+    h=[];var sum=0,x,y;
+    for(x=0;x<L.W;x++){h[x]=[];for(y=0;y<L.D;y++){var v=Math.random()<0.28?0:ri(1,L.H);h[x][y]=v;sum+=v}}
+    if(sum<L.min||sum>L.max)continue;
+    if(!connected(h,L))continue;
+    if(!usesAll(h,L))continue;
+    return {L:L,h:h};
+  }
+  /* Rückfall */
+  h=[];for(var xx=0;xx<L.W;xx++){h[xx]=[];for(var yy=0;yy<L.D;yy++)h[xx][yy]=(xx+yy)%2?1:L.H}
+  return {L:L,h:h};
+}
+function connected(h,L){
+  var cells=[],x,y;for(x=0;x<L.W;x++)for(y=0;y<L.D;y++)if(h[x][y]>0)cells.push([x,y]);
+  if(!cells.length)return false;
+  var seen={},stack=[cells[0]];seen[cells[0].join()]=1;var n=1;
+  while(stack.length){var c=stack.pop();[[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){var nx=c[0]+d[0],ny=c[1]+d[1];if(nx<0||ny<0||nx>=L.W||ny>=L.D||h[nx][ny]<=0)return;var k=nx+","+ny;if(seen[k])return;seen[k]=1;n++;stack.push([nx,ny])})}
+  return n===cells.length;
+}
+/* Körper soll die ganze Breite, Tiefe und Höhe nutzen, damit die Ansichten gleich groß sind */
+function usesAll(h,L){
+  var xs={},ys={},mx=0,x,y;
+  for(x=0;x<L.W;x++)for(y=0;y<L.D;y++)if(h[x][y]>0){xs[x]=1;ys[y]=1;mx=Math.max(mx,h[x][y])}
+  return Object.keys(xs).length===L.W&&Object.keys(ys).length===L.D&&mx===L.H;
+}
+function front(B){var g=[],L=B.L,r,c;for(r=0;r<L.H;r++){g[r]=[];for(c=0;c<L.W;c++){var z=L.H-1-r,f=false;for(var y=0;y<L.D;y++)if(B.h[c][y]>z)f=true;g[r][c]=f}}return g}
+function top(B){var g=[],L=B.L,r,c;for(r=0;r<L.D;r++){g[r]=[];for(c=0;c<L.W;c++){var y=L.D-1-r;g[r][c]=B.h[c][y]>0}}return g}
+function side(B){var g=[],L=B.L,r,c;for(r=0;r<L.H;r++){g[r]=[];for(c=0;c<L.D;c++){var z=L.H-1-r,y=L.D-1-c,f=false;for(var x=0;x<L.W;x++)if(B.h[x][y]>z)f=true;g[r][c]=f}}return g}
+function views(B){return {f:front(B),t:top(B),s:side(B)}}
+function sameGrid(a,b){for(var r=0;r<a.length;r++)for(var c=0;c<a[r].length;c++)if(a[r][c]!==b[r][c])return false;return true}
+function sameViews(a,b){return sameGrid(a.f,b.f)&&sameGrid(a.t,b.t)&&sameGrid(a.s,b.s)}
+function sameBody(A,B){for(var x=0;x<A.L.W;x++)for(var y=0;y<A.L.D;y++)if(A.h[x][y]!==B.h[x][y])return false;return true}
+
+/* Schrägbild (Kavalierprojektion, Tiefe nach links oben, 45 Grad, halbe Länge) */
+function drawIso(svg,B,mark){
+  svg.innerHTML="";var L=B.L,u=26,k=0.5*Math.SQRT1_2*u;
+  var wd=Math.max(110,L.W*u+L.D*k+14),ht=L.H*u+L.D*k+14,pw=L.W*u+L.D*k+14;
+  svg.setAttribute("viewBox","0 0 "+wd+" "+ht);
+  var ox=7+L.D*k+(wd-pw)/2,oy=ht-7;                       /* Ursprung vorn links unten */
+  function P(x,y,z){return [ox+x*u-y*k, oy-z*u-y*k]}
+  function poly(pts,fill){var e=el("polygon",{points:pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1)}).join(" "),fill:fill,stroke:"var(--ink)","stroke-width":"1.2","stroke-linejoin":"round"},svg);return e}
+  var order=[];
+  for(var y=L.D-1;y>=0;y--)for(var x=L.W-1;x>=0;x--)for(var z=0;z<B.h[x][y];z++)order.push([x,y,z]);
+  order.forEach(function(c){
+    var x=c[0],y=c[1],z=c[2];
+    poly([P(x,y,z),P(x+1,y,z),P(x+1,y,z+1),P(x,y,z+1)],"var(--f-front)");           /* Vorderseite */
+    poly([P(x,y,z+1),P(x+1,y,z+1),P(x+1,y+1,z+1),P(x,y+1,z+1)],"var(--f-top)");      /* Oberseite */
+    poly([P(x,y,z),P(x,y+1,z),P(x,y+1,z+1),P(x,y,z+1)],"var(--f-left)");             /* linke Seite */
+  });
+  if(mark){
+    /* Pfeil für Blickrichtung */
+    var t=el("text",{x:7,y:12,"font-size":"10","fill":"var(--muted)","font-family":"system-ui"},svg);t.textContent=mark;
+  }
+}
+
+/* Raster (Ansicht) */
+function drawGrid(svg,grid,opts){
+  svg.innerHTML="";var rows=grid.length,cols=grid[0].length,c=40,pad=4;
+  svg.setAttribute("viewBox","0 0 "+(cols*c+2*pad)+" "+(rows*c+2*pad));
+  svg.style.maxWidth=(cols*c*1.25+2*pad)+"px";
+  for(var r=0;r<rows;r++)for(var q=0;q<cols;q++){
+    var on=grid[r][q],st=opts.state?opts.state[r][q]:null;
+    var g=el("g",{"class":opts.click?"gc":""},svg);
+    var fill=on?"var(--cell)":"var(--card)",stroke="var(--line)",sw="1.5",dash="";
+    if(st==="miss"){fill="var(--card)";stroke="var(--bad)";sw="3";dash="5 3"}
+    if(st==="extra"){fill="var(--bad-bg)";stroke="var(--bad)";sw="3"}
+    var rc=el("rect",{x:pad+q*c,y:pad+r*c,width:c,height:c,fill:fill,stroke:stroke,"stroke-width":sw},g);
+    if(dash)rc.setAttribute("stroke-dasharray",dash);
+    if(on&&!st){rc.setAttribute("stroke","var(--ink)")}
+    if(opts.click){(function(rr,qq){g.addEventListener("click",function(){opts.click(rr,qq)})})(r,q);g.setAttribute("tabindex","0");g.setAttribute("role","button");g.setAttribute("aria-label","Feld Zeile "+(r+1)+" Spalte "+(q+1)+(on?" gefüllt":" leer"));g.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();g.dispatchEvent(new Event("click"))}})}
+  }
+}
+
+/* Dreitafelbild als eine Zeichnung: Vorderansicht + Draufsicht darunter + Seitenansicht rechts */
+function drawSheet(svg,V,B,hl,empty){
+  svg.innerHTML="";var L=B.L,c=22,gap=14,pad=6;
+  var wd=Math.max(150,pad*2+L.W*c+gap+L.D*c),ht=pad*2+L.H*c+gap+L.D*c+14;
+  svg.setAttribute("viewBox","0 0 "+wd+" "+ht);
+  function block(grid,x0,y0,name,key){
+    var g=el("g",{},svg);
+    for(var r=0;r<grid.length;r++)for(var q=0;q<grid[0].length;q++){
+      var on=empty?false:grid[r][q];
+      el("rect",{x:x0+q*c,y:y0+r*c,width:c,height:c,fill:on?(hl===key?"var(--acc)":"var(--cell)"):"var(--card)",stroke:on?"var(--ink)":"var(--line)","stroke-width":on?"1.4":"1"},g);
+    }
+    var t=el("text",{x:x0,y:y0-3,"font-size":"8.5","fill":"var(--muted)","font-family":"system-ui","font-weight":"700"},g);t.textContent=name;
+    return g;
+  }
+  var fx=pad,fy=pad+8,sx=pad+L.W*c+gap,ty=fy+L.H*c+gap+8;
+  block(V.f,fx,fy,"Vorderansicht","f");
+  block(V.s,sx,fy,"Seitenansicht","s");
+  block(V.t,fx,ty,"Draufsicht","t");
+  /* Hilfslinien */
+  el("line",{x1:fx+L.W*c+gap/2,x2:fx+L.W*c+gap/2,y1:fy,y2:fy+L.H*c,stroke:"var(--line)","stroke-dasharray":"3 3"},svg);
+  return svg;
+}
+
+/* ------- Tabs ------- */
+function showTab(n){
+  $$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===n?"true":"false")});
+  ["learn","draw","find"].forEach(function(k){$("#p-"+k).hidden=(k!==n)});
+}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
+function bindSeg(id,cb){$$("#"+id+" button").forEach(function(b){b.addEventListener("click",function(){$$("#"+id+" button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});cb(+b.dataset.l)})})}
+
+/* ------- Verstehen ------- */
+var LB=null,LH=null;
+function learnNew(){
+  LB=makeBody(ri(0,1));LH=null;learnDraw();
+}
+function learnDraw(){
+  var V=views(LB);drawIso($("#lIso"),LB);drawSheet($("#lSheet"),V,LB,LH);
+  var txt={f:"Vorderansicht: Du schaust von vorn und siehst die Breite und die Höhe des Körpers.",t:"Draufsicht: Du schaust von oben und siehst die Breite und die Tiefe. Vorn liegt unten.",s:"Seitenansicht von links: Du schaust von links und siehst die Tiefe und die Höhe. Die Vorderseite liegt rechts."};
+  $("#lNote").textContent=LH?txt[LH]:"Tippe unten auf eine Ansicht, um zu sehen, was sie zeigt.";
+  /* Tippen auf Ansichten */
+  var rects=$$("#lSheet g");
+  var keys=["f","s","t"];
+  rects.forEach(function(g,i){g.style.cursor="pointer";g.addEventListener("click",function(){LH=keys[i];learnDraw()})});
+}
+$("#lNew").addEventListener("click",learnNew);
+
+/* ------- Zeichnen ------- */
+var DL=0,DB=null,DG=null,DSolved=parseInt(store("tz-solved")||"0",10),DDone=false;
+function drawNew(){
+  DB=makeBody(DL);DDone=false;var V=views(DB);
+  function blank(g){return g.map(function(r){return r.map(function(){return false})})}
+  DG={f:blank(V.f),t:blank(V.t),s:blank(V.s)};
+  drawIso($("#dIso"),DB);
+  var box=$("#dViews");box.innerHTML="";
+  [["f","Vorderansicht (von vorn)"],["t","Draufsicht (von oben)"],["s","Seitenansicht (von links)"]].forEach(function(a){
+    var d=document.createElement("div");d.className="view";d.innerHTML="<h3>"+a[1]+"</h3>";var s=document.createElementNS(NS,"svg");s.id="dv-"+a[0];d.appendChild(s);box.appendChild(d);
+  });
+  renderDraw();$("#dFb").innerHTML="";$("#dSolved").textContent=DSolved;$("#dCheck").disabled=false;
+}
+function renderDraw(states){
+  ["f","t","s"].forEach(function(k){
+    drawGrid($("#dv-"+k),DG[k],{click:DDone?null:function(r,c){DG[k][r][c]=!DG[k][r][c];renderDraw()},state:states?states[k]:null});
+  });
+}
+$("#dCheck").addEventListener("click",function(){
+  if(DDone)return;var V=views(DB),st={},wrong=0,tot=0;
+  ["f","t","s"].forEach(function(k){st[k]=V[k].map(function(row,r){return row.map(function(v,c){var u=DG[k][r][c];tot++;if(v&&!u){wrong++;return "miss"}if(!v&&u){wrong++;return "extra"}return null})})});
+  var viewsOk=["f","t","s"].filter(function(k){return !st[k].some(function(r){return r.some(function(x){return x})})}).length;
+  if(wrong===0){DDone=true;DSolved++;store("tz-solved",String(DSolved));$("#dSolved").textContent=DSolved;renderDraw();$("#dFb").innerHTML='<div class="fb ok"><h3>Alle drei Ansichten stimmen!</h3><p>Sehr gut. Probiere ein höheres Niveau oder einen neuen Körper.</p></div>';$("#dCheck").disabled=true;return}
+  renderDraw(st);
+  $("#dFb").innerHTML='<div class="fb no"><h3>'+viewsOk+' von 3 Ansichten stimmen</h3><p>Rot gestrichelt: Hier fehlt ein gefülltes Feld. Rot gefüllt: Dieses Feld ist leer. Verbessere die Felder und prüfe noch einmal.</p><div class="row" style="margin-top:10px"><button class="btn small" id="dShow">Lösung zeigen</button></div></div>';
+  $("#dShow").addEventListener("click",function(){DDone=true;DG=views(DB);var dg={f:V.f,t:V.t,s:V.s};DG=dg;renderDraw();$("#dFb").innerHTML='<div class="fb no"><h3>So sehen die Ansichten aus</h3><p>Zähle im Schrägbild nach: Vorn siehst du die Breite und die Höhe, oben die Breite und die Tiefe, links die Tiefe und die Höhe.</p></div>';$("#dCheck").disabled=true});
+});
+$("#dNew").addEventListener("click",drawNew);
+bindSeg("dLvl",function(l){DL=l;drawNew()});
+
+/* ------- Erkennen ------- */
+var _ord=null,FL=0,FB=null,FStreak=0,FBest=parseInt(store("tz-streak")||"0",10),FDone=false;
+function similarBody(B){
+  /* verändert 1-2 Höhen, so dass sich mindestens eine Ansicht ändert */
+  var L=B.L,tries=0,C;
+  while(tries++<400){
+    C={L:L,h:B.h.map(function(r){return r.slice()})};
+    var n=ri(1,2);for(var i=0;i<n;i++){var x=ri(0,L.W-1),y=ri(0,L.D-1);C.h[x][y]=ri(0,L.H)}
+    if(!usesAll(C.h,L)||!connected(C.h,L))continue;
+    if(sameViews(views(C),views(B)))continue;
+    return C;
+  }
+  return null;
+}
+function findNew(){
+  FDone=false;FB=makeBody(FL);var V=views(FB),opts=[FB],tries=0;
+  while(opts.length<4&&tries++<600){
+    var C=similarBody(FB);
+    if(C&&!opts.some(function(o){return sameBody(o,C)}))opts.push(C);
+  }
+  while(opts.length<4){var R=makeBody(FL);if(!opts.some(function(o){return sameBody(o,R)})&&!sameViews(views(R),V))opts.push(R)}
+  var order=opts.map(function(b,i){return {b:b,ok:i===0,r:Math.random()}}).sort(function(a,b){return a.r-b.r});_ord=order;
+  drawSheet($("#fSheet"),V,FB);
+  var box=$("#fOpts");box.innerHTML="";
+  order.forEach(function(o,i){
+    var b=document.createElement("button");b.className="opt";b.innerHTML='<span class="l">'+"ABCD"[i]+'</span>';
+    var s=document.createElementNS(NS,"svg");s.style.maxWidth="150px";b.appendChild(s);drawIso(s,o.b);
+    b.addEventListener("click",function(){pick(o,b,order)});box.appendChild(b);
+  });
+  $("#fFb").innerHTML="";$("#fStreak").textContent=FStreak;$("#fBest").textContent=FBest;
+}
+function pick(o,b){
+  if(FDone)return;FDone=true;
+  $$("#fOpts .opt").forEach(function(x){x.disabled=true});
+  var rightBtn=null;
+  if(o.ok){b.classList.add("right");FStreak++;if(FStreak>FBest){FBest=FStreak;store("tz-streak",String(FBest))}
+    $("#fFb").innerHTML='<div class="fb ok"><h3>Richtig!</h3><p>Dieses Schrägbild passt zu allen drei Ansichten.</p><div class="row" style="margin-top:10px"><button class="btn primary" id="fNext">Weiter</button></div></div>';
+  }else{b.classList.add("wrong");FStreak=0;
+    var V=views(FB),V2=views(o.b),why=[];
+    if(!sameGrid(V.f,V2.f))why.push("die Vorderansicht");if(!sameGrid(V.t,V2.t))why.push("die Draufsicht");if(!sameGrid(V.s,V2.s))why.push("die Seitenansicht");
+    $("#fFb").innerHTML='<div class="fb no"><h3>Nicht ganz</h3><p>Bei diesem Körper passt '+why.join(" und ")+' nicht zur Zeichnung. Wähle beim nächsten Mal eine Ansicht aus und prüfe sie Feld für Feld.</p><div class="row" style="margin-top:10px"><button class="btn primary" id="fNext">Weiter</button></div></div>';
+  }
+  /* richtige Option markieren */
+  $$("#fOpts .opt").forEach(function(x,i){if(x!==b&&_ord[i].ok)x.classList.add("right")});
+  $("#fStreak").textContent=FStreak;$("#fBest").textContent=FBest;
+  $("#fNext").addEventListener("click",findNew);
+}
+bindSeg("fLvl",function(l){FL=l;FStreak=0;findNew()});
+
+learnNew();drawNew();findNew();
+window.__tz={makeBody:makeBody,views:views,front:front,top:top,side:side,LV:LV,sameViews:sameViews,sameBody:sameBody,similarBody:similarBody,state:function(){return {DB:DB,FB:FB}}};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Technisches Zeichnen interaktiv", text: "<p>Hier lernst du, wie aus einem Körper drei Ansichten für die Werkstattzeichnung entstehen.</p>" },
+  { sel: "#tabs", title: "Drei Bereiche", text: "<ul><li><b>Verstehen:</b> So entstehen die Ansichten</li><li><b>Ansichten zeichnen:</b> Felder antippen</li><li><b>Körper erkennen:</b> Das passende Schrägbild wählen</li></ul>" },
+  { sel: "#lSheet", title: "Anordnung", text: "<p>Vorderansicht in der Mitte, die Draufsicht darunter, die Seitenansicht von links rechts daneben.</p>" },
+  { title: "Tipp", text: "<p>Beginne immer mit der Vorderansicht. Die anderen Ansichten lassen sich daraus ableiten, weil Breite und Höhe gleich bleiben.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
