@@ -296,14 +296,16 @@
       "  margin-top: 14px; font-size: 12.5px; color: #AAABB2; background: none; border: none; text-decoration: underline; cursor: pointer; font-family: inherit; }",
       "#protect-overlay .protect-divider {",
       "  display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;",
-      "  font-size: 11.5px; font-weight: 700; color: #8d8e96; text-transform: uppercase; letter-spacing: 0.06em; }",
+      "  font-size: 13px; font-weight: 600; color: #B4B6BE; }",
       "#protect-overlay .protect-divider::before, #protect-overlay .protect-divider::after {",
       "  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.16); }",
       "#protect-overlay button.protect-guest-btn {",
-      "  width: 100%; padding: 12px 14px; font-size: 15px; font-weight: 600; border-radius: 999px; cursor: pointer; font-family: inherit;",
-      "  color: #F4F6FB; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.22); }",
-      "#protect-overlay button.protect-guest-btn:hover { background: rgba(255,255,255,0.14); }",
-      "#protect-overlay .protect-guest-hint { margin: 10px 0 0; font-size: 12px; color: #AAABB2; }",
+      "  width: 100%; min-height: 64px; padding: 16px 20px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; border-radius: 999px; cursor: pointer; font-family: inherit;",
+      "  color: #fff; background: linear-gradient(160deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12)); border: 1px solid rgba(255,255,255,0.4);",
+      "  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.4), 0 10px 28px rgba(0,0,0,0.45); touch-action: manipulation; transition: transform 0.1s ease-out, background 0.2s ease; }",
+      "#protect-overlay button.protect-guest-btn:hover { background: linear-gradient(160deg, rgba(255,255,255,0.44), rgba(255,255,255,0.18)); }",
+      "#protect-overlay button.protect-guest-btn:active { transform: scale(0.97); }",
+      "#protect-overlay .protect-guest-hint { margin: 10px 0 0; font-size: 12.5px; color: #AAABB2; }",
       "#protect-share-btn, .protect-feedback-widget, .protect-highscore-btn {",
       "  border: 1px solid rgba(255,255,255,0.22); background: linear-gradient(160deg, rgba(44,46,58,0.82), rgba(14,15,20,0.78)); color: #F4F6FB;",
       "  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);",
@@ -486,25 +488,25 @@
     wrap.innerHTML =
       '<div class="protect-card">' +
         '<div class="protect-icon">' + LOCK_SVG + "</div>" +
-        "<h2>Anmeldung</h2>" +
+        "<h2>Willkommen</h2>" +
         (expiredHint
-          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte anmelden.</div>'
-          : '<p class="protect-sub">Bitte melde dich an, um buildspace zu nutzen.</p>') +
+          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte anmelden oder als Gast fortfahren.</div>'
+          : '<p class="protect-sub">Starte direkt als Gast – oder melde dich mit Passwort an.</p>') +
+        '<button type="button" class="protect-guest-btn" id="protect-guest-btn">Als Gast fortfahren</button>' +
+        '<p class="protect-guest-hint">Als Gast hast du Zugriff auf den Bereich Schule.</p>' +
+        '<div class="protect-divider"><span>Mit Anmeldung bzw. Passwort anmelden</span></div>' +
         '<form id="protect-form" autocomplete="off">' +
-          '<input type="password" id="protect-input" placeholder="Passwort" autofocus />' +
+          '<input type="password" id="protect-input" placeholder="Passwort" />' +
           '<button type="submit" class="protect-submit">Anmelden</button>' +
         "</form>" +
         '<div class="protect-error" id="protect-error"></div>' +
-        '<div class="protect-divider"><span>oder</span></div>' +
-        '<button type="button" class="protect-guest-btn" id="protect-guest-btn">Als Gast fortfahren</button>' +
-        '<p class="protect-guest-hint">Als Gast hast du nur Zugriff auf den Bereich Schule.</p>' +
       "</div>";
     document.body.appendChild(wrap);
     const form = wrap.querySelector("#protect-form");
     const input = wrap.querySelector("#protect-input");
     const errorEl = wrap.querySelector("#protect-error");
     const guestBtn = wrap.querySelector("#protect-guest-btn");
-    setTimeout(() => input.focus(), 30);
+    setTimeout(() => guestBtn.focus({ preventScroll: true, focusVisible: false }), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       const level = checkPasswordInput(input.value);
