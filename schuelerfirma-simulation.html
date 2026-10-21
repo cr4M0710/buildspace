@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Schülerfirma-Simulation</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f4f1e8; --ink:#25303a; --muted:#5c6770; --line:#d4d0c2; --card:#fffefa;
+  --acc:#0f7b6c; --acc2:#e8912d; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#2d5fd1;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#13191e;--ink:#edf1f4;--muted:#a3adb5;--line:#34404a;--card:#1c252c;--acc:#4fd1bd;--acc2:#ffb35c;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+}
+:root[data-theme="dark"]{--bg:#13191e;--ink:#edf1f4;--muted:#a3adb5;--line:#34404a;--card:#1c252c;--acc:#4fd1bd;--acc2:#ffb35c;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:920px;margin:0 auto;padding:20px 16px 60px}
+header.top{margin-bottom:16px}
+header.top h1{font-size:clamp(30px,6vw,44px)}
+header.top p{color:var(--muted);margin-top:6px;max-width:42em}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--acc2);color:#25303a}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:14px 0}
+.prod button{text-align:left;padding:16px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:150px}
+.prod button:hover{background:var(--acc2);color:#25303a}
+.prod .e{font-size:38px}
+.prod .t{font-family:var(--head);font-size:22px;font-weight:800}
+.prod .d{font-size:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat{border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}
+.stat small{display:block;color:var(--muted);font-size:14px}
+.stat b{font-family:var(--head);font-size:22px}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.event{padding:12px 16px;border-left:6px solid var(--acc2);background:var(--bg);border-radius:8px;margin-bottom:16px}
+.ctl{display:grid;gap:16px;margin:10px 0 16px}
+.ctl label{display:block;font-weight:700;margin-bottom:4px}
+.ctl .val{font-family:var(--head);font-size:26px;font-weight:800;color:var(--acc)}
+.ctl input[type=range]{width:100%;height:44px;accent-color:var(--acc)}
+.ctl .hint{font-size:15px;color:var(--muted)}
+.pre{padding:12px 16px;border:2.5px dashed var(--acc);border-radius:12px;margin:8px 0 16px;font-size:17px}
+.pre b{font-family:var(--head)}
+.good{color:var(--ok)} .bad{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:15.5px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1.5px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-family:var(--head);font-size:14px;color:var(--muted)}
+.scroll{overflow-x:auto}
+.res{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid var(--ink);background:var(--bg)}
+.res h3{font-size:22px;margin-bottom:6px}
+.res ul{margin:6px 0 0;padding-left:20px}
+.q{margin-top:18px;padding:14px 16px;border:2.5px solid var(--ink);border-radius:14px}
+.opts{display:grid;gap:8px;margin-top:10px}
+.opt{padding:11px 14px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-weight:700;min-height:48px}
+.opt:hover:not(:disabled){background:var(--acc2);color:#25303a}
+.opt.right{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.stars{font-size:44px;letter-spacing:6px}
+svg.chart{width:100%;height:auto;display:block}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Schülerfirma-Simulation – buildspace">
+<meta property="og:description" content="Leite 8 Monate lang eine kleine Schülerfirma: Preis, Menge und Werbung festlegen, Kassenbuch führen, Break-even berechnen.">
+<meta property="og:url" content="https://buildspaceos.de/schuelerfirma-simulation.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/schuelerfirma-simulation.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Schülerfirma-Simulation – buildspace">
+<meta name="twitter:description" content="Leite 8 Monate lang eine kleine Schülerfirma: Preis, Menge und Werbung festlegen, Kassenbuch führen, Break-even berechnen.">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/schuelerfirma-simulation.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🏭 Schülerfirma-Simulation</h1>
+    <p>Du leitest 8 Monate lang eine kleine Schülerfirma. Lege jeden Monat Preis, Produktionsmenge und Werbung fest. Am Ende zählt, wie viel Geld in der Kasse ist.</p>
+  </header>
+
+  <section class="card" id="sStart">
+    <h2>Was stellt deine Firma her?</h2>
+    <p class="muted" style="margin-top:6px">Jedes Produkt hat andere Kosten und eine andere Nachfrage. Du startest mit 300 € Kapital und zahlst jeden Monat Fixkosten für die Werkstatt.</p>
+    <div class="prod" id="prodBox"></div>
+    <p class="muted" id="bestLine"></p>
+  </section>
+
+  <section class="card" id="sPlay" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="pill" id="pName"></span><b id="pMonth"></b><button class="btn" id="pQuit" style="min-height:42px;padding:6px 12px;font-size:16px">Abbrechen</button></div>
+    <div class="stats">
+      <div class="stat"><small>Kasse</small><b id="stCash"></b></div>
+      <div class="stat"><small>Lager</small><b id="stStock"></b></div>
+      <div class="stat"><small>Materialkosten</small><b id="stMat"></b></div>
+      <div class="stat"><small>Fixkosten/Monat</small><b id="stFix"></b></div>
+    </div>
+    <div class="event" id="evBox"></div>
+    <div id="decide">
+      <div class="ctl">
+        <div><label for="inPrice">Verkaufspreis pro Stück: <span class="val" id="vPrice"></span></label><input type="range" id="inPrice"><div class="hint" id="hPrice"></div></div>
+        <div><label for="inProd">Produktion diesen Monat: <span class="val" id="vProd"></span></label><input type="range" id="inProd"><div class="hint" id="hProd"></div></div>
+        <div><label for="inAd">Werbung: <span class="val" id="vAd"></span></label><input type="range" id="inAd"><div class="hint">Plakate, Aushänge, Social Media. Wirkt nur im laufenden Monat und hat abnehmenden Nutzen.</div></div>
+      </div>
+      <div class="pre" id="pre" aria-live="polite"></div>
+      <button class="btn primary" id="goBtn">Monat starten ▶</button>
+    </div>
+    <div id="result" aria-live="polite"></div>
+    <h3 style="margin-top:22px;font-size:20px">Kassenbuch</h3>
+    <div class="scroll"><table id="book"></table></div>
+  </section>
+
+  <section class="card" id="sEnd" hidden>
+    <div style="text-align:center"><div class="stars" id="eStars" aria-hidden="true"></div><h2 id="eTitle" style="margin-top:6px"></h2><p class="muted" id="eText" style="margin-top:6px"></p></div>
+    <h3 style="margin-top:20px;font-size:20px">Dein Verlauf</h3>
+    <svg class="chart" id="chart" viewBox="0 0 640 260" role="img" aria-label="Kassenstand pro Monat"></svg>
+    <div class="q" id="quiz"></div>
+    <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="eAgain">Nochmal mit diesem Produkt</button><button class="btn" id="eMenu">Anderes Produkt</button></div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function eur(x){return (Math.round(x*100)/100).toFixed(2).replace(".",",").replace("-","−")+" €"}
+function eur0(x){return Math.round(x).toLocaleString("de-DE").replace("-","−")+" €"}
+var MONTHS=8,START=300,STORAGE=0.2,CAP=120;
+
+var PRODUCTS={
+  halter:{emoji:"📱",name:"Handyhalter aus Holz",desc:"Beliebt, aber viele Mitbewerber. Günstiges Material, preisempfindliche Kundschaft.",mat:2.5,fix:60,ref:7,base:60,elast:1.8,pmin:3,pmax:15},
+  kerze:{emoji:"🕯️",name:"Duftkerzen im Glas",desc:"Hochwertiges Geschenk. Teures Material, dafür zahlt die Kundschaft gern mehr.",mat:4.5,fix:70,ref:10,base:42,elast:1.7,pmin:5,pmax:25},
+  snack:{emoji:"🥨",name:"Pausensnacks",desc:"Hohe Nachfrage, kleine Preise. Dafür darf nichts liegen bleiben, denn Ware verdirbt.",mat:0.9,fix:45,ref:2,base:110,elast:2.2,pmin:1,pmax:5,perish:true}
+};
+/* Ereignisse: Faktor auf die Nachfrage */
+var EVENTS=[
+  {t:"Ein ganz normaler Monat.",f:1},
+  {t:"Schulfest im Ort: mehr Laufkundschaft.",f:1.35},
+  {t:"Ferien und Prüfungszeit: weniger Kundschaft.",f:0.7},
+  {t:"Ein Konkurrent senkt seine Preise.",f:0.8},
+  {t:"Ein Bericht in der Schülerzeitung macht euch bekannt.",f:1.25},
+  {t:"Ein Ganztagsschulfest bringt viele Besucher.",f:1.4},
+  {t:"Schlechtes Wetter: Der Pausenhof ist leer.",f:0.85},
+  {t:"Ein Ganztagsprojekt: ein neuer Jahrgang kauft ein.",f:1.15}
+];
+/* feste Ereignisabfolge pro Durchgang, zufällig gemischt, Monat 1 normal */
+function makeEvents(){var a=EVENTS.slice(1);for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return [EVENTS[0]].concat(a.slice(0,MONTHS-1))}
+
+/* Nachfrage: Basis * Ereignis * Preiswirkung * Werbewirkung * kleine Schwankung */
+function demand(P,price,ad,ev,noise){
+  var pe=Math.pow(P.ref/price,P.elast);
+  var ae=1+0.5*Math.sqrt(ad/20);          /* 20 € Werbung = +50 % */
+  return Math.max(0,Math.round(P.base*ev*pe*ae*(1+noise)));
+}
+/* Monatsabrechnung */
+function settle(P,S,dec,ev,noise){
+  var prod=Math.min(dec.prod,CAP);
+  var matCost=prod*P.mat;
+  var avail=S.stock+prod;
+  var d=demand(P,dec.price,dec.ad,ev.f,noise);
+  var sold=Math.min(d,avail);
+  var rev=sold*dec.price;
+  var left=avail-sold;
+  var spoil=P.perish?left:0;               /* Snacks verderben */
+  var keep=left-spoil;
+  var store_=keep*STORAGE;
+  var cost=matCost+P.fix+dec.ad+store_;
+  var profit=rev-cost;
+  return {prod:prod,matCost:matCost,demand:d,sold:sold,rev:rev,left:left,spoil:spoil,keep:keep,storeCost:store_,cost:cost,profit:profit,lost:Math.max(0,d-avail)};
+}
+function optProfit(P){var best=-1e9,p,ad,d,u,pr,st=P.pmax<=6?0.1:0.5;
+  for(p=P.pmin;p<=P.pmax+1e-9;p+=st)for(ad=0;ad<=60;ad+=5){d=Math.min(demand(P,p,ad,1,0),CAP);pr=d*(p-P.mat)-P.fix-ad;if(pr>best)best=pr}
+  return best}
+function maxProd(P,cash){return Math.max(0,Math.min(CAP,Math.floor(cash/P.mat)))}
+
+var G=null;
+function renderStart(){
+  var b=$("#prodBox");b.innerHTML="";
+  Object.keys(PRODUCTS).forEach(function(k){
+    var P=PRODUCTS[k],best=store("firma-best-"+k);
+    var el=document.createElement("button");
+    el.innerHTML='<span class="e">'+P.emoji+'</span><span class="t">'+P.name+'</span><span class="d">'+P.desc+'</span><span class="d"><b>Material:</b> '+eur(P.mat)+' pro Stück · <b>Fixkosten:</b> '+eur(P.fix)+' pro Monat</span><span class="d"><b>'+(best!=null?"Bestes Endergebnis: "+eur0(+best):"Noch nicht gespielt")+'</b></span>';
+    el.addEventListener("click",function(){begin(k)});b.appendChild(el);
+  });
+}
+function begin(k){
+  var P=PRODUCTS[k];
+  G={key:k,P:P,cash:START,stock:0,m:0,events:makeEvents(),noise:[],log:[],cashHist:[START],done:false};
+  for(var i=0;i<MONTHS;i++)G.noise.push((Math.random()-0.5)*0.16);
+  $("#sStart").hidden=true;$("#sEnd").hidden=true;$("#sPlay").hidden=false;
+  $("#pName").textContent=P.emoji+" "+P.name;
+  var ip=$("#inPrice");ip.min=P.pmin;ip.max=P.pmax;ip.step=P.pmax<=6?0.1:0.5;ip.value=P.ref;$("#inProd").max=CAP;$("#inProd").value=Math.round(P.base*0.8);
+  $("#inAd").min=0;$("#inAd").max=60;$("#inAd").step=5;$("#inAd").value=10;
+  $("#stMat").textContent=eur(P.mat)+" / Stück";$("#stFix").textContent=eur(P.fix);
+  $("#result").innerHTML="";$("#book").innerHTML="";
+  newMonth();
+}
+function newMonth(){
+  var P=G.P;
+  $("#pMonth").textContent="Monat "+(G.m+1)+" von "+MONTHS;
+  $("#stCash").textContent=eur(G.cash);$("#stStock").textContent=G.stock+" Stück";
+  $("#evBox").innerHTML="<b>Ereignis:</b> "+G.events[G.m].t;
+  var mp=maxProd(P,G.cash);
+  var ipr=$("#inProd");ipr.min=0;ipr.max=Math.max(mp,1);ipr.step=1;
+  ipr.value=Math.min(parseInt(ipr.value||"0",10)||Math.round(P.base*0.8),mp);
+  $("#hProd").textContent="Höchstens "+mp+" Stück: Du kannst nur Material bezahlen, das deine Kasse hergibt (Kapazität "+CAP+").";
+  $("#decide").hidden=false;$("#result").innerHTML="";
+  upd();
+}
+function upd(){
+  var P=G.P,price=+$("#inPrice").value,prod=+$("#inProd").value,ad=+$("#inAd").value;
+  $("#vPrice").textContent=eur(price);$("#vProd").textContent=prod+" Stück";$("#vAd").textContent=eur(ad);
+  var gps=price-P.mat,be=gps>0?Math.ceil((P.fix+ad)/gps):null;
+  $("#hPrice").textContent="Preis minus Material = "+eur(gps)+" Stückgewinn vor Fixkosten.";
+  $("#pre").innerHTML="<b>Deckungsbeitrag pro Stück:</b> "+eur(price)+" − "+eur(P.mat)+" = <b class='"+(gps>0?"good":"bad")+"'>"+eur(gps)+"</b><br><b>Break-even:</b> "+(be!==null?"Du musst mindestens <b>"+be+" Stück</b> verkaufen, damit Fixkosten ("+eur(P.fix)+") und Werbung ("+eur(ad)+") gedeckt sind.":"<span class='bad'>Dein Preis liegt unter den Materialkosten, du machst mit jedem Stück Verlust.</span>");
+}
+["#inPrice","#inProd","#inAd"].forEach(function(s){$(s).addEventListener("input",function(){if(G)upd()})});
+$("#goBtn").addEventListener("click",function(){
+  var P=G.P,dec={price:+$("#inPrice").value,prod:+$("#inProd").value,ad:+$("#inAd").value};
+  if(dec.ad>G.cash+0){dec.ad=Math.max(0,Math.floor(G.cash/5)*5)}
+  var r=settle(P,{stock:G.stock},dec,G.events[G.m],G.noise[G.m]);
+  G.cash=G.cash+r.rev-r.cost;G.stock=r.keep;
+  G.log.push({m:G.m+1,price:dec.price,prod:r.prod,ad:dec.ad,demand:r.demand,sold:r.sold,rev:r.rev,cost:r.cost,profit:r.profit,cash:G.cash});
+  G.cashHist.push(G.cash);
+  showResult(r,dec);renderBook();
+});
+function showResult(r,dec){
+  var h='<div class="res"><h3>Abrechnung Monat '+(G.m+1)+'</h3><ul>';
+  h+='<li>Nachfrage: <b>'+r.demand+' Stück</b>, verkauft: <b>'+r.sold+' Stück</b> zu '+eur(dec.price)+' = <b>'+eur(r.rev)+'</b> Umsatz</li>';
+  h+='<li>Kosten: Material '+eur(r.matCost)+' + Fixkosten '+eur(G.P.fix)+' + Werbung '+eur(dec.ad)+(r.storeCost>0?' + Lager '+eur(r.storeCost):'')+' = <b>'+eur(r.cost)+'</b></li>';
+  h+='<li><b class="'+(r.profit>=0?"good":"bad")+'">'+(r.profit>=0?"Gewinn: ":"Verlust: ")+eur(Math.abs(r.profit))+'</b> (Umsatz − Kosten)</li>';
+  if(r.lost>0)h+='<li>Es wurde Kundschaft abgewiesen: <b>'+r.lost+' Stück</b> hättest du noch verkaufen können. Zu wenig produziert?</li>';
+  if(r.spoil>0)h+='<li class="bad">'+r.spoil+' Stück sind verdorben und müssen weggeworfen werden. Zu viel produziert?</li>';
+  else if(r.keep>0)h+='<li>'+r.keep+' Stück bleiben im Lager und kosten '+eur(r.storeCost)+' Lagerkosten.</li>';
+  h+='</ul><div class="row" style="margin-top:12px"><button class="btn primary" id="nextM">'+(G.m+1>=MONTHS?"Auswertung ansehen":"Nächster Monat ▶")+'</button></div></div>';
+  $("#decide").hidden=true;$("#result").innerHTML=h;
+  $("#stCash").textContent=eur(G.cash);$("#stStock").textContent=G.stock+" Stück";
+  $("#nextM").addEventListener("click",function(){G.m++;if(G.m>=MONTHS)finish();else newMonth()});
+  $("#nextM").focus();
+}
+function renderBook(){
+  var h="<tr><th>Monat</th><th>Preis</th><th>Prod.</th><th>Verk.</th><th>Umsatz</th><th>Kosten</th><th>Gewinn</th><th>Kasse</th></tr>";
+  G.log.forEach(function(l){h+="<tr><td>"+l.m+"</td><td>"+eur(l.price)+"</td><td>"+l.prod+"</td><td>"+l.sold+"</td><td>"+eur(l.rev)+"</td><td>"+eur(l.cost)+"</td><td class='"+(l.profit>=0?"good":"bad")+"'>"+eur(l.profit)+"</td><td>"+eur(l.cash)+"</td></tr>"});
+  $("#book").innerHTML=h;
+}
+function finish(){
+  $("#sPlay").hidden=true;$("#sEnd").hidden=false;
+  var end=G.cash,gain=end-START,key="firma-best-"+G.key,prev=store(key);
+  var rec=prev===null||end>+prev;if(rec)store(key,String(Math.round(end)));
+  var goal=optProfit(G.P)*MONTHS,st=gain>=goal*0.7?3:gain>=goal*0.4?2:gain>0?1:0;
+  $("#eStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#eTitle").textContent="Endkasse: "+eur(end);
+  $("#eText").textContent=(gain>=0?"Gewinn über 8 Monate: ":"Verlust über 8 Monate: ")+eur(Math.abs(gain))+(rec?" (neuer persönlicher Rekord)":"")+". "+(st===3?"Eine erfolgreiche Firma!":st===2?"Solide geführt.":st===1?"Im Plus, da geht noch mehr.":"Die Firma schreibt rote Zahlen. Schau dir Preise und Mengen im Kassenbuch an.");
+  drawChart();buildQuiz();
+}
+function drawChart(){
+  var H=G.cashHist,W=640,Ht=260,pl=56,pr=16,pt=16,pb=34,mn=Math.min.apply(null,H.concat([0])),mx=Math.max.apply(null,H.concat([START]));
+  if(mx===mn)mx=mn+1;var rg=mx-mn;mn-=rg*.05;mx+=rg*.08;
+  function X(i){return pl+(W-pl-pr)*i/(H.length-1)}function Y(v){return pt+(Ht-pt-pb)*(1-(v-mn)/(mx-mn))}
+  var s="";
+  for(var k=0;k<=4;k++){var v=mn+(mx-mn)*k/4;s+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(pl-6)+'" y="'+(Y(v)+5)+'" text-anchor="end" font-size="13" fill="var(--muted)">'+Math.round(v)+'</text>'}
+  s+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(START)+'" y2="'+Y(START)+'" stroke="var(--acc2)" stroke-dasharray="6 5" stroke-width="2"/><text x="'+(W-pr)+'" y="'+(Y(START)-6)+'" text-anchor="end" font-size="12" fill="var(--acc2)">Startkapital</text>';
+  s+='<polyline fill="none" stroke="var(--acc)" stroke-width="3.5" points="'+H.map(function(v,i){return X(i)+","+Y(v)}).join(" ")+'"/>';
+  H.forEach(function(v,i){s+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="4.5" fill="var(--acc)"/><text x="'+X(i)+'" y="'+(Ht-12)+'" text-anchor="middle" font-size="13" fill="var(--muted)">'+i+'</text>'});
+  $("#chart").innerHTML=s;
+}
+function buildQuiz(){
+  var P=G.P,price=Math.round((P.ref)*10)/10,gps=price-P.mat,ans=Math.ceil(P.fix/gps);
+  var wrong=[Math.ceil(P.fix/price),Math.ceil(P.fix*gps),Math.ceil(P.fix/gps)+Math.round(P.fix/ (gps*2))+3];
+  var seen={},opts=[ans].concat(wrong).filter(function(x){if(seen[x])return false;seen[x]=1;return true});
+  var cs=opts.slice();for(var i=cs.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=cs[i];cs[i]=cs[j];cs[j]=t}
+  var q=$("#quiz");
+  q.innerHTML='<h3 style="font-size:20px">Abschlussfrage: Break-even</h3><p style="margin-top:6px">Die Firma verkauft '+P.name+' für '+eur(price)+'. Das Material kostet '+eur(P.mat)+' pro Stück, die Fixkosten liegen bei '+eur(P.fix)+' im Monat (ohne Werbung). Ab wie vielen verkauften Stücken pro Monat macht sie Gewinn?</p><div class="opts" id="qOpts"></div><div id="qFb" aria-live="polite"></div>';
+  cs.forEach(function(x){var b=document.createElement("button");b.className="opt";b.textContent=x+" Stück";b.dataset.v=x;
+    b.addEventListener("click",function(){
+      Array.prototype.forEach.call(document.querySelectorAll("#qOpts .opt"),function(o){o.disabled=true;if(+o.dataset.v===ans)o.classList.add("right");else if(o===b)o.classList.add("wrong")});
+      $("#qFb").innerHTML='<div class="res" style="margin-top:12px"><b>'+(x===ans?"Richtig!":"Nicht ganz.")+'</b> Pro Stück bleiben '+eur(price)+' − '+eur(P.mat)+' = '+eur(gps)+' übrig (Deckungsbeitrag). Break-even = Fixkosten : Deckungsbeitrag = '+eur(P.fix)+' : '+eur(gps)+' = '+(P.fix/gps).toFixed(1).replace(".",",")+', aufgerundet <b>'+ans+' Stück</b>.</div>';
+    });$("#qOpts").appendChild(b)});
+}
+$("#pQuit").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
+$("#eAgain").addEventListener("click",function(){begin(G.key)});
+$("#eMenu").addEventListener("click",function(){$("#sEnd").hidden=true;$("#sStart").hidden=false;renderStart()});
+renderStart();
+window.__sf={optProfit:optProfit,PRODUCTS:PRODUCTS,demand:demand,settle:settle,maxProd:maxProd,G:function(){return G}};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Schülerfirma-Simulation", text: "<p>Du führst 8 Monate lang eine kleine Firma. Am Ende zählt die Endkasse.</p>" },
+  { sel: "#prodBox", title: "Produkt wählen", text: "<p>Jedes Produkt hat andere Materialkosten, Fixkosten und Kundschaft.</p>" },
+  { title: "Jeden Monat drei Entscheidungen", text: "<ul><li><b>Preis:</b> zu hoch, und niemand kauft</li><li><b>Produktion:</b> zu wenig oder zu viel kostet Geld</li><li><b>Werbung:</b> bringt Kundschaft, kostet aber auch</li></ul>" },
+  { title: "Kassenbuch und Break-even", text: "<p>Jede Abrechnung zeigt Umsatz, Kosten und Gewinn. Der Break-even sagt dir, wie viel du mindestens verkaufen musst.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

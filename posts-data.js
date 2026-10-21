@@ -1057,4 +1057,16 @@ const posts = [
     titleEn: "Error Detective",
     excerptEn: "Find the faulty line in someone else's working, name the mistake and learn the rule. With an error catalogue and three levels for grades 5 to 10."
    },
+   {
+    title: "Schülerfirma-Simulation",
+    excerpt: "Leite 8 Monate lang eine kleine Schülerfirma: Preis, Menge und Werbung festlegen, Kassenbuch führen, Break-even berechnen.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "schuelerfirma-simulation.html",
+    emoji: "🏭",
+    tags: ["spiel", "wirtschaft", "projektarbeit", "einzelarbeit", "partnerarbeit", "jg9", "jg10"],
+    titleEn: "Student Company Simulation",
+    excerptEn: "Run a small student company for 8 months: set price, quantity and advertising, keep the cash book and work out the break-even point."
+   },
 ];
