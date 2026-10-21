@@ -1105,4 +1105,16 @@ const posts = [
     titleEn: "AI Bias Lab",
     excerptEn: "A hiring AI learns from old, unfair decisions. Train it yourself, spot proxy features and test with twin applications whether it decides fairly."
    },
+   {
+    title: "Halluzinations-Detektiv",
+    excerpt: "Sechs KI-Antworten prüfen: Welche Sätze sind erfunden, welche Quellen gibt es nicht? Mit Erklärung zu jedem Satz und einem Prüf-Plan.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "halluzinations-detektiv.html",
+    emoji: "🕵️",
+    tags: ["spiel", "ki", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Hallucination Detective",
+    excerptEn: "Check six AI answers: which sentences are made up, which sources do not exist? With an explanation for every sentence and a checking plan."
+   },
 ];

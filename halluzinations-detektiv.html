@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Halluzinations-Detektiv</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f1f5f3; --ink:#1f2d2a; --muted:#5a6b66; --line:#cfdbd6; --card:#fcfffd;
+  --acc:#0e8a6d; --flag:#d6453d; --warn:#f0a30a; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#2d5fd1;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#121a18;--ink:#e9f3f0;--muted:#a2b5af;--line:#33443f;--card:#1a2522;--acc:#4fd1b0;--flag:#ff8077;--warn:#ffc04d;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+}
+:root[data-theme="dark"]{--bg:#121a18;--ink:#e9f3f0;--muted:#a2b5af;--line:#33443f;--card:#1a2522;--acc:#4fd1b0;--flag:#ff8077;--warn:#ffc04d;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:820px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(28px,6vw,42px)}
+header.top p{color:var(--muted);margin:6px 0 4px;max-width:42em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--warn);color:#1f2d2a}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:7px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 14px}
+.bar>i{display:block;height:100%;width:0;background:var(--acc);transition:width .3s}
+.ask{padding:12px 16px;border-radius:14px;background:var(--bg);border:2.5px solid var(--line);margin:8px 0 12px}
+.ask b{font-family:var(--head)}
+.ans{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.sen{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;border:2.5px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;min-height:54px}
+.sen .fl{flex:none;width:30px;height:30px;border-radius:50%;border:2.5px solid var(--line);display:grid;place-items:center;font-size:15px;margin-top:1px}
+.sen[aria-pressed="true"]{border-color:var(--flag);background:var(--bad-bg)}
+.sen[aria-pressed="true"] .fl{border-color:var(--flag);background:var(--flag);color:#fff}
+.sen:disabled{cursor:default}
+.sen.good{border-color:var(--ok);background:var(--ok-bg)}
+.sen.bad{border-color:var(--bad);background:var(--bad-bg)}
+.why{margin-top:6px;font-size:16px;color:var(--ink)}
+.tag{display:inline-block;padding:1px 10px;border-radius:99px;background:var(--bad);color:#fff;font-size:13px;font-weight:700;margin-right:6px}
+.tag.okt{background:var(--ok)}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:4px}
+.stars{font-size:44px;letter-spacing:6px}
+.types{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px}
+.type{border:2.5px solid var(--ink);border-radius:14px;padding:12px 14px;background:var(--bg)}
+.type h3{font-size:19px;margin-bottom:4px}
+.type .ex{margin-top:6px;font-size:16px;color:var(--muted)}
+ol.steps{padding-left:22px;margin:10px 0 0}
+ol.steps li{margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Halluzinations-Detektiv – buildspace">
+<meta property="og:description" content="Sechs KI-Antworten prüfen: Welche Sätze sind erfunden, welche Quellen gibt es nicht? Mit Erklärung zu jedem Satz und einem Prüf-Plan.">
+<meta property="og:url" content="https://buildspaceos.de/halluzinations-detektiv.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/halluzinations-detektiv.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Halluzinations-Detektiv – buildspace">
+<meta name="twitter:description" content="Sechs KI-Antworten prüfen: Welche Sätze sind erfunden, welche Quellen gibt es nicht? Mit Erklärung zu jedem Satz und einem Prüf-Plan.">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/halluzinations-detektiv.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🕵️ Halluzinations-Detektiv</h1>
+    <p>KI-Antworten klingen oft überzeugend, auch wenn sie falsch sind. Das nennt man Halluzination. Finde die erfundenen Sätze, bevor sie in deiner Hausaufgabe landen.</p>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="play" aria-selected="true">🔎 Fälle lösen</button>
+    <button class="tab" role="tab" data-tab="kit" aria-selected="false">🧰 Prüf-Werkzeug</button>
+  </nav>
+
+  <section class="panel" id="p-play">
+    <div class="card" id="sStart">
+      <h2>Bereit für die Ermittlung?</h2>
+      <p class="muted" style="margin-top:6px">Du bekommst sechs KI-Antworten auf Fragen aus Schule und Alltag. In jeder Antwort sind keine, einer oder mehrere Sätze erfunden oder falsch. Tippe die verdächtigen Sätze an (🚩) und drücke dann auf „Prüfen“.</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="go">Runde starten</button></div>
+      <p class="muted" style="margin-top:10px" id="bestLine"></p>
+    </div>
+    <div class="card" id="sPlay" hidden>
+      <div class="row" style="justify-content:space-between"><span class="pill" id="pCase"></span><span><b id="pScore">0</b> Treffer</span><button class="btn small" id="pQuit">Abbrechen</button></div>
+      <div class="bar"><i id="pBar"></i></div>
+      <div class="ask"><span class="muted">Du fragst die KI:</span><br><b id="pPrompt"></b></div>
+      <p class="muted" style="margin-bottom:8px">Antwort der KI. Tippe auf Sätze, die du für erfunden oder falsch hältst:</p>
+      <ul class="ans" id="ans"></ul>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="chk">Prüfen ✔</button></div>
+      <div id="fb" aria-live="polite"></div>
+    </div>
+    <div class="card" id="sEnd" hidden>
+      <div style="text-align:center"><div class="stars" id="eStars" aria-hidden="true"></div><h2 id="eTitle" style="margin-top:6px"></h2><p class="muted" id="eText" style="margin-top:8px"></p>
+      <div class="row" style="justify-content:center;margin-top:16px"><button class="btn primary" id="eAgain">Neue Runde</button><button class="btn" id="eKit">Prüf-Werkzeug ansehen</button></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-kit" hidden>
+    <div class="card">
+      <h2>So erkennst du Halluzinationen</h2>
+      <p class="muted" style="margin-top:6px">Eine KI kennt keine Fakten wie eine Datenbank. Sie berechnet, welcher Text plausibel klingt. Deshalb passieren immer wieder dieselben Arten von Fehlern:</p>
+      <div class="types">
+        <div class="type"><h3>🔢 Falsche Zahl oder Angabe</h3><p>Jahreszahlen, Längen, Orte oder Namen sind leicht verändert.</p><p class="ex">Beispiel: Ein Abkommen wird um zehn Jahre falsch datiert.</p></div>
+        <div class="type"><h3>📚 Erfundene Quelle</h3><p>Studien, Bücher oder Berichte klingen echt, existieren aber nicht.</p><p class="ex">Verdacht, wenn Titel, Jahr und Institut sehr genau klingen, du aber nichts findest.</p></div>
+        <div class="type"><h3>🤔 Falscher Zusammenhang</h3><p>Zwei echte Dinge werden falsch verbunden, oder die Begründung stimmt nicht.</p><p class="ex">Beispiel: Ein Preis wird für die falsche Entdeckung vergeben.</p></div>
+        <div class="type"><h3>💪 Übertriebene Sicherheit</h3><p>Wörter wie „immer“, „nie“, „alle“ oder „bewiesen“ ohne Beleg.</p><p class="ex">Echte Wissenschaft nennt meist Einschränkungen.</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Dein Prüf-Plan in vier Schritten</h2>
+      <ol class="steps">
+        <li><b>Auffälliges markieren.</b> Zahlen, Namen, Zitate und Quellen sind die häufigsten Fehlerstellen.</li>
+        <li><b>Zweite Quelle suchen.</b> Schulbuch, Lexikon, Behörden- oder Museumsseite. Stimmen mindestens zwei unabhängige Quellen überein?</li>
+        <li><b>Quelle wirklich öffnen.</b> Nenne die KI eine Studie oder ein Buch, such es selbst. Findest du es nicht, ist es vermutlich erfunden.</li>
+        <li><b>Mit Verstand prüfen.</b> Passt das Datum zur Zeit? Ist die Zahl möglich? Widerspricht der Satz einem anderen in derselben Antwort?</li>
+      </ol>
+      <div class="fb ok" style="margin-top:14px"><h3>Merksatz</h3><p>Die KI ist ein guter Ideengeber, aber kein Beweis. Was du abgibst, hast du selbst geprüft.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+/* Satz: [Text, falsch?, Typ, Erklärung] */
+var T={zahl:"Falsche Angabe",quelle:"Erfundene Quelle",zus:"Falscher Zusammenhang",sicher:"Übertriebene Sicherheit"};
+var CASES=[
+ {p:"Erzähle mir etwas über den Rhein.",s:[
+  ["Der Rhein ist etwa 1 230 Kilometer lang.",0,"","Stimmt: Die Länge liegt bei rund 1 230 Kilometern."],
+  ["Er entspringt in den Schweizer Alpen und mündet in die Nordsee.",0,"","Stimmt: Die Quellflüsse liegen in Graubünden, die Mündung in den Niederlanden."],
+  ["Die Quelle des Rheins liegt am Mont Blanc in Frankreich.",1,"zahl","Falsch: Der Rhein entspringt in der Schweiz (Graubünden). Der Mont Blanc ist der Ursprung ganz anderer Flüsse."],
+  ["Er fließt unter anderem durch Köln und Düsseldorf.",0,"","Stimmt."],
+  ["Der Rhein ist der längste Fluss Europas.",1,"sicher","Falsch: Die Wolga ist mit rund 3 500 km viel länger, auch die Donau ist länger."],
+  ["Auf seinem Weg durchfließt er den Bodensee.",0,"","Stimmt: Der Rhein durchfließt den Bodensee."]]},
+ {p:"Wer hat die Relativitätstheorie entwickelt?",s:[
+  ["Albert Einstein veröffentlichte 1905 die Spezielle Relativitätstheorie.",0,"","Stimmt."],
+  ["Die Allgemeine Relativitätstheorie folgte 1915 und 1916.",0,"","Stimmt."],
+  ["Für die Relativitätstheorie erhielt er 1921 den Nobelpreis für Physik.",1,"zus","Falsch: Den Nobelpreis 1921 bekam Einstein für die Erklärung des photoelektrischen Effekts, nicht für die Relativitätstheorie."],
+  ["Einstein wurde in Ulm geboren.",0,"","Stimmt: Geboren 1879 in Ulm."],
+  ["In seinem Buch „Die Geometrie der Zeit“ (1912) erklärte er die Idee erstmals für Laien.",1,"quelle","Dieses Buch ist erfunden. Einstein schrieb zwar ein populäres Buch über Relativität, aber nicht mit diesem Titel."]]},
+ {p:"Erkläre die Photosynthese.",s:[
+  ["Pflanzen nehmen Kohlenstoffdioxid und Wasser auf.",0,"","Stimmt."],
+  ["Mit Lichtenergie bilden sie Traubenzucker und Sauerstoff.",0,"","Stimmt."],
+  ["Der Vorgang findet in den Mitochondrien statt.",1,"zus","Falsch: Die Photosynthese läuft in den Chloroplasten ab. Mitochondrien sind für die Zellatmung zuständig."],
+  ["Das grüne Chlorophyll nutzt vor allem rotes und blaues Licht.",0,"","Stimmt: Grünes Licht wird überwiegend zurückgeworfen, deshalb sehen Blätter grün aus."],
+  ["Eine Studie der Universität Heidelberg von 2019 zeigte, dass Pflanzen nachts 40 % mehr Sauerstoff erzeugen.",1,"quelle","Erfundene Studie und falsche Aussage: Ohne Licht läuft keine Photosynthese, nachts wird kein Sauerstoff erzeugt."]]},
+ {p:"Informiere mich über das Bundesland Hessen.",s:[
+  ["Die Landeshauptstadt von Hessen ist Wiesbaden.",0,"","Stimmt."],
+  ["Die größte Stadt Hessens ist Frankfurt am Main.",0,"","Stimmt."],
+  ["Der höchste Berg Hessens ist die Wasserkuppe in der Rhön mit rund 950 Metern.",0,"","Stimmt."],
+  ["Die Hessische Verfassung wurde 1946 von Kaiser Wilhelm II. unterzeichnet.",1,"zahl","Unmöglich: Kaiser Wilhelm II. dankte schon 1918 ab. Die hessische Verfassung wurde 1946 durch Volksabstimmung angenommen."]]},
+ {p:"Erkläre den Satz des Pythagoras.",s:[
+  ["In einem rechtwinkligen Dreieck gilt a² + b² = c².",0,"","Stimmt."],
+  ["Dabei ist c die Hypotenuse, die längste Seite.",0,"","Stimmt."],
+  ["Der Satz gilt für alle Dreiecke, nicht nur für rechtwinklige.",1,"sicher","Falsch: Der Satz gilt nur im rechtwinkligen Dreieck."],
+  ["Ein Dreieck mit 6 cm, 8 cm und 10 cm ist rechtwinklig, weil 36 + 64 = 100 ist.",0,"","Stimmt: 6² + 8² = 10²."],
+  ["Auch ein Dreieck mit 5 cm, 6 cm und 7 cm ist rechtwinklig, denn 25 + 36 = 61 passt fast zu 49.",1,"zus","Falsch: 61 ist nicht 49. Bei fast passt gilt der Satz nicht, das Dreieck ist nicht rechtwinklig."]]},
+ {p:"Was ist der Klimawandel?",s:[
+  ["Seit der Industrialisierung ist die globale Durchschnittstemperatur um etwa 1,1 bis 1,2 Grad gestiegen.",0,"","Stimmt."],
+  ["Hauptursache sind Treibhausgase wie CO₂ aus Kohle, Öl und Gas.",0,"","Stimmt."],
+  ["Das Pariser Klimaabkommen wurde 2005 beschlossen.",1,"zahl","Falsch: Es wurde 2015 beschlossen."],
+  ["Das Abkommen will die Erwärmung deutlich unter 2 Grad halten.",0,"","Stimmt."],
+  ["Laut dem „Weltklimarat-Bericht Eis und Zukunft“ von 2011 sind alle Alpengletscher bis 2020 verschwunden.",1,"quelle","Erfundener Bericht und falsche Behauptung: Die Gletscher schmelzen stark, sind aber nicht alle verschwunden."]]},
+ {p:"Was ist ein Sprachmodell?",s:[
+  ["Ein Sprachmodell berechnet, welches Wort mit hoher Wahrscheinlichkeit als nächstes passt.",0,"","Stimmt."],
+  ["Es wird mit sehr großen Mengen an Text trainiert.",0,"","Stimmt."],
+  ["Bei jeder Antwort schlägt es in einer Datenbank mit geprüften Fakten nach.",1,"zus","Falsch: Ein Sprachmodell erzeugt Text aus gelernten Wahrscheinlichkeiten. Eine Faktenprüfung findet nicht automatisch statt."],
+  ["Deshalb sind seine Antworten immer korrekt.",1,"sicher","Falsch: „immer“ ist ein Warnsignal. Sprachmodelle können überzeugend klingende Fehler machen."],
+  ["Solche erfundenen, aber glaubwürdig klingenden Antworten nennt man Halluzinationen.",0,"","Stimmt."]]},
+ {p:"Erzähle mir etwas über die Berliner Mauer.",s:[
+  ["Der Bau der Berliner Mauer begann am 13. August 1961.",0,"","Stimmt."],
+  ["Sie fiel am 9. November 1989.",0,"","Stimmt."],
+  ["Die Grenzanlagen um West-Berlin waren rund 155 Kilometer lang.",0,"","Stimmt: Etwa 155 km umschlossen West-Berlin, rund 43 km davon verliefen durch die Stadt."],
+  ["Kennedy sagte 1963 vor dem Brandenburger Tor „Ich bin ein Berliner“.",1,"zahl","Falsch: Die Rede hielt er vor dem Rathaus Schöneberg. Das Brandenburger Tor lag damals hinter der Mauer."],
+  ["Der Bau wurde vom westdeutschen Kanzler Konrad Adenauer angeordnet.",1,"zus","Falsch: Die Mauer baute die DDR. Adenauer war Kanzler der Bundesrepublik."]]},
+ {p:"Was sollte ich über Vitamin C wissen?",s:[
+  ["Vitamin C ist wasserlöslich.",0,"","Stimmt."],
+  ["Viel Vitamin C steckt zum Beispiel in Paprika, Zitrusfrüchten und Sanddorn.",0,"","Stimmt."],
+  ["Ein langer Mangel an Vitamin C kann zu Skorbut führen.",0,"","Stimmt."],
+  ["Vitamin C wird im Körper gespeichert, man muss es nur einmal im Monat zuführen.",1,"zus","Falsch: Wasserlösliche Vitamine werden kaum gespeichert, der Überschuss wird ausgeschieden."],
+  ["Laut einer WHO-Studie von 2017 verhindern 5 Gramm Vitamin C am Tag jede Erkältung.",1,"quelle","Erfunden: Eine solche Studie gibt es nicht, und „jede Erkältung“ ist eine übertriebene Behauptung."]]},
+ {p:"Welche Eigenschaften hat Holz als Werkstoff?",s:[
+  ["Holz ist ein nachwachsender Rohstoff.",0,"","Stimmt."],
+  ["Eiche und Buche zählen zu den Harthölzern, Fichte und Kiefer zu den Weichhölzern.",0,"","Stimmt."],
+  ["Beim Trocknen dehnt sich Holz aus.",1,"zus","Falsch: Holz schwindet beim Trocknen und quillt bei Feuchtigkeit."],
+  ["Entlang der Faser lässt sich Holz leichter spalten als quer dazu.",0,"","Stimmt."],
+  ["Balsaholz ist das härteste Holz der Welt.",1,"sicher","Falsch: Balsa gehört zu den leichtesten und weichsten Hölzern."]]}
+];
+
+var R=null;
+function tabs(n){$$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===n?"true":"false")});$("#p-play").hidden=n!=="play";$("#p-kit").hidden=n!=="kit"}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){tabs(b.dataset.tab)})});
+function bestLine(){var b=store("halluz-best");$("#bestLine").textContent=b!==null?"Bestes Ergebnis: "+b+" Prozent Treffer":""}
+function start(){
+  R={cases:shuffle(CASES).slice(0,6),i:0,hit:0,tot:0,done:false};
+  $("#sStart").hidden=true;$("#sEnd").hidden=true;$("#sPlay").hidden=false;show();
+}
+function show(){
+  var c=R.cases[R.i];R.done=false;R.flag={};
+  $("#pCase").textContent="Fall "+(R.i+1)+" von 6";$("#pScore").textContent=R.hit;$("#pBar").style.width=(R.i/6*100)+"%";
+  $("#pPrompt").textContent=c.p;$("#fb").innerHTML="";$("#chk").disabled=false;$("#chk").hidden=false;
+  var h="";c.s.forEach(function(s,i){h+='<li><button class="sen" data-i="'+i+'" aria-pressed="false"><span class="fl" aria-hidden="true">🚩</span><span>'+s[0]+'</span></button></li>'});
+  $("#ans").innerHTML=h;
+  $$("#ans .sen").forEach(function(b){b.addEventListener("click",function(){if(R.done)return;var i=+b.dataset.i;R.flag[i]=!R.flag[i];b.setAttribute("aria-pressed",R.flag[i]?"true":"false")})});
+}
+$("#chk").addEventListener("click",function(){
+  if(R.done)return;R.done=true;var c=R.cases[R.i],hit=0,miss=[],fp=0,fn=0;
+  $$("#ans .sen").forEach(function(b,i){
+    var s=c.s[i],flagged=!!R.flag[i],bad=!!s[1],right=flagged===bad;if(right)hit++;else if(flagged)fp++;else fn++;
+    b.disabled=true;b.classList.remove("good","bad");b.classList.add(bad?"bad":"good");
+    var tag=bad?'<span class="tag">'+T[s[2]]+'</span>':'<span class="tag okt">Stimmt</span>';
+    var mark=right?"":(flagged?" (zu Unrecht markiert)":" (übersehen)");
+    b.querySelector("span:last-child").innerHTML=s[0]+'<div class="why">'+tag+(s[3]==="Stimmt."?"":s[3])+'<b>'+mark+'</b></div>';
+  });
+  R.hit+=hit;R.tot+=c.s.length;$("#pScore").textContent=R.hit;
+  var all=hit===c.s.length,last=R.i===5;
+  $("#fb").innerHTML='<div class="fb '+(all?"ok":"no")+'"><h3>'+(all?"Perfekt ermittelt!":hit+" von "+c.s.length+" Sätzen richtig eingeschätzt")+'</h3>'+
+   (fn>0?'<p>Übersehen: '+fn+' erfundene'+(fn>1?" Sätze":"r Satz")+'.</p>':'')+(fp>0?'<p>Zu Unrecht verdächtigt: '+fp+(fp>1?" Sätze":" Satz")+'. Auch richtige Aussagen sind in KI-Antworten.</p>':'')+
+   '<div class="row" style="margin-top:10px"><button class="btn primary" id="nx">'+(last?"Ergebnis ansehen":"Nächster Fall")+'</button></div></div>';
+  $("#chk").hidden=true;
+  $("#nx").addEventListener("click",function(){R.i++;if(R.i>=6)end();else{show();window.scrollTo({top:0,behavior:"smooth"})}});
+});
+function end(){
+  $("#sPlay").hidden=true;$("#sEnd").hidden=false;
+  var pct=Math.round(R.hit/R.tot*100),prev=store("halluz-best"),rec=prev===null||pct>+prev;if(rec)store("halluz-best",String(pct));
+  var st=pct>=90?3:pct>=75?2:pct>=55?1:0;
+  $("#eStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#eTitle").textContent=pct+" Prozent Treffer ("+R.hit+" von "+R.tot+" Sätzen)";
+  $("#eText").textContent=(st===3?"Scharfer Blick! Dir macht so schnell keine KI etwas vor.":st===2?"Gut. Bei Zahlen, Quellen und Wörtern wie „immer“ solltest du noch genauer hinschauen.":"Halluzinationen sind schwer zu erkennen, weil sie so überzeugend klingen. Im Prüf-Werkzeug findest du einen Plan.")+(rec?" Neuer Bestwert!":"");
+  bestLine();
+}
+$("#go").addEventListener("click",start);
+$("#pQuit").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false});
+$("#eAgain").addEventListener("click",start);
+$("#eKit").addEventListener("click",function(){tabs("kit")});
+bestLine();
+window.__hd={CASES:CASES,start:start,R:function(){return R}};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Halluzinations-Detektiv", text: "<p>KI-Antworten klingen oft glaubwürdig, auch wenn sie erfunden sind. Du lernst, sie zu entlarven.</p>" },
+  { sel: "#tabs", title: "Zwei Bereiche", text: "<ul><li><b>Fälle lösen:</b> Sechs KI-Antworten prüfen</li><li><b>Prüf-Werkzeug:</b> Typische Fehler und ein Prüf-Plan</li></ul>" },
+  { title: "So geht ein Fall", text: "<p>Tippe Sätze an, die du für erfunden oder falsch hältst (🚩). Dann auf „Prüfen“. Du siehst für jeden Satz die Erklärung.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
