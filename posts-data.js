@@ -325,15 +325,15 @@ const posts = [
    },
    {
     title: "Parabel-Werkstatt",
-    excerpt: "Quadratische Funktionen in Normal-, Scheitelpunkt- oder Nullstellenform eingeben und Graph sowie Wertetabelle direkt nebeneinander vergleichen.",
+    excerpt: "Beliebige Funktionen eintippen und zeichnen, Parabeln untersuchen sowie quadratische Gleichungen rechnerisch und grafisch lösen – mit Schiebereglern, Wertetabelle und Übungen.",
     date: "2026-09-20",
     category: "schule",
     subcategory: "mathematik",
     url: "parabel-werkstatt.html",
     emoji: "📈",
-    tags: ["tool", "funktionen", "einzelarbeit", "jg9", "jg10"],
+    tags: ["tool", "funktionen", "gleichungen", "einzelarbeit", "jg9", "jg10"],
     titleEn: "Parabola Workshop",
-    excerptEn: "Enter quadratic functions in standard, vertex or intercept form and compare the graph and value table side by side."
+    excerptEn: "Plot any function you type, explore parabolas and solve quadratic equations by calculation and graph – with sliders, value table and practice tasks."
    },
    {
     title: "Mathe-Fußball",
