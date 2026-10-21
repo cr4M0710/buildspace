@@ -1021,4 +1021,16 @@ const posts = [
     titleEn: "Pythagoras Workshop",
     excerptEn: "Discover and practise the Pythagorean theorem: compare squares on the sides with sliders, watch the rearrangement proof as an animation, calculate any side with step-by-step working, and train on three levels (basic, advanced, expert) from the hypotenuse to space diagonals."
    },
+   {
+    title: "Körper-Werkstatt",
+    excerpt: "Würfel, Quader, Prisma, Zylinder, Pyramide, Kegel und Kugel erkunden: Körper per Fingerwisch drehen, Netze ansehen, Volumen und Oberfläche mit Rechenweg bestimmen, mit dem Faktor k vergrößern (Länge ×k, Fläche ×k², Volumen ×k³) und auf drei Niveaus trainieren.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "koerper-werkstatt.html",
+    emoji: "🧊",
+    tags: ["tool", "spiel", "geometrie", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "Solids Workshop",
+    excerptEn: "Explore cube, cuboid, prism, cylinder, pyramid, cone and sphere: rotate solids with a swipe, view their nets, calculate volume and surface area with step-by-step working, scale them by a factor k (length ×k, area ×k², volume ×k³) and train on three levels."
+   },
 ];
