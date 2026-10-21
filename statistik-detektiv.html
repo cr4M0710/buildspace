@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Statistik-Detektiv</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#eeeef6; --grid:rgba(29,27,58,.05); --ink:#1d1b3a; --muted:#57567a; --line:#cfcfe4; --card:#fcfcff;
+  --amber:#f0a30a; --teal:#0f9a9a; --red:#c23b3b; --blue:#3b63c9; --violet:#7a4bd1;
+  --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#3b63c9;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13122a; --grid:rgba(190,190,255,.05); --ink:#ecebff; --muted:#a9a8cf; --line:#34335a; --card:#1c1b3a;
+    --amber:#ffbf3d; --teal:#45d0d0; --red:#ff8c8c; --blue:#7fa2ff; --violet:#b592ff;
+    --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --focus:#8cb0ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13122a; --grid:rgba(190,190,255,.05); --ink:#ecebff; --muted:#a9a8cf; --line:#34335a; --card:#1c1b3a;
+  --amber:#ffbf3d; --teal:#45d0d0; --red:#ff8c8c; --blue:#7fa2ff; --violet:#b592ff;
+  --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --focus:#8cb0ff;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:1060px;margin:0 auto;padding:20px 16px 60px}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.logo{width:64px;height:64px;flex:none}
+header.top h1{font-size:clamp(30px,6vw,46px)}
+header.top p{color:var(--muted);max-width:38em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px;display:inline-flex;align-items:center;gap:8px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:18px;padding:18px 20px;box-shadow:5px 5px 0 var(--ink)}
+.card+.card{margin-top:22px}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+svg.fig{width:100%;height:auto;display:block;overflow:visible}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--amber);color:#1d1b3a}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--violet);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:8px 14px;font-size:16px}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.note{margin-top:12px;padding:10px 14px;border-left:6px solid var(--amber);background:var(--bg);border-radius:6px;font-size:16.5px}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.qtop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.bar>i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.news{font-family:var(--head);font-size:clamp(22px,3.6vw,30px);font-weight:800;padding:12px 16px;border:3px solid var(--ink);border-radius:12px;background:var(--bg);margin:6px 0 14px;position:relative}
+.news small{display:block;font-family:var(--body);font-weight:400;font-size:15px;color:var(--muted);margin-top:2px}
+.news::before{content:"SCHLAGZEILE";position:absolute;top:-11px;left:14px;background:var(--amber);color:#1d1b3a;font-family:var(--body);font-size:12px;font-weight:800;letter-spacing:.1em;padding:1px 8px;border-radius:6px}
+.chartbox{background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chartbox{background:#232248}}
+:root[data-theme="dark"] .chartbox{background:#232248}
+.chartbox .tag{display:inline-block;font-size:14px;font-weight:700;color:var(--muted);margin:2px 6px}
+.chartbox .tag.fair{color:var(--ok)}
+.gl{stroke:var(--line);stroke-width:1.2}
+.ax{stroke:var(--ink);stroke-width:2}
+.tl{font-family:var(--body);font-size:14px;fill:var(--muted)}
+.cl{font-family:var(--body);font-size:15px;fill:var(--ink);text-anchor:middle}
+.vl{font-family:var(--head);font-size:16px;font-weight:800;fill:var(--ink);text-anchor:middle}
+.ct{font-family:var(--body);font-size:14px;fill:var(--muted)}
+.b1{fill:var(--blue)} .b2{fill:var(--amber)} .b3{fill:var(--teal)} .b4{fill:var(--violet)}
+.ln1{fill:none;stroke:var(--blue);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.ln2{fill:none;stroke:var(--amber);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.pt1{fill:var(--blue)} .pt2{fill:var(--amber)}
+.shade{fill:var(--amber);fill-opacity:.2}
+.opts{display:grid;gap:10px;margin-top:14px}
+.opt{padding:13px 16px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-family:var(--head);font-size:20px;font-weight:700;min-height:52px}
+.opt:hover:not(:disabled){background:var(--amber);color:#1d1b3a}
+.opt.right{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.opts.two-col{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.fb{margin-top:16px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:24px;margin-bottom:6px}
+.fb p+p{margin-top:8px}
+.answer{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.answer input[type=text]{width:170px;padding:11px 12px;border:2.5px solid var(--ink);border-radius:12px;background:var(--bg);font-size:22px;min-height:52px}
+.q-text{font-size:21px;line-height:1.55}
+.steps{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.steps li{padding:8px 12px;background:var(--bg);border-radius:10px;font-family:var(--head);font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.steps li.res{background:var(--ok-bg);color:var(--ok)}
+.err{padding:10px 14px;border-radius:10px;background:var(--bad-bg);color:var(--bad);font-weight:700;margin-top:12px}
+.bonus{margin-top:14px;padding:12px 14px;border:2.5px dashed var(--violet);border-radius:14px}
+.bonus h4{margin:0 0 4px;font-family:var(--head);font-size:19px;color:var(--violet)}
+.lvl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:12px 0}
+.lvl button{text-align:left;padding:16px;border:2.5px solid var(--ink);border-radius:16px;background:var(--card);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:120px}
+.lvl button:hover{background:var(--amber);color:#1d1b3a}
+.lvl .t{font-family:var(--head);font-size:26px;font-weight:800}
+.lvl .d{font-size:16px;opacity:.85}
+.lvl .best{margin-top:auto;font-size:15px;font-weight:700}
+.stars{font-size:46px;letter-spacing:6px}
+/* Kennwerte-Labor */
+.dots-svg{touch-action:manipulation;cursor:crosshair;background:#fff;border:2px solid var(--line);border-radius:14px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dots-svg{background:#232248}}
+:root[data-theme="dark"] .dots-svg{background:#232248}
+.dot{fill:var(--blue);stroke:var(--card);stroke-width:2}
+.mean-l{stroke:var(--amber);stroke-width:3;stroke-dasharray:7 5}
+.med-l{stroke:var(--teal);stroke-width:3}
+.mlabel{font-family:var(--head);font-weight:800;font-size:19px;paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+.box{fill:var(--violet);fill-opacity:.25;stroke:var(--violet);stroke-width:2.5}
+.wh{stroke:var(--violet);stroke-width:2.5}
+table.kv{width:100%;border-collapse:collapse;margin-top:10px;font-size:18px}
+table.kv th,table.kv td{padding:7px 10px;border-bottom:2px solid var(--line);text-align:left}
+table.kv td{text-align:right;font-family:var(--head);font-weight:800}
+table.kv td.m{color:var(--amber)} table.kv td.d{color:var(--teal)}
+.mission{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mission li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:2.5px solid var(--line);border-radius:12px;background:var(--bg)}
+.mission li .ck{flex:none;width:28px;height:28px;border-radius:50%;border:2.5px solid var(--ink);display:grid;place-items:center;font-weight:800;margin-top:1px}
+.mission li.done{border-color:var(--ok);background:var(--ok-bg)}
+.mission li.done .ck{background:var(--ok);border-color:var(--ok);color:#fff}
+details summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center}
+@media (max-width:640px){.tk1{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Statistik-Detektiv – buildspace">
+<meta property="og:description" content="Diagramme kritisch lesen und Kennwerte entdecken: Im Diagramm-Check entlarvst du sechs Fälle mit Schlagzeile (abgeschnittene Achse, gewählter Zeitraum,…">
+<meta property="og:url" content="https://buildspaceos.de/statistik-detektiv.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/statistik-detektiv.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Statistik-Detektiv – buildspace">
+<meta name="twitter:description" content="Diagramme kritisch lesen und Kennwerte entdecken: Im Diagramm-Check entlarvst du sechs Fälle mit Schlagzeile (abgeschnittene Achse, gewählter Zeitraum,…">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/statistik-detektiv.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="4" y="4" width="56" height="56" rx="12" fill="var(--ink)"/>
+      <rect x="13" y="34" width="9" height="16" rx="2" fill="#7fa2ff"/>
+      <rect x="25" y="26" width="9" height="24" rx="2" fill="#ffbf3d"/>
+      <rect x="37" y="30" width="9" height="20" rx="2" fill="#45d0d0"/>
+      <circle cx="40" cy="22" r="9" fill="none" stroke="#fff" stroke-width="3.5"/>
+      <line x1="46.5" y1="28.5" x2="54" y2="36" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1>Statistik-Detektiv</h1>
+      <p>Entlarve Tricks in Diagrammen, entdecke Mittelwert, Median und Boxplot und trainiere auf drei Niveaus.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="check" aria-selected="true">🕵️ Diagramm-Check</button>
+    <button class="tab" role="tab" data-tab="lab" aria-selected="false">📊 Kennwerte-Labor</button>
+    <button class="tab" role="tab" data-tab="train" aria-selected="false">🎯 Training</button>
+  </nav>
+
+  <!-- DIAGRAMM-CHECK -->
+  <section class="panel" id="p-check">
+    <div class="card" id="cStart">
+      <h2>Diagramm-Check</h2>
+      <p class="muted" style="margin-top:6px">Auf Werbung, in Zeitungen und in sozialen Netzwerken sehen Diagramme oft dramatischer aus, als die Zahlen sind. In jedem Fall hast du eine Schlagzeile und ein Diagramm. Finde heraus, ob und welcher Trick darin steckt, und sieh dir danach die faire Version an.</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="cGo">Ermittlung starten (6 Fälle)</button></div>
+      <p class="muted" id="cBest" style="margin-top:10px;font-size:16px"></p>
+    </div>
+    <div class="card" id="cPlay" hidden>
+      <div class="qtop"><span class="pill" id="cNo"></span><button class="btn small" id="cQuit">Abbrechen</button></div>
+      <div class="bar"><i id="cBar"></i></div>
+      <div class="news" id="cNews"></div>
+      <div class="chartbox"><span class="tag" id="cTag">So wurde das Diagramm gezeigt</span><svg class="fig" id="cSvg" viewBox="0 0 520 320" role="img" aria-label="Diagramm"></svg></div>
+      <div class="row" style="margin-top:10px"><button class="btn small" id="cHint">💡 Tipp</button></div>
+      <div id="cHintBox"></div>
+      <p style="margin-top:12px;font-weight:700">Welcher Trick steckt im Diagramm?</p>
+      <div class="opts two-col" id="cOpts"></div>
+      <div id="cFb" aria-live="polite"></div>
+    </div>
+    <div class="card" id="cEnd" hidden>
+      <div style="text-align:center">
+        <div class="stars" id="cStars" aria-hidden="true"></div>
+        <h2 id="cTitle" style="margin-top:6px"></h2>
+        <p id="cText" class="muted" style="margin-top:8px"></p>
+        <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="cAgain">Neue Fälle</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KENNWERTE-LABOR -->
+  <section class="panel" id="p-lab" hidden>
+    <div class="card">
+      <h2>Punkte setzen, Kennwerte sehen</h2>
+      <p class="muted" style="margin-top:4px">Tippe auf die Zahlengerade, um einen Punkt zu setzen. Mittelwert, Median und Boxplot ändern sich sofort.</p>
+      <div class="row" style="margin:12px 0">
+        <button class="btn small" id="mAdd" aria-pressed="true">➕ Punkt setzen</button>
+        <button class="btn small" id="mDel" aria-pressed="false">➖ Punkt entfernen</button>
+        <button class="btn small" id="mP1">Test-Punkte</button>
+        <button class="btn small" id="mP2">Taschengeld</button>
+        <button class="btn small" id="mRnd">🎲 Zufall</button>
+        <button class="btn small" id="mClr">Leeren</button>
+      </div>
+      <svg class="fig dots-svg" id="dotSvg" viewBox="0 0 640 390" role="img" aria-label="Punktdiagramm auf einer Zahlengerade von 0 bis 20 mit Boxplot"></svg>
+      <p class="muted" id="mName" style="font-size:16px;margin-top:6px"></p>
+      <div class="two" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+        <table class="kv" id="kv" style="margin-top:0"></table>
+        <div class="note" id="mNote" style="margin-top:0;align-self:start"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Aufträge</h2>
+      <p class="muted" style="margin-top:4px">Kannst du die Punkte so setzen, dass die Bedingung erfüllt ist? Die Haken erscheinen live.</p>
+      <ul class="mission" id="mission"></ul>
+    </div>
+  </section>
+
+  <!-- TRAINING -->
+  <section class="panel" id="p-train" hidden>
+    <div class="card" id="tStart">
+      <h2>Training</h2>
+      <p class="muted" style="margin-top:6px">Zehn Aufgaben pro Runde mit Rechenweg. Dezimalzahlen mit Komma eingeben. Dein bestes Ergebnis wird auf diesem Gerät gespeichert.</p>
+      <div class="lvl" id="lvlBox"></div>
+    </div>
+    <div class="card" id="tPlay" hidden>
+      <div class="qtop"><span class="pill" id="tLvl"></span><b id="tCount"></b><button class="btn" id="tQuit">Abbrechen</button></div>
+      <div class="bar"><i id="tBar"></i></div>
+      <div class="two" id="qWrap">
+        <div>
+          <p class="q-text" id="qText"></p>
+          <div id="qInput"></div>
+          <div id="qHintBox"></div>
+          <div id="qFb" aria-live="polite"></div>
+        </div>
+        <svg class="fig" id="qFig" viewBox="0 0 400 150" role="img" aria-label="Skizze zur Aufgabe"></svg>
+      </div>
+    </div>
+    <div class="card" id="tEnd" hidden>
+      <div style="text-align:center">
+        <div class="stars" id="eStars" aria-hidden="true"></div>
+        <h2 id="eTitle" style="margin-top:6px"></h2>
+        <p id="eText" class="muted" style="margin-top:8px"></p>
+        <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="eAgain">Nochmal</button><button class="btn" id="eMenu">Anderes Niveau</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function fmt(x,d){d=d==null?2:d;var m=Math.pow(10,d);return (Math.round(x*m)/m).toLocaleString("de-DE",{maximumFractionDigits:d})}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1))}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function parseNum(s){if(s==null)return NaN;s=String(s).trim().replace(",",".");if(!/^-?\d*\.?\d+$/.test(s))return NaN;return parseFloat(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+/* ---------- Tabs ---------- */
+function showTab(name){
+  $$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===name?"true":"false")});
+  ["check","lab","train"].forEach(function(n){$("#p-"+n).hidden=(n!==name)});
+}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
+
+/* =====================================================
+   Kennwerte
+   ===================================================== */
+function med(arr){var m=arr.length;if(!m)return NaN;return m%2?arr[(m-1)/2]:(arr[m/2-1]+arr[m/2])/2}
+function stats(d){
+  var a=d.slice().sort(function(x,y){return x-y}),n=a.length;
+  if(!n)return null;
+  var sum=a.reduce(function(s,x){return s+x},0);
+  var lo=a.slice(0,Math.floor(n/2)),hi=a.slice(Math.ceil(n/2));
+  var q1=lo.length?med(lo):a[0],q3=hi.length?med(hi):a[n-1];
+  var cnt={},mx=0;a.forEach(function(x){cnt[x]=(cnt[x]||0)+1;if(cnt[x]>mx)mx=cnt[x]});
+  var modes=mx>1?Object.keys(cnt).filter(function(k){return cnt[k]===mx}).map(Number).sort(function(x,y){return x-y}):[];
+  return {n:n,a:a,sum:sum,mean:sum/n,median:med(a),min:a[0],max:a[n-1],range:a[n-1]-a[0],q1:q1,q3:q3,iqr:q3-q1,modes:modes};
+}
+
+/* =====================================================
+   DIAGRAMM-CHECK
+   ===================================================== */
+var CW=520,CH=320,ML=58,MR=22,MT=28,MB=46;
+function niceTicks(min,max,target){
+  var span=max-min,raw=span/(target||5),pow=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/pow,step;
+  step=f<1.5?1:f<3?2:f<7?5:10;step*=pow;
+  var out=[],t=Math.ceil(min/step-1e-9)*step;
+  for(;t<=max+1e-9;t+=step)out.push(Math.round(t*1e6)/1e6);
+  return out;
+}
+function frame(ticks,Y,ylabel){
+  var s="";
+  ticks.forEach(function(t){var y=Y(t).toFixed(1);s+='<line class="gl" x1="'+ML+'" x2="'+(CW-MR)+'" y1="'+y+'" y2="'+y+'"/><text class="tl" x="'+(ML-8)+'" y="'+(parseFloat(y)+4.5)+'" text-anchor="end">'+fmt(t,t%1?1:0)+'</text>'});
+  s+='<line class="ax" x1="'+ML+'" x2="'+ML+'" y1="'+MT+'" y2="'+(CH-MB)+'"/><line class="ax" x1="'+ML+'" x2="'+(CW-MR)+'" y1="'+(CH-MB)+'" y2="'+(CH-MB)+'"/>';
+  if(ylabel)s+='<text class="ct" x="'+ML+'" y="'+(MT-10)+'" text-anchor="start">'+esc(ylabel)+'</text>';
+  return s;
+}
+function barChart(o){
+  var iw=CW-ML-MR,ih=CH-MB-MT,n=o.cats.length,slot=iw/n,bw=slot*0.58;
+  var map=o.map||function(v){return (v-o.ymin)/(o.ymax-o.ymin)};
+  var Y=function(v){return MT+(1-map(v))*ih};
+  var s=frame(o.ticks,Y,o.ylabel),base=CH-MB;
+  o.vals.forEach(function(v,i){
+    var x=ML+slot*i+(slot-bw)/2,y=Y(v);
+    s+='<rect class="'+(o.cls||"b1")+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,base-y).toFixed(1)+'" rx="3"/>';
+    s+='<text class="vl" x="'+(x+bw/2).toFixed(1)+'" y="'+(y-6).toFixed(1)+'">'+fmt(v,v%1?1:0)+'</text>';
+    s+='<text class="cl" x="'+(x+bw/2).toFixed(1)+'" y="'+(CH-MB+22)+'">'+esc(o.cats[i])+'</text>';
+  });
+  return s;
+}
+function lineChart(o){
+  var iw=CW-ML-MR,ih=CH-MB-MT,n=o.labels.length;
+  var Y=function(v){return MT+(1-(v-o.ymin)/(o.ymax-o.ymin))*ih};
+  var X=function(i){return ML+(n>1?i/(n-1):0.5)*iw};
+  var s="";
+  if(o.shade){s+='<rect class="shade" x="'+X(o.shade[0]).toFixed(1)+'" y="'+MT+'" width="'+(X(o.shade[1])-X(o.shade[0])).toFixed(1)+'" height="'+ih+'"/>'}
+  s+=frame(o.ticks,Y,o.ylabel);
+  var every=o.every||1;
+  o.labels.forEach(function(l,i){if(i%every===0||i===n-1)s+='<text class="cl" x="'+X(i).toFixed(1)+'" y="'+(CH-MB+20)+'" style="font-size:12.5px">'+esc(l)+'</text>'});
+  var pts=o.vals.map(function(v,i){return X(i).toFixed(1)+","+Y(v).toFixed(1)}).join(" ");
+  s+='<polyline class="ln1" points="'+pts+'"/>';
+  if(n<=12)o.vals.forEach(function(v,i){s+='<circle class="pt1" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="4.5"/>'});
+  if(o.shade)s+='<text class="ct" x="'+((X(o.shade[0])+X(o.shade[1]))/2).toFixed(1)+'" y="'+(MT+16)+'" text-anchor="middle">gezeigter Ausschnitt</text>';
+  return s;
+}
+function dualChart(o){
+  /* o.a, o.b: {vals,min,max,ticks,name}; zwei y-Achsen */
+  var iw=CW-ML-MR-26,ih=CH-MB-MT,n=o.labels.length;
+  var X=function(i){return ML+i/(n-1)*iw};
+  var YA=function(v){return MT+(1-(v-o.a.min)/(o.a.max-o.a.min))*ih};
+  var YB=function(v){return MT+(1-(v-o.b.min)/(o.b.max-o.b.min))*ih};
+  var s="";
+  o.a.ticks.forEach(function(t){var y=YA(t);s+='<line class="gl" x1="'+ML+'" x2="'+(ML+iw)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="tl" x="'+(ML-8)+'" y="'+(y+4.5).toFixed(1)+'" text-anchor="end" style="fill:var(--blue)">'+fmt(t,0)+'</text>'});
+  o.b.ticks.forEach(function(t){var y=YB(t);s+='<text class="tl" x="'+(ML+iw+8)+'" y="'+(y+4.5).toFixed(1)+'" text-anchor="start" style="fill:var(--amber)">'+fmt(t,0)+'</text>'});
+  s+='<line class="ax" x1="'+ML+'" x2="'+ML+'" y1="'+MT+'" y2="'+(CH-MB)+'"/><line class="ax" x1="'+ML+'" x2="'+(ML+iw)+'" y1="'+(CH-MB)+'" y2="'+(CH-MB)+'"/><line class="ax" x1="'+(ML+iw)+'" x2="'+(ML+iw)+'" y1="'+MT+'" y2="'+(CH-MB)+'"/>';
+  o.labels.forEach(function(l,i){s+='<text class="cl" x="'+X(i).toFixed(1)+'" y="'+(CH-MB+20)+'" style="font-size:13px">'+esc(l)+'</text>'});
+  s+='<polyline class="ln1" points="'+o.a.vals.map(function(v,i){return X(i).toFixed(1)+","+YA(v).toFixed(1)}).join(" ")+'"/>';
+  s+='<polyline class="ln2" points="'+o.b.vals.map(function(v,i){return X(i).toFixed(1)+","+YB(v).toFixed(1)}).join(" ")+'"/>';
+  s+='<text class="ct" x="'+ML+'" y="'+(MT-12)+'" style="fill:var(--blue)" text-anchor="start">● '+esc(o.a.name)+'  (linke Achse)</text><text class="ct" x="'+(ML+iw)+'" y="'+(MT-12)+'" style="fill:var(--amber)" text-anchor="end">● '+esc(o.b.name)+'  (rechte Achse)</text>';
+  return s;
+}
+function bubbleChart(o){
+  var n=o.cats.length,maxv=Math.max.apply(null,o.vals),maxR=Math.min(104,(CW-40)/n/2-8),s="",cy=CH/2-8;
+  o.vals.forEach(function(v,i){
+    var cx=(CW/n)*(i+0.5),r=o.mode==="diameter"?maxR*v/maxv:maxR*Math.sqrt(v/maxv);
+    s+='<circle class="'+["b1","b2","b3","b4"][i%4]+'" cx="'+cx.toFixed(1)+'" cy="'+cy+'" r="'+r.toFixed(1)+'" fill-opacity=".85"/>';
+    s+='<text class="vl" x="'+cx.toFixed(1)+'" y="'+(cy+5)+'" style="fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:3px">'+fmt(v,v%1?1:0)+' '+esc(o.unit||"")+'</text>';
+    s+='<text class="cl" x="'+cx.toFixed(1)+'" y="'+(CH-24)+'">'+esc(o.cats[i])+'</text>';
+  });
+  s+='<text class="ct" x="'+CW/2+'" y="20" text-anchor="middle">'+(o.mode==="diameter"?"Durchmesser der Kreise ∝ Wert":"Fläche der Kreise ∝ Wert")+'</text>';
+  return s;
+}
+
+/* ----- Fälle ----- */
+var TRICKS={
+  cut:"Die y-Achse beginnt nicht bei 0",
+  period:"Es wird nur ein günstiger Zeitraum gezeigt",
+  area:"Die Kreise vergleichen Durchmesser statt Flächen",
+  scale:"Die Skala ist ungleichmäßig eingeteilt",
+  dual:"Zwei verschiedene y-Achsen",
+  ok:"Kein Trick: Das Diagramm ist fair"
+};
+var TRICK_ORDER=["cut","period","area","scale","dual","ok"];
+var HINTS={
+  cut:"Schau dir die Zahlen an der y-Achse genau an. Wo beginnt sie?",
+  period:"Wie viele Monate sind im Diagramm zu sehen? Was könnte vorher passiert sein?",
+  area:"Wenn ein Kreis doppelt so breit ist, wie viel mehr Fläche hat er dann?",
+  scale:"Vergleiche die Abstände zwischen den Zahlen an der y-Achse. Sind sie gleich groß?",
+  dual:"Wie viele y-Achsen gibt es? Bei welchen Werten beginnen und enden sie?",
+  ok:"Prüfe alle Achsen und die Art der Darstellung. Manchmal ist ein Diagramm einfach in Ordnung."
+};
+function mkCut(){
+  var base=ri(4,9)*50,steps=[ri(5,10),ri(5,10),ri(5,10)],v=[base];
+  steps.forEach(function(s){v.push(v[v.length-1]+s)});
+  var first=v[0],last=v[3],ymin=Math.floor((first-8)/10)*10,ymax=Math.ceil((last+6)/10)*10;
+  var ctx=pick([["Verkaufte Brötchen pro Woche","Schul-Cafeteria","Brötchen","Verkauf EXPLODIERT: Cafeteria meldet Rekordwoche!"],["Besucher im Schwimmbad pro Monat","Freibad","Besucher","Freibad-Boom: Besucherzahlen schießen in die Höhe!"],["Verkaufte Bücher pro Woche","Schulbibliothek","Ausleihen","Lesewut an der Schule: Ausleihen steigen steil an!"]]);
+  var cats=["Woche 1","Woche 2","Woche 3","Woche 4"];
+  if(ctx[0].indexOf("Monat")>-1)cats=["Mai","Juni","Juli","Aug."];
+  var pct=(last-first)/first*100;
+  function chart(from0){var yo=from0?0:ymin,yx=from0?Math.ceil(last*1.15/50)*50:ymax;return barChart({cats:cats,vals:v,ymin:yo,ymax:yx,ticks:niceTicks(yo,yx,5),ylabel:ctx[0]})}
+  return {id:"cut",headline:ctx[3],sub:ctx[1],chart:function(){return chart(false)},fair:function(){return chart(true)},
+    explain:"Die y-Achse beginnt erst bei "+ymin+" statt bei 0. Dadurch sieht der letzte Balken mehrfach so hoch aus wie der erste, obwohl er nur wenig größer ist. Mit einer Achse ab 0 sind die Balken fast gleich hoch.",
+    follow:{q:"Zusatzfrage: Um wie viel Prozent ist der Wert von "+first+" auf "+last+" gestiegen? (auf eine Nachkommastelle)",unit:"%",ans:Math.round(pct*10)/10,tol:0.06,
+      steps:["Zunahme: "+last+" − "+first+" = "+(last-first),"Anteil: "+(last-first)+" : "+first+" ≈ "+fmt(pct/100,4),"Prozent: ≈ "+fmt(pct,1)+" %"]}};
+}
+function mkPeriod(){
+  var vals=[],i,noise=[0.6,-0.5,0.8,-0.7,0.4,-0.9,0.7,-0.3,0.5,-0.6,0.9,-0.4,0.3,-0.8,0.6,-0.2,0.7,-0.5,0.2,-0.7,0.4,-0.3,0.6,-0.4];
+  var start=ri(60,70),drop=0.45+Math.random()*0.15;
+  for(i=0;i<19;i++)vals.push(Math.round((start-drop*i+noise[i])*10)/10);
+  var last=vals[18];
+  for(i=19;i<24;i++)vals.push(Math.round((last+(i-18)*1.1+noise[i]*0.3)*10)/10);
+  var labels=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez","Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+  var ctx=pick([["Mitglieder im Sportverein (in Hundert)","Vereinsnachrichten","Verein im Aufwind: Mitgliederzahl steigt kräftig!"],["Verkaufte Tickets pro Monat (in Hundert)","Kino","Kino-Trend: Ticketverkäufe wachsen und wachsen!"]]);
+  var vmin=Math.min.apply(null,vals),vmax=Math.max.apply(null,vals);
+  var shown=vals.slice(19-0,24-0+0).length?vals.slice(19,24):vals.slice(-5);
+  var shownLabels=labels.slice(19,24);
+  var s0=vals.slice(19,24),smin=Math.min.apply(null,s0),smax=Math.max.apply(null,s0);
+  var ymin=Math.floor(vmin-2),ymax=Math.ceil(vmax+2);
+  return {id:"period",headline:ctx[2],sub:ctx[1],
+    chart:function(){var lo=Math.floor(smin-1),hi=Math.ceil(smax+1);return lineChart({labels:shownLabels,vals:s0,ymin:lo,ymax:hi,ticks:niceTicks(lo,hi,5),ylabel:ctx[0]})},
+    fair:function(){return lineChart({labels:labels,vals:vals,ymin:ymin,ymax:ymax,ticks:niceTicks(ymin,ymax,5),ylabel:ctx[0],every:3,shade:[19,23]})},
+    explain:"Gezeigt werden nur die letzten 5 von 24 Monaten. In diesem Ausschnitt steigt die Kurve, aber im ganzen Zeitraum sinkt der Wert deutlich von etwa "+fmt(vals[0],0)+" auf "+fmt(vals[18],0)+" und erholt sich zuletzt nur ein wenig. Wer den Zeitraum auswählt, bestimmt die Geschichte.",
+    follow:null};
+}
+function mkArea(){
+  var f=pick([2,3]),base=pick([10,12,15,20]),vals=[base,base*f],cats=pick([["Anbieter A","Anbieter B"],["Schule A","Schule B"],["Laden A","Laden B"]]);
+  var ctx=pick([["Euro im Monat","€","Handy-Tarife: Anbieter B ist VIEL teurer!"],["Schüler","","Schule B ist riesig im Vergleich zu Schule A!"]]);
+  var unit=ctx[1];
+  if(ctx[0]==="Schüler"){vals=[base*40,base*40*f]}
+  return {id:"area",headline:ctx[2],sub:"Vergleich der Werte",
+    chart:function(){return bubbleChart({cats:cats,vals:vals,mode:"diameter",unit:unit})},
+    fair:function(){return bubbleChart({cats:cats,vals:vals,mode:"area",unit:unit})},
+    explain:"Der Wert von "+cats[1]+" ist "+f+"-mal so groß wie der von "+cats[0]+". Im Bild ist aber der Durchmesser "+f+"-mal so groß. Die Fläche wächst mit dem Quadrat und ist dann "+(f*f)+"-mal so groß. Das Auge vergleicht Flächen, deshalb wirkt der Unterschied viel größer.",
+    follow:{q:"Zusatzfrage: Wie viel mal so groß ist die Fläche des großen Kreises im Vergleich zum kleinen, wenn der Durchmesser "+f+"-mal so groß ist?",unit:"mal",ans:f*f,tol:0.001,steps:["Durchmesser ×"+f+" bedeutet Radius ×"+f,"Fläche = π · r², also ×"+f+"² = "+(f*f)]}};
+}
+function mkScale(){
+  var vals=[10,20,50,100],cats=["5a","5b","5c","5d"],ticks=[0,10,20,50,100];
+  var pm=function(v){for(var i=0;i<ticks.length-1;i++){if(v<=ticks[i+1])return (i+(v-ticks[i])/(ticks[i+1]-ticks[i]))/(ticks.length-1)}return 1};
+  var ctx=pick([["Gesammelte Euro beim Spendenlauf","Spendenlauf","Spendenlauf: Klassen steigern sich gleichmäßig Stufe um Stufe!"],["Punkte im Klassenwettbewerb","Wettbewerb","Wettbewerb: Alle Klassen verbessern sich in gleichen Schritten!"]]);
+  return {id:"scale",headline:ctx[2],sub:ctx[1],
+    chart:function(){return barChart({cats:cats,vals:vals,map:pm,ticks:ticks,ylabel:ctx[0]})},
+    fair:function(){return barChart({cats:cats,vals:vals,ymin:0,ymax:100,ticks:[0,20,40,60,80,100],ylabel:ctx[0]})},
+    explain:"An der y-Achse stehen die Zahlen 0, 10, 20, 50, 100 in gleichen Abständen. Die Schritte sind aber verschieden groß (10, 10, 30, 50). Dadurch sieht das Wachstum gleichmäßig aus, obwohl 5d zehnmal so viel hat wie 5a.",
+    follow:null};
+}
+function mkDual(){
+  var labels=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug"];
+  var a=[400,404,409,414,419,423,427,432],b=[120,150,175,205,235,260,285,300];
+  var ctx=pick([["Schul-WLAN (GB)","Fehlstunden","Wer viel im WLAN ist, fehlt öfter: Beide Kurven steigen im Gleichschritt!"]]);
+  var idxA=a.map(function(v){return v/a[0]*100}),idxB=b.map(function(v){return v/b[0]*100});
+  return {id:"dual",headline:ctx[2],sub:"Schul-WLAN und Fehlstunden",
+    chart:function(){return dualChart({labels:labels,a:{vals:a,min:395,max:435,ticks:[400,410,420,430],name:ctx[0]},b:{vals:b,min:110,max:310,ticks:[120,160,200,240,280],name:ctx[1]}})},
+    fair:function(){var lo=90,hi=270;var iw=CW-ML-MR,ih=CH-MB-MT,n=8;var Y=function(v){return MT+(1-(v-lo)/(hi-lo))*ih},X=function(i){return ML+i/(n-1)*iw};var s=frame(niceTicks(lo,hi,6),Y,"Index: erster Monat = 100");labels.forEach(function(l,i){s+='<text class="cl" x="'+X(i).toFixed(1)+'" y="'+(CH-MB+20)+'" style="font-size:13px">'+l+'</text>'});s+='<polyline class="ln1" points="'+idxA.map(function(v,i){return X(i).toFixed(1)+","+Y(v).toFixed(1)}).join(" ")+'"/><polyline class="ln2" points="'+idxB.map(function(v,i){return X(i).toFixed(1)+","+Y(v).toFixed(1)}).join(" ")+'"/>';s+='<text class="ct" x="'+X(7)+'" y="'+(Y(idxA[7])-8).toFixed(1)+'" text-anchor="end" style="fill:var(--blue)">'+esc(ctx[0])+'</text><text class="ct" x="'+X(7)+'" y="'+(Y(idxB[7])-8).toFixed(1)+'" text-anchor="end" style="fill:var(--amber)">'+esc(ctx[1])+'</text>';return s},
+    explain:"Jede Linie hat ihre eigene y-Achse, die genau auf die eigenen Werte zugeschnitten ist. So verlaufen beide parallel. Auf einer gemeinsamen Skala (erster Monat = 100) steigt das WLAN nur um etwa 8 %, die Fehlstunden aber um 150 %. Außerdem beweist ein gleichzeitiger Anstieg keinen Zusammenhang.",
+    follow:null};
+}
+function mkOk(){
+  var cats=["Strand","Berge","Stadt","Freizeitpark"],vals=shuffle([8,12,6,4]).map(function(x){return x+ri(0,3)});
+  var mx=Math.max.apply(null,vals),top=Math.ceil((mx+2)/5)*5;
+  var ctx=pick([["Stimmen","Klassenfahrt-Umfrage: Berge liegen vorn"]]);
+  var win=cats[vals.indexOf(mx)];
+  var head="Klassenfahrt-Umfrage: "+win+" liegt vorn";
+  function ch(){return barChart({cats:cats,vals:vals,ymin:0,ymax:top,ticks:niceTicks(0,top,5),ylabel:"Stimmen"})}
+  return {id:"ok",headline:head,sub:"Umfrage in der Klasse",chart:ch,fair:ch,
+    explain:"Hier stimmt alles: Die Achse beginnt bei 0, die Abstände sind gleich groß, es gibt eine Achse und die Balken zeigen die Werte ehrlich. Gute Detektive sind nicht bei jedem Diagramm misstrauisch, sondern prüfen genau.",follow:null};
+}
+var MK={cut:mkCut,period:mkPeriod,area:mkArea,scale:mkScale,dual:mkDual,ok:mkOk};
+
+var CS={cases:[],i:0,score:0,bonus:0,bonusN:0,answered:false,fairOn:false};
+function bestKeyC(){return "stat-best-check"}
+function renderCBest(){var b=store(bestKeyC());$("#cBest").textContent=b!=null?"Bestes Ergebnis: "+b+" von 6":""}
+function startCheck(){
+  CS={cases:shuffle(TRICK_ORDER).map(function(k){return MK[k]()}),i:0,score:0,bonus:0,bonusN:0,answered:false,fairOn:false};
+  $("#cStart").hidden=true;$("#cEnd").hidden=true;$("#cPlay").hidden=false;
+  showCase();
+}
+function showCase(){
+  var c=CS.cases[CS.i];CS.answered=false;CS.fairOn=false;
+  $("#cNo").textContent="Fall "+(CS.i+1)+" von 6";
+  $("#cBar").style.width=(CS.i/6*100)+"%";
+  $("#cNews").innerHTML=esc(c.headline)+"<small>"+esc(c.sub)+"</small>";
+  $("#cSvg").innerHTML=c.chart();
+  $("#cTag").textContent="So wurde das Diagramm gezeigt";$("#cTag").className="tag";
+  $("#cHintBox").innerHTML="";$("#cFb").innerHTML="";
+  $("#cHint").disabled=false;
+  var opts=shuffle(TRICK_ORDER);
+  $("#cOpts").innerHTML=opts.map(function(k){return '<button class="opt" data-k="'+k+'">'+TRICKS[k]+'</button>'}).join("");
+  $$("#cOpts .opt").forEach(function(b){b.addEventListener("click",function(){answerCase(b.dataset.k)})});
+}
+function answerCase(k){
+  if(CS.answered)return;CS.answered=true;
+  var c=CS.cases[CS.i],ok=k===c.id;if(ok)CS.score++;
+  $$("#cOpts .opt").forEach(function(b){b.disabled=true;if(b.dataset.k===c.id)b.classList.add("right");else if(b.dataset.k===k)b.classList.add("wrong")});
+  $("#cHint").disabled=true;
+  var last=CS.i===5;
+  var h='<div class="fb '+(ok?"ok":"no")+'"><h3>'+(ok?"Gut ermittelt!":"Nicht ganz")+'</h3>';
+  if(!ok)h+='<p>Hier steckt: <b>'+TRICKS[c.id]+'.</b></p>';
+  h+='<p>'+c.explain+'</p>';
+  if(c.id!=="ok")h+='<div class="row" style="margin-top:12px"><button class="btn small" id="fairBtn" aria-pressed="false">👁 Fair ansehen</button></div>';
+  h+='<div id="followBox"></div>';
+  h+='<div class="row" style="margin-top:14px"><button class="btn primary" id="cNext">'+(last?"Ergebnis ansehen":"Nächster Fall")+'</button></div></div>';
+  $("#cFb").innerHTML=h;
+  var fb=$("#fairBtn");
+  if(fb)fb.addEventListener("click",function(){
+    CS.fairOn=!CS.fairOn;fb.setAttribute("aria-pressed",CS.fairOn?"true":"false");
+    fb.textContent=CS.fairOn?"↩ Original zeigen":"👁 Fair ansehen";
+    $("#cSvg").innerHTML=CS.fairOn?c.fair():c.chart();
+    $("#cTag").textContent=CS.fairOn?"So sieht es fair aus":"So wurde das Diagramm gezeigt";$("#cTag").className="tag"+(CS.fairOn?" fair":"");
+  });
+  if(c.follow){
+    CS.bonusN++;
+    $("#followBox").innerHTML='<div class="bonus"><h4>Rechen-Bonus</h4><p>'+c.follow.q+'</p><div class="answer"><input type="text" inputmode="decimal" id="fAns" autocomplete="off" aria-label="Antwort Zusatzfrage"><span><b>'+c.follow.unit+'</b></span><button class="btn small primary" id="fChk">Prüfen</button></div><div id="fRes"></div></div>';
+    var done=false;
+    function chk(){
+      if(done)return;var v=parseNum($("#fAns").value);
+      if(isNaN(v)){$("#fRes").innerHTML='<div class="err">Bitte eine Zahl eingeben.</div>';return}
+      done=true;var good=Math.abs(v-c.follow.ans)<=c.follow.tol;if(good)CS.bonus++;
+      $("#fAns").disabled=true;$("#fChk").disabled=true;
+      $("#fRes").innerHTML='<div class="fb '+(good?"ok":"no")+'" style="margin-top:10px"><h3>'+(good?"Richtig!":"Fast")+'</h3>'+(good?"":'<p>Gesucht war '+fmt(c.follow.ans,1)+' '+c.follow.unit+'.</p>')+'<ol class="steps">'+c.follow.steps.map(function(s,i){return '<li'+(i===c.follow.steps.length-1?' class="res"':'')+'>'+s+'</li>'}).join("")+'</ol></div>';
+    }
+    $("#fChk").addEventListener("click",chk);$("#fAns").addEventListener("keydown",function(e){if(e.key==="Enter")chk()});
+  }
+  $("#cNext").addEventListener("click",nextCase);
+  $("#cFb").scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function nextCase(){
+  CS.i++;
+  if(CS.i>=6){endCheck();return}
+  showCase();$("#cPlay").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function endCheck(){
+  $("#cPlay").hidden=true;$("#cEnd").hidden=false;
+  var s=CS.score,prev=parseInt(store(bestKeyC())||"-1",10),rec=s>prev;if(rec)store(bestKeyC(),String(s));
+  var st=s>=6?3:s>=4?2:s>=3?1:0;
+  $("#cStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#cTitle").textContent=s+" von 6 Fällen gelöst";
+  $("#cText").textContent=(CS.bonusN?"Rechen-Bonus: "+CS.bonus+" von "+CS.bonusN+". ":"")+(s>=6?"Meisterdetektiv! Dir macht niemand etwas vor.":s>=4?"Gute Arbeit. Prüfe immer zuerst die Achsen, den Zeitraum und die Darstellungsart.":"Übung macht den Detektiv. Achte beim nächsten Mal auf Achsen, Zeitraum und Flächen.")+(rec&&s>0?" Neuer Rekord!":"");
+  renderCBest();
+}
+$("#cGo").addEventListener("click",startCheck);
+$("#cAgain").addEventListener("click",startCheck);
+$("#cQuit").addEventListener("click",function(){$("#cPlay").hidden=true;$("#cStart").hidden=false;renderCBest()});
+$("#cHint").addEventListener("click",function(){var c=CS.cases[CS.i];$("#cHintBox").innerHTML='<div class="note">'+HINTS[c.id]+'</div>'});
+
+/* =====================================================
+   KENNWERTE-LABOR
+   ===================================================== */
+var LAB={data:[7,9,10,10,11,12,12,12,13,15],name:"Beispiel: Punkte in einem Test",mode:"add"};
+var LX0=40,LDX=28;
+function lx(v){return LX0+v*LDX}
+function drawLab(){
+  var d=LAB.data,st=stats(d),s="";
+  var axisY=210;
+  s+='<line class="ax" x1="'+lx(0)+'" x2="'+lx(20)+'" y1="'+axisY+'" y2="'+axisY+'"/>';
+  for(var v=0;v<=20;v++){
+    s+='<line class="ax" x1="'+lx(v)+'" x2="'+lx(v)+'" y1="'+axisY+'" y2="'+(axisY+(v%5?7:12))+'" style="stroke-width:'+(v%5?1.5:2.5)+'"/>';
+    s+='<text class="tl'+(v%5?' tk1':'')+'" x="'+lx(v)+'" y="'+(axisY+30)+'" text-anchor="middle" style="font-size:'+(v%5?14:20)+'px;font-weight:'+(v%5?400:800)+';fill:var(--ink)">'+v+'</text>';
+  }
+  var cnt={};d.forEach(function(x){cnt[x]=(cnt[x]||0)+1});
+  var maxStack=Math.max.apply(null,[1].concat(Object.keys(cnt).map(function(k){return cnt[k]})));
+  var rad=9,gap=Math.min(19,150/maxStack);
+  if(st){
+    s+='<line class="med-l" x1="'+lx(st.median)+'" x2="'+lx(st.median)+'" y1="'+34+'" y2="'+axisY+'"/>';
+    s+='<line class="mean-l" x1="'+lx(st.mean)+'" x2="'+lx(st.mean)+'" y1="'+34+'" y2="'+axisY+'"/>';
+  }
+  Object.keys(cnt).forEach(function(k){for(var i=0;i<cnt[k];i++){s+='<circle class="dot" cx="'+lx(+k)+'" cy="'+(axisY-rad-2-i*gap)+'" r="'+rad+'"/>'}});
+  if(st){
+    var left=st.mean<=st.median;
+    s+='<text class="mlabel" x="'+(lx(st.median)+(left?8:-8))+'" y="20" text-anchor="'+(left?"start":"end")+'" style="fill:var(--teal)">Median '+fmt(st.median,2)+'</text>';
+    s+='<text class="mlabel" x="'+(lx(st.mean)+(left?-8:8))+'" y="20" text-anchor="'+(left?"end":"start")+'" style="fill:var(--amber)">Mittelwert '+fmt(st.mean,2)+'</text>';
+  }else s+='<text class="tl" x="'+lx(10)+'" y="120" text-anchor="middle" style="font-size:20px">Tippe auf die Zahlengerade, um Punkte zu setzen.</text>';
+  /* Boxplot */
+  var by=322;
+  s+='<text class="ct" x="'+lx(0)+'" y="'+(by-52)+'" text-anchor="start" style="font-size:17px;font-weight:700">Boxplot</text>';
+  if(st){
+    s+='<line class="wh" x1="'+lx(st.min)+'" x2="'+lx(st.q1)+'" y1="'+by+'" y2="'+by+'"/><line class="wh" x1="'+lx(st.q3)+'" x2="'+lx(st.max)+'" y1="'+by+'" y2="'+by+'"/>';
+    s+='<line class="wh" x1="'+lx(st.min)+'" x2="'+lx(st.min)+'" y1="'+(by-12)+'" y2="'+(by+12)+'"/><line class="wh" x1="'+lx(st.max)+'" x2="'+lx(st.max)+'" y1="'+(by-12)+'" y2="'+(by+12)+'"/>';
+    s+='<rect class="box" x="'+lx(st.q1)+'" y="'+(by-20)+'" width="'+Math.max(2,lx(st.q3)-lx(st.q1))+'" height="40" rx="3"/>';
+    s+='<line class="med-l" x1="'+lx(st.median)+'" x2="'+lx(st.median)+'" y1="'+(by-20)+'" y2="'+(by+20)+'" style="stroke-width:4"/>';
+    s+='<polygon points="'+lx(st.mean)+','+(by-8)+' '+(lx(st.mean)+7)+','+by+' '+lx(st.mean)+','+(by+8)+' '+(lx(st.mean)-7)+','+by+'" fill="var(--amber)" stroke="var(--ink)" stroke-width="1.5"/>';
+    s+='<text class="tl" x="'+lx(st.min)+'" y="'+(by+42)+'" text-anchor="middle" style="font-size:17px;fill:var(--ink)">Min '+fmt(st.min,2)+'</text>';
+    s+='<text class="tl" x="'+lx(st.max)+'" y="'+(by+42)+'" text-anchor="middle" style="font-size:17px;fill:var(--ink)">Max '+fmt(st.max,2)+'</text>';
+    s+='<text class="tl" x="'+lx(st.q1)+'" y="'+(by-30)+'" text-anchor="middle" style="font-size:17px;fill:var(--ink)">q<tspan dy="4" style="font-size:12px">u</tspan><tspan dy="-4"> '+fmt(st.q1,2)+'</tspan></text>';
+    s+='<text class="tl" x="'+lx(st.q3)+'" y="'+(by-30)+'" text-anchor="middle" style="font-size:17px;fill:var(--ink)">q<tspan dy="4" style="font-size:12px">o</tspan><tspan dy="-4"> '+fmt(st.q3,2)+'</tspan></text>';
+  }
+  $("#dotSvg").innerHTML=s;
+  /* Tabelle */
+  var rows=[["Anzahl n",st?st.n:0,""],["Mittelwert x̄",st?fmt(st.mean,2):"–","m"],["Median x̃",st?fmt(st.median,2):"–","d"],["Modus",st?(st.modes.length?st.modes.join(" und "):"keiner"):"–",""],["Spannweite",st?fmt(st.range,2):"–",""],["unteres Quartil",st?fmt(st.q1,2):"–",""],["oberes Quartil",st?fmt(st.q3,2):"–",""],["Quartilabstand",st?fmt(st.iqr,2):"–",""]];
+  $("#kv").innerHTML=rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th><td class="'+r[2]+'">'+r[1]+'</td></tr>'}).join("");
+  var note;
+  if(!st)note="Setze mindestens einen Punkt.";
+  else if(st.n<3)note="Mit mehr Punkten werden die Kennwerte aussagekräftiger.";
+  else if(Math.abs(st.mean-st.median)>=1.5)note="Mittelwert und Median liegen weit auseinander. Einzelne sehr große oder sehr kleine Werte (Ausreißer) ziehen den Mittelwert, der Median bleibt stabil.";
+  else note="Mittelwert und Median liegen nah beieinander. Die Daten sind recht gleichmäßig verteilt.";
+  $("#mNote").textContent=note;
+  $("#mName").textContent=LAB.name+" · "+LAB.data.length+" von 20 Punkten";
+  checkMissions();
+}
+var MISSIONS=[
+  {t:"Setze mindestens 7 Punkte so, dass Mittelwert und Median gleich sind.",ok:function(s){return s.n>=7&&Math.abs(s.mean-s.median)<0.005}},
+  {t:"Setze mindestens 7 Punkte so, dass der Mittelwert mindestens 2 größer ist als der Median (Tipp: ein Ausreißer).",ok:function(s){return s.n>=7&&s.mean-s.median>=2}},
+  {t:"Setze mindestens 8 Punkte mit der Spannweite 15 und dem Median 5.",ok:function(s){return s.n>=8&&s.range===15&&Math.abs(s.median-5)<0.005}},
+  {t:"Setze mindestens 8 Punkte mit genau einem Modus bei 8 und einer Spannweite von höchstens 6.",ok:function(s){return s.n>=8&&s.modes.length===1&&s.modes[0]===8&&s.range<=6}},
+  {t:"Setze mindestens 6 Punkte so, dass der Quartilabstand 0 ist, die Spannweite aber mindestens 10.",ok:function(s){return s.n>=6&&s.iqr===0&&s.range>=10}}
+];
+function checkMissions(){
+  var st=stats(LAB.data);
+  $("#mission").innerHTML=MISSIONS.map(function(m){var done=!!st&&m.ok(st);return '<li class="'+(done?"done":"")+'"><span class="ck" aria-hidden="true">'+(done?"✓":"")+'</span><span>'+m.t+(done?' <b>(geschafft!)</b>':'')+'</span></li>'}).join("");
+}
+$("#dotSvg").addEventListener("pointerdown",function(e){
+  var r=this.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*640,v=Math.round((vx-LX0)/LDX);
+  v=Math.max(0,Math.min(20,v));
+  if(LAB.mode==="add"){if(LAB.data.length>=20){$("#mNote").textContent="Mehr als 20 Punkte passen nicht. Entferne zuerst einen.";return}LAB.data.push(v)}
+  else{
+    var idx=-1,best=99;
+    LAB.data.forEach(function(x,i){var dd=Math.abs(x-v);if(dd<best){best=dd;idx=i}});
+    if(idx>=0&&best<=1)LAB.data.splice(idx,1);
+  }
+  LAB.name="Eigene Daten";drawLab();
+});
+function setMode(m){LAB.mode=m;$("#mAdd").setAttribute("aria-pressed",m==="add"?"true":"false");$("#mDel").setAttribute("aria-pressed",m==="del"?"true":"false")}
+$("#mAdd").addEventListener("click",function(){setMode("add")});
+$("#mDel").addEventListener("click",function(){setMode("del")});
+$("#mP1").addEventListener("click",function(){LAB.data=[7,9,10,10,11,12,12,12,13,15];LAB.name="Beispiel: Punkte in einem Test";drawLab()});
+$("#mP2").addEventListener("click",function(){LAB.data=[3,4,4,5,5,6,6,7,8,19];LAB.name="Beispiel: Taschengeld pro Woche (mit Ausreißer)";drawLab()});
+$("#mRnd").addEventListener("click",function(){var n=ri(8,14),a=[];for(var i=0;i<n;i++)a.push(ri(2,18));LAB.data=a;LAB.name="Zufallsdaten";drawLab()});
+$("#mClr").addEventListener("click",function(){LAB.data=[];LAB.name="Eigene Daten";drawLab()});
+
+/* =====================================================
+   TRAINING
+   ===================================================== */
+var LEVELS={
+  basis:{name:"Basis",desc:"Mittelwert, Median, Spannweite und Modus aus einer Liste bestimmen.",emoji:"🟢"},
+  profi:{name:"Profi",desc:"Quartile, Boxplot lesen, Notenschnitt und fehlende Werte.",emoji:"🟡"},
+  experte:{name:"Experte",desc:"Ausreißer, Kennwerte im Alltag deuten und Mittelwerte zusammenfassen.",emoji:"🔴"}
+};
+function listStr(a){return a.join("; ")}
+function qMean(){
+  var n=ri(4,7),m=ri(5,15),v,t=0,last;
+  do{v=[];for(var i=0;i<n-1;i++)v.push(ri(Math.max(1,m-5),m+5));var sum=v.reduce(function(s,x){return s+x},0);last=n*m-sum;t++}while((last<1||last>30)&&t<80);
+  v.push(last);v=shuffle(v);
+  var sum2=v.reduce(function(s,x){return s+x},0);
+  return {kind:"num",text:"Berechne den Mittelwert: "+listStr(v),unit:"",ans:sum2/n,tol:0.011,hint:"Addiere alle Werte und teile die Summe durch die Anzahl der Werte.",
+    steps:["Summe: "+v.join(" + ")+" = "+sum2,"Anzahl: n = "+n,"x̄ = "+sum2+" : "+n+" = "+fmt(sum2/n,2)]};
+}
+function qMedian(even){
+  var n=even===true?pick([6,8]):even===false?pick([5,7,9]):pick([5,6,7,8,9]),v=[];
+  for(var i=0;i<n;i++)v.push(ri(2,40));
+  var a=v.slice().sort(function(x,y){return x-y}),m=med(a);
+  var steps=["Sortieren: "+a.join(", ")];
+  if(n%2)steps.push("Anzahl "+n+" ist ungerade: Der Wert in der Mitte ist der "+((n+1)/2)+". Wert.");
+  else steps.push("Anzahl "+n+" ist gerade: Mitte der beiden mittleren Werte ("+a[n/2-1]+" und "+a[n/2]+").");
+  steps.push("x̃ = "+fmt(m,2));
+  return {kind:"num",text:"Bestimme den Median: "+listStr(v),unit:"",ans:m,tol:0.011,hint:"Sortiere die Werte der Größe nach. Der Median steht in der Mitte (bei gerader Anzahl: Mittelwert der beiden mittleren Werte).",steps:steps};
+}
+function qRange(){
+  var n=ri(6,9),v=[];for(var i=0;i<n;i++)v.push(ri(2,48));
+  var mx=Math.max.apply(null,v),mn=Math.min.apply(null,v);
+  return {kind:"num",text:"Bestimme die Spannweite: "+listStr(v),unit:"",ans:mx-mn,tol:0.001,hint:"Spannweite = größter Wert − kleinster Wert.",steps:["Größter Wert: "+mx+", kleinster Wert: "+mn,"Spannweite = "+mx+" − "+mn+" = "+(mx-mn)]};
+}
+function qMode(){
+  var n=ri(9,12),mv=ri(2,15),k=ri(3,4),v=[],used={},i;
+  for(i=0;i<k;i++)v.push(mv);
+  used[mv]=k;
+  while(v.length<n){var x=ri(1,20);if(x===mv)continue;if((used[x]||0)>=2)continue;used[x]=(used[x]||0)+1;v.push(x)}
+  v=shuffle(v);
+  return {kind:"num",text:"Bestimme den Modus (häufigster Wert): "+listStr(v),unit:"",ans:mv,tol:0.001,hint:"Der Modus ist der Wert, der am häufigsten vorkommt. Zähle oder sortiere die Liste.",steps:["Sortiert: "+v.slice().sort(function(a,b){return a-b}).join(", "),"Der Wert "+mv+" kommt "+k+"-mal vor, kein anderer so oft.","Modus = "+mv]};
+}
+function qQuart(){
+  var n=pick([7,11]),v=[];for(var i=0;i<n;i++)v.push(ri(2,40));
+  var a=v.slice().sort(function(x,y){return x-y}),lo=a.slice(0,(n-1)/2),hi=a.slice((n+1)/2),which=pick(["u","o"]);
+  var ans=which==="u"?med(lo):med(hi);
+  return {kind:"num",text:"Bestimme das "+(which==="u"?"untere":"obere")+" Quartil: "+listStr(v),unit:"",ans:ans,tol:0.011,hint:"Sortiere. Der Median teilt die Daten in zwei Hälften. Das "+(which==="u"?"untere Quartil ist der Median der unteren Hälfte":"obere Quartil ist der Median der oberen Hälfte")+" (ohne den mittleren Wert).",
+    steps:["Sortiert: "+a.join(", "),"Median (Mitte): "+a[(n-1)/2],which==="u"?"Untere Hälfte: "+lo.join(", "):"Obere Hälfte: "+hi.join(", "),"q"+(which==="u"?"u":"o")+" = Median dieser Hälfte = "+fmt(ans,2)]};
+}
+function qMissing(){
+  var n=5,m=ri(6,14),v,t=0,last;
+  do{v=[];for(var i=0;i<n-1;i++)v.push(ri(Math.max(1,m-6),m+6));last=n*m-v.reduce(function(s,x){return s+x},0);t++}while((last<0||last>30)&&t<80);
+  return {kind:"num",text:"Der Mittelwert von fünf Zahlen ist "+m+". Vier der Zahlen sind "+listStr(v)+". Wie lautet die fünfte Zahl?",unit:"",ans:last,tol:0.001,hint:"Die Summe aller fünf Zahlen ist 5 · "+m+". Davon ziehst du die vier bekannten ab.",
+    steps:["Gesamtsumme: 5 · "+m+" = "+(5*m),"Bekannte Summe: "+v.join(" + ")+" = "+v.reduce(function(s,x){return s+x},0),"Fehlt: "+(5*m)+" − "+v.reduce(function(s,x){return s+x},0)+" = "+last]};
+}
+function qGrades(){
+  var c=[ri(0,4),ri(2,8),ri(4,10),ri(3,9),ri(1,5),ri(0,3)],n=c.reduce(function(s,x){return s+x},0);
+  while(n<15){c[2]++;n++}
+  var tot=0;c.forEach(function(x,i){tot+=x*(i+1)});
+  var tab=c.map(function(x,i){return "Note "+(i+1)+": "+x+"×"}).join(", ");
+  return {kind:"num",text:"Ergebnis einer Klassenarbeit: "+tab+". Berechne den Notendurchschnitt (auf zwei Nachkommastellen).",unit:"",ans:Math.round(tot/n*100)/100,tol:0.011,hint:"Multipliziere jede Note mit ihrer Häufigkeit, addiere alles und teile durch die Anzahl der Arbeiten.",
+    steps:["Anzahl: "+c.join(" + ")+" = "+n,"Notensumme: "+c.map(function(x,i){return x+"·"+(i+1)}).join(" + ")+" = "+tot,"Durchschnitt: "+tot+" : "+n+" ≈ "+fmt(tot/n,2)]};
+}
+function boxFig(b){
+  var W=400,x0=24,x1=376,lo=Math.floor(b.min/5)*5-0,hi=Math.ceil(b.max/5)*5,X=function(v){return x0+(v-lo)/(hi-lo)*(x1-x0)},by=70;
+  var s='<line class="ax" x1="'+x0+'" x2="'+x1+'" y1="115" y2="115"/>';
+  for(var t=lo;t<=hi;t+=5)s+='<line class="ax" x1="'+X(t)+'" x2="'+X(t)+'" y1="115" y2="121"/><text class="tl" x="'+X(t)+'" y="136" text-anchor="middle">'+t+'</text>';
+  s+='<line class="wh" x1="'+X(b.min)+'" x2="'+X(b.q1)+'" y1="'+by+'" y2="'+by+'"/><line class="wh" x1="'+X(b.q3)+'" x2="'+X(b.max)+'" y1="'+by+'" y2="'+by+'"/>';
+  s+='<line class="wh" x1="'+X(b.min)+'" x2="'+X(b.min)+'" y1="'+(by-14)+'" y2="'+(by+14)+'"/><line class="wh" x1="'+X(b.max)+'" x2="'+X(b.max)+'" y1="'+(by-14)+'" y2="'+(by+14)+'"/>';
+  s+='<rect class="box" x="'+X(b.q1)+'" y="'+(by-24)+'" width="'+(X(b.q3)-X(b.q1))+'" height="48" rx="3"/><line class="med-l" x1="'+X(b.med)+'" x2="'+X(b.med)+'" y1="'+(by-24)+'" y2="'+(by+24)+'" style="stroke-width:4"/>';
+  [["Min",b.min],["qᵤ",b.q1],["x̃",b.med],["qₒ",b.q3],["Max",b.max]].forEach(function(p){s+='<text class="tl" x="'+X(p[1])+'" y="'+(by-32)+'" text-anchor="middle" style="font-weight:700;fill:var(--ink)">'+p[0]+'</text>'});
+  return s;
+}
+function qBox(){
+  var mn=ri(2,10),q1=mn+ri(2,6),md=q1+ri(2,6),q3=md+ri(2,7),mx=q3+ri(3,10),which=pick(["range","iqr"]);
+  var b={min:mn,q1:q1,med:md,q3:q3,max:mx};
+  return {kind:"num",text:"Im Boxplot sind diese Werte eingezeichnet: Minimum "+mn+", unteres Quartil "+q1+", Median "+md+", oberes Quartil "+q3+", Maximum "+mx+". Wie groß ist "+(which==="range"?"die Spannweite?":"der Quartilabstand?"),unit:"",ans:which==="range"?mx-mn:q3-q1,tol:0.001,fig:b,
+    hint:which==="range"?"Spannweite = Maximum − Minimum.":"Quartilabstand = oberes Quartil − unteres Quartil (so breit ist die Box).",
+    steps:which==="range"?["Spannweite = "+mx+" − "+mn+" = "+(mx-mn)]:["Quartilabstand = "+q3+" − "+q1+" = "+(q3-q1)]};
+}
+function qOutlier(){
+  var n=pick([4,5,6]),m=ri(5,12),extra=ri(2,6)*m;
+  var nm=(n*m+extra)/(n+1);
+  return {kind:"num",text:"Der Mittelwert von "+n+" Zahlen ist "+m+". Jetzt kommt ein weiterer Wert "+extra+" dazu. Wie groß ist der neue Mittelwert? (auf eine Nachkommastelle)",unit:"",ans:Math.round(nm*10)/10,tol:0.06,hint:"Alte Summe = n · Mittelwert. Dazu den neuen Wert addieren und durch n + 1 teilen.",
+    steps:["Alte Summe: "+n+" · "+m+" = "+(n*m),"Neue Summe: "+(n*m)+" + "+extra+" = "+(n*m+extra),"Neuer Mittelwert: "+(n*m+extra)+" : "+(n+1)+" ≈ "+fmt(nm,1)]};
+}
+function qWhich(){
+  var ctx=pick([
+    {t:"In einer kleinen Firma verdienen 8 Beschäftigte zwischen 2 400 € und 3 100 € im Monat, der Chef verdient 19 000 €. Welcher Wert beschreibt das „typische“ Gehalt am besten?",o:["der Median","der Mittelwert","das Maximum","die Spannweite"],a:0,e:"Der Chef ist ein Ausreißer. Er zieht den Mittelwert stark nach oben. Der Median bleibt bei den normalen Gehältern."},
+    {t:"Acht Kinder bekommen 2 € bis 5 € Taschengeld pro Woche, ein Kind bekommt 40 €. Welcher Wert beschreibt das „übliche“ Taschengeld am besten?",o:["der Median","der Mittelwert","das Maximum","die Spannweite"],a:0,e:"Das eine Kind mit 40 € ist ein Ausreißer. Der Median ist davon kaum betroffen, der Mittelwert dagegen stark."},
+    {t:"Eine Schuhgeschäft-Kette will wissen, welche Schuhgröße sie am häufigsten bestellen soll. Welcher Kennwert passt?",o:["der Modus","der Mittelwert","die Spannweite","der Quartilabstand"],a:0,e:"Gefragt ist der häufigste Wert. Das ist der Modus. Ein Mittelwert wie 41,3 ergibt bei Schuhgrößen keinen Sinn."},
+    {t:"Du willst wissen, wie stark die Wassertemperatur im Schwimmbad im Laufe eines Tages schwankt. Welcher Kennwert passt am besten?",o:["die Spannweite","der Modus","der Mittelwert","der Median"],a:0,e:"Die Spannweite (Maximum − Minimum) misst direkt, wie weit die Werte auseinanderliegen."}
+  ]);
+  var idx=shuffle([0,1,2,3]),opts=idx.map(function(i){return ctx.o[i]}),ans=idx.indexOf(ctx.a);
+  return {kind:"mc",text:ctx.t,options:opts,ans:ans,hint:"Überlege: Gibt es Ausreißer? Fragt man nach dem häufigsten Wert oder nach der Streuung?",steps:[ctx.e,"Richtig: "+opts[ans]]};
+}
+function qStays(){
+  var opts=["der Median","der Mittelwert","die Spannweite","die Summe aller Werte"],o=shuffle(opts),idx=o.indexOf("der Median");
+  var v=[3,4,5,6,8],big=ri(20,40);
+  return {kind:"mc",text:"In der Liste 3, 4, 5, 6, 8 wird der größte Wert 8 durch "+big+" ersetzt. Welche Größe bleibt dabei unverändert?",options:o,ans:idx,hint:"Berechne die Größen vorher und nachher. Der mittlere Wert nach dem Sortieren ändert sich nicht.",
+    steps:["Vorher: Mittelwert "+fmt(26/5,1)+", Median 5, Spannweite 5, Summe 26","Nachher: Mittelwert "+fmt((18+big)/5,1)+", Median 5, Spannweite "+(big-3)+", Summe "+(18+big),"Der Median bleibt bei 5."]};
+}
+function qWeighted(){
+  var a1=pick([2,2.5,3,3.5]),a2=pick([1.5,2,2.5,3]),n1=pick([10,20]),n2=n1*3/2;
+  var ans=(n1*a1+n2*a2)/(n1+n2);
+  return {kind:"num",text:"Kurs A hat "+n1+" Schüler mit dem Durchschnitt "+fmt(a1,1)+", Kurs B hat "+n2+" Schüler mit dem Durchschnitt "+fmt(a2,1)+". Wie groß ist der Durchschnitt aller Schüler zusammen? (auf zwei Nachkommastellen)",unit:"",ans:Math.round(ans*100)/100,tol:0.011,hint:"Mittelwerte dürfen nicht einfach gemittelt werden. Rechne mit den Summen: Anzahl · Durchschnitt.",
+    steps:["Summe A: "+n1+" · "+fmt(a1,1)+" = "+fmt(n1*a1,1),"Summe B: "+n2+" · "+fmt(a2,1)+" = "+fmt(n2*a2,1),"Gesamt: ("+fmt(n1*a1,1)+" + "+fmt(n2*a2,1)+") : "+(n1+n2)+" = "+fmt(ans,2)]};
+}
+function qTarget(){
+  var k=ri(3,5),m=ri(8,14),x=m+k+1;
+  return {kind:"num",text:"In "+k+" Tests hast du im Schnitt "+m+" Punkte erreicht. Wie viele Punkte brauchst du im nächsten Test, damit dein Schnitt auf "+(m+1)+" Punkte steigt?",unit:"Punkte",ans:x,tol:0.001,hint:"Rechne mit den Summen: Gesamtsumme nach k + 1 Tests minus bisherige Summe.",
+    steps:["Bisherige Summe: "+k+" · "+m+" = "+(k*m),"Benötigte Summe: "+(k+1)+" · "+(m+1)+" = "+((k+1)*(m+1)),"Nächster Test: "+((k+1)*(m+1))+" − "+(k*m)+" = "+x]};
+}
+var GEN={basis:[qMean,qMedian,qRange,qMode],profi:[qQuart,qMissing,qGrades,qBox,function(){return qMedian(true)}],experte:[qOutlier,qWhich,qStays,qWeighted,qTarget]};
+var TS={level:null,qs:[],i:0,score:0,done:false};
+function bestKey(l){return "stat-best-"+l}
+function renderLevels(){
+  var box=$("#lvlBox");box.innerHTML="";
+  Object.keys(LEVELS).forEach(function(k){
+    var L=LEVELS[k],best=store(bestKey(k));
+    var b=document.createElement("button");
+    b.innerHTML='<span class="t">'+L.emoji+" "+L.name+'</span><span class="d">'+L.desc+'</span><span class="best">'+(best!=null?"Bestes Ergebnis: "+best+" / 10":"Noch nicht gespielt")+'</span>';
+    b.addEventListener("click",function(){startRound(k)});box.appendChild(b);
+  });
+}
+function startRound(level){
+  var pool=[];
+  while(pool.length<10)pool=pool.concat(shuffle(GEN[level]));
+  TS={level:level,qs:pool.slice(0,10).map(function(g){return g()}),i:0,score:0,done:false};
+  $("#tStart").hidden=true;$("#tEnd").hidden=true;$("#tPlay").hidden=false;
+  $("#tLvl").textContent=LEVELS[level].emoji+" "+LEVELS[level].name;
+  showQ();
+}
+function showQ(){
+  var q=TS.qs[TS.i];
+  $("#tCount").textContent="Aufgabe "+(TS.i+1)+" von 10";
+  $("#tBar").style.width=(TS.i/10*100)+"%";
+  $("#qText").textContent=q.text;
+  $("#qFb").innerHTML="";$("#qHintBox").innerHTML="";
+  var fig=$("#qFig");
+  if(q.fig){fig.style.display="block";fig.innerHTML=boxFig(q.fig);$("#qWrap").style.gridTemplateColumns=""}else{fig.style.display="none";fig.innerHTML="";$("#qWrap").style.gridTemplateColumns="1fr"}
+  var inp=$("#qInput");inp.innerHTML="";
+  if(q.kind==="num"){
+    inp.innerHTML='<div class="answer"><input type="text" inputmode="decimal" id="ans" autocomplete="off" aria-label="Deine Antwort"><span><b>'+esc(q.unit||"")+'</b></span><button class="btn primary" id="chk">Prüfen</button><button class="btn" id="hintBtn">💡 Tipp</button></div>';
+    $("#chk").addEventListener("click",checkNum);
+    $("#ans").addEventListener("keydown",function(e){if(e.key==="Enter")checkNum()});
+    setTimeout(function(){var el=$("#ans");if(el)el.focus({preventScroll:true})},50);
+  }else{
+    var h='<div class="opts">';q.options.forEach(function(o,i){h+='<button class="opt" data-i="'+i+'">'+esc(o)+'</button>'});
+    h+='</div><div class="answer"><button class="btn" id="hintBtn">💡 Tipp</button></div>';inp.innerHTML=h;
+    $$(".opt",inp).forEach(function(b){b.addEventListener("click",function(){checkMc(+b.dataset.i)})});
+  }
+  $("#hintBtn").addEventListener("click",function(){$("#qHintBox").innerHTML='<div class="note">'+q.hint+'</div>'});
+}
+function feedback(ok,q,extra){
+  TS.done=true;if(ok)TS.score++;
+  var last=TS.i===9;
+  var h='<div class="fb '+(ok?"ok":"no")+'"><h3>'+(ok?"Richtig!":"Fast, schau dir den Weg an")+'</h3>';
+  if(!ok)h+='<p>'+extra+'</p>';
+  h+='<ol class="steps">'+q.steps.map(function(s,i){return '<li'+(i===q.steps.length-1?' class="res"':'')+'>'+esc(s)+'</li>'}).join("")+'</ol>';
+  h+='<div class="row" style="margin-top:14px"><button class="btn primary" id="nextBtn">'+(last?"Ergebnis ansehen":"Weiter")+'</button></div></div>';
+  $("#qFb").innerHTML=h;
+  $("#nextBtn").addEventListener("click",nextQ);
+  $("#nextBtn").focus({preventScroll:false});
+}
+function checkNum(){
+  if(TS.done)return;
+  var q=TS.qs[TS.i],v=parseNum($("#ans").value);
+  if(isNaN(v)){$("#qFb").innerHTML='<div class="err">Bitte eine Zahl eingeben.</div>';return}
+  $("#ans").disabled=true;$("#chk").disabled=true;
+  feedback(Math.abs(v-q.ans)<=q.tol,q,"Gesucht war "+fmt(q.ans,2)+(q.unit?" "+q.unit:"")+". Du hast "+fmt(v,3)+" eingegeben.");
+}
+function checkMc(i){
+  if(TS.done)return;
+  var q=TS.qs[TS.i];
+  $$(".opt",$("#qInput")).forEach(function(b){b.disabled=true;if(+b.dataset.i===q.ans)b.classList.add("right");else if(+b.dataset.i===i)b.classList.add("wrong")});
+  feedback(i===q.ans,q,"Richtig wäre: "+q.options[q.ans]+".");
+}
+function nextQ(){
+  TS.done=false;TS.i++;
+  if(TS.i>=10){endRound();return}
+  showQ();$("#tPlay").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function endRound(){
+  $("#tPlay").hidden=true;$("#tEnd").hidden=false;
+  var s=TS.score,prev=parseInt(store(bestKey(TS.level))||"-1",10),rec=s>prev;
+  if(rec)store(bestKey(TS.level),String(s));
+  var st=s>=9?3:s>=7?2:s>=5?1:0;
+  $("#eStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#eTitle").textContent=s+" von 10 richtig";
+  $("#eText").textContent=(s>=9?"Hervorragend! Die Kennwerte sitzen.":s>=7?"Stark, nur noch ein paar Feinheiten.":s>=5?"Gute Basis. Im Kennwerte-Labor kannst du alles ausprobieren.":"Probiere im Kennwerte-Labor eigene Punkte aus und starte dann eine neue Runde.")+(rec&&s>0?" Neuer persönlicher Rekord!":"");
+}
+$("#tQuit").addEventListener("click",function(){$("#tPlay").hidden=true;$("#tStart").hidden=false;renderLevels()});
+$("#eAgain").addEventListener("click",function(){startRound(TS.level)});
+$("#eMenu").addEventListener("click",function(){$("#tEnd").hidden=true;$("#tStart").hidden=false;renderLevels()});
+
+/* ---------- Start ---------- */
+drawLab();renderLevels();renderCBest();
+window.__sd={MK:MK,TRICK_ORDER:TRICK_ORDER,GEN:GEN,stats:stats,MISSIONS:MISSIONS,LAB:LAB,drawLab:drawLab,CS:function(){return CS},TS:function(){return TS}};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Statistik-Detektiv", text: "<p>Entlarve Diagramm-Tricks, entdecke Mittelwert, Median und Boxplot und trainiere auf drei Niveaus.</p>" },
+  { sel: "#tabs", title: "Drei Bereiche", text: "<ul><li><b>Diagramm-Check:</b> Sechs Fälle mit Schlagzeile und Diagramm. Welcher Trick steckt drin?</li><li><b>Kennwerte-Labor:</b> Punkte setzen und Kennwerte live sehen</li><li><b>Training:</b> Zehn Aufgaben pro Runde</li></ul>" },
+  { sel: "#cGo", title: "Ermittlung starten", text: "<p>Du siehst eine Schlagzeile und ein Diagramm. Wähle den Trick aus. Danach kannst du dir das faire Diagramm ansehen.</p>" },
+  { sel: ".tab", has: "Kennwerte", click: ".tab[data-tab='lab']", title: "Kennwerte-Labor", text: "<p>Tippe auf die Zahlengerade, um Punkte zu setzen. Mit „Punkt entfernen“ nimmst du sie wieder weg. Unten warten Aufträge.</p>" },
+  { sel: ".tab", has: "Training", click: ".tab[data-tab='train']", title: "Training", text: "<p>Wähle ein Niveau. Nach jeder Aufgabe siehst du den Rechenweg.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

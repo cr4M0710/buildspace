@@ -1033,4 +1033,16 @@ const posts = [
     titleEn: "Solids Workshop",
     excerptEn: "Explore cube, cuboid, prism, cylinder, pyramid, cone and sphere: rotate solids with a swipe, view their nets, calculate volume and surface area with step-by-step working, scale them by a factor k (length ×k, area ×k², volume ×k³) and train on three levels."
    },
+   {
+    title: "Statistik-Detektiv",
+    excerpt: "Diagramme kritisch lesen und Kennwerte entdecken: Im Diagramm-Check entlarvst du sechs Fälle mit Schlagzeile (abgeschnittene Achse, gewählter Zeitraum, Flächen-Trick, krumme Skala, zwei y-Achsen oder fair) und siehst die faire Version. Im Kennwerte-Labor setzt du Punkte und siehst Mittelwert, Median, Quartile und Boxplot live, dazu Aufträge und ein Training auf drei Niveaus.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "statistik-detektiv.html",
+    emoji: "🕵️",
+    tags: ["tool", "spiel", "wahrscheinlichkeit", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9"],
+    titleEn: "Statistics Detective",
+    excerptEn: "Read charts critically and discover statistical measures: in the chart check you expose six cases with a headline (cut-off axis, cherry-picked period, area trick, uneven scale, dual y-axes or fair) and view the fair version. In the statistics lab you place points and see mean, median, quartiles and box plot live, plus missions and training on three levels."
+   },
 ];
