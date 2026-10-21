@@ -1045,4 +1045,16 @@ const posts = [
     titleEn: "Statistics Detective",
     excerptEn: "Read charts critically and discover statistical measures: in the chart check you expose six cases with a headline (cut-off axis, cherry-picked period, area trick, uneven scale, dual y-axes or fair) and view the fair version. In the statistics lab you place points and see mean, median, quartiles and box plot live, plus missions and training on three levels."
    },
+   {
+    title: "Fehler-Detektiv",
+    excerpt: "Finde die fehlerhafte Zeile in fremden Rechenwegen, benenne den Fehler und lerne die Merkregel. Mit Fehlerkatalog und drei Niveaus von Jg. 5 bis 10.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "fehler-detektiv.html",
+    emoji: "🕵️",
+    tags: ["spiel", "zahlen", "gleichungen", "einzelarbeit", "partnerarbeit", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Error Detective",
+    excerptEn: "Find the faulty line in someone else's working, name the mistake and learn the rule. With an error catalogue and three levels for grades 5 to 10."
+   },
 ];

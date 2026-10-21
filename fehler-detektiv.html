@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fehler-Detektiv</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f7f3ea; --grid:rgba(43,36,56,.05); --ink:#2b2438; --muted:#645d73; --line:#d9d1c0; --card:#fffdf8;
+  --red:#d6453d; --amber:#f0a30a; --teal:#12908e; --blue:#3b63c9;
+  --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#3b63c9;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#17141f; --grid:rgba(220,210,255,.05); --ink:#f0ecfa; --muted:#aaa3bd; --line:#383248; --card:#201c2c;
+    --red:#ff8077; --amber:#ffbf3d; --teal:#4fd0cd; --blue:#8aa8ff;
+    --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --focus:#9db6ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17141f; --grid:rgba(220,210,255,.05); --ink:#f0ecfa; --muted:#aaa3bd; --line:#383248; --card:#201c2c;
+  --red:#ff8077; --amber:#ffbf3d; --teal:#4fd0cd; --blue:#8aa8ff;
+  --ok:#6fd99b; --ok-bg:#15382a; --bad:#ff9087; --bad-bg:#45221f; --focus:#9db6ff;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.logo{width:64px;height:64px;flex:none}
+header.top h1{font-size:clamp(30px,6vw,46px)}
+header.top p{color:var(--muted);max-width:38em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px;display:inline-flex;align-items:center;gap:8px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:18px;padding:18px 20px;box-shadow:5px 5px 0 var(--ink)}
+.card+.card{margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--amber);color:#2b2438}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--red);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:8px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.note{margin-top:12px;padding:10px 14px;border-left:6px solid var(--amber);background:var(--bg);border-radius:6px;font-size:16.5px}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.qtop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.bar>i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.lvl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:12px 0}
+.lvl button{text-align:left;padding:16px;border:2.5px solid var(--ink);border-radius:16px;background:var(--card);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:130px}
+.lvl button:hover{background:var(--amber);color:#2b2438}
+.lvl .t{font-family:var(--head);font-size:26px;font-weight:800}
+.lvl .d{font-size:16px;opacity:.85}
+.lvl .best{margin-top:auto;font-size:15px;font-weight:700}
+.case{padding:12px 16px;border:3px solid var(--ink);border-radius:12px;background:var(--bg);margin:6px 0 14px;position:relative;font-family:var(--head);font-size:clamp(20px,3.4vw,26px);font-weight:700}
+.case::before{content:"AUFGABE";position:absolute;top:-11px;left:14px;background:var(--amber);color:#2b2438;font-family:var(--body);font-size:12px;font-weight:800;letter-spacing:.1em;padding:1px 8px;border-radius:6px}
+.who{font-weight:700;margin:4px 0 8px}
+.lines{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.ln{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 14px;border:2.5px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;font-family:var(--head);font-size:clamp(19px,3.2vw,24px);font-weight:600;min-height:54px}
+.ln .no{flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--body);font-size:14px;font-weight:700}
+.ln .tx{overflow-wrap:anywhere}
+.ln:hover:not(:disabled){border-color:var(--ink);background:var(--bg)}
+.ln:disabled{cursor:default}
+.ln.err{border-color:var(--bad);background:var(--bad-bg)}
+.ln.err .no{background:var(--bad)}
+.ln.pick{border-color:var(--ink);box-shadow:0 0 0 3px var(--amber)}
+.ln.good{border-color:var(--ok);background:var(--ok-bg)}
+.ln.good .no{background:var(--ok)}
+.all-ok{margin-top:12px}
+.opts{display:grid;gap:10px;margin-top:12px}
+.opt{padding:13px 16px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-family:var(--head);font-size:20px;font-weight:700;min-height:52px}
+.opt:hover:not(:disabled){background:var(--amber);color:#2b2438}
+.opt.right{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.fb{margin-top:16px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:24px;margin-bottom:6px}
+.fb p+p{margin-top:8px}
+.fb h4{margin:12px 0 6px;font-family:var(--head);font-size:18px}
+.tip{margin-top:10px;padding:10px 14px;border:2.5px dashed var(--teal);border-radius:12px;background:var(--card)}
+.tip b{color:var(--teal)}
+.stars{font-size:46px;letter-spacing:6px}
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px;line-height:1.15;font-size:.92em}
+.fr>span:first-child{padding:0 4px;border-bottom:2px solid currentColor}
+.fr>span:last-child{padding:0 4px}
+details.cat{border:2.5px solid var(--line);border-radius:12px;background:var(--card);margin-top:10px;padding:2px 14px}
+details.cat[open]{border-color:var(--ink)}
+details.cat summary{cursor:pointer;font-weight:700;min-height:48px;display:flex;align-items:center;gap:8px;font-size:18px}
+.ex{margin:6px 0 10px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.ex li{display:flex;gap:10px;align-items:center;padding:6px 10px;border-radius:8px;background:var(--bg);font-family:var(--head);font-size:20px;font-weight:600}
+.ex li.err{background:var(--bad-bg);color:var(--bad)}
+.ex li.good{background:var(--ok-bg);color:var(--ok)}
+.ex li .m{flex:none;font-family:var(--body);font-weight:800;font-size:14px;min-width:22px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Fehler-Detektiv – buildspace">
+<meta property="og:description" content="Finde die fehlerhafte Zeile in fremden Rechenwegen, benenne den Fehler und lerne die Merkregel. Mit Fehlerkatalog und drei Niveaus von Jg. 5 bis 10.">
+<meta property="og:url" content="https://buildspaceos.de/fehler-detektiv.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/fehler-detektiv.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fehler-Detektiv – buildspace">
+<meta name="twitter:description" content="Finde die fehlerhafte Zeile in fremden Rechenwegen, benenne den Fehler und lerne die Merkregel. Mit Fehlerkatalog und drei Niveaus von Jg. 5 bis 10.">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/fehler-detektiv.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="4" y="4" width="56" height="56" rx="12" fill="var(--ink)"/>
+      <text x="20" y="22" font-family="Trebuchet MS,Arial,sans-serif" font-size="18" font-weight="800" fill="#ffbf3d" text-anchor="middle">2+3</text>
+      <circle cx="30" cy="40" r="12" fill="none" stroke="#fff" stroke-width="3.5"/>
+      <line x1="38.5" y1="48.5" x2="52" y2="56" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M25 35 L35 45 M35 35 L25 45" stroke="#ff8077" stroke-width="3.5" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1>Fehler-Detektiv</h1>
+      <p>Jemand hat falsch gerechnet. Finde die fehlerhafte Zeile, benenne den Fehler und lerne die Merkregel dazu.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="hunt" aria-selected="true">🔎 Fehlerjagd</button>
+    <button class="tab" role="tab" data-tab="catalog" aria-selected="false">📖 Fehlerkatalog</button>
+  </nav>
+
+  <section class="panel" id="p-hunt">
+    <div class="card" id="tStart">
+      <h2>Fehlerjagd</h2>
+      <p class="muted" style="margin-top:6px">Du bekommst den Rechenweg einer Mitschülerin oder eines Mitschülers. Tippe auf die <b>erste fehlerhafte Zeile</b> und wähle dann den passenden Fehler. Manchmal ist die Rechnung aber auch komplett richtig. Zehn Fälle pro Runde, bis zu 20 Punkte. Dein bestes Ergebnis wird auf diesem Gerät gespeichert.</p>
+      <div class="lvl" id="lvlBox"></div>
+    </div>
+    <div class="card" id="tPlay" hidden>
+      <div class="qtop"><span class="pill" id="tLvl"></span><b id="tCount"></b><span><b id="tScore">0</b> Punkte</span><button class="btn small" id="tQuit">Abbrechen</button></div>
+      <div class="bar"><i id="tBar"></i></div>
+      <div class="case" id="caseBox"></div>
+      <p class="who" id="who"></p>
+      <ol class="lines" id="lines"></ol>
+      <div class="row all-ok" id="allOkRow"><button class="btn" id="allOk">✔ Alles richtig, hier ist kein Fehler</button><button class="btn small" id="hintBtn">💡 Tipp</button></div>
+      <div id="hintBox"></div>
+      <div id="typeBox" aria-live="polite"></div>
+      <div id="fb" aria-live="polite"></div>
+    </div>
+    <div class="card" id="tEnd" hidden>
+      <div style="text-align:center">
+        <div class="stars" id="eStars" aria-hidden="true"></div>
+        <h2 id="eTitle" style="margin-top:6px"></h2>
+        <p id="eText" class="muted" style="margin-top:8px"></p>
+        <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="eAgain">Nochmal</button><button class="btn" id="eMenu">Anderes Niveau</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-catalog" hidden>
+    <div class="card">
+      <h2>Fehlerkatalog</h2>
+      <p class="muted" style="margin-top:6px">Typische Fehler mit einem Beispiel und der Merkregel, wie du sie vermeidest. Das Beispiel ändert sich bei jedem Öffnen der Seite.</p>
+      <div id="catBox"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1))}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function round2(x){return Math.round(x*100)/100}
+function N(x){return String(round2(x)).replace("-","−").replace(".",",")}      /* Zahl mit deutschem Komma und Minus */
+function P(x){return x<0?"("+N(x)+")":N(x)}                                         /* Zahl, negative in Klammern */
+function eur(x){var s=(Math.round(x*100)/100).toFixed(2).replace(".",",");return s+" €"}
+function fr(a,b){return '<span class="fr"><span>'+a+'</span><span>'+b+'</span></span>'}
+function sup(b,e){return b+"<sup>"+e+"</sup>"}
+var MUL=" · ",MIN=" − ";
+
+/* ============================================================
+   Fehlertypen mit Merkregeln
+   ============================================================ */
+var TYPES={
+  punkt:{lv:"basis",label:"Punkt vor Strich missachtet",tip:"Punktrechnung (· und :) kommt vor Strichrechnung (+ und −). Rechne zuerst die Punktrechnung aus."},
+  komma:{lv:"basis",label:"Komma falsch gesetzt",tip:"Beim Multiplizieren von Dezimalzahlen zählst du alle Nachkommastellen der Faktoren zusammen. So viele Stellen hat das Ergebnis hinter dem Komma."},
+  bruchadd:{lv:"basis",label:"Nenner einfach mitaddiert",tip:"Brüche mit verschiedenen Nennern erst gleichnamig machen (Hauptnenner), dann nur die Zähler addieren. Der Nenner bleibt gleich."},
+  kuerzen:{lv:"basis",label:"Beim Kürzen subtrahiert statt dividiert",tip:"Kürzen heißt: Zähler und Nenner durch dieselbe Zahl teilen. Nie subtrahieren."},
+  einheit:{lv:"basis",label:"Falscher Umrechnungsfaktor",tip:"Lerne die Faktoren: 1 m = 100 cm, 1 cm = 10 mm, 1 km = 1 000 m, 1 kg = 1 000 g, 1 l = 1 000 ml."},
+  runden:{lv:"basis",label:"Falsche Rundungsregel angewendet",tip:"Schau auf die Ziffer direkt rechts von der Rundungsstelle: 0 bis 4 abrunden, 5 bis 9 aufrunden."},
+  umfflaeche:{lv:"basis",label:"Umfang und Flächeninhalt verwechselt",tip:"Umfang U = 2 · (l + b): einmal um die Figur herum, in cm. Flächeninhalt A = l · b: die Fläche innen, in cm²."},
+  subtr:{lv:"basis",label:"Kleinere Ziffer von größerer abgezogen",tip:"Bei der schriftlichen Subtraktion nie „kleinere minus größere“ umdrehen. Stattdessen einen Zehner entbündeln: aus 2 wird 12, links wird eine 1 weniger."},
+  umkehr:{lv:"basis",label:"Beim Umformen nicht die Umkehroperation verwendet",tip:"Wenn etwas addiert wurde, ziehst du es auf beiden Seiten ab. Wenn multipliziert wurde, teilst du. Immer das Gegenteil."},
+  dreisatz:{lv:"profi",label:"Beim Dreisatz mit der falschen Rechenart gerechnet",tip:"Vom Preis für viele auf den Preis für einen kommst du durch Teilen. Danach multiplizierst du mit der gewünschten Anzahl."},
+  anteil:{lv:"profi",label:"Prozentsatz nicht durch 100 geteilt",tip:"p % bedeutet p : 100. Also W = G · p : 100, zum Beispiel 25 % = 0,25."},
+  grundwert:{lv:"profi",label:"Beim Grundwert multipliziert statt dividiert",tip:"Gesucht ist der Grundwert (100 %): G = W : p · 100. Der Grundwert ist größer als der Prozentwert, wenn p < 100 ist."},
+  rabatt:{lv:"profi",label:"Rabatt mit dem neuen Preis verwechselt",tip:"Der Rabatt ist nur der Betrag, der abgezogen wird. Neuer Preis = alter Preis − Rabatt (oder alter Preis · (1 − p/100))."},
+  klammer:{lv:"profi",label:"Klammer nur teilweise ausmultipliziert",tip:"Beim Ausmultiplizieren wird jeder Summand in der Klammer mit dem Faktor multipliziert: a · (x + b) = a · x + a · b."},
+  klammer_vz:{lv:"profi",label:"Vorzeichenfehler beim Auflösen der Klammer",tip:"Minus vor einer Klammer dreht alle Vorzeichen in der Klammer um. − (−5) wird zu + 5."},
+  potenz:{lv:"profi",label:"Potenz als Produkt gerechnet",tip:"Eine Potenz ist wiederholtes Multiplizieren: 2³ = 2 · 2 · 2 = 8, nicht 2 · 3 = 6."},
+  antiprop:{lv:"profi",label:"Antiproportionale Zuordnung als proportional behandelt",tip:"Frage dich: Wird es mit mehr Personen länger oder kürzer? Bei „je mehr, desto weniger“ wird geteilt, nicht multipliziert."},
+  binom:{lv:"experte",label:"Mittleres Glied der binomischen Formel vergessen",tip:"(a ± b)² = a² ± 2ab + b². Das doppelte Produkt in der Mitte darf nie fehlen. Probe: (x+1)² mit x=1 ergibt 4, nicht 2."},
+  pyth_plus:{lv:"experte",label:"Bei der Kathete addiert statt subtrahiert",tip:"Nur die Hypotenuse ist die Summe der Quadrate: c² = a² + b². Für eine Kathete stellst du um: a² = c² − b²."},
+  pq_vz:{lv:"experte",label:"Vorzeichen bei −p/2 vergessen",tip:"pq-Formel: x = −p/2 ± √((p/2)² − q). Vor dem p/2 steht ein Minus, bei negativem p wird daraus ein Plus."},
+  potenz_mul:{lv:"experte",label:"Beim Multiplizieren von Potenzen die Hochzahlen multipliziert",tip:"Gleiche Basis, mal: Hochzahlen addieren, a^m · a^n = a^(m+n). Probe: 2² · 2³ = 4 · 8 = 32 = 2⁵."},
+  potenz_pow:{lv:"experte",label:"Beim Potenzieren einer Potenz die Hochzahlen addiert",tip:"Potenz hoch Zahl: Hochzahlen multiplizieren, (a^m)^n = a^(m·n). Probe: (2²)³ = 4³ = 64 = 2⁶."},
+  prozent_gw:{lv:"experte",label:"Zweiter Prozentsatz auf falschen Grundwert bezogen",tip:"Bei jeder Prozentrechnung ist der Grundwert der Wert VOR der Änderung. Nach einer Erhöhung ist der Grundwert der neue, höhere Preis."},
+  steigung:{lv:"experte",label:"Steigung: x- und y-Unterschied vertauscht",tip:"m = Δy : Δx, also „Höhenunterschied durch Breitenunterschied“. Erst y, dann x. Eine steile Gerade hat ein großes m."},
+  zyl_d:{lv:"experte",label:"Durchmesser statt Radius eingesetzt",tip:"In Kreis- und Zylinderformeln steckt der Radius r. Ist der Durchmesser d gegeben, rechnest du erst r = d : 2."},
+  pfad:{lv:"experte",label:"Pfadregel: addiert statt multipliziert",tip:"Entlang eines Pfades werden die Wahrscheinlichkeiten multipliziert. Addiert wird nur zwischen verschiedenen Pfaden. Eine Wahrscheinlichkeit über 1 ist immer falsch."}
+};
+
+/* ============================================================
+   Generatoren: { aufgabe, good:[...], bad:[...], err:Index, type }
+   ============================================================ */
+function gPunkt(){var a=ri(2,9),b=ri(2,9),c=ri(2,9);
+  return {aufgabe:a+" + "+b+MUL+c,good:["= "+a+" + "+(b*c),"= "+(a+b*c)],bad:["= "+(a+b)+MUL+c,"= "+((a+b)*c)],err:0,type:"punkt"}}
+function gKomma(){var a,b,p;do{a=ri(2,9);b=ri(2,9);p=a*b}while(p<10||p%10===0);
+  var pre=[a+MUL+b+" = "+p,"Kommastellen: 1 + 1 = 2"];
+  return {aufgabe:"0,"+a+MUL+"0,"+b,good:pre.concat(["Ergebnis: 0,"+p]),bad:pre.concat(["Ergebnis: "+Math.floor(p/10)+","+(p%10)]),err:2,type:"komma"}}
+function gBruchAdd(){var pr=pick([[2,3],[3,4],[2,5],[3,5],[4,5],[3,7]]),d1=pr[0],d2=pr[1],a=ri(1,d1-1),b=ri(1,d2-1),hn=d1*d2,z1=a*d2,z2=b*d1,s=a+b,t=d1+d2;
+  return {aufgabe:fr(a,d1)+" + "+fr(b,d2),good:["Hauptnenner: "+d1+MUL+d2+" = "+hn,"= "+fr(z1,hn)+" + "+fr(z2,hn),"= "+fr(z1+z2,hn)],bad:["Zähler und Nenner addiert: "+fr(a+" + "+b,d1+" + "+d2),"= "+fr(s,t)],err:0,type:"bruchadd"}}
+function gKuerzen(){var tr=pick([[12,18,6],[8,20,4],[15,25,5],[18,24,6],[14,21,7],[16,24,8],[9,12,3]]),n=tr[0],d=tr[1],g=tr[2],L0="ggT("+n+"; "+d+") = "+g;
+  return {aufgabe:"Kürze den Bruch "+fr(n,d),good:[L0,"Kürzen: "+fr(n+" : "+g,d+" : "+g),"= "+fr(n/g,d/g)],bad:[L0,"Kürzen: "+fr(n+" − "+g,d+" − "+g),"= "+fr(n-g,d-g)],err:1,type:"kuerzen"}}
+var UN=[{f:"m",t:"cm",k:100,w:10},{f:"km",t:"m",k:1000,w:100},{f:"kg",t:"g",k:1000,w:100},{f:"l",t:"ml",k:1000,w:100},{f:"cm",t:"mm",k:10,w:100}];
+function gEinheit(){var u=pick(UN),v=pick([2.5,3.4,1.8,4.2,0.6,7.5,5.3]);
+  function ln(k){return N(v)+" "+u.f+" = "+N(v)+MUL+k+" "+u.t+" = "+N(v*k)+" "+u.t}
+  return {aufgabe:"Rechne "+N(v)+" "+u.f+" in "+u.t+" um.",good:["1 "+u.f+" = "+u.k+" "+u.t,ln(u.k)],bad:["1 "+u.f+" = "+u.w+" "+u.t,ln(u.w)],err:0,type:"einheit"}}
+function gRunden(){var up=Math.random()<.5,x=ri(1,9),y=ri(1,8),z=up?ri(5,9):ri(1,4),val=x+","+y+z,A=x+","+y,B=x+","+(y+1);
+  var pre=["Gerundet wird auf Zehntel.","Die Hundertstel-Ziffer ist "+z+"."];
+  return {aufgabe:"Runde "+val+" auf Zehntel.",good:pre.concat([z+(up?" ≥ 5":" < 5")+", also "+(up?"aufrunden":"abrunden"),"≈ "+(up?B:A)]),bad:pre.concat([z+(up?" ≥ 5":" < 5")+", also "+(up?"abrunden":"aufrunden"),"≈ "+(up?A:B)]),err:2,type:"runden"}}
+function gFlaeche(){var l=ri(4,12),w=ri(2,l-1),askA=Math.random()<.5;
+  if(askA)return {aufgabe:"Berechne den Flächeninhalt eines Rechtecks mit l = "+l+" cm und b = "+w+" cm.",good:["A = l"+MUL+"b","A = "+l+MUL+w+" = "+(l*w)+" cm²"],bad:["A = 2"+MUL+"(l + b)","A = 2"+MUL+"("+l+" + "+w+") = "+(2*(l+w))+" cm²"],err:0,type:"umfflaeche"};
+  return {aufgabe:"Berechne den Umfang eines Rechtecks mit l = "+l+" cm und b = "+w+" cm.",good:["U = 2"+MUL+"(l + b)","U = 2"+MUL+"("+l+" + "+w+") = "+(2*(l+w))+" cm"],bad:["U = l"+MUL+"b","U = "+l+MUL+w+" = "+(l*w)+" cm"],err:0,type:"umfflaeche"}}
+function gSubtr(){var a,b,tries=0;do{a=ri(41,95);b=ri(11,a-6);tries++}while(!(b%10>a%10&&a-b>=5)&&tries<500);
+  var ae=a%10,be=b%10,at=Math.floor(a/10),bt=Math.floor(b/10);
+  return {aufgabe:a+" − "+b,good:["Einer: "+(10+ae)+" − "+be+" = "+(10+ae-be)+" (ein Zehner wird entbündelt)","Zehner: "+(at-1)+" − "+bt+" = "+(at-1-bt),"Ergebnis: "+(a-b)],bad:["Einer: "+ae+" − "+be+" geht nicht, also "+be+" − "+ae+" = "+(be-ae),"Zehner: "+at+" − "+bt+" = "+(at-bt),"Ergebnis: "+((at-bt)*10+(be-ae))],err:0,type:"subtr"}}
+function gUmkehrEinfach(){var a=ri(3,19),x=ri(4,30),c=x+a;
+  return {aufgabe:"x + "+a+" = "+c,good:["x + "+a+" = "+c,"| − "+a,"x = "+c+" − "+a+" = "+x],bad:["x + "+a+" = "+c,"| + "+a,"x = "+c+" + "+a+" = "+(c+a)],err:1,type:"umkehr"}}
+
+function gDreisatz(){var u=pick([0.6,0.8,1.2,1.5,2.5,0.4]),n1=pick([4,5,8,10]),n2=pick([3,6,7,9,12]),nm=pick([["Hefte","Heft"],["Stifte","Stift"],["Brötchen","Brötchen"],["Äpfel","Apfel"]]),Pr=n1*u;
+  var L0=n1+" "+nm[0]+" → "+eur(Pr);
+  return {aufgabe:n1+" "+nm[0]+" kosten "+eur(Pr)+". Wie viel kosten "+n2+" "+nm[0]+"?",good:[L0,"1 "+nm[1]+" → "+eur(Pr)+" : "+n1+" = "+eur(u),n2+" "+nm[0]+" → "+eur(u)+MUL+n2+" = "+eur(u*n2)],bad:[L0,"1 "+nm[1]+" → "+eur(Pr)+MUL+n1+" = "+eur(Pr*n1),n2+" "+nm[0]+" → "+eur(Pr*n1)+MUL+n2+" = "+eur(Pr*n1*n2)],err:1,type:"dreisatz"}}
+function gAnteil(){var G=pick([40,60,80,120,150,200,240]),p=pick([10,15,20,25,30,40,5]),W=G*p/100,L0="gegeben: G = "+G+" €, p % = "+p+" %";
+  return {aufgabe:"Berechne "+p+" % von "+G+" €.",good:[L0,"W = G"+MUL+"p : 100","W = "+G+MUL+p+" : 100 = "+N(W)+" €"],bad:[L0,"W = G"+MUL+"p","W = "+G+MUL+p+" = "+(G*p)+" €"],err:1,type:"anteil"}}
+function gGrundwert(){var G=pick([50,80,120,200,300,150]),p=pick([10,20,25,40,50,30]),W=G*p/100,L0="gegeben: W = "+N(W)+" €, p % = "+p+" %";
+  return {aufgabe:N(W)+" € sind "+p+" % des Grundwerts. Berechne den Grundwert G.",good:[L0,"G = W : p"+MUL+"100","G = "+N(W)+" : "+p+MUL+"100 = "+N(G)+" €"],bad:[L0,"G = W"+MUL+"p : 100","G = "+N(W)+MUL+p+" : 100 = "+N(W*p/100)+" €"],err:1,type:"grundwert"}}
+function gRabatt(){var Pr=pick([60,80,120,150,200,240]),r=pick([10,20,25,30,15]),R=Pr*r/100,L0="gegeben: Preis "+Pr+" €, Rabatt "+r+" %",L1="Rabatt: "+Pr+MUL+r+" : 100 = "+N(R)+" €";
+  return {aufgabe:"Ein Pullover kostet "+Pr+" € und wird um "+r+" % reduziert. Wie viel kostet er jetzt?",good:[L0,L1,"neuer Preis: "+Pr+" − "+N(R)+" = "+N(Pr-R)+" €"],bad:[L0,L1,"neuer Preis: "+N(R)+" €"],err:2,type:"rabatt"}}
+function gGleichung(){var a=pick([2,3,4,5]),x=ri(2,9),b=ri(3,9),c=a*x+b,L0=a+"x + "+b+" = "+c;
+  return {aufgabe:"Löse die Gleichung "+L0+".",good:[L0,"| − "+b,a+"x = "+c+" − "+b+" = "+(c-b),"x = "+(c-b)+" : "+a+" = "+x],bad:[L0,"| + "+b,a+"x = "+c+" + "+b+" = "+(c+b),"x = "+(c+b)+" : "+a+" "+((c+b)%a===0?"= ":"≈ ")+N((c+b)/a)],err:1,type:"umkehr"}}
+function gKlammer(){var a=pick([2,3,4]),x=ri(2,8),b=ri(2,6),c=a*(x+b),L0=a+MUL+"(x + "+b+") = "+c;
+  return {aufgabe:"Löse die Gleichung "+L0+".",good:[L0,a+"x + "+a+MUL+b+" = "+c,a+"x = "+c+" − "+(a*b)+" = "+(c-a*b),"x = "+(c-a*b)+" : "+a+" = "+x],bad:[L0,a+"x + "+b+" = "+c,a+"x = "+c+" − "+b+" = "+(c-b),"x = "+(c-b)+" : "+a+" "+((c-b)%a===0?"= ":"≈ ")+N((c-b)/a)],err:1,type:"klammer"}}
+function gVorzeichen(){var a,b;do{a=ri(2,8);b=ri(2,9)}while(a===b);
+  return {aufgabe:"−"+a+" − (−"+b+")",good:["= −"+a+" + "+b,"= "+N(b-a)],bad:["= −"+a+" − "+b,"= −"+(a+b)],err:0,type:"klammer_vz"}}
+function gPotenz(){var b=ri(2,5),e=ri(3,4),k=ri(2,9),val=Math.pow(b,e),prod=[],i;for(i=0;i<e;i++)prod.push(b);
+  return {aufgabe:sup(b,e)+" + "+k,good:[sup(b,e)+" = "+prod.join(MUL)+" = "+val,val+" + "+k+" = "+(val+k)],bad:[sup(b,e)+" = "+b+MUL+e+" = "+(b*e),(b*e)+" + "+k+" = "+(b*e+k)],err:0,type:"potenz"}}
+function gAntiprop(){var n1=pick([3,4,6]),f=pick([2,3]),d1=pick([6,12,18,24]),n2=n1*f,L0=n2+" Arbeiter sind das "+f+"-Fache von "+n1+" Arbeitern.";
+  return {aufgabe:n1+" Arbeiter brauchen "+d1+" Tage für eine Arbeit. Wie lange brauchen "+n2+" Arbeiter?",good:[L0,"Also dauert es nur den "+f+"-ten Teil der Zeit.",d1+" : "+f+" = "+(d1/f)+" Tage"],bad:[L0,"Also dauert es auch "+f+"-mal so lange.",d1+MUL+f+" = "+(d1*f)+" Tage"],err:1,type:"antiprop"}}
+
+function gBinom(){var a=ri(2,9),minus=Math.random()<.5,s=minus?"−":"+";
+  return {aufgabe:"(x "+s+" "+a+")²",good:["= x² "+s+" 2"+MUL+"x"+MUL+a+" + "+a+"²","= x² "+s+" "+(2*a)+"x + "+(a*a)],bad:["= x² "+s+" "+a+"²","= x² "+s+" "+(a*a)],err:0,type:"binom"}}
+function gPyth(){var t=pick([[6,8,10],[5,12,13],[8,15,17],[7,24,25],[9,12,15],[12,16,20]]),sw=Math.random()<.5,a=sw?t[1]:t[0],b=sw?t[0]:t[1],c=t[2];
+  var s=c*c+a*a;
+  return {aufgabe:"Ein rechtwinkliges Dreieck hat die Hypotenuse c = "+c+" cm und die Kathete a = "+a+" cm. Berechne die Kathete b.",good:["b² = c² − a²","b² = "+c+"² − "+a+"² = "+(c*c-a*a),"b = √"+(c*c-a*a)+" = "+b+" cm"],bad:["b² = c² + a²","b² = "+c+"² + "+a+"² = "+s,"b = √"+s+" ≈ "+N(Math.sqrt(s))+" cm"],err:0,type:"pyth_plus"}}
+function gPQ(){var s1,s2,tries=0;do{s1=ri(-4,6);s2=ri(-4,6);tries++}while((s1===s2||(s1+s2)%2!==0||s1+s2===0)&&tries<500);
+  var p=-(s1+s2),q=s1*s2,m=p/2,d=Math.abs(s1-s2)/2,c0=-m,lo=Math.min(s1,s2),hi=Math.max(s1,s2);
+  var eq="x² "+(p<0?"− "+(-p):"+ "+p)+"x "+(q<0?"− "+(-q):"+ "+q)+" = 0";
+  var rad="√"+(m*m-q);
+  return {aufgabe:"Löse mit der pq-Formel: "+eq,good:["p = "+N(p)+",  q = "+N(q),"x₁,₂ = −p/2 ± √((p/2)² − q)","x₁,₂ = "+N(c0)+" ± "+rad+" = "+N(c0)+" ± "+d,"x₁ = "+lo+",  x₂ = "+hi],bad:["p = "+N(p)+",  q = "+N(q),"x₁,₂ = p/2 ± √((p/2)² − q)","x₁,₂ = "+N(m)+" ± "+rad+" = "+N(m)+" ± "+d,"x₁ = "+N(m-d)+",  x₂ = "+N(m+d)],err:1,type:"pq_vz"}}
+function gPotenzMul(){
+  if(Math.random()<.5){var b=pick([2,3,5]),m=ri(2,4),n=ri(2,4);if(b>2){m=ri(2,3);n=ri(2,3)}
+    return {aufgabe:sup(b,m)+MUL+sup(b,n),good:["= "+sup(b,"("+m+" + "+n+")"),"= "+sup(b,m+n)],bad:["= "+sup(b,"("+m+MUL+n+")"),"= "+sup(b,m*n)],err:0,type:"potenz_mul"}}
+  var b2=pick([2,3,5]),m2=ri(2,4),n2=ri(2,3);
+  return {aufgabe:"("+sup(b2,m2)+")"+"<sup>"+n2+"</sup>",good:["= "+sup(b2,"("+m2+MUL+n2+")"),"= "+sup(b2,m2*n2)],bad:["= "+sup(b2,"("+m2+" + "+n2+")"),"= "+sup(b2,m2+n2)],err:0,type:"potenz_pow"}}
+function gProzentGW(){var c=pick([[100,10],[200,20],[400,25],[300,10],[500,20]]),G=c[0],p=c[1],G1=G*(1+p/100),G2=G1*(1-p/100),L0="Erhöhung: "+G+MUL+(1+p/100).toString().replace(".",",")+" = "+N(G1)+" €";
+  return {aufgabe:"Ein Preis von "+G+" € steigt um "+p+" %. Danach sinkt der neue Preis um "+p+" %. Wie hoch ist der Endpreis?",good:[L0,"Senkung vom NEUEN Preis: "+N(G1)+MUL+(1-p/100).toString().replace(".",",")+" = "+N(G2)+" €","Endpreis: "+N(G2)+" € (weniger als vorher)"],bad:[L0,"Senkung: "+N(G1)+" − "+p+" % von "+G+" = "+N(G1)+" − "+N(G*p/100)+" = "+N(G)+" €","Endpreis: "+N(G)+" € (wie vorher)"],err:1,type:"prozent_gw"}}
+function gSteigung(){var x1=ri(0,4),y1=ri(0,6),dx,dy;do{dx=ri(1,5);dy=ri(1,7)}while(dx===dy||dy%dx===0&&dx>1&&false);
+  var x2=x1+dx,y2=y1+dy;
+  return {aufgabe:"Bestimme die Steigung der Geraden durch P₁("+x1+" | "+y1+") und P₂("+x2+" | "+y2+").",good:["m = Δy : Δx","m = "+fr(y2+" − "+y1,x2+" − "+x1),"m = "+fr(dy,dx)+(dx>1?" = "+N(dy/dx):"")],bad:["m = Δy : Δx","m = "+fr(x2+" − "+x1,y2+" − "+y1),"m = "+fr(dx,dy)+(dy>1?" = "+N(dx/dy):"")],err:1,type:"steigung"}}
+function gZylinder(){var d=pick([6,8,10,12]),h=ri(3,9),r=d/2,Vg=Math.PI*r*r*h,Vb=Math.PI*d*d*h;
+  function v(x){return (Math.round(x*10)/10).toString().replace(".",",")}
+  return {aufgabe:"Ein Zylinder hat den Durchmesser d = "+d+" cm und die Höhe h = "+h+" cm. Berechne das Volumen.",good:["r = d : 2 = "+r+" cm","V = π"+MUL+"r²"+MUL+"h = π"+MUL+r+"²"+MUL+h,"V ≈ "+v(Vg)+" cm³"],bad:["r = d = "+d+" cm","V = π"+MUL+"r²"+MUL+"h = π"+MUL+d+"²"+MUL+h,"V ≈ "+v(Vb)+" cm³"],err:0,type:"zyl_d"}}
+function gPfad(){
+  if(Math.random()<.5)return {aufgabe:"Ein Würfel wird zweimal geworfen. Wie groß ist die Wahrscheinlichkeit für zwei Sechsen?",good:["P(6) = "+fr(1,6),"P = "+fr(1,6)+MUL+fr(1,6)+" = "+fr(1,36)],bad:["P(6) = "+fr(1,6),"P = "+fr(1,6)+" + "+fr(1,6)+" = "+fr(2,6)+" = "+fr(1,3)],err:1,type:"pfad"};
+  var r=ri(1,3),b=ri(2,4),t=r+b;
+  return {aufgabe:"In einer Urne liegen "+r+" rote und "+b+" blaue Kugeln. Es wird zweimal mit Zurücklegen gezogen. Wie groß ist die Wahrscheinlichkeit für zweimal Rot?",good:["P(rot) = "+fr(r,t),"P = "+fr(r,t)+MUL+fr(r,t)+" = "+fr(r*r,t*t)],bad:["P(rot) = "+fr(r,t),"P = "+fr(r,t)+" + "+fr(r,t)+" = "+fr(2*r,t)],err:1,type:"pfad"}}
+
+var GENS={
+  basis:[gPunkt,gKomma,gBruchAdd,gKuerzen,gEinheit,gRunden,gFlaeche,gSubtr,gUmkehrEinfach],
+  profi:[gDreisatz,gAnteil,gGrundwert,gRabatt,gGleichung,gKlammer,gVorzeichen,gPotenz,gAntiprop],
+  experte:[gBinom,gPyth,gPQ,gPotenzMul,gProzentGW,gSteigung,gZylinder,gPfad]
+};
+var LEVELS={
+  basis:{name:"Basis",desc:"Jg. 5/6: Rechenreihenfolge, Komma, Brüche, Einheiten, Runden, Umfang und Fläche.",emoji:"🟢"},
+  profi:{name:"Profi",desc:"Jg. 7/8: Dreisatz, Prozent, Gleichungen, Klammern, Vorzeichen, Potenzen.",emoji:"🟡"},
+  experte:{name:"Experte",desc:"Jg. 9/10: Binomische Formeln, Pythagoras, pq-Formel, Potenzgesetze, Steigung, Wahrscheinlichkeit.",emoji:"🔴"}
+};
+var NAMES=["Mia","Ben","Lea","Noah","Emma","Finn","Lina","Jonas","Sara","Tim","Nele","Paul"];
+
+/* ============================================================
+   Runde
+   ============================================================ */
+var TS={level:null,tasks:[],i:0,score:0,phase:"pick",sel:-1};
+function bestKey(l){return "fehler-best-"+l}
+function renderLevels(){
+  var box=$("#lvlBox");box.innerHTML="";
+  Object.keys(LEVELS).forEach(function(k){
+    var L=LEVELS[k],best=store(bestKey(k));
+    var b=document.createElement("button");
+    b.innerHTML='<span class="t">'+L.emoji+" "+L.name+'</span><span class="d">'+L.desc+'</span><span class="best">'+(best!=null?"Bestes Ergebnis: "+best+" / 20":"Noch nicht gespielt")+'</span>';
+    b.addEventListener("click",function(){startRound(k)});box.appendChild(b);
+  });
+}
+function makeTask(gen){
+  var g=gen(),hasErr=Math.random()>0.12;
+  return {aufgabe:g.aufgabe,good:g.good,bad:g.bad,type:g.type,hasErr:hasErr,lines:hasErr?g.bad:g.good,err:hasErr?g.err:-1,gerr:g.err,who:pick(NAMES)};
+}
+function startRound(level){
+  var pool=[];
+  while(pool.length<10)pool=pool.concat(shuffle(GENS[level]));
+  var tasks=pool.slice(0,10).map(makeTask);
+  /* mindestens ein Fall ohne Fehler und mindestens acht mit Fehler */
+  var noErr=tasks.filter(function(t){return !t.hasErr}).length;
+  if(noErr>2){tasks.forEach(function(t){if(!t.hasErr&&noErr>2){t.hasErr=true;t.lines=t.bad;t.err=t.gerr;noErr--}})}
+  TS={level:level,tasks:tasks,i:0,score:0,phase:"pick",sel:-1};
+  $("#tStart").hidden=true;$("#tEnd").hidden=true;$("#tPlay").hidden=false;
+  $("#tLvl").textContent=LEVELS[level].emoji+" "+LEVELS[level].name;
+  showTask();
+}
+function showTask(){
+  var t=TS.tasks[TS.i];
+  $("#tCount").textContent="Fall "+(TS.i+1)+" von 10";
+  $("#tScore").textContent=TS.score;
+  $("#tBar").style.width=(TS.i/10*100)+"%";
+  $("#caseBox").innerHTML=t.aufgabe;
+  $("#who").textContent="Rechenweg von "+t.who+":";
+  TS.phase="pick";TS.sel=-1;
+  var h="";
+  t.lines.forEach(function(l,i){h+='<li><button class="ln" data-i="'+i+'"><span class="no">'+(i+1)+'</span><span class="tx">'+l+'</span></button></li>'});
+  $("#lines").innerHTML=h;
+  $$("#lines .ln").forEach(function(b){b.addEventListener("click",function(){pickLine(+b.dataset.i)})});
+  $("#allOk").disabled=false;$("#allOkRow").hidden=false;$("#hintBtn").disabled=false;
+  $("#hintBox").innerHTML="";$("#typeBox").innerHTML="";$("#fb").innerHTML="";
+}
+function lockLines(){$$("#lines .ln").forEach(function(b){b.disabled=true});$("#allOk").disabled=true;$("#hintBtn").disabled=true}
+function markLines(t){
+  $$("#lines .ln").forEach(function(b,i){
+    b.classList.remove("pick");
+    if(t.hasErr&&i===t.err)b.classList.add("err");
+  });
+}
+function solutionHtml(t){
+  var h='<h4>So geht es richtig:</h4><ol class="lines">';
+  t.good.forEach(function(l,i){h+='<li><div class="ln good" style="cursor:default"><span class="no">'+(i+1)+'</span><span class="tx">'+l+'</span></div></li>'});
+  return h+'</ol>';
+}
+function tipHtml(t){var ty=TYPES[t.type];return '<div class="tip"><b>Merkregel:</b> '+ty.tip+'</div>'}
+function nextBtn(last){return '<div class="row" style="margin-top:14px"><button class="btn primary" id="nextBtn">'+(last?"Ergebnis ansehen":"Weiter")+'</button></div>'}
+function bindNext(){$("#nextBtn").addEventListener("click",nextTask);$("#nextBtn").focus({preventScroll:false})}
+function addScore(n){TS.score+=n;$("#tScore").textContent=TS.score}
+function pickLine(i){
+  if(TS.phase!=="pick")return;
+  var t=TS.tasks[TS.i];TS.phase="done";lockLines();
+  var last=TS.i===9;
+  if(!t.hasErr){
+    $$("#lines .ln")[i].classList.add("pick");
+    $("#fb").innerHTML='<div class="fb no"><h3>Hier steckt kein Fehler</h3><p>Diese Rechnung ist vollständig richtig. Gute Detektive prüfen jede Zeile und erfinden keine Fehler.</p>'+nextBtn(last)+'</div>';
+    bindNext();return;
+  }
+  markLines(t);
+  if(i!==t.err){
+    $$("#lines .ln")[i].classList.add("pick");
+    $("#fb").innerHTML='<div class="fb no"><h3>Nicht ganz</h3><p>Der erste Fehler steckt in <b>Zeile '+(t.err+1)+'</b> (rot markiert).</p><p><b>Fehler:</b> '+TYPES[t.type].label+'.</p>'+tipHtml(t)+solutionHtml(t)+nextBtn(last)+'</div>';
+    bindNext();return;
+  }
+  /* richtige Zeile: Fehlertyp abfragen */
+  addScore(1);TS.phase="type";
+  var same=Object.keys(TYPES).filter(function(k){return TYPES[k].lv===TS.level&&k!==t.type});
+  var opts=shuffle([t.type].concat(shuffle(same).slice(0,3)));
+  var h='<div class="fb ok"><h3>Zeile '+(t.err+1)+' ist richtig!</h3><p>Was ist hier schiefgelaufen?</p><div class="opts">';
+  opts.forEach(function(k){h+='<button class="opt" data-k="'+k+'">'+TYPES[k].label+'</button>'});
+  h+='</div></div>';
+  $("#typeBox").innerHTML=h;
+  $$("#typeBox .opt").forEach(function(b){b.addEventListener("click",function(){pickType(b.dataset.k)})});
+  $("#typeBox").scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function pickType(k){
+  if(TS.phase!=="type")return;TS.phase="done";
+  var t=TS.tasks[TS.i],ok=k===t.type,last=TS.i===9;
+  $$("#typeBox .opt").forEach(function(b){b.disabled=true;if(b.dataset.k===t.type)b.classList.add("right");else if(b.dataset.k===k)b.classList.add("wrong")});
+  if(ok)addScore(1);
+  $("#fb").innerHTML='<div class="fb '+(ok?"ok":"no")+'"><h3>'+(ok?"Fehler erkannt und benannt!":"Fehler gefunden, aber falsch benannt")+'</h3>'+(ok?"":'<p>Richtig war: <b>'+TYPES[t.type].label+'</b>.</p>')+tipHtml(t)+solutionHtml(t)+nextBtn(last)+'</div>';
+  bindNext();
+}
+$("#allOk").addEventListener("click",function(){
+  if(TS.phase!=="pick")return;
+  var t=TS.tasks[TS.i],last=TS.i===9;TS.phase="done";lockLines();
+  if(!t.hasErr){
+    addScore(2);
+    $("#fb").innerHTML='<div class="fb ok"><h3>Genau, hier ist alles richtig!</h3><p>Sauber geprüft. Nicht jede Rechnung enthält einen Fehler.</p>'+nextBtn(last)+'</div>';
+  }else{
+    markLines(t);
+    $("#fb").innerHTML='<div class="fb no"><h3>Da steckt doch ein Fehler</h3><p>Der erste Fehler steckt in <b>Zeile '+(t.err+1)+'</b> (rot markiert).</p><p><b>Fehler:</b> '+TYPES[t.type].label+'.</p>'+tipHtml(t)+solutionHtml(t)+nextBtn(last)+'</div>';
+  }
+  bindNext();
+});
+$("#hintBtn").addEventListener("click",function(){
+  var t=TS.tasks[TS.i];
+  $("#hintBox").innerHTML='<div class="note">Prüfe die Zeilen der Reihe nach: Passt jede Zeile zur vorherigen? Rechne in Gedanken nach, besonders bei Vorzeichen, Komma und der Rechenart. Manchmal gibt es auch gar keinen Fehler.</div>';
+});
+function nextTask(){
+  TS.i++;
+  if(TS.i>=10){endRound();return}
+  showTask();$("#tPlay").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function endRound(){
+  $("#tPlay").hidden=true;$("#tEnd").hidden=false;
+  var s=TS.score,prev=parseInt(store(bestKey(TS.level))||"-1",10),rec=s>prev;
+  if(rec)store(bestKey(TS.level),String(s));
+  var st=s>=18?3:s>=14?2:s>=10?1:0;
+  $("#eStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#eTitle").textContent=s+" von 20 Punkten";
+  $("#eText").textContent=(s>=18?"Meisterdetektiv! Dir entgeht kein Fehler.":s>=14?"Stark. Schau dir im Fehlerkatalog die Merkregeln zu den verpassten Fehlern an.":s>=10?"Gute Spur. Im Fehlerkatalog findest du zu jedem Fehlertyp eine Merkregel.":"Übung macht den Detektiv. Lies im Fehlerkatalog die Merkregeln und versuche es erneut.")+(rec&&s>0?" Neuer persönlicher Rekord!":"");
+}
+$("#tQuit").addEventListener("click",function(){$("#tPlay").hidden=true;$("#tStart").hidden=false;renderLevels()});
+$("#eAgain").addEventListener("click",function(){startRound(TS.level)});
+$("#eMenu").addEventListener("click",function(){$("#tEnd").hidden=true;$("#tStart").hidden=false;renderLevels()});
+
+/* ============================================================
+   Fehlerkatalog
+   ============================================================ */
+function exampleFor(type,lv){
+  var gens=GENS[lv],tries=0,g;
+  while(tries++<80){g=pick(gens)();if(g.type===type)return g}
+  return null;
+}
+function renderCatalog(){
+  var h="";
+  ["basis","profi","experte"].forEach(function(lv){
+    h+='<h3 style="margin-top:18px">'+LEVELS[lv].emoji+" "+LEVELS[lv].name+'</h3><p class="muted" style="font-size:16px">'+LEVELS[lv].desc+'</p>';
+    Object.keys(TYPES).filter(function(k){return TYPES[k].lv===lv}).forEach(function(k){
+      var ex=exampleFor(k,lv),ty=TYPES[k];
+      h+='<details class="cat"><summary>'+ty.label+'</summary>';
+      if(ex){
+        h+='<div class="case" style="margin-top:16px">'+ex.aufgabe+'</div><p class="who">So wird es oft falsch gemacht:</p><ul class="ex">';
+        ex.bad.forEach(function(l,i){h+='<li class="'+(i===ex.err?"err":"")+'"><span class="m">'+(i===ex.err?"✗":(i+1))+'</span><span>'+l+'</span></li>'});
+        h+='</ul><p class="who">So ist es richtig:</p><ul class="ex">';
+        ex.good.forEach(function(l,i){h+='<li class="good"><span class="m">'+(i+1)+'</span><span>'+l+'</span></li>'});
+        h+='</ul>';
+      }
+      h+='<div class="tip" style="margin-bottom:12px"><b>Merkregel:</b> '+ty.tip+'</div></details>';
+    });
+  });
+  $("#catBox").innerHTML=h;
+}
+
+/* ---------- Tabs ---------- */
+function showTab(name){
+  $$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===name?"true":"false")});
+  ["hunt","catalog"].forEach(function(n){$("#p-"+n).hidden=(n!==name)});
+}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
+
+renderLevels();renderCatalog();
+window.__fd={GENS:GENS,TYPES:TYPES,TS:function(){return TS},makeTask:makeTask};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Fehler-Detektiv", text: "<p>Jemand hat falsch gerechnet. Du findest den Fehler und lernst die Merkregel dazu.</p>" },
+  { sel: "#tabs", title: "Zwei Bereiche", text: "<ul><li><b>Fehlerjagd:</b> Zehn Fälle pro Runde</li><li><b>Fehlerkatalog:</b> Typische Fehler mit Beispiel und Merkregel zum Nachlesen</li></ul>" },
+  { sel: "#lvlBox", title: "Niveau wählen", text: "<p>Basis (Jg. 5/6), Profi (Jg. 7/8) oder Experte (Jg. 9/10).</p>" },
+  { title: "So funktioniert ein Fall", text: "<ul><li>Tippe auf die <b>erste fehlerhafte Zeile</b></li><li>Wähle dann den passenden Fehler aus</li><li>Ist alles richtig, tippe auf „Alles richtig“</li></ul><p>Pro Fall gibt es bis zu 2 Punkte.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
