@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Zuschnitt-Optimierer</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f3efe6; --ink:#2a2620; --muted:#6a6358; --line:#d6cfbf; --card:#fffdf8;
+  --wood:#e3c28c; --wood2:#cfa766; --acc:#b4561b; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --focus:#2d5fd1;
+  --p1:#7fb5d9;--p2:#e9a96b;--p3:#9ccf9a;--p4:#d9a0c9;--p5:#e6d36f;--p6:#a9a4e0;--pink:#2a2620;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#1a1814;--ink:#f1ece2;--muted:#b3ab9c;--line:#3c372e;--card:#252219;--wood:#8a6c3e;--wood2:#6d532b;--acc:#ffa05c;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff;--p1:#4a84ad;--p2:#b5733a;--p3:#5c9a5a;--p4:#a66a95;--p5:#a8962f;--p6:#6d68b0}
+}
+:root[data-theme="dark"]{--bg:#1a1814;--ink:#f1ece2;--muted:#b3ab9c;--line:#3c372e;--card:#252219;--wood:#8a6c3e;--wood2:#6d532b;--acc:#ffa05c;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--focus:#9db6ff;--p1:#4a84ad;--p2:#b5733a;--p3:#5c9a5a;--p4:#a66a95;--p5:#a8962f;--p6:#6d68b0}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(30px,6vw,44px)}
+header.top p{color:var(--muted);margin:6px 0 16px;max-width:42em}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:#f0b44a;color:#2a2620}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.jobs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:14px}
+.jobs button{text-align:left;padding:16px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:150px}
+.jobs button:hover{background:#f0b44a;color:#2a2620}
+.jobs .e{font-size:34px}
+.jobs .t{font-family:var(--head);font-size:22px;font-weight:800}
+.jobs .d{font-size:16px}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.stat{border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}
+.stat small{display:block;color:var(--muted);font-size:14px}
+.stat b{font-family:var(--head);font-size:22px}
+.boardwrap{border:2.5px solid var(--ink);border-radius:14px;background:var(--bg);padding:6px;touch-action:none}
+svg#board{width:100%;height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.part{cursor:grab}
+.part.sel rect.body{stroke:var(--ink);stroke-width:.9}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:6px}
+.stars{font-size:40px;letter-spacing:6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:15px;color:var(--muted);margin-top:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Zuschnitt-Optimierer – buildspace">
+<meta property="og:description" content="Teile per Drag-and-drop so auf Holzplatten legen, dass nichts überlappt und möglichst wenig Verschnitt entsteht. Mit Maserung, Verschnittrechnung und sechs…">
+<meta property="og:url" content="https://buildspaceos.de/zuschnitt-optimierer.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/zuschnitt-optimierer.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Zuschnitt-Optimierer – buildspace">
+<meta name="twitter:description" content="Teile per Drag-and-drop so auf Holzplatten legen, dass nichts überlappt und möglichst wenig Verschnitt entsteht. Mit Maserung, Verschnittrechnung und sechs…">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/zuschnitt-optimierer.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🪚 Zuschnitt-Optimierer</h1>
+    <p>Du bekommst eine Holzplatte und eine Teileliste. Ziehe die Teile so auf die Platte, dass nichts überlappt und möglichst wenig Verschnitt entsteht. Echte Werkstätten sparen so viel Geld.</p>
+  </header>
+
+  <section class="card" id="sStart">
+    <h2>Welchen Auftrag übernimmst du?</h2>
+    <p class="muted" style="margin-top:6px">Alle Maße in Zentimetern. Die Teile rasten am Rand der Platte und an anderen Teilen ein.</p>
+    <div class="jobs" id="jobBox"></div>
+  </section>
+
+  <section class="card" id="sPlay" hidden>
+    <div class="row" style="justify-content:space-between"><span class="pill" id="jName"></span><button class="btn" id="jQuit" style="min-height:42px;padding:6px 12px;font-size:16px">Zurück</button></div>
+    <p id="jNote" class="muted" style="margin-top:8px"></p>
+    <div class="stats">
+      <div class="stat"><small>Teile auf der Platte</small><b id="stPlaced"></b></div>
+      <div class="stat"><small>Platten in Benutzung</small><b id="stSheets"></b></div>
+      <div class="stat"><small>Verschnitt aktuell</small><b id="stWaste"></b></div>
+      <div class="stat"><small>Mindest-Verschnitt</small><b id="stMin"></b></div>
+    </div>
+    <div class="boardwrap"><svg id="board" role="img" aria-label="Holzplatte mit verschiebbaren Teilen"></svg></div>
+    <div class="legend"><span>Ziehen: Teil verschieben</span><span>Teil antippen, dann „Drehen“</span><span>🟥 rot = überlappt oder ragt über den Rand</span></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="rotBtn" disabled>↻ Drehen</button>
+      <button class="btn" id="resetBtn">Zurücksetzen</button>
+      <button class="btn" id="solBtn">💡 Lösung zeigen</button>
+      <button class="btn primary" id="chkBtn">Prüfen ✔</button>
+    </div>
+    <div id="fb" aria-live="polite"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var NS="http://www.w3.org/2000/svg";
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function pc(x){return (Math.round(x*10)/10).toString().replace(".",",")+" %"}
+
+/* Teile: [w,h,Anzahl]. sol: pro Teil (in Reihenfolge der Expansion) [Platte, x, y, w, h] */
+var JOBS=[
+ {id:"pinn",emoji:"🖼️",name:"Pinnwand-Rahmen",lvl:"Einstieg, Jg. 8",sheets:1,sw:80,sh:60,grain:false,
+  note:"Eine Sperrholzplatte 80 cm × 60 cm. Alle drei Teile müssen auf die Platte passen.",
+  parts:[[60,40,1],[20,40,1],[80,20,1]],
+  sol:[[0,0,0,60,40],[0,60,0,20,40],[0,0,40,80,20]]},
+ {id:"kiste",emoji:"📦",name:"Werkzeugkiste",lvl:"Einstieg, Jg. 8",sheets:1,sw:120,sh:60,grain:false,
+  note:"Platte 120 cm × 60 cm. Boden, Deckel, zwei Seiten und drei Griffleisten. Geht es ganz ohne Verschnitt?",
+  parts:[[60,30,2],[30,30,2],[20,30,3]],
+  sol:[[0,0,0,60,30],[0,60,0,60,30],[0,0,30,30,30],[0,30,30,30,30],[0,60,30,20,30],[0,80,30,20,30],[0,100,30,20,30]]},
+ {id:"regal",emoji:"📚",name:"Bücherregal",lvl:"Mittel, Jg. 9",sheets:1,sw:100,sh:50,grain:false,
+  note:"Platte 100 cm × 50 cm. Vier Teile, ein Stück Verschnitt bleibt übrig. Die Teile dürfen gedreht werden.",
+  parts:[[45,30,1],[55,30,1],[50,20,1],[25,20,1]],
+  sol:[[0,0,0,45,30],[0,45,0,55,30],[0,0,30,50,20],[0,50,30,25,20]]},
+ {id:"vogel",emoji:"🐦",name:"Vogelhaus (Maserung)",lvl:"Mittel, Jg. 9",sheets:1,sw:100,sh:50,grain:true,
+  note:"Platte 100 cm × 50 cm mit Maserung. Die Teile dürfen nicht gedreht werden, weil die Maserung bei allen Teilen in dieselbe Richtung laufen muss.",
+  parts:[[50,25,2],[30,50,1],[20,50,1]],
+  sol:[[0,0,0,50,25],[0,0,25,50,25],[0,50,0,30,50],[0,80,0,20,50]]},
+ {id:"hocker",emoji:"🪑",name:"Hocker für die Klasse",lvl:"Profi, Jg. 10",sheets:2,sw:120,sh:60,grain:false,
+  note:"Du hast zwei Platten 120 cm × 60 cm. Verteile alle Teile. Tipp: Beide Platten lassen sich ohne Verschnitt füllen.",
+  parts:[[70,40,1],[50,40,1],[120,20,1],[90,60,1],[30,30,2]],
+  sol:[[0,0,0,70,40],[0,70,0,50,40],[0,0,40,120,20],[1,0,0,90,60],[1,90,0,30,30],[1,90,30,30,30]]},
+ {id:"regal2",emoji:"🗄️",name:"Schrank mit Fächern",lvl:"Profi, Jg. 10",sheets:2,sw:120,sh:60,grain:false,
+  note:"Zwei Platten 120 cm × 60 cm. Die Teile füllen fast zwei ganze Platten. Plane zuerst auf dem Papier: Welche Teile ergeben zusammen 120 cm oder 60 cm?",
+  parts:[[60,40,2],[40,60,2],[40,20,4],[30,20,2],[10,40,1]],
+  sol:[[0,0,0,60,40],[0,60,0,60,40],[0,0,40,40,20],[0,40,40,40,20],[0,80,40,40,20],[1,0,0,40,60],[1,40,0,40,60],[1,80,0,30,20],[1,80,20,30,20],[1,110,0,10,40],[1,80,40,40,20]]}
+];
+
+var J=null,parts=[],sel=-1,done=false,hint=false,drag=null;
+var GAP=8,M=4;
+function sheetOrigin(i){return {x:M,y:M+i*(J.sh+GAP)}}
+var stageY=0,boardW=0,boardH=0;
+
+function expand(job){var a=[],id=0;job.parts.forEach(function(p,pi){for(var k=0;k<p[2];k++){a.push({id:id++,w:p[0],h:p[1],x:0,y:0,c:pi%6+1,rot:false,w0:p[0],h0:p[1]})}});return a}
+function layoutStage(){
+  var x=0,y=0,rowH=0,maxW=J.sw;
+  parts.forEach(function(p){
+    if(x+p.w>maxW&&x>0){x=0;y+=rowH+3;rowH=0}
+    p.x=M+x;p.y=stageY+y;x+=p.w+3;rowH=Math.max(rowH,p.h);
+  });
+  return y+rowH;
+}
+function stagePlace(){
+  var h=layoutStage();boardH=stageY+h+M;boardW=J.sw+2*M;
+  var svg=$("#board");svg.setAttribute("viewBox","0 0 "+boardW+" "+boardH);
+}
+function sheetHeightTotal(){return M+J.sheets*(J.sh+GAP)}
+function startJob(id){
+  J=JOBS.filter(function(j){return j.id===id})[0];
+  parts=expand(J);sel=-1;done=false;hint=false;
+  stageY=sheetHeightTotal()+2;
+  /* Bereich für Lager: Höhe aus Layout */
+  var sum=0;J.parts.forEach(function(p){sum+=p[0]*p[1]*p[2]});J.total=sum;J.area=J.sw*J.sh*J.sheets;
+  stagePlace();
+  $("#sStart").hidden=true;$("#sPlay").hidden=false;
+  $("#jName").textContent=J.emoji+" "+J.name;$("#jNote").textContent=J.note;
+  $("#fb").innerHTML="";$("#rotBtn").hidden=J.grain;
+  $("#stMin").textContent=pc((1-J.total/J.area)*100);
+  draw();
+}
+function sheetOf(p){
+  for(var i=0;i<J.sheets;i++){var o=sheetOrigin(i);
+    if(p.x>=o.x-1e-6&&p.y>=o.y-1e-6&&p.x+p.w<=o.x+J.sw+1e-6&&p.y+p.h<=o.y+J.sh+1e-6)return i}
+  return -1;
+}
+function overlap(a,b){return a.x<b.x+b.w-1e-6&&b.x<a.x+a.w-1e-6&&a.y<b.y+b.h-1e-6&&b.y<a.y+a.h-1e-6}
+function status(){
+  var bad={},placed=0,used={};
+  parts.forEach(function(p){
+    var s=sheetOf(p);p.s=s;
+    var inStage=p.y>=stageY-1e-6;
+    p.inStage=inStage;
+    if(s>=0){placed++;used[s]=1}
+    else if(!inStage){bad[p.id]=1}
+  });
+  for(var i=0;i<parts.length;i++)for(var k=i+1;k<parts.length;k++){
+    var a=parts[i],b=parts[k];
+    if(a.inStage&&b.inStage)continue;
+    if(overlap(a,b)){bad[a.id]=1;bad[b.id]=1}
+  }
+  return {bad:bad,placed:placed,sheets:Object.keys(used).length,usedMap:used};
+}
+function colorVar(c){return "var(--p"+c+")"}
+function draw(){
+  var svg=$("#board");svg.innerHTML="";
+  /* Platten */
+  for(var i=0;i<J.sheets;i++){
+    var o=sheetOrigin(i);
+    var g=document.createElementNS(NS,"g");
+    var r=document.createElementNS(NS,"rect");r.setAttribute("x",o.x);r.setAttribute("y",o.y);r.setAttribute("width",J.sw);r.setAttribute("height",J.sh);r.setAttribute("fill","var(--wood)");r.setAttribute("stroke","var(--wood2)");r.setAttribute("stroke-width",".8");g.appendChild(r);
+    for(var gx=10;gx<J.sw;gx+=10){var l=document.createElementNS(NS,"line");l.setAttribute("x1",o.x+gx);l.setAttribute("x2",o.x+gx);l.setAttribute("y1",o.y);l.setAttribute("y2",o.y+J.sh);l.setAttribute("stroke","var(--wood2)");l.setAttribute("stroke-width",".15");l.setAttribute("opacity",".6");g.appendChild(l)}
+    for(var gy=10;gy<J.sh;gy+=10){var l2=document.createElementNS(NS,"line");l2.setAttribute("x1",o.x);l2.setAttribute("x2",o.x+J.sw);l2.setAttribute("y1",o.y+gy);l2.setAttribute("y2",o.y+gy);l2.setAttribute("stroke","var(--wood2)");l2.setAttribute("stroke-width",".15");l2.setAttribute("opacity",".6");g.appendChild(l2)}
+    if(J.grain){for(var gy2=5;gy2<J.sh;gy2+=10){var m=document.createElementNS(NS,"line");m.setAttribute("x1",o.x+2);m.setAttribute("x2",o.x+J.sw-2);m.setAttribute("y1",o.y+gy2);m.setAttribute("y2",o.y+gy2);m.setAttribute("stroke","var(--wood2)");m.setAttribute("stroke-width",".3");m.setAttribute("stroke-dasharray","3 2");g.appendChild(m)}}
+    var tx=document.createElementNS(NS,"text");tx.setAttribute("x",o.x+J.sw-1);tx.setAttribute("y",o.y+J.sh-1.5);tx.setAttribute("text-anchor","end");tx.setAttribute("font-size","3.4");tx.setAttribute("fill","var(--ink)");tx.setAttribute("opacity",".7");tx.textContent="Platte "+(i+1)+": "+J.sw+" × "+J.sh+" cm";g.appendChild(tx);
+    svg.appendChild(g);
+  }
+  var low=sheetHeightTotal()+14,anyStage=false;
+  parts.forEach(function(q){if(q.y>=stageY-1e-6){anyStage=true;low=Math.max(low,q.y+q.h+M)}});
+  boardH=low;svg.setAttribute("viewBox","0 0 "+boardW+" "+boardH);
+  var lg=document.createElementNS(NS,"text");lg.setAttribute("x",M);lg.setAttribute("y",stageY-1.2);lg.setAttribute("font-size","3.4");lg.setAttribute("fill","var(--muted)");lg.textContent="Lager: Teile von hier auf die Platte ziehen";svg.appendChild(lg);
+  var st=status();
+  parts.forEach(function(p){
+    var g=document.createElementNS(NS,"g");g.setAttribute("class","part"+(p.id===sel?" sel":""));g.dataset.id=p.id;
+    var rc=document.createElementNS(NS,"rect");rc.setAttribute("class","body");rc.setAttribute("x",p.x);rc.setAttribute("y",p.y);rc.setAttribute("width",p.w);rc.setAttribute("height",p.h);rc.setAttribute("rx",".8");
+    var bad=st.bad[p.id];
+    rc.setAttribute("fill",bad?"var(--bad-bg)":colorVar(p.c));rc.setAttribute("stroke",bad?"var(--bad)":"var(--ink)");rc.setAttribute("stroke-width",bad?"1":".35");
+    g.appendChild(rc);
+    var fs=Math.min(4.6,p.w/5.2,p.h/1.8);
+    var t=document.createElementNS(NS,"text");t.setAttribute("x",p.x+p.w/2);t.setAttribute("y",p.y+p.h/2+fs*.35);t.setAttribute("text-anchor","middle");t.setAttribute("font-size",fs);t.setAttribute("font-weight","700");t.setAttribute("fill","var(--ink)");t.setAttribute("pointer-events","none");t.textContent=p.w+"×"+p.h;g.appendChild(t);
+    if(J.grain){var ar=document.createElementNS(NS,"text");ar.setAttribute("x",p.x+p.w/2);ar.setAttribute("y",p.y+3.3);ar.setAttribute("text-anchor","middle");ar.setAttribute("font-size","3");ar.setAttribute("fill","var(--ink)");ar.setAttribute("pointer-events","none");ar.textContent="↔ Maserung";if(p.w>=24)g.appendChild(ar)}
+    g.addEventListener("pointerdown",function(e){startDrag(e,p)});
+    svg.appendChild(g);
+  });
+  stats(st);
+}
+function stats(st){
+  $("#stPlaced").textContent=st.placed+" / "+parts.length;
+  $("#stSheets").textContent=st.sheets+" / "+J.sheets;
+  var usedArea=0;parts.forEach(function(p){if(p.s>=0)usedArea+=p.w*p.h});
+  $("#stWaste").textContent=st.sheets>0?pc((1-usedArea/(J.sw*J.sh*st.sheets))*100):"–";
+  $("#rotBtn").disabled=sel<0||J.grain;
+}
+function toUnits(e){
+  var svg=$("#board"),pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  var m=svg.getScreenCTM().inverse();var r=pt.matrixTransform(m);return {x:r.x,y:r.y};
+}
+function startDrag(e,p){
+  e.preventDefault();if(done)return;
+  var u=toUnits(e);drag={p:p,dx:u.x-p.x,dy:u.y-p.y,moved:false,id:e.pointerId};
+  sel=p.id;
+  /* nach vorne holen */
+  var i=parts.indexOf(p);parts.splice(i,1);parts.push(p);
+  draw();
+  try{$("#board").setPointerCapture(e.pointerId)}catch(er){}
+}
+function snap(p,nx,ny){
+  nx=Math.round(nx);ny=Math.round(ny);
+  var T=3,best;
+  var xs=[],ys=[];
+  for(var i=0;i<J.sheets;i++){var o=sheetOrigin(i);xs.push(o.x,o.x+J.sw);ys.push(o.y,o.y+J.sh)}
+  parts.forEach(function(q){if(q===p||q.y>=stageY-1e-6)return;xs.push(q.x,q.x+q.w);ys.push(q.y,q.y+q.h)});
+  var bx=T+1,by=T+1,sx=nx,sy=ny;
+  xs.forEach(function(v){var d=Math.abs(nx-v);if(d<bx){bx=d;sx=v}d=Math.abs(nx+p.w-v);if(d<bx){bx=d;sx=v-p.w}});
+  ys.forEach(function(v){var d=Math.abs(ny-v);if(d<by){by=d;sy=v}d=Math.abs(ny+p.h-v);if(d<by){by=d;sy=v-p.h}});
+  return {x:bx<=T?sx:nx,y:by<=T?sy:ny};
+}
+$("#board").addEventListener("pointermove",function(e){
+  if(!drag||e.pointerId!==drag.id)return;
+  var u=toUnits(e),p=drag.p;
+  var s=snap(p,u.x-drag.dx,u.y-drag.dy);
+  /* Grenzen der Zeichenfläche */
+  s.x=Math.max(0,Math.min(boardW-p.w,s.x));s.y=Math.max(0,Math.min(boardH-p.h,s.y));
+  if(s.x!==p.x||s.y!==p.y){p.x=s.x;p.y=s.y;drag.moved=true;updatePart(p)}
+});
+function endDrag(e){if(!drag||e.pointerId!==drag.id)return;drag=null;draw()}
+$("#board").addEventListener("pointerup",endDrag);
+$("#board").addEventListener("pointercancel",endDrag);
+function updatePart(p){
+  /* leichtgewichtig: komplett neu zeichnen ist ok bei < 15 Teilen */
+  var id=p.id,svg=$("#board");
+  var g=svg.querySelector('g.part[data-id="'+id+'"]');
+  if(!g){draw();return}
+  var rc=g.querySelector("rect.body"),t=g.querySelector("text");
+  rc.setAttribute("x",p.x);rc.setAttribute("y",p.y);
+  t.setAttribute("x",p.x+p.w/2);var fs=parseFloat(t.getAttribute("font-size"));t.setAttribute("y",p.y+p.h/2+fs*.35);
+  var tx=g.querySelectorAll("text");if(tx[1]){tx[1].setAttribute("x",p.x+p.w/2);tx[1].setAttribute("y",p.y+3.3)}
+  var st=status();
+  parts.forEach(function(q){var gg=svg.querySelector('g.part[data-id="'+q.id+'"]');if(!gg)return;var r=gg.querySelector("rect.body"),b=st.bad[q.id];r.setAttribute("fill",b?"var(--bad-bg)":colorVar(q.c));r.setAttribute("stroke",b?"var(--bad)":"var(--ink)");r.setAttribute("stroke-width",b?"1":".35")});
+  stats(st);
+}
+$("#rotBtn").addEventListener("click",function(){
+  var p=parts.filter(function(q){return q.id===sel})[0];if(!p||J.grain)return;
+  var cx=p.x+p.w/2,cy=p.y+p.h/2,w=p.w;p.w=p.h;p.h=w;
+  p.x=Math.max(0,Math.min(boardW-p.w,Math.round(cx-p.w/2)));p.y=Math.max(0,Math.min(boardH-p.h,Math.round(cy-p.h/2)));
+  draw();
+});
+$("#resetBtn").addEventListener("click",function(){
+  parts.forEach(function(p){if(p.w!==p.w0){var t=p.w;p.w=p.h;p.h=t}});
+  sel=-1;done=false;hint=false;layoutStage();draw();$("#fb").innerHTML="";
+});
+$("#solBtn").addEventListener("click",function(){
+  hint=true;
+  /* Teile nach Maß der Lösung zuordnen */
+  var used=[];J.sol.forEach(function(s){
+    var p=parts.filter(function(q){return used.indexOf(q.id)<0&&((q.w0===s[3]&&q.h0===s[4])||(q.w0===s[4]&&q.h0===s[3]))})[0];
+    if(!p)return;used.push(p.id);
+    p.w=s[3];p.h=s[4];var o=sheetOrigin(s[0]);p.x=o.x+s[1];p.y=o.y+s[2];
+  });
+  sel=-1;draw();
+  $("#fb").innerHTML='<div class="fb ok"><h3>Eine mögliche Lösung</h3><p>Schau dir an, welche Teile nebeneinander jeweils die Plattenbreite oder -höhe ergeben. Versuche es danach selbst noch einmal mit „Zurücksetzen“.</p></div>';
+});
+$("#chkBtn").addEventListener("click",function(){
+  var st=status(),n=parts.length,fb=$("#fb");
+  var bad=Object.keys(st.bad).length;
+  if(bad>0){fb.innerHTML='<div class="fb no"><h3>Noch nicht passend</h3><p>'+bad+' Teil'+(bad>1?"e":"")+' überlappen sich oder ragen über den Rand der Platte (rot markiert).</p></div>';return}
+  if(st.placed<n){fb.innerHTML='<div class="fb no"><h3>Es fehlen Teile</h3><p>Es liegen noch '+(n-st.placed)+' Teile im Lager. Alle Teile müssen auf die Platte.</p></div>';return}
+  done=true;
+  var usedArea=0;parts.forEach(function(p){usedArea+=p.w*p.h});
+  var area=J.sw*J.sh*st.sheets,waste=(area-usedArea)/area*100;
+  var plates=st.sheets,minSheets=Math.ceil(J.total/(J.sw*J.sh));
+  var good=!hint&&plates<=Math.max(minSheets,1)&&plates<=J.sheets;
+  var stars=hint?1:(plates<=minSheets?3:2);
+  var key="zuschnitt-"+J.id,prev=store(key);
+  if(!hint&&(prev===null||stars>+prev))store(key,String(stars));
+  fb.innerHTML='<div class="fb ok"><div class="stars" aria-hidden="true">'+"★".repeat(stars)+"☆".repeat(3-stars)+'</div><h3>Alle Teile passen!</h3>'+
+   '<p>Teilefläche: <b>'+usedArea+' cm²</b> von <b>'+area+' cm²</b> Plattenfläche ('+plates+' Platte'+(plates>1?"n":"")+').</p>'+
+   '<p>Verschnitt = (Plattenfläche − Teilefläche) : Plattenfläche = ('+area+' − '+usedArea+') : '+area+' = <b>'+pc(waste)+'</b>.</p>'+
+   (hint?'<p>Mit Lösungshilfe gibt es nur einen Stern. Versuche es noch einmal ohne.</p>':'')+
+   '<div class="row" style="margin-top:12px"><button class="btn primary" id="again">Nochmal</button><button class="btn" id="menu2">Anderer Auftrag</button></div></div>';
+  $("#again").addEventListener("click",function(){startJob(J.id)});
+  $("#menu2").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
+});
+$("#jQuit").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
+function renderStart(){
+  var b=$("#jobBox");b.innerHTML="";
+  JOBS.forEach(function(j){
+    var best=store("zuschnitt-"+j.id),btn=document.createElement("button");
+    btn.innerHTML='<span class="e">'+j.emoji+'</span><span class="t">'+j.name+'</span><span class="d">'+j.lvl+' · '+j.sheets+' Platte'+(j.sheets>1?"n":"")+' '+j.sw+'×'+j.sh+' cm'+(j.grain?" · Maserung":"")+'</span><span class="d"><b>'+(best?"Bestes Ergebnis: "+"★".repeat(+best)+"☆".repeat(3-best):"Noch nicht gelöst")+'</b></span>';
+    btn.addEventListener("click",function(){startJob(j.id)});b.appendChild(btn);
+  });
+}
+renderStart();
+window.__zo={JOBS:JOBS,start:startJob,parts:function(){return parts},J:function(){return J},status:status,origin:sheetOrigin};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Zuschnitt-Optimierer", text: "<p>Plane den Zuschnitt aus einer Holzplatte, so wie es in der Werkstatt gemacht wird.</p>" },
+  { sel: "#jobBox", title: "Auftrag wählen", text: "<p>Von einfach bis schwierig. Manche Aufträge haben Maserung, dann dürfen die Teile nicht gedreht werden.</p>" },
+  { title: "Teile verschieben", text: "<ul><li>Teile aus dem Lager auf die Platte ziehen</li><li>Antippen und „Drehen“ drückt das Teil um 90°</li><li>Rot heißt: überlappt oder ragt über den Rand</li></ul>" },
+  { title: "Verschnitt", text: "<p>Nach dem Prüfen siehst du den Verschnitt in Prozent und die Rechnung dazu.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

@@ -1069,4 +1069,16 @@ const posts = [
     titleEn: "Student Company Simulation",
     excerptEn: "Run a small student company for 8 months: set price, quantity and advertising, keep the cash book and work out the break-even point."
    },
+   {
+    title: "Zuschnitt-Optimierer",
+    excerpt: "Teile per Drag-and-drop so auf Holzplatten legen, dass nichts überlappt und möglichst wenig Verschnitt entsteht. Mit Maserung, Verschnittrechnung und sechs Aufträgen.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "zuschnitt-optimierer.html",
+    emoji: "🪚",
+    tags: ["spiel", "werkstatt", "projektarbeit", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "Cutting Optimiser",
+    excerptEn: "Drag parts onto wooden boards so nothing overlaps and as little waste as possible is left. With wood grain, waste calculation and six jobs."
+   },
 ];
