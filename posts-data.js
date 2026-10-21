@@ -1117,4 +1117,16 @@ const posts = [
     titleEn: "Hallucination Detective",
     excerptEn: "Check six AI answers: which sentences are made up, which sources do not exist? With an explanation for every sentence and a checking plan."
    },
+   {
+    title: "Prompt-Duell",
+    excerpt: "Welcher Prompt ist besser? Sechs Duelle mit Auswertung nach Rolle, Aufgabe, Kontext, Format und Datenschutz, dazu ein Baukasten, mit dem du selbst Prompts zusammenstellst.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "prompt-duell.html",
+    emoji: "🥊",
+    tags: ["spiel", "ki", "einzelarbeit", "partnerarbeit", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Prompt Duel",
+    excerptEn: "Which prompt is better? Six duels judged by role, task, context, format and privacy, plus a builder to assemble your own prompts."
+   },
 ];

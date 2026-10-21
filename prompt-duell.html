@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prompt-Duell</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<style>
+:root{
+  --bg:#f6f2fb; --ink:#2a2140; --muted:#675d80; --line:#dcd3ec; --card:#fffdff;
+  --a:#7a45d6; --b:#e0702a; --ok:#18794e; --ok-bg:#dcf3e6; --bad:#b3261e; --bad-bg:#fbe4e1; --warn:#f0a30a; --focus:#2d5fd1;
+  --head:"Trebuchet MS","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#17122a;--ink:#f0ebfb;--muted:#b0a6cc;--line:#3a3258;--card:#211b38;--a:#b496ff;--b:#ffa163;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--warn:#ffc04d;--focus:#9db6ff}
+}
+:root[data-theme="dark"]{--bg:#17122a;--ink:#f0ebfb;--muted:#b0a6cc;--line:#3a3258;--card:#211b38;--a:#b496ff;--b:#ffa163;--ok:#6fd99b;--ok-bg:#15382a;--bad:#ff9087;--bad-bg:#45221f;--warn:#ffc04d;--focus:#9db6ff}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.15}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.app{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+header.top h1{font-size:clamp(28px,6vw,42px)}
+header.top p{color:var(--muted);margin:6px 0 4px;max-width:42em}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.tab{padding:12px 18px;border:2.5px solid var(--ink);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
+.card+.card{margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;font-weight:700;min-height:48px}
+.btn:hover:not(:disabled){background:var(--warn);color:#2a2140}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover:not(:disabled){background:var(--a);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:42px;padding:7px 14px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 14px}
+.bar>i{display:block;height:100%;width:0;background:var(--a);transition:width .3s}
+.task{padding:12px 16px;border-radius:14px;background:var(--bg);border:2.5px solid var(--line);margin:8px 0 14px}
+.duel{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.pr{display:flex;flex-direction:column;gap:8px;text-align:left;padding:14px 16px;border:3px solid var(--ink);border-radius:16px;background:var(--card);cursor:pointer;min-height:140px}
+.pr:hover:not(:disabled){background:var(--bg)}
+.pr .lbl{font-family:var(--head);font-weight:800;font-size:20px}
+.pr.A .lbl{color:var(--a)}.pr.B .lbl{color:var(--b)}
+.pr .txt{font-size:17px}
+.pr:disabled{cursor:default}
+.pr.win{border-color:var(--ok);background:var(--ok-bg)}
+.pr.lose{border-color:var(--bad);background:var(--bad-bg)}
+.resp{margin-top:6px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:15.5px;color:var(--ink);border-left:5px solid var(--line)}
+.resp small{display:block;color:var(--muted);font-weight:700;margin-bottom:2px}
+.crit{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.c{font-size:13.5px;font-weight:700;padding:2px 9px;border-radius:99px;border:2px solid var(--line);color:var(--muted)}
+.c.y{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px;border:2.5px solid}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:4px}
+.stars{font-size:44px;letter-spacing:6px}
+.slot{margin-top:14px}
+.slot h3{font-size:18px;margin-bottom:6px}
+.opts{display:grid;gap:8px}
+.o{padding:10px 14px;border:2.5px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;min-height:48px}
+.o:hover{background:var(--bg)}
+.o[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.o.q2{border-color:var(--ok);background:var(--ok-bg);color:var(--ink)}
+.o.q1{border-color:var(--warn);background:var(--bg);color:var(--ink)}
+.o.q0{border-color:var(--bad);background:var(--bad-bg);color:var(--ink)}
+.o.chosen{box-shadow:0 0 0 4px var(--a)}
+.built{white-space:pre-wrap;padding:12px 14px;border:2.5px dashed var(--a);border-radius:12px;background:var(--bg);margin-top:10px;font-size:17px}
+.out{margin-top:12px;padding:12px 14px;border-radius:12px;border:2.5px solid var(--ink);background:var(--card)}
+.sc{font-family:var(--head);font-size:30px;font-weight:800}
+.list{margin:8px 0 0;padding-left:22px}
+.list li{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Prompt-Duell – buildspace">
+<meta property="og:description" content="Welcher Prompt ist besser? Sechs Duelle mit Auswertung nach Rolle, Aufgabe, Kontext, Format und Datenschutz, dazu ein Baukasten, mit dem du selbst Prompts…">
+<meta property="og:url" content="https://buildspaceos.de/prompt-duell.html">
+<meta property="og:image" content="https://buildspaceos.de/assets/og/prompt-duell.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Prompt-Duell – buildspace">
+<meta name="twitter:description" content="Welcher Prompt ist besser? Sechs Duelle mit Auswertung nach Rolle, Aufgabe, Kontext, Format und Datenschutz, dazu ein Baukasten, mit dem du selbst Prompts…">
+<meta name="twitter:image" content="https://buildspaceos.de/assets/og/prompt-duell.jpg">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🥊 Prompt-Duell</h1>
+    <p>Ob eine KI hilfreich antwortet, hängt stark davon ab, wie du fragst. Entscheide, welcher Prompt besser ist, und baue danach selbst einen.</p>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab" role="tab" data-tab="duel" aria-selected="true">🥊 Duell</button>
+    <button class="tab" role="tab" data-tab="build" aria-selected="false">🧱 Prompt-Baukasten</button>
+    <button class="tab" role="tab" data-tab="rules" aria-selected="false">📋 Checkliste</button>
+  </nav>
+
+  <section class="panel" id="p-duel">
+    <div class="card" id="dStart">
+      <h2>Zwei Prompts, ein Sieger</h2>
+      <p class="muted" style="margin-top:6px">Du siehst eine Aufgabe und zwei Prompts. Wähle den, der die bessere Antwort erwarten lässt. Länger ist nicht automatisch besser! Sechs Duelle pro Runde.</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="dGo">Runde starten</button></div>
+      <p class="muted" style="margin-top:10px" id="dBest"></p>
+    </div>
+    <div class="card" id="dPlay" hidden>
+      <div class="row" style="justify-content:space-between"><span class="pill" id="dCnt"></span><span><b id="dScore">0</b> Siege richtig</span><button class="btn small" id="dQuit">Abbrechen</button></div>
+      <div class="bar"><i id="dBar"></i></div>
+      <div class="task"><span class="muted">Die Aufgabe:</span><br><b id="dTask"></b></div>
+      <p class="muted" style="margin-bottom:8px">Welcher Prompt ist besser?</p>
+      <div class="duel" id="dBox"></div>
+      <div id="dFb" aria-live="polite"></div>
+    </div>
+    <div class="card" id="dEnd" hidden>
+      <div style="text-align:center"><div class="stars" id="dStars" aria-hidden="true"></div><h2 id="dTitle" style="margin-top:6px"></h2><p class="muted" id="dText" style="margin-top:8px"></p>
+      <div class="row" style="justify-content:center;margin-top:16px"><button class="btn primary" id="dAgain">Neue Runde</button><button class="btn" id="dToBuild">Zum Baukasten</button></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-build" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Prompt-Baukasten</h2><button class="btn small" id="bNew">Andere Aufgabe</button></div>
+      <div class="task" style="margin-top:10px"><span class="muted">Dein Ziel:</span><br><b id="bGoal"></b></div>
+      <p class="muted">Wähle für jeden Baustein eine Formulierung. Danach siehst du deinen fertigen Prompt und eine passende KI-Antwort.</p>
+      <div id="bSlots"></div>
+      <div class="row" style="margin-top:16px"><button class="btn primary" id="bRun" disabled>Prompt abschicken ▶</button></div>
+      <div id="bOut" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-rules" hidden>
+    <div class="card">
+      <h2>Checkliste für gute Prompts</h2>
+      <ol class="list">
+        <li><b>Rolle:</b> Wer soll die KI sein? („Du bist Tischlermeisterin, die Schülern etwas erklärt.“)</li>
+        <li><b>Aufgabe:</b> Was genau soll herauskommen? Ein Verb und ein Ergebnis: erstelle, vergleiche, erkläre.</li>
+        <li><b>Kontext:</b> Für wen? Welche Vorkenntnisse? Wie viel Zeit? Alter, Klasse, Ziel.</li>
+        <li><b>Format:</b> Wie soll die Antwort aussehen? Tabelle, Stichpunkte, Wortzahl, Sprache.</li>
+        <li><b>Sicherheit:</b> „Erfinde nichts“, „Sag, wenn du unsicher bist“, „Nenne eine Quelle zum Nachlesen“.</li>
+        <li><b>Datenschutz:</b> Keine echten Namen, Adressen, Noten oder Fotos von anderen Personen eingeben.</li>
+      </ol>
+      <div class="fb ok" style="margin-top:14px"><h3>Merksatz</h3><p>Ein guter Prompt ist eine gute Arbeitsanweisung: klar, mit Zusammenhang und ohne Geheimnisse.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+var CR=["Rolle","Aufgabe","Kontext","Format","Sicherheit","Datenschutz"];
+
+/* Duelle: good, bad = {t,r (Antwort), c:[Kriterien]} */
+var DUELS=[
+ {task:"Du schreibst in 8 Tagen eine Mathearbeit zu Bruchrechnung und brauchst einen Lernplan.",
+  good:{t:"Ich bin in Klasse 7 und schreibe in 8 Tagen eine Mathearbeit zu Bruchrechnung. Ich habe täglich 30 Minuten Zeit. Erstelle einen Lernplan als Tabelle mit Tag, Thema und Aufgabenart. Gib mir am Ende drei Übungsaufgaben.",r:"Tabelle mit 8 Tagen: Tag 1 Brüche erweitern und kürzen (10 Aufgaben), Tag 2 Brüche addieren … Am Ende: drei Übungsaufgaben.",c:["Aufgabe","Kontext","Format"]},
+  bad:{t:"Mach mir einen Lernplan.",r:"Ein Lernplan hilft beim Lernen. Teile den Stoff in kleine Abschnitte, wiederhole regelmäßig und mach Pausen.",c:["Aufgabe"]},
+  why:"Der gute Prompt nennt Klasse, Thema, Zeit und Format. Beim anderen muss die KI raten, wofür der Plan gedacht ist."},
+ {task:"Du bewirbst dich um ein zweiwöchiges Praktikum als Tischler:in und brauchst ein Anschreiben.",
+  good:{t:"Schreibe ein formelles Anschreiben (höchstens 150 Wörter, Sie-Form) für ein zweiwöchiges Praktikum als Tischler. Ich bin 15, arbeite gern in der Schulwerkstatt und habe ein Vogelhaus gebaut. Nutze nur diese Angaben und erfinde nichts.",r:"Sehr geehrte Damen und Herren, ich bin 15 Jahre alt und möchte gern ein zweiwöchiges Praktikum … In der Schulwerkstatt habe ich ein Vogelhaus gebaut …",c:["Aufgabe","Kontext","Format","Sicherheit"]},
+  bad:{t:"Schreibe ein sehr gutes, super tolles, ausführliches und trotzdem kurzes Anschreiben, das perfekt ist und alle beeindruckt, für irgendein Praktikum, das richtig toll klingt.",r:"Sehr geehrte Damen und Herren, ich bin begeistert von Ihrem Betrieb. Ich bin extrem motiviert, kann alles und bin immer pünktlich …",c:[]},
+  why:"Der lange Prompt ist leer: viele Wörter, aber keine Angaben zu dir, zum Beruf oder zur Länge. Er widerspricht sich sogar (ausführlich und kurz). Der kürzere Prompt liefert alle Informationen."},
+ {task:"Du hältst ein Referat über die Photosynthese in Klasse 8.",
+  good:{t:"Erkläre mir die Photosynthese für ein Referat in Klasse 8 in einfachen Worten, in höchstens 6 Sätzen. Nenne am Ende, welche Angaben ich im Schulbuch nachprüfen sollte.",r:"Pflanzen wandeln mit Licht aus Wasser und Kohlenstoffdioxid Traubenzucker und Sauerstoff um … Prüfe nach: Name des Zellbestandteils, Formel.",c:["Aufgabe","Kontext","Format","Sicherheit"]},
+  bad:{t:"Photosynthese",r:"Die Photosynthese ist ein Prozess in Pflanzen. Hier ist ein sehr langer Fachtext mit vielen Begriffen aus der Biochemie …",c:[]},
+  why:"Ein einzelnes Stichwort lässt offen, was du willst, für wen und wie lang. Der gute Prompt nennt Zielgruppe, Umfang und fordert einen Prüfhinweis."},
+ {task:"Du willst Prozentrechnung wirklich verstehen. Dir hat der Dreisatz geholfen.",
+  good:{t:"Du bist Mathelehrer:in. Erkläre Prozentrechnung einer Schülerin in Klasse 7, die den Dreisatz kann, in 3 Schritten mit einem Alltagsbeispiel (Rabatt). Stelle mir danach eine Kontrollaufgabe.",r:"Schritt 1: 100 % sind der Grundwert … Beispiel: Eine Jacke kostet 80 €, 25 % Rabatt … Kontrollaufgabe: Ein Pullover kostet 60 € …",c:["Rolle","Aufgabe","Kontext","Format"]},
+  bad:{t:"Du bist Mathelehrer. Erkläre mir Prozentrechnung.",r:"Prozentrechnung beschäftigt sich mit Anteilen von 100. Der Prozentsatz, der Grundwert und der Prozentwert sind die drei Größen …",c:["Rolle","Aufgabe"]},
+  why:"Eine Rolle allein reicht nicht. Der gute Prompt sagt zusätzlich, was du schon kannst, wie viele Schritte und mit welchem Beispiel."},
+ {task:"Du brauchst eine Beurteilung für das Zeugnisgespräch deiner Gruppenarbeit, möchtest aber niemanden bloßstellen.",
+  good:{t:"Schreibe eine kurze, wohlwollende Rückmeldung für eine Schülerin der 8. Klasse. Sie ist hilfsbereit, braucht manchmal länger beim Anfangen und arbeitet im Team gut. Bitte keine Namen verwenden.",r:"Sie unterstützt ihre Gruppe zuverlässig und arbeitet im Team sehr gut. Beim Einstieg in neue Aufgaben darf sie sich noch mehr zutrauen …",c:["Aufgabe","Kontext","Datenschutz"]},
+  bad:{t:"Hier sind der volle Name und die Noten meiner Mitschülerin Lena Meyer aus der 8b, mit Adresse und Handynummer. Schreib eine Beurteilung über sie.",r:"Lena Meyer (8b) … (Die Daten sind nun beim Anbieter der KI gelandet und lassen sich nicht zurückholen.)",c:[]},
+  why:"Persönliche Daten anderer gehören nicht in eine KI. Der gute Prompt kommt ohne Namen, Adresse und Noten aus und liefert trotzdem ein brauchbares Ergebnis."},
+ {task:"Du möchtest wissen, welche Regeln im Praktikum für Jugendliche gelten.",
+  good:{t:"Erkläre mir die Grundregeln des Jugendarbeitsschutzgesetzes für Schüler-Praktikant:innen (Arbeitszeit, Pausen). Nenne das Gesetz, damit ich nachlesen kann. Wenn du dir bei einer Angabe nicht sicher bist, sage es.",r:"Jugendliche dürfen in der Regel höchstens 8 Stunden am Tag arbeiten … Bitte lies es im Gesetzestext nach. Bei Angaben zu Pausen bin ich nicht in jedem Fall sicher …",c:["Aufgabe","Kontext","Sicherheit"]},
+  bad:{t:"Welche Gesetze gelten im Praktikum? Gib mir einfach alle Paragraphen mit Nummern.",r:"§ 17 regelt die Mittagspause, § 99 verbietet die Nachtarbeit … (Nummern erfunden, nicht nachprüfbar)",c:["Aufgabe"]},
+  why:"Wer „alle Paragraphen mit Nummern“ verlangt, verleitet die KI zum Erfinden. Der gute Prompt fordert eine Quelle und erlaubt Unsicherheit."},
+ {task:"Du hast einen langen Text für Geschichte und willst ihn schnell lernen.",
+  good:{t:"Fasse den folgenden Text für Klasse 7 in 3 Stichpunkten zusammen. Wähle ein schwieriges Wort aus und erkläre es in einem Satz: [Text]",r:"• Die Mauer teilte Berlin … • Sie fiel 1989 … • Das Wort „Grenzanlage“ bedeutet …",c:["Aufgabe","Kontext","Format"]},
+  bad:{t:"Fasse den Text zusammen: [Text]",r:"Der Text behandelt die Teilung Berlins. Es werden mehrere Aspekte betrachtet, die auch für die Gegenwart von Bedeutung sind …",c:["Aufgabe"]},
+  why:"Ohne Länge und Zielgruppe bekommst du irgendeine Zusammenfassung. Mit Format und Zielgruppe ist sie sofort nutzbar."}
+];
+
+/* Baukasten: q 2 gut, 1 geht so, 0 schlecht */
+var BUILD=[
+ {goal:"Du bereitest einen 5-Minuten-Vortrag über den Beruf Tischler:in für deine 8. Klasse vor.",
+  slots:[
+   {n:"Rolle",o:[["Du bist eine erfahrene Tischlermeisterin, die Schülern Berufe erklärt.",2],["Du bist ein Roboter.",0],["Du bist eine KI.",1]]},
+   {n:"Aufgabe",o:[["Erstelle eine Gliederung für einen 5-Minuten-Vortrag über den Beruf Tischler/in.",2],["Schreibe was über Holz.",0],["Erzähle mir alles über Berufe.",1]]},
+   {n:"Kontext",o:[["Der Vortrag ist für meine 8. Klasse. Ich kenne nur Grundlagen und war einmal in der Schulwerkstatt.",2],["Es ist für eine Klasse.",1],["Es ist für ein Publikum von Experten mit Meisterbrief.",0]]},
+   {n:"Format",o:[["Gib mir 5 Stichpunkte mit je einem Satz und eine Frage ans Publikum.",2],["Mach es lang und wissenschaftlich.",0],["Kurz bitte.",1]]},
+   {n:"Sicherheit",o:[["Wenn du bei Zahlen unsicher bist, schreibe das dazu und nenne, wo ich nachlesen kann.",2],["Du weißt alles. Antworte ohne Einschränkungen und nenne nie Unsicherheit.",0],["(keine Angabe)",1]]}],
+  ans:{low:"Holz ist ein toller Werkstoff. Berufe sind wichtig. Man kann vieles damit machen. (unkonkret, kaum nutzbar)",mid:"Gliederung: 1. Einleitung, 2. Aufgaben, 3. Ausbildung, 4. Fazit. (brauchbar, aber allgemein)",high:"1. Was macht ein/e Tischler/in? 2. Werkstoffe und Maschinen 3. Ausbildung (3 Jahre, bitte beim Betrieb prüfen) 4. Beispielprojekt Vogelhaus 5. Warum der Beruf Spaß macht. Frage ans Publikum: Was habt ihr zuletzt gebaut?"}},
+ {goal:"Du möchtest eine höfliche E-Mail an die Betriebsleitung schreiben, um nach einem Praktikumsplatz zu fragen.",
+  slots:[
+   {n:"Rolle",o:[["Du bist ein erfahrener Berufsberater für Jugendliche.",2],["Du bist mein bester Kumpel.",0],["Du hilfst mir.",1]]},
+   {n:"Aufgabe",o:[["Formuliere eine E-Mail, in der ich höflich nach einem zweiwöchigen Praktikumsplatz frage.",2],["Schreibe was an eine Firma.",0],["Schreibe eine E-Mail.",1]]},
+   {n:"Kontext",o:[["Ich bin 15, gehe in Klasse 9 und interessiere mich für Elektrotechnik. Der Zeitraum ist im März.",2],["Ich bin jung und suche was.",1],["Ich bin 35 und Elektromeister.",0]]},
+   {n:"Format",o:[["Höchstens 120 Wörter, Sie-Form, mit Betreff.",2],["So lang wie möglich.",0],["Normal.",1]]},
+   {n:"Sicherheit",o:[["Erfinde keine Angaben über mich. Wo Informationen fehlen, setze [Platzhalter] ein.",2],["Denk dir ruhig tolle Erfahrungen für mich aus.",0],["(keine Angabe)",1]]}],
+  ans:{low:"Hallo Firma, ich suche einen Job. Bitte melden. Viele Grüße (unhöflich, ohne Angaben)",mid:"Sehr geehrte Damen und Herren, ich interessiere mich für ein Praktikum. Bitte antworten Sie mir. (okay, aber ohne Zeitraum und Interesse)",high:"Betreff: Anfrage Praktikumsplatz im März\nSehr geehrte Damen und Herren, ich bin 15 Jahre alt, besuche die 9. Klasse und interessiere mich für Elektrotechnik. Haben Sie im März Platz für ein zweiwöchiges Praktikum? [Telefonnummer] …"}},
+ {goal:"Du willst eine Mathe-Klassenarbeit zu Prozentrechnung mit Aufgaben üben, die dein Niveau treffen.",
+  slots:[
+   {n:"Rolle",o:[["Du bist Mathelehrer:in einer 7. Klasse.",2],["Du bist ein Taschenrechner.",0],["Du kannst Mathe.",1]]},
+   {n:"Aufgabe",o:[["Erstelle 5 Übungsaufgaben zur Prozentrechnung mit Lösungen am Ende.",2],["Gib mir Mathe.",0],["Gib mir Aufgaben.",1]]},
+   {n:"Kontext",o:[["Ich kann Dreisatz, bin bei Prozentrechnung unsicher und brauche Alltagsaufgaben (Rabatte, Zinsen).",2],["Ich bin in Klasse 7.",1],["Ich bin Mathematikstudent und will Beweise.",0]]},
+   {n:"Format",o:[["Steigend von leicht bis schwer, jede Aufgabe in 1–2 Sätzen, Lösungen getrennt.",2],["Alles in einem langen Absatz.",0],["Nummeriert.",1]]},
+   {n:"Sicherheit",o:[["Rechne die Lösungen sorgfältig nach und kennzeichne Aufgaben, bei denen Rundung wichtig ist.",2],["Die Lösungen sind immer richtig, du musst nichts prüfen.",0],["(keine Angabe)",1]]}],
+  ans:{low:"Aufgabe: Berechne 7 + 3. (nicht Prozentrechnung, nicht passend)",mid:"1. Berechne 20 % von 50. 2. Berechne 10 % von 200 … (passt, aber ohne Alltagsbezug)",high:"1. Ein T-Shirt kostet 20 €. Es gibt 25 % Rabatt. Wie viel sparst du? … 5. Ein Sparbuch bringt 2 % Zinsen auf 450 €. (Lösungen getrennt, Rundung markiert)"}}
+];
+
+function tab(n){$$(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===n?"true":"false")});["duel","build","rules"].forEach(function(k){$("#p-"+k).hidden=k!==n})}
+$$(".tab").forEach(function(b){b.addEventListener("click",function(){tab(b.dataset.tab)})});
+
+/* Duell */
+var D=null;
+function dStart(){D={list:shuffle(DUELS).slice(0,6),i:0,s:0,locked:false};$("#dStart").hidden=true;$("#dEnd").hidden=true;$("#dPlay").hidden=false;dShow()}
+function critHtml(c){return '<div class="crit">'+CR.map(function(k){return '<span class="c'+(c.indexOf(k)>=0?" y":"")+'">'+(c.indexOf(k)>=0?"✓ ":"")+k+'</span>'}).join("")+'</div>'}
+function dShow(){
+  var d=D.list[D.i];D.locked=false;
+  $("#dCnt").textContent="Duell "+(D.i+1)+" von 6";$("#dScore").textContent=D.s;$("#dBar").style.width=(D.i/6*100)+"%";$("#dTask").textContent=d.task;$("#dFb").innerHTML="";
+  var sides=Math.random()<.5?["good","bad"]:["bad","good"];D.sides=sides;
+  var box=$("#dBox");box.innerHTML="";
+  sides.forEach(function(k,i){
+    var b=document.createElement("button");b.className="pr "+"AB"[i];b.innerHTML='<span class="lbl">Prompt '+"AB"[i]+'</span><span class="txt">'+d[k].t+'</span>';
+    b.addEventListener("click",function(){dPick(i)});box.appendChild(b);
+  });
+}
+function dPick(i){
+  if(D.locked)return;D.locked=true;
+  var d=D.list[D.i],ok=D.sides[i]==="good",last=D.i===5;
+  if(ok)D.s++;$("#dScore").textContent=D.s;
+  $$("#dBox .pr").forEach(function(b,k){var side=D.sides[k];b.disabled=true;b.classList.add(side==="good"?"win":"lose");
+    b.insertAdjacentHTML("beforeend",critHtml(d[side].c)+'<div class="resp"><small>So könnte die KI antworten:</small>'+d[side].r+'</div>')});
+  $("#dFb").innerHTML='<div class="fb '+(ok?"ok":"no")+'"><h3>'+(ok?"Richtig gewählt!":"Der andere Prompt ist besser")+'</h3><p>'+d.why+'</p><div class="row" style="margin-top:10px"><button class="btn primary" id="dNext">'+(last?"Ergebnis ansehen":"Nächstes Duell")+'</button></div></div>';
+  $("#dNext").addEventListener("click",function(){D.i++;if(D.i>=6)dEnd();else{dShow();window.scrollTo({top:0,behavior:"smooth"})}});
+}
+function dEnd(){
+  $("#dPlay").hidden=true;$("#dEnd").hidden=false;var s=D.s,prev=store("duell-best"),rec=prev===null||s>+prev;if(rec)store("duell-best",String(s));
+  var st=s>=6?3:s>=5?2:s>=3?1:0;$("#dStars").textContent="★".repeat(st)+"☆".repeat(3-st);
+  $("#dTitle").textContent=s+" von 6 Duellen richtig";
+  $("#dText").textContent=(st===3?"Du erkennst gute Prompts sofort!":st>=1?"Gut. Beim Baukasten kannst du jetzt selbst Prompts zusammenstellen.":"Lies die Checkliste und versuche es noch einmal.")+(rec?" Neuer Bestwert!":"");bestLine();
+}
+function bestLine(){var b=store("duell-best");$("#dBest").textContent=b!==null?"Bestes Ergebnis: "+b+" von 6":""}
+$("#dGo").addEventListener("click",dStart);$("#dAgain").addEventListener("click",dStart);
+$("#dQuit").addEventListener("click",function(){$("#dPlay").hidden=true;$("#dStart").hidden=false});
+$("#dToBuild").addEventListener("click",function(){tab("build")});
+
+/* Baukasten */
+var B=null,bi=-1;
+function bNew(){
+  var n;do{n=Math.floor(Math.random()*BUILD.length)}while(n===bi&&BUILD.length>1);bi=n;
+  var t=BUILD[n];B={t:t,pick:[],slotOrder:t.slots.map(function(s){return shuffle(s.o.map(function(o,i){return i}))})};
+  $("#bGoal").textContent=t.goal;$("#bOut").innerHTML="";$("#bRun").disabled=true;$("#bRun").hidden=false;
+  var h="";t.slots.forEach(function(s,si){h+='<div class="slot"><h3>'+(si+1)+'. '+s.n+'</h3><div class="opts" data-s="'+si+'">';
+    B.slotOrder[si].forEach(function(oi){h+='<button class="o" aria-pressed="false" data-s="'+si+'" data-o="'+oi+'">'+s.o[oi][0]+'</button>'});h+='</div></div>'});
+  $("#bSlots").innerHTML=h;
+  $$("#bSlots .o").forEach(function(b){b.addEventListener("click",function(){
+    if(B.done)return;var si=+b.dataset.s;B.pick[si]=+b.dataset.o;
+    $$('#bSlots .o[data-s="'+si+'"]').forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+    $("#bRun").disabled=B.pick.filter(function(v){return v!==undefined}).length<t.slots.length;
+  })});
+}
+$("#bRun").addEventListener("click",function(){
+  var t=B.t,sum=0,parts=[];B.done=true;
+  t.slots.forEach(function(s,si){var o=s.o[B.pick[si]];sum+=o[1];if(o[0]!=="(keine Angabe)")parts.push(o[0]);
+    $$('#bSlots .o[data-s="'+si+'"]').forEach(function(x){var q=s.o[+x.dataset.o][1];x.classList.add("q"+q);if(+x.dataset.o===B.pick[si])x.classList.add("chosen")})});
+  var tier=sum>=8?"high":sum>=5?"mid":"low",lab={high:"Sehr hilfreiche Antwort",mid:"Brauchbare, aber allgemeine Antwort",low:"Kaum nutzbare Antwort"}[tier];
+  $("#bRun").hidden=true;
+  $("#bOut").innerHTML='<div class="out"><b>Dein Prompt:</b><div class="built">'+parts.join("\n")+'</div></div><div class="out"><div class="sc">'+sum+' von 10 Punkten</div><b>'+lab+':</b><div class="built" style="border-style:solid;border-color:var(--line)">'+t.ans[tier]+'</div><p class="muted" style="margin-top:8px">Grün: beste Formulierung. Gelb: geht so. Rot: schlecht, weil sie unklar, unpassend oder riskant ist.</p><div class="row" style="margin-top:10px"><button class="btn primary" id="bAgain">Nächste Aufgabe</button></div></div>';
+  $("#bAgain").addEventListener("click",bNew);
+});
+$("#bNew").addEventListener("click",bNew);
+bNew();bestLine();
+window.__pd={DUELS:DUELS,BUILD:BUILD};
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Prompt-Duell", text: "<p>Hier lernst du, wie du einer KI gute Aufträge gibst.</p>" },
+  { sel: "#tabs", title: "Drei Bereiche", text: "<ul><li><b>Duell:</b> Welcher Prompt ist besser?</li><li><b>Baukasten:</b> Baue selbst einen Prompt</li><li><b>Checkliste:</b> Die wichtigsten Regeln</li></ul>" },
+  { title: "Tipp", text: "<p>Länger ist nicht besser. Gut sind klare Angaben: Wer, was, für wen, in welcher Form.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>
