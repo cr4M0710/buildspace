@@ -1009,4 +1009,16 @@ const posts = [
     titleEn: "Interactive Formula Collection",
     excerptEn: "The Hessian secondary-school formula sheet to search and expand: a step-by-step example and mini calculator for every formula, plus unit converter, statistics and quadratic-formula calculators, bookmarks, flashcards and an exam mode."
    },
+   {
+    title: "Pythagoras-Werkstatt",
+    excerpt: "Den Satz des Pythagoras entdecken und üben: Quadrate über den Seiten mit Reglern vergleichen, den Beweis durch Verschieben als Animation ansehen, im Rechner jede Seite mit Rechenweg bestimmen und im Training auf drei Niveaus (Basis, Profi, Experte) Aufgaben von der Hypotenuse bis zur Raumdiagonale lösen.",
+    date: "2026-10-21",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "pythagoras-werkstatt.html",
+    emoji: "🔺",
+    tags: ["tool", "spiel", "geometrie", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "Pythagoras Workshop",
+    excerptEn: "Discover and practise the Pythagorean theorem: compare squares on the sides with sliders, watch the rearrangement proof as an animation, calculate any side with step-by-step working, and train on three levels (basic, advanced, expert) from the hypotenuse to space diagonals."
+   },
 ];
