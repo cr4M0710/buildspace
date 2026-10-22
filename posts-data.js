@@ -58,7 +58,7 @@ const posts = [
    },
    {
     title: "Mathe Warm-up Generator",
-    excerpt: "Erzeugt Aufwärm-Aufgaben zu 18 Themenbereichen mit A/B/C-Differenzierung, direkt als PDF exportierbar.",
+    excerpt: "Aufwärm-Blätter für Jg. 5–10 nach dem schulinternen Curriculum: rund 190 kleinschrittige Themen, A/B/C-Differenzierung, Lösungen, PDF-Export.",
     date: "2026-09-18",
     category: "schule",
     subcategory: "mathematik",
@@ -66,7 +66,7 @@ const posts = [
     emoji: "🔥",
     tags: ["tool", "kopfrechnen", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
     titleEn: "Math Warm-Up Generator",
-    excerptEn: "Generates warm-up exercises across 18 topic areas with A/B/C differentiation, exportable straight to PDF."
+    excerptEn: "Warm-up sheets for grades 5–10 following the school curriculum: about 190 fine-grained topics, A/B/C differentiation, solutions, PDF export."
    },
    {
     title: "Hallenplan – Handballtraining",
