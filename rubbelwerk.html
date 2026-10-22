@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<title>Rubbelwerk</title>
+<meta name="description" content="Digitale Rubbelkarten bauen: Lösungswörter, gestufte Tipps, Quiz, Auswahlkarten, Rubbellose und Zufallsaufgaben – als Link, QR-Code oder Druckbogen.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="buildspace">
+<meta property="og:title" content="Rubbelwerk – buildspace">
+<meta property="og:description" content="Digitale Rubbelkarten für den Unterricht – teilen per Link, QR-Code oder Druckbogen.">
+<meta property="og:url" content="https://buildspaceos.de/rubbelwerk.html">
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("myhome_theme")==="light"?"light":"dark")}catch(e){document.documentElement.setAttribute("data-theme","dark")}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Dela+Gothic+One&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+/* Layout: Werkbank links (Karten + Formular), Vorschau-Los rechts; Spieler-Ansicht = ein Los mittig */
+:root{
+  --bg:#E8ECF2; --bg2:#DCE2EB; --panel:#FFFFFF; --panel2:#F3F5F9; --ink:#141B2B; --soft:#55617A; --line:#D2D9E4;
+  --acc:#C9450C; --acc-ink:#FFFFFF; --acc-soft:#FDE9DD;
+  --ok:#1C7A4B; --ok-soft:#DFF3E8; --bad:#BF2536; --bad-soft:#FBE5E8;
+  --ticket:#FFFFFF; --ticket-edge:#E8ECF2; --perf:#C5CDD9;
+  --shadow:0 1px 2px rgba(20,27,43,.07),0 12px 32px -14px rgba(20,27,43,.30);
+  --f-d:"Dela Gothic One","Arial Black",Impact,system-ui,sans-serif;
+  --f-b:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --f-m:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:18px; --r-sm:11px;
+}
+:root[data-theme="dark"]{
+  --bg:#0E1219; --bg2:#141A24; --panel:#191F2C; --panel2:#202839; --ink:#E9EDF5; --soft:#9AA5BB; --line:#2B3548;
+  --acc:#FF7D3F; --acc-ink:#1B0D05; --acc-soft:#3A2015;
+  --ok:#4CC98A; --ok-soft:#163427; --bad:#FF7482; --bad-soft:#3A1B21;
+  --ticket:#1E2533; --ticket-edge:#0E1219; --perf:#3A4559;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme]){
+  --bg:#0E1219; --bg2:#141A24; --panel:#191F2C; --panel2:#202839; --ink:#E9EDF5; --soft:#9AA5BB; --line:#2B3548;
+  --acc:#FF7D3F; --acc-ink:#1B0D05; --acc-soft:#3A2015; --ok:#4CC98A; --ok-soft:#163427; --bad:#FF7482; --bad-soft:#3A1B21;
+  --ticket:#1E2533; --ticket-edge:#0E1219; --perf:#3A4559; color-scheme:dark; } }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.5 var(--f-b);-webkit-text-size-adjust:100%;
+  padding:max(76px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 96px max(16px,env(safe-area-inset-left));
+  background-image:radial-gradient(circle at 1px 1px,var(--bg2) 1px,transparent 1.5px);background-size:22px 22px}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{font-size:16px}
+a{color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700;font-size:15px;text-decoration:none;color:var(--ink);transition:transform .15s cubic-bezier(.3,1.4,.5,1),background .15s}
+.btn:active{transform:scale(.96)}
+.btn svg{width:18px;height:18px;flex:none}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px}
+.btn.danger{color:var(--bad)}
+.btn.icon{width:44px;padding:0}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* Kopf */
+.top{max-width:1320px;margin:0 auto 18px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 20px}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand-mark{width:52px;height:52px;border-radius:14px;flex:none;position:relative;overflow:hidden;box-shadow:var(--shadow);
+  background:linear-gradient(135deg,#c9ced6,#f4f6f9 35%,#a9b0bb 55%,#e6e9ee 75%,#b8bec8)}
+.brand-mark::after{content:"";position:absolute;inset:0;background:var(--acc);clip-path:polygon(0 100%,0 62%,22% 52%,40% 66%,62% 44%,100% 30%,100% 100%)}
+.brand h1{font:400 30px/1 var(--f-d);letter-spacing:-.01em}
+.brand p{margin:4px 0 0;color:var(--soft);font-size:15px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Studio */
+.studio{max-width:1320px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:940px){.studio{grid-template-columns:minmax(0,1fr)}}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
+.pane-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--soft)}
+.setbar{padding:16px 18px 6px;display:grid;gap:12px}
+.setrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.setrow input[type=text]{flex:1 1 220px}
+
+/* Kartenleiste */
+.cards{display:flex;gap:8px;overflow-x:auto;padding:12px 18px 14px;scrollbar-width:thin}
+.chip{flex:none;display:flex;align-items:center;gap:8px;min-height:46px;max-width:220px;padding:6px 14px 6px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;text-align:left}
+.chip .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:400 14px var(--f-d);background:var(--panel);border:1px solid var(--line);flex:none}
+.chip .l{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.chip .l b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip .l span{font-size:12px;color:var(--soft)}
+.chip.on{border-color:var(--acc);background:var(--acc-soft)}
+.chip.on .n{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.chip.add{padding:6px 16px;font-weight:700;color:var(--acc);border-style:dashed;background:transparent}
+.cardtools{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 14px;border-bottom:1px solid var(--line)}
+
+/* Formular */
+.editor{padding:16px 18px 20px;display:grid;gap:16px}
+.typebadge{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.typebadge .tb{font:400 13px var(--f-d);letter-spacing:.02em;padding:5px 12px;border-radius:999px;background:var(--acc-soft);color:var(--acc)}
+.f{display:grid;gap:6px;min-width:0}
+.f > label,.f > .lab{font-weight:700;font-size:15px}
+.f .help{font-size:13.5px;color:var(--soft);margin:0}
+.inp,textarea.inp,select.inp{width:100%;min-height:46px;padding:10px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel2)}
+textarea.inp{min-height:84px;resize:vertical;line-height:1.45}
+.inp:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.rows{display:grid;gap:8px}
+.row{display:flex;gap:8px;align-items:center}
+.row .inp{flex:1 1 auto;min-width:0}
+.row .num{flex:0 0 84px;width:84px}
+.row .lv{flex:0 0 74px;width:74px}
+.tog{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer;font-size:15px}
+.tog input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.tog input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.3,1.4,.5,1);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog input:checked{background:var(--acc)}
+.tog input:checked::after{transform:translateX(18px)}
+.mark{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--soft);white-space:nowrap;min-height:44px;cursor:pointer}
+.mark input{width:20px;height:20px;accent-color:var(--ok)}
+details.opts{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2)}
+details.opts > summary{cursor:pointer;padding:12px 16px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:48px}
+details.opts > summary::-webkit-details-marker{display:none}
+details.opts > summary::after{content:"+";font:400 20px var(--f-d);color:var(--soft)}
+details.opts[open] > summary::after{content:"–"}
+details.opts .in{padding:4px 16px 16px;display:grid;gap:16px}
+.foils{display:flex;gap:10px;flex-wrap:wrap}
+.sw{width:56px;height:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;position:relative;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.sw.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.sw span{position:absolute;left:0;right:0;bottom:-20px;font-size:11px;color:var(--soft);text-align:center}
+.foilwrap{padding-bottom:18px}
+input[type=range]{width:100%;accent-color:var(--acc);min-height:32px}
+.imgprev{max-width:100%;max-height:180px;border-radius:10px;border:1px solid var(--line);display:block}
+
+/* Vorschau */
+.preview-pane{position:sticky;top:16px}
+@media (max-width:940px){.preview-pane{position:static}}
+.pv{padding:22px 18px 26px;background:var(--bg);border-radius:0 0 var(--r) var(--r);background-image:radial-gradient(circle at 1px 1px,var(--bg2) 1px,transparent 1.5px);background-size:22px 22px}
+
+/* Los (Karte) */
+.player{max-width:620px;margin:0 auto;display:grid;gap:14px}
+.set-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.set-h h1{font:400 clamp(20px,4vw,26px)/1.15 var(--f-d)}
+.nav{display:flex;gap:6px;flex-wrap:wrap}
+.nav button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:400 15px var(--f-d);cursor:pointer;position:relative}
+.nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.nav button.ok::after{content:"";position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:var(--ok);border:2px solid var(--bg)}
+.nav button[disabled]{opacity:.4;cursor:not-allowed}
+.ticket{position:relative;background:var(--ticket);border-radius:20px;box-shadow:var(--shadow);padding:22px 24px 24px;display:grid;gap:14px;
+  -webkit-mask:radial-gradient(circle 11px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 11px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat;
+          mask:radial-gradient(circle 11px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 11px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat}
+.t-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:12px;border-bottom:2px dashed var(--perf)}
+.t-type{font:400 13px var(--f-d);letter-spacing:.04em;color:var(--acc);text-transform:uppercase}
+.t-no{font:600 12.5px var(--f-m);color:var(--soft);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.t-title{font:400 clamp(22px,4.6vw,30px)/1.12 var(--f-d);letter-spacing:-.01em}
+.t-text{margin:0;font-size:18px;line-height:1.5;color:var(--ink)}
+.t-msg{min-height:0;font-weight:700;font-size:16px}
+.t-msg:empty{display:none}
+.t-msg.ok{color:var(--ok)} .t-msg.bad{color:var(--bad)} .t-msg.info{color:var(--soft)}
+.t-note{background:var(--acc-soft);border-radius:14px;padding:14px 16px;font-size:17px;animation:pop .45s cubic-bezier(.3,1.4,.5,1)}
+.t-note b{display:block;font:400 13px var(--f-d);letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin-bottom:4px}
+.t-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.counter{font:700 14px var(--f-b);color:var(--soft);font-variant-numeric:tabular-nums}
+.counter b{color:var(--ink)}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.shake{animation:shake .38s}
+
+/* Codesperre */
+.lockbox{display:grid;gap:10px;padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+.lockbox .lt{display:flex;align-items:center;gap:10px;font-weight:700}
+.lockbox .lt svg{width:22px;height:22px;color:var(--acc);flex:none}
+.lockbox form{display:flex;gap:8px;flex-wrap:wrap}
+.lockbox input{flex:1 1 160px;min-height:46px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-family:var(--f-m);letter-spacing:.08em;text-transform:uppercase}
+.lockbox .h{font-size:14px;color:var(--soft);margin:0}
+
+/* Rubbelfeld */
+.rub{position:relative;border-radius:14px;overflow:hidden;background:var(--panel2);border:1px solid var(--line);isolation:isolate;outline-offset:3px}
+.rub-c{position:relative;z-index:0;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 14px}
+.rub-cv{position:absolute;inset:0;width:100%;height:100%;z-index:1;touch-action:none;cursor:crosshair;transition:opacity .5s ease}
+.rub-cv.gone{opacity:0;pointer-events:none}
+.rub.nope{animation:shake .35s}
+.rub.done{border-color:transparent}
+
+.letters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.letter{width:54px;height:66px}
+.letter .rub-c{font:400 30px var(--f-d);padding:0}
+.letters .gap{width:20px}
+.wordfield{height:96px}
+.wordfield .rub-c{font:400 clamp(26px,6vw,40px) var(--f-d);letter-spacing:.06em}
+.guess{display:flex;gap:8px;flex-wrap:wrap}
+.guess input{flex:1 1 180px;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
+
+.tips{display:grid;gap:10px}
+.tip{min-height:70px}
+.tip .rub-c{justify-content:flex-start;text-align:left;font-size:17px;padding:14px 16px}
+.tip .rub-c b{font:400 12px var(--f-d);letter-spacing:.05em;color:var(--soft);text-transform:uppercase;display:block;margin-bottom:2px}
+.tip.sol .rub-c{background:var(--ok-soft)}
+
+.answer{min-height:96px}
+.answer .rub-c{font-size:22px;font-weight:700}
+.myans{font-size:15px;color:var(--soft);margin:0}
+.selfcheck{display:flex;gap:8px;flex-wrap:wrap}
+
+.opts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.opt{display:grid;gap:8px;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);align-content:start}
+.opt p{margin:0;font-weight:700;font-size:16px;line-height:1.35}
+.opt .rub{height:58px;background:var(--panel)}
+.opt .rub-c{font:400 16px var(--f-d);gap:6px}
+.opt .rub-c.r{color:var(--ok)} .opt .rub-c.f{color:var(--bad)}
+.opt.picked{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-soft)}
+
+.losfield{height:clamp(150px,32vw,220px)}
+.losfield .rub-c{flex-direction:column;gap:4px;font:400 clamp(22px,5vw,32px)/1.15 var(--f-d)}
+.losfield .rub-c small{font:700 14px var(--f-b);color:var(--soft);letter-spacing:.04em;text-transform:uppercase}
+.losfield.win .rub-c{background:radial-gradient(circle at 50% 40%,var(--acc-soft),var(--panel2) 70%);color:var(--acc)}
+.prizes{margin:0;padding-left:20px;font-size:15px;color:var(--soft)}
+
+.levels{display:flex;gap:8px;flex-wrap:wrap}
+.levels button{min-width:64px;min-height:56px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);font:400 22px var(--f-d);cursor:pointer}
+.levels button.on{background:var(--ink);color:var(--bg)}
+.taskfield{min-height:120px}
+.taskfield .rub-c{font-size:19px;line-height:1.45;padding:18px}
+
+.imgfield .rub-c{padding:0}
+.imgfield img{display:block;width:100%;height:auto}
+.empty-hint{padding:18px;border:2px dashed var(--line);border-radius:14px;color:var(--soft);text-align:center;font-size:15px}
+
+.pnav{display:flex;justify-content:space-between;gap:8px}
+.made{text-align:center;font-size:13px;color:var(--soft)}
+
+/* Overlay */
+.ov{position:fixed;inset:0;z-index:9995;background:rgba(8,11,18,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;
+  padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 32px max(16px,env(safe-area-inset-left))}
+.sheet{width:min(860px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);margin:auto 0;animation:pop .35s cubic-bezier(.3,1.4,.5,1)}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.sheet-h h2{font:400 22px/1.2 var(--f-d)}
+.sheet-b{padding:18px 20px 22px;display:grid;gap:16px}
+.typegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.typecard{display:grid;gap:8px;text-align:left;padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;align-content:start}
+.typecard:active{transform:scale(.98)}
+.typecard .tf{height:46px;border-radius:10px;position:relative;overflow:hidden}
+.typecard b{font:400 17px var(--f-d)}
+.typecard span{font-size:14.5px;color:var(--soft);line-height:1.4}
+.liblist{display:grid;gap:8px}
+.libitem{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);flex-wrap:wrap}
+.libitem .li{flex:1 1 200px;min-width:0}
+.libitem .li b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.libitem .li span{font-size:13.5px;color:var(--soft)}
+.libitem.cur{border-color:var(--acc)}
+.sharegrid{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}
+@media (max-width:680px){.sharegrid{grid-template-columns:minmax(0,1fr)}}
+.qrbox{background:#fff;border-radius:16px;padding:12px;border:1px solid var(--line);display:grid;gap:8px;justify-items:center;text-align:center;color:#141B2B}
+.qrbox svg{width:100%;height:auto;display:block}
+.qrbox p{margin:0;font-size:13px;color:#55617A}
+.linkout{font-family:var(--f-m);font-size:13px;word-break:break-all;min-height:96px}
+.note{font-size:14px;color:var(--soft);background:var(--panel2);border-radius:12px;padding:12px 14px;margin:0;line-height:1.5}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:14.5px;font-weight:700}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9999;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:700;font-size:15px;box-shadow:var(--shadow);animation:pop .3s}
+
+/* Spieler-Modus */
+body.play .top,body.play .studio{display:none}
+body.play{padding-top:max(76px,env(safe-area-inset-top))}
+html.share-mode body{padding-top:104px}
+#playRoot{display:none}
+body.play #playRoot{display:block}
+.fail{max-width:520px;margin:40px auto;text-align:center;display:grid;gap:10px}
+
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9997}
+
+/* Druck */
+#printSheet{display:none}
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  html,body{background:#fff!important;padding:0!important;color:#000}
+  body > *:not(#printSheet){display:none!important}
+  body > div#printSheet{display:grid!important;grid-template-columns:1fr 1fr;gap:8mm}
+  .pcard{border:2px dashed #888;border-radius:6mm;padding:6mm;display:grid;gap:3mm;justify-items:center;text-align:center;break-inside:avoid;page-break-inside:avoid;color:#000}
+  .pcard .st{font:400 11pt var(--f-d);letter-spacing:.06em;text-transform:uppercase}
+  .pcard h3{font:400 16pt/1.15 var(--f-d)}
+  .pcard svg{width:58mm;height:58mm}
+  .pcard p{margin:0;font:11pt var(--f-b)}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01s!important;transition-duration:.01s!important}}
+@media (max-width:520px){
+  .ticket{padding:18px 18px 20px}
+  .letter{width:44px;height:56px}
+  .letter .rub-c{font-size:24px}
+  .brand h1{font-size:25px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"></div>
+    <div><h1>Rubbelwerk</h1><p>Digitale Rubbelkarten bauen, testen und verteilen</p></div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="btnTemplates" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Vorlagen</button>
+    <button class="btn" id="btnLibrary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6l2 2h8v12H4z"/></svg>Meine Sets</button>
+    <button class="btn pri" id="btnShare" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Teilen</button>
+  </div>
+</header>
+
+<main class="studio" id="studio">
+  <section class="pane" aria-label="Werkbank">
+    <div class="setbar">
+      <div class="f">
+        <label for="setTitle">Titel des Sets</label>
+        <div class="setrow">
+          <input class="inp" id="setTitle" type="text" maxlength="80" placeholder="z. B. Station 3 – Prozentrechnung">
+        </div>
+      </div>
+      <label class="tog" for="setSeq"><input type="checkbox" id="setSeq"> Karten nacheinander freischalten (nächste Karte erst nach dem Lösen)</label>
+    </div>
+    <div class="cards" id="cardList" role="tablist" aria-label="Karten im Set"></div>
+    <div class="cardtools" id="cardTools">
+      <button class="btn sm ghost" type="button" data-act="left" aria-label="Karte nach vorne">← Vor</button>
+      <button class="btn sm ghost" type="button" data-act="right" aria-label="Karte nach hinten">Zurück →</button>
+      <button class="btn sm ghost" type="button" data-act="dup">Duplizieren</button>
+      <button class="btn sm ghost danger" type="button" data-act="del">Löschen</button>
+    </div>
+    <div class="editor" id="editor"></div>
+  </section>
+
+  <section class="pane preview-pane" aria-label="Vorschau">
+    <div class="pane-h">
+      <div><div class="eyebrow">Vorschau</div><div style="font-size:14px;color:var(--soft)">So sehen es Lernende – einfach ausprobieren.</div></div>
+      <button class="btn sm" id="pvReset" type="button">Zurücksetzen</button>
+    </div>
+    <div class="pv"><div id="preview" class="player"></div></div>
+  </section>
+</main>
+
+<div id="playRoot"><div id="player" class="player"></div></div>
+<div id="printSheet"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+"use strict";
+/* ======================= Hilfen ======================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const linkify = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, "<br>");
+const uid = () => Math.random().toString(36).slice(2, 9);
+const norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function el(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function toast(msg) { const t = el(`<div class="toast" role="status">${esc(msg)}</div>`); document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>';
+
+/* ======================= Kartentypen ======================= */
+const TYPES = {
+  wort:   { name: "Lösungswort",     desc: "Jeder Buchstabe ist ein eigenes Rubbelfeld. Wer das Wort früher errät, tippt es ein." },
+  tipp:   { name: "Tippkarte",       desc: "Gestufte Tipps, nacheinander freizurubbeln – mit Zähler, Wartezeit und Lösung am Ende." },
+  quiz:   { name: "Frage & Antwort", desc: "Die Frage ist sichtbar, die Antwort liegt unter der Folie. Optional erst selbst antworten." },
+  wahl:   { name: "Auswahlkarte",    desc: "Mehrere Antworten – nur eine darf gerubbelt werden. Richtig oder falsch?" },
+  los:    { name: "Rubbellos",       desc: "Gewinn oder Niete nach Wahrscheinlichkeit, auf Wunsch nur einmal pro Gerät." },
+  zufall: { name: "Zufallsaufgabe",  desc: "Zieht eine Aufgabe aus einem Pool – getrennt nach Niveau A, B und C." },
+  bild:   { name: "Bildkarte",       desc: "Ein Bild liegt unter der Folie. Wer erkennt es zuerst?" }
+};
+const FOILS = {
+  silber: { name: "Silber", c: ["#c3c9d2", "#f3f5f8", "#a6adb9", "#e4e7ec", "#b4bac5"], ink: "#3a4150" },
+  gold:   { name: "Gold",   c: ["#c4952c", "#f6da86", "#ae7e1e", "#efcd6b", "#a37219"], ink: "#4a3205" },
+  kupfer: { name: "Kupfer", c: ["#b2603a", "#efb08c", "#984b27", "#de966e", "#8a4221"], ink: "#3e1a08" },
+  mint:   { name: "Mint",   c: ["#58b29a", "#bde8da", "#3c957e", "#9cd9c6", "#33866f"], ink: "#0c3a2e" },
+  nacht:  { name: "Nacht",  c: ["#2b3350", "#55618a", "#212840", "#485377", "#1b2134"], ink: "#e9edf6", stars: true }
+};
+function newCard(ty) {
+  const b = { id: uid(), ty, ti: "", tx: "", fo: "silber", ap: 60, cf: true, sd: false, lk: { c: "", h: "" }, nt: "" };
+  const d = {
+    wort:   { ti: "Lösungswort", tx: "Rubbel die Buchstaben frei – oder errate das Wort vorher!", w: "LERNEN", gs: true, ein: true },
+    tipp:   { ti: "Tippkarte", tx: "Hier steht die Aufgabe, zu der es Tipps gibt.", tp: ["Erster Tipp", "Zweiter Tipp"], lo: "", sq: true, dl: 0 },
+    quiz:   { ti: "Frage", tx: "Wie viel sind 25 % von 80?", a: "20", gs: true },
+    wahl:   { ti: "Welche Aussage stimmt?", tx: "", op: [{ t: "Antwort A", r: true }, { t: "Antwort B", r: false }, { t: "Antwort C", r: false }], mx: 1, sh: true },
+    los:    { ti: "Rubbellos", tx: "Rubbel frei und schau, was du gewonnen hast!", pr: [{ t: "Hausaufgaben-Joker", g: 1, w: true }, { t: "Leider eine Niete", g: 4, w: false }], one: true, sp: false, fo: "gold" },
+    zufall: { ti: "Deine Aufgabe", tx: "Wähle dein Niveau und rubbel deine Aufgabe frei.", pl: [{ t: "Aufgabe für Niveau A", n: "A" }, { t: "Aufgabe für Niveau B", n: "B" }, { t: "Aufgabe für Niveau C", n: "C" }], rd: false, one: false },
+    bild:   { ti: "Was ist das?", tx: "Rubbel nach und nach frei. Erkennst du es, bevor alles frei ist?", im: "", a: "", ap: 88, cf: false }
+  }[ty];
+  return Object.assign(b, d);
+}
+function normCard(c) {
+  if (!c || !TYPES[c.ty]) return null;
+  const n = Object.assign(newCard(c.ty), c, { id: uid() });
+  n.lk = Object.assign({ c: "", h: "" }, c.lk || {});
+  return n;
+}
+
+/* ======================= Kodierung (Link) ======================= */
+function packSet(set) {
+  const clean = { v: 1, t: set.t || "", sq: !!set.sq, cards: set.cards.map((c) => {
+    const o = JSON.parse(JSON.stringify(c, (k, v) => (k === "id" ? undefined : v === "" || v == null ? undefined : v)));
+    if (o.lk && !o.lk.c) delete o.lk;
+    return o;
+  }) };
+  const json = JSON.stringify(clean);
+  if (window.LZString) return "k=" + LZString.compressToEncodedURIComponent(json);
+  return "b=" + btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function readHash(h) { const m = String(h || "").match(/#([kb])=([^&\s]+)/); return m ? { kind: m[1], data: m[2] } : null; }
+function unpackSet(ref) {
+  try {
+    let json;
+    if (ref.kind === "b") json = decodeURIComponent(escape(atob(ref.data.replace(/-/g, "+").replace(/_/g, "/"))));
+    else { if (!window.LZString) return null; json = LZString.decompressFromEncodedURIComponent(ref.data); }
+    const o = JSON.parse(json);
+    if (!o || !Array.isArray(o.cards)) return null;
+    const cards = o.cards.map(normCard).filter(Boolean);
+    if (!cards.length) return null;
+    return { t: o.t || "", sq: !!o.sq, cards };
+  } catch (e) { return null; }
+}
+function fileName() { return (location.pathname.split("/").pop() || "rubbelwerk.html"); }
+function schoolYearEnd() { const n = new Date(); let y = n.getFullYear(); const end = new Date(y, 6, 31, 23, 59); return (n > end ? new Date(y + 1, 6, 31, 23, 59) : end).getTime(); }
+function buildLink(set, o) {
+  const p = new URLSearchParams();
+  if (o.exp) { p.set("share", "1"); p.set("exp", String(o.exp)); p.set("posts", fileName()); p.set("title", (set.t || "Rubbelkarte").slice(0, 40)); }
+  if (o.embed) p.set("embed", "1");
+  const q = p.toString();
+  return location.origin + location.pathname + (q ? "?" + q : "") + "#" + packSet(set);
+}
+
+/* ======================= Effekte ======================= */
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fx = { cv: $("#fx"), parts: [], run: false };
+function confetti(x, y) {
+  if (RM) return;
+  const cv = fx.cv, dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  const cols = ["#FF7D3F", "#F6DA86", "#4CC98A", "#7FA7FF", "#FF7482", "#E9EDF5"];
+  for (let i = 0; i < 90; i++) {
+    const a = Math.random() * Math.PI * 2, s = 4 + Math.random() * 9;
+    fx.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 6, r: Math.random() * 6.28, vr: (Math.random() - .5) * .4, w: 6 + Math.random() * 6, h: 4 + Math.random() * 5, c: cols[i % cols.length], life: 90 + Math.random() * 40 });
+  }
+  if (!fx.run) { fx.run = true; requestAnimationFrame(tick); }
+  function tick() {
+    const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight);
+    fx.parts = fx.parts.filter((p) => p.life-- > 0);
+    fx.parts.forEach((p) => { p.vy += .32; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.globalAlpha = Math.min(1, p.life / 30); g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); g.restore(); });
+    if (fx.parts.length) requestAnimationFrame(tick); else { fx.run = false; g.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+}
+function confettiAt(node) { const r = node.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + r.height / 2); }
+const audio = { ctx: null, src: null, gain: null };
+function scratchSound(on) {
+  try {
+    if (!audio.ctx) {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      audio.ctx = new C();
+      const len = audio.ctx.sampleRate * 1.5, buf = audio.ctx.createBuffer(1, len, audio.ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      audio.buf = buf;
+    }
+    if (on) {
+      if (audio.src) return;
+      const s = audio.ctx.createBufferSource(); s.buffer = audio.buf; s.loop = true;
+      const f = audio.ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 3200; f.Q.value = .8;
+      const g = audio.ctx.createGain(); g.gain.value = .05;
+      s.connect(f); f.connect(g); g.connect(audio.ctx.destination); s.start(); audio.src = s; audio.gain = g;
+    } else if (audio.src) { audio.src.stop(); audio.src = null; }
+  } catch (e) {}
+}
+function chime(win) {
+  try {
+    if (!audio.ctx) return; const t = audio.ctx.currentTime;
+    (win ? [660, 880, 1320] : [520, 780]).forEach((f, i) => {
+      const o = audio.ctx.createOscillator(), g = audio.ctx.createGain(); o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + i * .09); g.gain.linearRampToValueAtTime(.12, t + i * .09 + .02); g.gain.exponentialRampToValueAtTime(.001, t + i * .09 + .5);
+      o.connect(g); g.connect(audio.ctx.destination); o.start(t + i * .09); o.stop(t + i * .09 + .55);
+    });
+  } catch (e) {}
+}
+
+/* ======================= Rubbelfeld ======================= */
+function makeRub(host, o) {
+  host.classList.add("rub");
+  host.tabIndex = 0; host.setAttribute("role", "button");
+  host.setAttribute("aria-label", (o.aria || "Rubbelfeld") + " – mit dem Finger freirubbeln oder Eingabetaste drücken");
+  const cv = document.createElement("canvas"); cv.className = "rub-cv"; host.appendChild(cv);
+  const g = cv.getContext("2d", { willReadFrequently: true });
+  const foil = FOILS[o.foil] || FOILS.silber;
+  let w = 0, h = 0, dpr = 1, revealed = false, touched = false, down = false, last = null, moves = 0;
+  const seed = Math.random() * 1000;
+  function paint() {
+    if (!w || !h) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, w, h);
+    const lg = g.createLinearGradient(0, 0, w, h); foil.c.forEach((c, i) => lg.addColorStop(i / (foil.c.length - 1), c));
+    g.fillStyle = lg; g.fillRect(0, 0, w, h);
+    // Körnung
+    let s = seed; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    const n = Math.min(900, Math.round(w * h / 60));
+    for (let i = 0; i < n; i++) { g.fillStyle = rnd() > .5 ? "rgba(255,255,255,.22)" : "rgba(0,0,0,.10)"; g.fillRect(rnd() * w, rnd() * h, 1.2, 1.2); }
+    if (foil.stars) for (let i = 0; i < Math.round(w * h / 900); i++) { g.fillStyle = "rgba(255,255,255," + (.3 + rnd() * .6) + ")"; g.beginPath(); g.arc(rnd() * w, rnd() * h, rnd() * 1.4 + .3, 0, 6.3); g.fill(); }
+    // Rautenmuster
+    g.save(); g.globalAlpha = .10; g.strokeStyle = foil.ink; g.lineWidth = 1;
+    for (let x = -h; x < w; x += 14) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.stroke(); }
+    g.restore();
+    const locked = o.isLocked && o.isLocked();
+    const label = locked ? (o.lockLabel ? o.lockLabel() : "gesperrt") : (o.label || "");
+    if (locked) { g.fillStyle = "rgba(10,14,22,.38)"; g.fillRect(0, 0, w, h); }
+    const fs = Math.max(11, Math.min(18, h * .26));
+    g.fillStyle = locked ? "#fff" : foil.ink; g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = "400 " + fs + "px 'Dela Gothic One', 'Arial Black', sans-serif";
+    if (locked) {
+      const cx = w / 2, cy = label ? h / 2 - fs * .55 : h / 2, r = Math.min(9, h * .14);
+      g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy - r * .5, r * .7, Math.PI, 0); g.stroke();
+      g.fillRect(cx - r, cy - r * .5, r * 2, r * 1.5);
+      if (label && h > 44) g.fillText(label, cx, h / 2 + fs * .75, w - 8);
+    } else if (label) g.fillText(label, w / 2, h / 2, w - 8);
+  }
+  function fit() {
+    const r = host.getBoundingClientRect(); if (!r.width || !r.height) return;
+    if (touched && !revealed && Math.abs(r.width - w) < 2 && Math.abs(r.height - h) < 2) return;
+    if (touched && !revealed) return;
+    dpr = Math.min(2, devicePixelRatio || 1); w = r.width; h = r.height;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); paint();
+  }
+  const ro = new ResizeObserver(fit); ro.observe(host);
+  const rad = () => Math.max(13, Math.min(30, Math.min(w, h) * .2));
+  function pos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  function scratch(p) {
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalCompositeOperation = "destination-out";
+    g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = rad() * 2;
+    g.beginPath(); if (last) { g.moveTo(last.x, last.y); g.lineTo(p.x, p.y); g.stroke(); } else { g.arc(p.x, p.y, rad(), 0, 6.29); g.fill(); }
+    last = p;
+  }
+  function check() {
+    if (revealed || !cv.width) return;
+    const d = g.getImageData(0, 0, cv.width, cv.height).data; let clear = 0, tot = 0;
+    for (let i = 3; i < d.length; i += 4 * 7) { tot++; if (d[i] < 60) clear++; }
+    if (tot && clear / tot * 100 >= (o.ap || 60)) reveal();
+  }
+  function refuse() { host.classList.remove("nope"); void host.offsetWidth; host.classList.add("nope"); o.onRefuse && o.onRefuse(); }
+  cv.addEventListener("pointerdown", (e) => {
+    if (revealed) return;
+    if (o.isLocked && o.isLocked()) { refuse(); return; }
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    down = true; last = null; if (!touched) { touched = true; o.onStart && o.onStart(); }
+    if (o.sound) scratchSound(true);
+    scratch(pos(e));
+  });
+  cv.addEventListener("pointermove", (e) => { if (!down) return; scratch(pos(e)); if (++moves % 6 === 0) check(); });
+  const up = () => { if (!down) return; down = false; last = null; scratchSound(false); check(); };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); cv.addEventListener("lostpointercapture", up);
+  host.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return; e.preventDefault();
+    if (revealed) return; if (o.isLocked && o.isLocked()) { refuse(); return; } reveal();
+  });
+  function reveal(silent) {
+    if (revealed) return; revealed = true; touched = true; down = false; scratchSound(false);
+    cv.classList.add("gone"); host.classList.add("done"); host.setAttribute("aria-label", (o.aria || "Rubbelfeld") + " – aufgedeckt");
+    o.onReveal && o.onReveal(!!silent);
+  }
+  return { reveal, refresh() { if (!touched && !revealed) paint(); }, get revealed() { return revealed; }, get touched() { return touched; }, destroy() { ro.disconnect(); scratchSound(false); } };
+}
+
+/* ======================= Spieler ======================= */
+function mountSet(root, set, ctx) {
+  let idx = 0, cleanup = null;
+  const done = set.cards.map(() => false);
+  root.innerHTML = "";
+  const multi = set.cards.length > 1;
+  const head = el(`<div class="set-h"><h1>${esc(set.t || "")}</h1><div class="nav" role="tablist" aria-label="Karten"></div></div>`);
+  if (!set.t && !multi) head.hidden = true;
+  const stage = el(`<div></div>`);
+  const pnav = el(`<div class="pnav"><button class="btn" type="button" data-d="-1">← Zurück</button><button class="btn" type="button" data-d="1">Weiter →</button></div>`);
+  root.append(head, stage);
+  if (multi) root.append(pnav);
+  if (!ctx.preview) root.append(el(`<p class="made">Erstellt mit Rubbelwerk · buildspace</p>`));
+  const allowed = (i) => !set.sq || i === 0 || done.slice(0, i).every(Boolean);
+  function nav() {
+    const n = $(".nav", head); n.innerHTML = "";
+    if (!multi) return;
+    set.cards.forEach((c, i) => {
+      const b = el(`<button type="button" role="tab" aria-selected="${i === idx}" aria-label="Karte ${i + 1}${done[i] ? ", gelöst" : ""}">${i + 1}</button>`);
+      if (i === idx) b.classList.add("on"); if (done[i]) b.classList.add("ok");
+      if (!allowed(i)) { b.disabled = true; b.title = "Erst die vorherige Karte lösen"; }
+      b.onclick = () => show(i); n.appendChild(b);
+    });
+    const [pb, nb] = $$("button", pnav);
+    pb.disabled = idx === 0; nb.disabled = idx === set.cards.length - 1 || !allowed(idx + 1);
+  }
+  pnav.addEventListener("click", (e) => { const b = e.target.closest("button[data-d]"); if (b && !b.disabled) show(idx + Number(b.dataset.d)); });
+  function show(i, force) {
+    if (!force && !allowed(i)) return;
+    if (cleanup) cleanup();
+    idx = i; stage.innerHTML = "";
+    cleanup = mountCard(stage, set.cards[i], { preview: ctx.preview, index: i, total: set.cards.length, onDone() { done[i] = true; nav(); } });
+    nav();
+  }
+  show(ctx.start && ctx.start < set.cards.length ? ctx.start : 0, true);
+  return () => cleanup && cleanup();
+}
+
+function mountCard(stage, card, ctx) {
+  const rubs = [], timers = [];
+  const st = { locked: !!(card.lk && card.lk.c), done: false };
+  const no = String(ctx.index + 1).padStart(2, "0") + " / " + String(ctx.total).padStart(2, "0");
+  const t = el(`<article class="ticket">
+    <div class="t-head"><span class="t-type">${esc(TYPES[card.ty].name)}</span><span class="t-no">Nr. ${no}</span></div>
+    ${card.ti ? `<h2 class="t-title">${esc(card.ti)}</h2>` : ""}
+    ${card.tx ? `<p class="t-text">${linkify(card.tx)}</p>` : ""}
+    <div class="t-lock"></div>
+    <div class="t-body"></div>
+    <div class="t-msg" aria-live="polite"></div>
+    <div class="t-note" hidden></div>
+    <div class="t-foot" hidden></div>
+  </article>`);
+  stage.appendChild(t);
+  const body = $(".t-body", t), msgEl = $(".t-msg", t), foot = $(".t-foot", t);
+  const msg = (text, kind) => { msgEl.className = "t-msg " + (kind || "info"); msgEl.textContent = text || ""; };
+  const isLocked = () => st.locked;
+  const base = (extra) => Object.assign({ foil: card.fo, ap: card.ap, sound: card.sd, isLocked, onRefuse() { if (st.locked) msg("Diese Karte ist noch gesperrt – gib zuerst den Code ein.", "bad"); } }, extra);
+  const add = (host, o) => { const r = makeRub(host, base(o)); rubs.push(r); return r; };
+  function finish(win, node) {
+    if (st.done) return; st.done = true;
+    if (card.nt) { const n = $(".t-note", t); n.innerHTML = `<b>Geschafft</b>${linkify(card.nt)}`; n.hidden = false; }
+    if (card.cf && win !== false) confettiAt(node || t);
+    if (card.sd) chime(win !== false);
+    ctx.onDone && ctx.onDone();
+  }
+  const store1 = (k) => "rubbelwerk_once_" + hashStr(JSON.stringify([card.ty, card.ti, card.tx, card.pr, card.pl])) + (k || "");
+
+  // Codesperre
+  if (st.locked) {
+    const lb = el(`<div class="lockbox"><div class="lt">${LOCK_SVG}<span>Diese Karte ist gesperrt.</span></div>
+      ${card.lk.h ? `<p class="h">${linkify(card.lk.h)}</p>` : ""}
+      <form><label class="vh" for="code-${ctx.index}">Code</label><input id="code-${ctx.index}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code eingeben"><button class="btn pri" type="submit">Öffnen</button></form></div>`);
+    $(".t-lock", t).appendChild(lb);
+    $("form", lb).addEventListener("submit", (e) => {
+      e.preventDefault(); const v = $("input", lb).value;
+      if (norm(v) === norm(card.lk.c)) {
+        st.locked = false; lb.remove(); msg("Code richtig – die Karte ist offen.", "ok"); rubs.forEach((r) => r.refresh()); unlockHooks.forEach((f) => f());
+      } else { lb.classList.remove("shake"); void lb.offsetWidth; lb.classList.add("shake"); msg("Der Code stimmt nicht. Prüfe deine Lösung noch einmal.", "bad"); }
+    });
+  }
+  const unlockHooks = [];
+
+  const R = {
+    wort() {
+      const word = String(card.w || "").trim();
+      if (!word) { body.innerHTML = `<div class="empty-hint">Trage im Formular ein Lösungswort ein.</div>`; return; }
+      const chars = [...word];
+      const total = chars.filter((c) => c !== " ").length;
+      let solved = false;
+      const cnt = el(`<span class="counter"><b>0</b> / ${total} Buchstaben aufgedeckt</span>`);
+      const upd = () => {
+        const n = rubs.filter((r) => r.revealed).length;
+        $("b", cnt).textContent = card.ein === false ? (rubs[0] && rubs[0].revealed ? total : 0) : n;
+        if (!solved && rubs.length && rubs.every((r) => r.revealed)) { solved = true; msg(card.gs ? "Alles aufgedeckt." : "Alles aufgedeckt – das Wort steht da!", "info"); finish(true, body); }
+      };
+      if (card.ein === false) {
+        const f = el(`<div class="wordfield"><div class="rub-c">${esc(word)}</div></div>`); body.appendChild(f);
+        add(f, { label: "RUBBELN", aria: "Lösungswort", onReveal: upd });
+      } else {
+        const row = el(`<div class="letters"></div>`); body.appendChild(row);
+        chars.forEach((c, i) => {
+          if (c === " ") { row.appendChild(el(`<span class="gap"></span>`)); return; }
+          const L = el(`<div class="letter"><div class="rub-c">${esc(c)}</div></div>`); row.appendChild(L);
+          add(L, { label: "?", aria: "Buchstabe " + (i + 1), ap: Math.min(card.ap, 55), onReveal: upd });
+        });
+      }
+      if (card.gs) {
+        const g = el(`<form class="guess"><label class="vh" for="gs-${ctx.index}">Lösungswort</label><input id="gs-${ctx.index}" autocomplete="off" spellcheck="false" placeholder="Lösungswort eintippen"><button class="btn pri" type="submit">Prüfen</button></form>`);
+        body.appendChild(g);
+        g.addEventListener("submit", (e) => {
+          e.preventDefault(); if (solved) return;
+          if (st.locked) { msg("Diese Karte ist noch gesperrt – gib zuerst den Code ein.", "bad"); return; }
+          const used = rubs.filter((r) => r.revealed).length;
+          if (norm($("input", g).value).replace(/\s/g, "") === norm(word).replace(/\s/g, "")) {
+            solved = true; rubs.forEach((r) => r.reveal(true)); upd();
+            msg(used === 0 ? "Richtig – ganz ohne Hilfe!" : `Richtig! Du hast ${used} von ${total} Buchstaben gebraucht.`, "ok"); finish(true, g);
+          } else { g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); msg("Noch nicht – rubbel einen weiteren Buchstaben frei.", "bad"); }
+        });
+      }
+      foot.hidden = false; foot.appendChild(cnt);
+    },
+    tipp() {
+      const tips = (card.tp || []).filter((x) => String(x).trim());
+      const items = tips.map((x, i) => ({ t: x, label: "Tipp " + (i + 1) }));
+      if (String(card.lo || "").trim()) items.push({ t: card.lo, label: "Lösung", sol: true });
+      if (!items.length) { body.innerHTML = `<div class="empty-hint">Trage im Formular mindestens einen Tipp ein.</div>`; return; }
+      const wrap = el(`<div class="tips"></div>`); body.appendChild(wrap);
+      const opened = [], t0 = { v: null };
+      const startClock = () => { if (t0.v == null) t0.v = Date.now(); };
+      if (!st.locked) startClock(); else unlockHooks.push(startClock);
+      const cnt = el(`<span class="counter">Genutzte Tipps: <b>0</b> von ${tips.length}</span>`);
+      const waitLeft = (i) => {
+        const dl = Number(card.dl) || 0; if (!dl) return 0;
+        const ref = i === 0 ? t0.v : opened[i - 1]; if (ref == null) return dl;
+        return Math.max(0, Math.ceil(dl - (Date.now() - ref) / 1000));
+      };
+      const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      items.forEach((it, i) => {
+        const f = el(`<div class="tip${it.sol ? " sol" : ""}"><div class="rub-c"><div><b>${esc(it.label)}</b>${linkify(it.t)}</div></div></div>`);
+        wrap.appendChild(f);
+        add(f, {
+          foil: it.sol ? "gold" : card.fo, label: it.label, aria: it.label,
+          isLocked: () => st.locked || (card.sq && i > 0 && !rubs[i - 1].revealed) || waitLeft(i) > 0,
+          lockLabel: () => st.locked ? "gesperrt" : (card.sq && i > 0 && !rubs[i - 1].revealed) ? "erst " + items[i - 1].label : "in " + fmt(waitLeft(i)),
+          onRefuse() { msg(st.locked ? "Diese Karte ist noch gesperrt – gib zuerst den Code ein." : (card.sq && i > 0 && !rubs[i - 1].revealed) ? `Rubbel zuerst ${items[i - 1].label} frei.` : "Denk noch einen Moment selbst nach – der Tipp öffnet gleich.", "bad"); },
+          onReveal() {
+            opened[i] = Date.now();
+            $("b", cnt).textContent = rubs.filter((r, k) => r.revealed && !items[k].sol).length;
+            rubs.forEach((r) => r.refresh());
+            if (it.sol || rubs.every((r) => r.revealed)) finish(true, f);
+          }
+        });
+      });
+      if (Number(card.dl) > 0) timers.push(setInterval(() => rubs.forEach((r) => r.refresh()), 1000));
+      foot.hidden = false; foot.appendChild(cnt);
+    },
+    quiz() {
+      const box = el(`<div style="display:grid;gap:10px"></div>`); body.appendChild(box);
+      const f = el(`<div class="answer"><div class="rub-c">${linkify(card.a || "–")}</div></div>`);
+      let given = !card.gs;
+      if (card.gs) {
+        const g = el(`<form class="guess"><label class="vh" for="qa-${ctx.index}">Deine Antwort</label><input id="qa-${ctx.index}" autocomplete="off" placeholder="Deine Antwort zuerst"><button class="btn pri" type="submit">Festhalten</button></form>`);
+        box.appendChild(g);
+        g.addEventListener("submit", (e) => {
+          e.preventDefault(); const v = $("input", g).value.trim();
+          if (!v) { msg("Schreib erst deine eigene Antwort auf.", "bad"); return; }
+          given = true; g.replaceWith(el(`<p class="myans">Deine Antwort: <b>${esc(v)}</b></p>`)); msg("Jetzt darfst du rubbeln.", "info"); rubs[0].refresh();
+        });
+      }
+      box.appendChild(f);
+      add(f, {
+        label: "ANTWORT", aria: "Antwort",
+        isLocked: () => st.locked || !given,
+        lockLabel: () => st.locked ? "gesperrt" : "erst antworten",
+        onRefuse() { msg(st.locked ? "Diese Karte ist noch gesperrt – gib zuerst den Code ein." : "Schreib erst deine eigene Antwort auf.", "bad"); },
+        onReveal() {
+          finish(true, f);
+          const sc = el(`<div class="selfcheck"><button class="btn sm" type="button" data-v="1">Hatte ich richtig</button><button class="btn sm" type="button" data-v="0">Lag daneben</button></div>`);
+          box.appendChild(sc);
+          sc.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; sc.remove(); msg(b.dataset.v === "1" ? "Stark – weiter so!" : "Kein Problem. Schau dir den Lösungsweg noch einmal an.", b.dataset.v === "1" ? "ok" : "info"); });
+        }
+      });
+    },
+    wahl() {
+      let ops = (card.op || []).filter((x) => String(x.t || "").trim());
+      if (!ops.length) { body.innerHTML = `<div class="empty-hint">Trage im Formular Antworten ein.</div>`; return; }
+      if (card.sh) ops = shuffle(ops);
+      const mx = Math.max(1, Math.min(ops.length, Number(card.mx) || 1));
+      const grid = el(`<div class="opts-grid"></div>`); body.appendChild(grid);
+      let picked = 0, right = 0, ended = false;
+      const left = () => mx - picked;
+      ops.forEach((op, i) => {
+        const o = el(`<div class="opt"><p>${esc(op.t)}</p><div><div class="rub-c ${op.r ? "r" : "f"}">${op.r ? "✓ Richtig" : "✗ Falsch"}</div></div></div>`);
+        grid.appendChild(o); const host = $("div", o); let mine = false;
+        add(host, {
+          label: "RUBBELN", aria: "Antwort: " + op.t, ap: Math.min(card.ap, 50),
+          isLocked: () => st.locked || (left() <= 0 && !ended && !mine),
+          lockLabel: () => st.locked ? "gesperrt" : "nicht gewählt",
+          onRefuse() { msg(st.locked ? "Diese Karte ist noch gesperrt – gib zuerst den Code ein." : "Deine Wahl ist schon gefallen.", "bad"); },
+          onStart() { if (!ended) { mine = true; picked++; o.classList.add("picked"); rubs.forEach((r) => r.refresh()); } },
+          onReveal(silent) {
+            if (silent || ended) return;
+            if (op.r) right++;
+            if (left() <= 0) {
+              ended = true;
+              msg(right ? (mx > 1 ? `${right} von ${mx} Treffern richtig.` : "Richtig gewählt!") : "Leider daneben.", right ? "ok" : "bad");
+              finish(right > 0, o);
+              const all = el(`<button class="btn sm" type="button">Alle aufdecken</button>`);
+              all.onclick = () => { rubs.forEach((r) => r.reveal(true)); all.remove(); };
+              foot.hidden = false; foot.appendChild(all);
+            }
+          }
+        });
+      });
+      msg(mx > 1 ? `Du darfst ${mx} Felder rubbeln.` : "Du darfst nur ein Feld rubbeln – entscheide dich gut.", "info");
+    },
+    los() {
+      const pr = (card.pr || []).filter((p) => String(p.t || "").trim() && Number(p.g) > 0);
+      if (!pr.length) { body.innerHTML = `<div class="empty-hint">Trage im Formular Gewinne und Nieten ein.</div>`; return; }
+      const key = store1();
+      let saved = !ctx.preview && card.one ? store.get(key, null) : null;
+      let pick;
+      if (saved && pr[saved.i]) pick = pr[saved.i];
+      else { const sum = pr.reduce((a, p) => a + Number(p.g), 0); let r = Math.random() * sum; pick = pr.find((p) => (r -= Number(p.g)) < 0) || pr[pr.length - 1]; }
+      const f = el(`<div class="losfield${pick.w ? " win" : ""}"><div class="rub-c"><small>${pick.w ? "Gewonnen" : "Ergebnis"}</small>${esc(pick.t)}</div></div>`);
+      body.appendChild(f);
+      const r = add(f, { label: "HIER RUBBELN", aria: "Rubbellos", onReveal(silent) {
+        if (!ctx.preview && card.one) store.set(key, { i: pr.indexOf(pick), done: true });
+        if (!silent) msg(pick.w ? "Glückwunsch!" : "Diesmal leider nicht.", pick.w ? "ok" : "info");
+        finish(pick.w, f);
+      } });
+      if (saved && saved.done) { r.reveal(true); msg("Du hast dieses Los schon gerubbelt.", "info"); }
+      if (card.sp) { const ul = el(`<details class="opts"><summary>Was es zu gewinnen gibt</summary><div class="in"><ul class="prizes">${pr.filter((p) => p.w).map((p) => `<li>${esc(p.t)}</li>`).join("")}</ul></div></details>`); body.appendChild(ul); }
+    },
+    zufall() {
+      const pool = (card.pl || []).filter((p) => String(p.t || "").trim());
+      if (!pool.length) { body.innerHTML = `<div class="empty-hint">Trage im Formular Aufgaben in den Pool ein.</div>`; return; }
+      const lv = [...new Set(pool.map((p) => p.n || ""))].filter(Boolean).sort();
+      const key = store1();
+      const saved = !ctx.preview && card.one ? store.get(key, null) : null;
+      const area = el(`<div style="display:grid;gap:12px"></div>`); body.appendChild(area);
+      function draw(level, fixedIdx) {
+        area.querySelectorAll(".taskfield,.redraw").forEach((n) => n.remove());
+        rubs.splice(0).forEach((r) => r.destroy());
+        const sub = pool.filter((p) => !lv.length || lv.length === 1 || (p.n || "") === level);
+        const cands = sub.length ? sub : pool;
+        const task = fixedIdx != null && pool[fixedIdx] ? pool[fixedIdx] : cands[Math.floor(Math.random() * cands.length)];
+        const f = el(`<div class="taskfield"><div class="rub-c"><div>${linkify(task.t)}</div></div></div>`); area.appendChild(f);
+        const r = add(f, { label: "AUFGABE FREIRUBBELN", aria: "Aufgabe", onReveal(silent) {
+          if (!ctx.preview && card.one) store.set(key, { i: pool.indexOf(task), n: level, done: true });
+          finish(true, f);
+          if (card.rd && !card.one) { const b = el(`<button class="btn sm redraw" type="button">Andere Aufgabe ziehen</button>`); b.onclick = () => draw(level); area.appendChild(b); }
+        } });
+        if (saved && saved.done && fixedIdx != null) { r.reveal(true); msg("Deine Aufgabe steht fest.", "info"); }
+      }
+      if (saved && saved.done) { draw(saved.n, saved.i); return; }
+      if (lv.length > 1) {
+        const lvBox = el(`<div><div class="eyebrow" style="margin-bottom:8px">Wähle dein Niveau</div><div class="levels">${lv.map((l) => `<button type="button" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>`);
+        area.appendChild(lvBox);
+        lvBox.addEventListener("click", (e) => {
+          const b = e.target.closest("button[data-l]"); if (!b) return;
+          if (rubs.some((r) => r.touched)) { msg("Dein Niveau steht schon fest.", "info"); return; }
+          $$("button", lvBox).forEach((x) => x.classList.toggle("on", x === b)); draw(b.dataset.l);
+        });
+      } else draw(lv[0] || "");
+    },
+    bild() {
+      if (!card.im) { body.innerHTML = `<div class="empty-hint">Lade im Formular ein Bild hoch oder gib eine Bildadresse an.</div>`; return; }
+      const f = el(`<div class="imgfield"><div class="rub-c"><img alt="${esc(card.a || "Verdecktes Bild")}"></div></div>`);
+      body.appendChild(f);
+      const img = $("img", f);
+      img.onload = () => add(f, { label: "RUBBELN", aria: "Bild", onReveal() { if (card.a) msg(card.a, "ok"); finish(true, f); } });
+      img.onerror = () => { f.replaceWith(el(`<div class="empty-hint">Das Bild konnte nicht geladen werden.</div>`)); };
+      img.src = card.im;
+    }
+  };
+  R[card.ty]();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => rubs.forEach((r) => r.refresh()));
+  return () => { rubs.forEach((r) => r.destroy()); timers.forEach(clearInterval); };
+}
+
+/* ======================= Vorlagen ======================= */
+function tpl(ty, o) { return Object.assign(newCard(ty), o); }
+const TEMPLATES = [
+  { name: "Mini-Escape: Bruchrechnung", desc: "3 Karten: Lösungswort öffnet per Code die Tippkarte, am Ende wartet ein Belohnungslos.", make: () => ({ t: "Mini-Escape: Bruch-Tresor", sq: true, cards: [
+    tpl("wort", { ti: "Station 1: Das Codewort", tx: "Wie heißt die Zahl unter dem Bruchstrich? Das Wort ist euer Code für Station 2.", w: "NENNER", nt: "Merkt euch das Wort – es öffnet die nächste Karte." }),
+    tpl("tipp", { ti: "Station 2: Kürzen", tx: "Kürze 18/24 so weit wie möglich.", tp: ["Suche eine Zahl, durch die 18 und 24 beide teilbar sind.", "Der größte gemeinsame Teiler von 18 und 24 ist 6."], lo: "18/24 = 3/4", lk: { c: "NENNER", h: "Den Code findet ihr auf Karte 1." }, dl: 20, fo: "mint", nt: "Super! Euer nächster Code lautet: DREIVIERTEL" }),
+    tpl("los", { ti: "Station 3: Der Tresor", tx: "Ihr habt es geschafft. Rubbelt euren Preis frei!", lk: { c: "DREIVIERTEL", h: "Der Code steht am Ende von Station 2." }, pr: [{ t: "Hausaufgaben-Joker", g: 1, w: true }, { t: "Sitzplatz frei wählen", g: 2, w: true }, { t: "Musik in der nächsten Arbeitsphase", g: 2, w: true }], one: false })
+  ] }) },
+  { name: "Gestufte Tipps: Prozent", desc: "Eine Aufgabe mit drei Hilfen und Lösung – mit Wartezeit, damit erst selbst gedacht wird.", make: () => ({ t: "Prozentrechnung – Hilfekarte", sq: false, cards: [
+    tpl("tipp", { ti: "Hilfe zu Aufgabe 4", tx: "Eine Jacke kostet 80 €. Im Sale gibt es 15 % Rabatt. Wie viel kostet sie jetzt?", tp: ["Berechne zuerst, wie viel 15 % von 80 € sind.", "15 % von 80 € = 80 € · 0,15", "Ziehe den Rabatt vom alten Preis ab."], lo: "80 € · 0,15 = 12 €  →  80 € − 12 € = 68 €", dl: 30 })
+  ] }) },
+  { name: "Quizkarten: Berufsorientierung", desc: "Drei Fragen zum Praktikum – erst eigene Antwort, dann rubbeln.", make: () => ({ t: "Fit fürs Praktikum", sq: false, cards: [
+    tpl("quiz", { ti: "Frage 1", tx: "Du bist im Praktikum krank. Was musst du als Erstes tun?", a: "Vor Arbeitsbeginn im Betrieb anrufen und Bescheid geben – und die Schule informieren." }),
+    tpl("quiz", { ti: "Frage 2", tx: "Was gehört in eine Bewerbungsmappe für ein Praktikum?", a: "Anschreiben, Lebenslauf, letztes Zeugnis", fo: "kupfer" }),
+    tpl("wahl", { ti: "Frage 3", tx: "Wie sprichst du deine Betreuerin im Betrieb am ersten Tag an?", op: [{ t: "Mit „Sie“ und Nachnamen", r: true }, { t: "Mit „du“ – das ist lockerer", r: false }, { t: "Gar nicht, ich warte ab", r: false }] })
+  ] }) },
+  { name: "Aufgabe nach Niveau", desc: "Zufallsaufgabe aus einem Pool, getrennt nach A-, B- und C-Kurs.", make: () => ({ t: "Gleichungen – deine Aufgabe", sq: false, cards: [
+    tpl("zufall", { ti: "Löse die Gleichung", tx: "Wähle dein Niveau, rubbel deine Aufgabe frei und löse sie im Heft.", pl: [
+      { t: "x + 7 = 15", n: "C" }, { t: "x − 4 = 11", n: "C" }, { t: "3x = 21", n: "C" },
+      { t: "2x + 5 = 17", n: "B" }, { t: "4x − 3 = 25", n: "B" }, { t: "5x + 2 = 3x + 10", n: "B" },
+      { t: "3(x − 2) = 2x + 5", n: "A" }, { t: "0,5x + 4 = 2x − 2", n: "A" }, { t: "2(x + 3) − 4 = 3(x − 1)", n: "A" }
+    ], rd: true, fo: "nacht" })
+  ] }) },
+  { name: "Belohnungslos", desc: "Rubbellos mit Gewinnen und Nieten – jedes Gerät darf nur einmal.", make: () => ({ t: "Belohnungslos", sq: false, cards: [
+    tpl("los", { ti: "Dein Los für heute", pr: [{ t: "Hausaufgaben-Joker", g: 1, w: true }, { t: "Sitzplatz frei wählen", g: 2, w: true }, { t: "5 Minuten früher Pause", g: 1, w: true }, { t: "Leider eine Niete", g: 6, w: false }], sp: true, sd: true })
+  ] }) },
+  { name: "Lösungswort-Kontrolle", desc: "Am Ende einer Stationsarbeit: Buchstaben ergeben das Kontrollwort.", make: () => ({ t: "Kontrollwort Stationsarbeit", sq: false, cards: [
+    tpl("wort", { ti: "Euer Kontrollwort", tx: "Jede Station liefert einen Buchstaben. Tippt das Wort ein – rubbelt nur, wenn ihr nicht weiterkommt.", w: "WINKEL", nt: "Zeigt eurer Lehrkraft, wie viele Buchstaben ihr gebraucht habt." })
+  ] }) }
+];
+
+/* ======================= Editor ======================= */
+const LIB = "rubbelwerk_lib", CUR = "rubbelwerk_cur";
+let lib = store.get(LIB, []), cur = null, sel = 0, pvCleanup = null, pvTimer = null;
+function setFrom(s) { return { id: uid(), t: s.t || "", sq: !!s.sq, cards: s.cards.map((c) => Object.assign(newCard(c.ty), c, { id: uid(), lk: Object.assign({ c: "", h: "" }, c.lk || {}) })) }; }
+function save() {
+  cur.upd = Date.now();
+  const i = lib.findIndex((x) => x.id === cur.id);
+  const entry = { id: cur.id, t: cur.t, upd: cur.upd, set: cur };
+  if (i >= 0) lib[i] = entry; else lib.unshift(entry);
+  if (!store.set(LIB, lib)) toast("Speichern im Browser nicht möglich – exportiere dein Set als Datei.");
+  store.set(CUR, cur.id);
+}
+function load(id) { const e = lib.find((x) => x.id === id); cur = e ? e.set : null; sel = 0; }
+function openSet(s) { cur = s; sel = 0; save(); renderAll(); }
+
+function renderAll() { $("#setTitle").value = cur.t || ""; $("#setSeq").checked = !!cur.sq; renderList(); renderEditor(); refreshPreview(true); }
+function renderList() {
+  const L = $("#cardList"); L.innerHTML = "";
+  cur.cards.forEach((c, i) => {
+    const b = el(`<button type="button" class="chip${i === sel ? " on" : ""}" role="tab" aria-selected="${i === sel}"><span class="n">${i + 1}</span><span class="l"><b>${esc(c.ti || TYPES[c.ty].name)}</b><span>${esc(TYPES[c.ty].name)}${c.lk && c.lk.c ? " · Code" : ""}</span></span></button>`);
+    b.onclick = () => { sel = i; renderList(); renderEditor(); refreshPreview(true); };
+    L.appendChild(b);
+  });
+  const add = el(`<button type="button" class="chip add" id="btnNew">+ Neue Karte</button>`);
+  add.onclick = openTypePicker; L.appendChild(add);
+  const tools = $("#cardTools");
+  $("[data-act=left]", tools).disabled = sel === 0;
+  $("[data-act=right]", tools).disabled = sel >= cur.cards.length - 1;
+  const del = $("[data-act=del]", tools); del.disabled = cur.cards.length <= 1; del.textContent = "Löschen"; del.dataset.sure = "";
+}
+$("#cardTools").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-act]"); if (!b || b.disabled) return;
+  const a = b.dataset.act, cs = cur.cards;
+  if (a === "left" && sel > 0) { [cs[sel - 1], cs[sel]] = [cs[sel], cs[sel - 1]]; sel--; }
+  else if (a === "right" && sel < cs.length - 1) { [cs[sel + 1], cs[sel]] = [cs[sel], cs[sel + 1]]; sel++; }
+  else if (a === "dup") { const c = JSON.parse(JSON.stringify(cs[sel])); c.id = uid(); c.ti = (c.ti || "") + " (Kopie)"; cs.splice(sel + 1, 0, c); sel++; }
+  else if (a === "del") {
+    if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Wirklich löschen?"; setTimeout(() => { if (b.dataset.sure) { b.dataset.sure = ""; b.textContent = "Löschen"; } }, 3500); return; }
+    cs.splice(sel, 1); sel = Math.max(0, sel - 1);
+  }
+  save(); renderList(); renderEditor(); refreshPreview(true);
+});
+$("#setTitle").addEventListener("input", (e) => { cur.t = e.target.value; save(); refreshPreview(); });
+$("#setSeq").addEventListener("change", (e) => { cur.sq = e.target.checked; save(); refreshPreview(); });
+
+function refreshPreview(now) {
+  clearTimeout(pvTimer);
+  const go = () => { if (pvCleanup) pvCleanup(); pvCleanup = mountSet($("#preview"), cur, { preview: true, start: sel }); };
+  if (now) go(); else pvTimer = setTimeout(go, 280);
+}
+$("#pvReset").onclick = () => refreshPreview(true);
+
+function changed(relist) { save(); if (relist) renderList(); refreshPreview(); }
+
+function renderEditor() {
+  const c = cur.cards[sel], E = $("#editor"); E.innerHTML = "";
+  const uidp = "f" + c.id;
+  const field = (label, key, o = {}) => {
+    const id = uidp + key;
+    const inp = o.area ? `<textarea class="inp" id="${id}" rows="${o.rows || 3}" placeholder="${esc(o.ph || "")}"></textarea>` : `<input class="inp" id="${id}" type="${o.type || "text"}" placeholder="${esc(o.ph || "")}"${o.min != null ? ` min="${o.min}"` : ""}${o.max != null ? ` max="${o.max}"` : ""}>`;
+    const w = el(`<div class="f"><label for="${id}">${esc(label)}</label>${inp}${o.help ? `<p class="help">${esc(o.help)}</p>` : ""}</div>`);
+    const i = $(".inp", w); i.value = c[key] == null ? "" : c[key];
+    i.addEventListener("input", () => { c[key] = o.type === "number" ? Number(i.value) : i.value; changed(key === "ti"); });
+    return w;
+  };
+  const toggle = (label, key, help) => {
+    const id = uidp + key;
+    const w = el(`<div class="f"><label class="tog" for="${id}"><input type="checkbox" id="${id}"> ${esc(label)}</label>${help ? `<p class="help">${esc(help)}</p>` : ""}</div>`);
+    const i = $("input", w); i.checked = c[key] !== false && !!c[key];
+    i.addEventListener("change", () => { c[key] = i.checked; changed(); });
+    return w;
+  };
+  // Listen-Editor
+  const list = (label, key, cols, blank, help) => {
+    const w = el(`<div class="f"><span class="lab">${esc(label)}</span>${help ? `<p class="help">${esc(help)}</p>` : ""}<div class="rows"></div><div><button class="btn sm" type="button">+ Hinzufügen</button></div></div>`);
+    const rows = $(".rows", w);
+    const draw = () => {
+      rows.innerHTML = "";
+      (c[key] || []).forEach((item, i) => {
+        const r = el(`<div class="row"></div>`);
+        cols.forEach((col) => {
+          let node;
+          if (col.kind === "check") {
+            node = el(`<label class="mark"><input type="checkbox"> ${esc(col.label)}</label>`);
+            const cb = $("input", node); cb.checked = col.get ? col.get(item) : !!item[col.k];
+            cb.addEventListener("change", () => { if (col.set) col.set(item, cb.checked); else item[col.k] = cb.checked; changed(); });
+          } else if (col.kind === "select") {
+            node = el(`<select class="inp lv" aria-label="${esc(col.label)}">${col.opts.map((o) => `<option value="${o}">${o || "–"}</option>`).join("")}</select>`);
+            node.value = item[col.k] || ""; node.addEventListener("change", () => { item[col.k] = node.value; changed(); });
+          } else {
+            node = el(`<input class="inp${col.kind === "number" ? " num" : ""}" type="${col.kind === "number" ? "number" : "text"}" ${col.kind === "number" ? 'min="0" inputmode="numeric"' : ""} aria-label="${esc(col.label)}" placeholder="${esc(col.ph || col.label)}">`);
+            node.value = col.k ? (item[col.k] == null ? "" : item[col.k]) : item;
+            node.addEventListener("input", () => {
+              const v = col.kind === "number" ? Number(node.value) : node.value;
+              if (col.k) item[col.k] = v; else c[key][i] = v; changed();
+            });
+          }
+          r.appendChild(node);
+        });
+        const x = el(`<button class="btn icon sm ghost" type="button" aria-label="Zeile entfernen">✕</button>`);
+        x.onclick = () => { c[key].splice(i, 1); draw(); changed(); };
+        r.appendChild(x); rows.appendChild(r);
+      });
+    };
+    $(".btn", w).onclick = () => { (c[key] = c[key] || []).push(typeof blank === "function" ? blank() : blank); draw(); changed(); const lastRow = rows.lastElementChild; const fi = lastRow && $("input.inp", lastRow); fi && fi.focus(); };
+    draw();
+    return w;
+  };
+
+  E.appendChild(el(`<div class="typebadge"><span class="tb">${esc(TYPES[c.ty].name)}</span><span style="font-size:14px;color:var(--soft)">${esc(TYPES[c.ty].desc)}</span></div>`));
+  const g2 = el(`<div class="grid2"></div>`); g2.appendChild(field("Titel der Karte", "ti", { ph: "z. B. Station 2" })); E.appendChild(g2);
+  E.appendChild(field(c.ty === "quiz" || c.ty === "wahl" ? "Frage" : "Aufgabe / Hinweis", "tx", { area: true, rows: 3, ph: "Steht sichtbar auf der Karte. Links werden anklickbar." }));
+
+  if (c.ty === "wort") {
+    E.appendChild(field("Lösungswort", "w", { ph: "z. B. NENNER", help: "Leerzeichen werden als Lücke angezeigt." }));
+    E.appendChild(toggle("Jeder Buchstabe einzeln rubbelbar", "ein", "Aus: Das ganze Wort liegt unter einem Feld."));
+    E.appendChild(toggle("Eingabefeld zum Raten anzeigen", "gs", "Lernende tippen das Wort ein; die Karte zählt, wie viele Buchstaben sie gebraucht haben."));
+  }
+  if (c.ty === "tipp") {
+    E.appendChild(list("Tipps (vom kleinen zum großen Tipp)", "tp", [{ label: "Tipp", ph: "Tipptext" }], ""));
+    E.appendChild(field("Lösung (optional, letztes Feld in Gold)", "lo", { area: true, rows: 2 }));
+    E.appendChild(toggle("Tipps nur der Reihe nach", "sq"));
+    E.appendChild(field("Wartezeit vor jedem Tipp (Sekunden)", "dl", { type: "number", min: 0, max: 600, help: "0 = sofort. Gibt Zeit zum Selbstdenken." }));
+  }
+  if (c.ty === "quiz") {
+    E.appendChild(field("Antwort", "a", { area: true, rows: 2 }));
+    E.appendChild(toggle("Erst eigene Antwort eintippen", "gs", "Die Antwort lässt sich erst rubbeln, wenn etwas eingetragen wurde."));
+  }
+  if (c.ty === "wahl") {
+    E.appendChild(list("Antworten", "op", [{ k: "t", label: "Antwort" }, { kind: "check", k: "r", label: "richtig" }], () => ({ t: "", r: false })));
+    E.appendChild(field("Wie viele Felder darf man rubbeln?", "mx", { type: "number", min: 1, max: 10 }));
+    E.appendChild(toggle("Reihenfolge mischen", "sh"));
+  }
+  if (c.ty === "los") {
+    E.appendChild(list("Gewinne und Nieten", "pr", [{ k: "t", label: "Text" }, { k: "g", kind: "number", label: "Lose", ph: "Lose" }, { kind: "check", k: "w", label: "Gewinn" }], () => ({ t: "", g: 1, w: false }),
+      "„Lose“ = Gewichtung. Beispiel: 1 Joker und 4 Nieten → 20 % Gewinnchance."));
+    const chance = el(`<p class="help"></p>`); const prW = E.lastElementChild;
+    const calc = () => { const s = (c.pr || []).reduce((a, p) => a + (Number(p.g) || 0), 0), w = (c.pr || []).filter((p) => p.w).reduce((a, p) => a + (Number(p.g) || 0), 0); chance.textContent = s ? `Gewinnchance: ${Math.round(w / s * 100)} %` : ""; };
+    calc(); prW.addEventListener("input", calc); prW.addEventListener("change", calc); prW.addEventListener("click", () => setTimeout(calc)); E.appendChild(chance);
+    E.appendChild(toggle("Nur einmal pro Gerät", "one", "Neu laden bringt kein neues Los. In der Vorschau gilt das nicht."));
+    E.appendChild(toggle("Liste der Gewinne auf der Karte zeigen", "sp"));
+  }
+  if (c.ty === "zufall") {
+    E.appendChild(list("Aufgaben-Pool", "pl", [{ k: "t", label: "Aufgabe" }, { kind: "select", k: "n", label: "Niveau", opts: ["", "A", "B", "C"] }], () => ({ t: "", n: "" }),
+      "Mit Niveau A/B/C wählen Lernende zuerst ihr Niveau. Ohne Niveau wird aus allen Aufgaben gezogen."));
+    E.appendChild(toggle("„Andere Aufgabe ziehen“ erlauben", "rd"));
+    E.appendChild(toggle("Aufgabe pro Gerät festhalten", "one", "Wer neu lädt, bekommt dieselbe Aufgabe."));
+  }
+  if (c.ty === "bild") {
+    const w = el(`<div class="f"><span class="lab">Bild</span>
+      <div class="row"><label class="btn sm" for="${uidp}up">Bild hochladen</label><input id="${uidp}up" type="file" accept="image/*" class="vh"><span class="help" id="${uidp}inf"></span></div>
+      <input class="inp" id="${uidp}url" type="url" placeholder="… oder Bildadresse (https://…)" aria-label="Bildadresse">
+      <p class="help">Hochgeladene Bilder werden verkleinert und stecken im Link. Für einen QR-Code ist der Link dann zu lang – eine Bildadresse hält ihn kurz.</p>
+      <div id="${uidp}pv"></div></div>`);
+    E.appendChild(w);
+    const url = $("#" + uidp + "url", w), pv = $("#" + uidp + "pv", w), inf = $("#" + uidp + "inf", w);
+    const showImg = () => { pv.innerHTML = c.im ? `<img class="imgprev" src="${esc(c.im)}" alt="">` : ""; inf.textContent = c.im && c.im.startsWith("data:") ? `Hochgeladen · ${Math.round(c.im.length / 1024)} KB im Link` : ""; };
+    url.value = c.im && !c.im.startsWith("data:") ? c.im : "";
+    url.addEventListener("input", () => { c.im = url.value.trim(); showImg(); changed(); });
+    $("#" + uidp + "up", w).addEventListener("change", (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const fr = new FileReader();
+      fr.onload = () => { const im = new Image(); im.onload = () => {
+        const s = Math.min(1, 520 / Math.max(im.width, im.height)), cv = document.createElement("canvas");
+        cv.width = Math.round(im.width * s); cv.height = Math.round(im.height * s); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        c.im = cv.toDataURL("image/jpeg", .7); url.value = ""; showImg(); changed();
+      }; im.src = fr.result; };
+      fr.readAsDataURL(file);
+    });
+    showImg();
+    E.appendChild(field("Auflösung nach dem Aufdecken (optional)", "a", { ph: "z. B. Ein Akkuschrauber" }));
+  }
+
+  // Optionen
+  const op = el(`<details class="opts"><summary>Folie, Effekte & Code-Sperre</summary><div class="in"></div></details>`);
+  if (c.lk && c.lk.c) op.open = true;
+  const inn = $(".in", op);
+  const fw = el(`<div class="f foilwrap"><span class="lab">Rubbelfolie</span><div class="foils"></div></div>`);
+  Object.entries(FOILS).forEach(([k, f]) => {
+    const b = el(`<button type="button" class="sw${c.fo === k ? " on" : ""}" aria-label="Folie ${f.name}" aria-pressed="${c.fo === k}" style="background:linear-gradient(135deg,${f.c.join(",")})"><span>${f.name}</span></button>`);
+    b.onclick = () => { c.fo = k; $$(".sw", fw).forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); }); changed(); };
+    $(".foils", fw).appendChild(b);
+  });
+  inn.appendChild(fw);
+  const ap = el(`<div class="f"><label for="${uidp}ap">Automatisch aufdecken ab <b>${c.ap} %</b> gerubbelt</label><input id="${uidp}ap" type="range" min="25" max="95" step="5"></div>`);
+  const rng = $("input", ap); rng.value = c.ap; rng.addEventListener("input", () => { c.ap = Number(rng.value); $("b", ap).textContent = c.ap + " %"; changed(); });
+  inn.appendChild(ap);
+  const tg = el(`<div class="grid2"></div>`); tg.appendChild(toggle("Konfetti beim Lösen", "cf")); tg.appendChild(toggle("Rubbelgeräusch und Klang", "sd")); inn.appendChild(tg);
+  const lk = el(`<div class="f"><span class="lab">Code-Sperre</span><p class="help">Die Karte lässt sich erst rubbeln, wenn der Code eingegeben wurde – z. B. das Lösungswort der vorherigen Station. Groß-/Kleinschreibung egal.</p>
+    <div class="grid2"><input class="inp" id="${uidp}lc" placeholder="Code (leer = keine Sperre)" aria-label="Code" autocomplete="off"><input class="inp" id="${uidp}lh" placeholder="Hinweis zum Code (optional)" aria-label="Hinweis zum Code"></div></div>`);
+  const lc = $("#" + uidp + "lc", lk), lh = $("#" + uidp + "lh", lk);
+  lc.value = c.lk.c || ""; lh.value = c.lk.h || "";
+  lc.addEventListener("input", () => { c.lk.c = lc.value.trim(); changed(true); });
+  lh.addEventListener("input", () => { c.lk.h = lh.value; changed(); });
+  inn.appendChild(lk);
+  inn.appendChild(field("Text nach dem Lösen (optional)", "nt", { area: true, rows: 2, ph: "z. B. „Euer nächster Code lautet …“ oder ein Link zur nächsten Station", help: "Erscheint, sobald die Karte gelöst ist. Links werden anklickbar." }));
+  E.appendChild(op);
+}
+
+/* ======================= Overlays ======================= */
+function sheet(title, build) {
+  const ov = el(`<div class="ov" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="sheet"><div class="sheet-h"><h2>${esc(title)}</h2><button class="btn icon" type="button" aria-label="Schließen">✕</button></div><div class="sheet-b"></div></div></div>`);
+  const close = () => { ov.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  $(".sheet-h .btn", ov).onclick = close;
+  ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+  document.addEventListener("keydown", onKey);
+  build($(".sheet-b", ov), close);
+  document.body.appendChild(ov);
+  setTimeout(() => { const f = $(".sheet-b button, .sheet-b input", ov); f && f.focus(); }, 30);
+  return close;
+}
+function openTypePicker() {
+  sheet("Neue Karte", (b, close) => {
+    const g = el(`<div class="typegrid"></div>`);
+    Object.entries(TYPES).forEach(([k, t]) => {
+      const f = FOILS[newCard(k).fo];
+      const c = el(`<button type="button" class="typecard"><div class="tf" style="background:linear-gradient(135deg,${f.c.join(",")})"></div><b>${esc(t.name)}</b><span>${esc(t.desc)}</span></button>`);
+      c.onclick = () => { cur.cards.splice(sel + 1, 0, newCard(k)); sel = Math.min(sel + 1, cur.cards.length - 1); save(); renderList(); renderEditor(); refreshPreview(true); close(); };
+      g.appendChild(c);
+    });
+    b.appendChild(g);
+  });
+}
+$("#btnTemplates").onclick = () => sheet("Vorlagen", (b, close) => {
+  b.appendChild(el(`<p class="note">Eine Vorlage öffnet sich als neues Set. Dein aktuelles Set bleibt unter „Meine Sets“ erhalten.</p>`));
+  const g = el(`<div class="typegrid"></div>`);
+  TEMPLATES.forEach((t, i) => {
+    const s = t.make(); const f = FOILS[s.cards[0].fo];
+    const c = el(`<button type="button" class="typecard"><div class="tf" style="background:linear-gradient(135deg,${f.c.join(",")})"></div><b>${esc(t.name)}</b><span>${esc(t.desc)}</span><span style="font-weight:700">${s.cards.length} ${s.cards.length === 1 ? "Karte" : "Karten"}</span></button>`);
+    c.onclick = () => { openSet(setFrom(t.make())); close(); toast("Vorlage geöffnet"); };
+    g.appendChild(c);
+  });
+  b.appendChild(g);
+});
+
+$("#btnLibrary").onclick = () => sheet("Meine Sets", (b, close) => {
+  const top = el(`<div class="setrow"><button class="btn pri" type="button" data-a="new">+ Neues leeres Set</button><button class="btn" type="button" data-a="exp">Aktuelles Set exportieren</button><label class="btn" for="impFile">Datei importieren</label><input type="file" id="impFile" accept=".json,application/json" class="vh"></div>`);
+  b.appendChild(top);
+  const imp = el(`<div class="f"><label for="impLink">Set aus einem Rubbelwerk-Link übernehmen</label><div class="setrow"><input class="inp" id="impLink" placeholder="Link einfügen …"><button class="btn" type="button">Übernehmen</button></div></div>`);
+  b.appendChild(imp);
+  const L = el(`<div class="liblist"></div>`); b.appendChild(L);
+  const draw = () => {
+    L.innerHTML = "";
+    lib.slice().sort((a, z) => z.upd - a.upd).forEach((e) => {
+      const d = new Date(e.upd).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const it = el(`<div class="libitem${e.id === cur.id ? " cur" : ""}"><div class="li"><b>${esc(e.t || "Ohne Titel")}</b><span>${e.set.cards.length} ${e.set.cards.length === 1 ? "Karte" : "Karten"} · zuletzt ${d}${e.id === cur.id ? " · geöffnet" : ""}</span></div>
+        <button class="btn sm" type="button" data-a="open">Öffnen</button><button class="btn sm ghost" type="button" data-a="copy">Kopie</button><button class="btn sm ghost danger" type="button" data-a="del">Löschen</button></div>`);
+      it.addEventListener("click", (ev) => {
+        const a = ev.target.closest("button[data-a]"); if (!a) return;
+        if (a.dataset.a === "open") { cur = e.set; sel = 0; store.set(CUR, cur.id); renderAll(); close(); }
+        if (a.dataset.a === "copy") { const s = setFrom(JSON.parse(JSON.stringify(e.set))); s.t = (s.t || "Set") + " (Kopie)"; lib.unshift({ id: s.id, t: s.t, upd: Date.now(), set: s }); store.set(LIB, lib); draw(); }
+        if (a.dataset.a === "del") {
+          if (!a.dataset.sure) { a.dataset.sure = "1"; a.textContent = "Wirklich?"; return; }
+          lib = lib.filter((x) => x.id !== e.id); store.set(LIB, lib);
+          if (e.id === cur.id) { if (!lib.length) { cur = null; ensureSet(); } else { cur = lib[0].set; } sel = 0; renderAll(); }
+          draw();
+        }
+      });
+      L.appendChild(it);
+    });
+  };
+  draw();
+  $("[data-a=new]", top).onclick = () => { openSet({ id: uid(), t: "", sq: false, cards: [newCard("wort")] }); close(); };
+  $("[data-a=exp]", top).onclick = () => {
+    const data = JSON.stringify({ rubbelwerk: 1, set: JSON.parse(JSON.stringify(cur)) }, null, 2);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    a.download = "rubbelwerk-" + (cur.t || "set").toLowerCase().replace(/[^a-z0-9äöüß]+/g, "-").replace(/^-|-$/g, "") + ".json";
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  };
+  $("#impFile", top).addEventListener("change", (ev) => {
+    const f = ev.target.files[0]; if (!f) return; const fr = new FileReader();
+    fr.onload = () => { try { const o = JSON.parse(fr.result); const s = o.set || o; if (!Array.isArray(s.cards)) throw 0; const n = setFrom({ t: s.t, sq: s.sq, cards: s.cards.filter((c) => TYPES[c.ty]) }); if (!n.cards.length) throw 0; openSet(n); close(); toast("Set importiert"); } catch (e) { toast("Diese Datei ist kein Rubbelwerk-Set."); } };
+    fr.readAsText(f);
+  });
+  $(".btn", imp).onclick = () => {
+    const ref = readHash($("input", imp).value);
+    const s = ref && unpackSet(ref);
+    if (!s) { toast("Im Link wurde kein Rubbelwerk-Set gefunden."); return; }
+    openSet(setFrom(s)); close(); toast("Set übernommen");
+  };
+});
+
+/* Teilen */
+$("#btnShare").onclick = () => sheet("Teilen", (b) => {
+  const st = { scope: "set", days: 7, embed: false };
+  const VALID = [["1 Tag", 1], ["1 Woche", 7], ["4 Wochen", 28], ["Bis Schuljahresende", "sj"], ["1 Jahr", 365]];
+  b.innerHTML = `
+    <div class="sharegrid">
+      <div style="display:grid;gap:14px;min-width:0">
+        <div class="f"><span class="lab">Was teilen?</span><div class="seg" id="shScope"><button type="button" data-v="set" class="on">Ganzes Set (${cur.cards.length})</button><button type="button" data-v="card">Nur Karte ${sel + 1}</button></div></div>
+        <div class="f"><span class="lab">Gültig für Lernende ohne Anmeldung</span><div class="seg" id="shDays">${VALID.map(([l, v]) => `<button type="button" data-v="${v}"${v === 7 ? ' class="on"' : ""}>${l}</button>`).join("")}</div>
+          <p class="help">Nutzt die buildspace-Freigabe: Bis zum Ablauf öffnet der Link ohne Login, danach fragt buildspace wieder nach der Anmeldung.</p></div>
+        <label class="tog" for="shEmbed"><input type="checkbox" id="shEmbed"> Ohne buildspace-Knöpfe (für Moodle, Edumaps, iServ)</label>
+        <div class="f"><label for="shLink">Link</label><textarea class="inp linkout" id="shLink" readonly rows="4"></textarea>
+          <div class="setrow"><button class="btn pri" type="button" id="shCopy">Link kopieren</button><a class="btn" id="shOpen" target="_blank" rel="noopener">Testen</a><button class="btn" type="button" id="shFrame">iFrame-Code kopieren</button></div>
+          <p class="help" id="shLen"></p></div>
+      </div>
+      <div class="qrbox" id="shQr"></div>
+    </div>
+    <div class="f"><span class="lab">Druckbogen für Stationen</span><p class="help">Jede Karte bekommt einen eigenen QR-Code mit Stationsnummer – zum Auslegen oder Aufhängen. Code-Sperren bleiben erhalten.</p><div><button class="btn" type="button" id="shPrint">Druckbogen öffnen</button></div></div>
+    <p class="note">Datenschutz: Der Karteninhalt steckt komplett im Link – nichts wird auf einem Server gespeichert. Lösungen stehen nicht im Klartext darin, lassen sich mit Technikwissen aber auslesen. Für Prüfungen ist das daher nicht gedacht.</p>`;
+  const subset = () => st.scope === "card" ? { t: cur.cards[sel].ti || cur.t, sq: false, cards: [cur.cards[sel]] } : cur;
+  const exp = () => st.days === "sj" ? schoolYearEnd() : Date.now() + Number(st.days) * 864e5;
+  function upd() {
+    const link = buildLink(subset(), { exp: exp(), embed: st.embed });
+    $("#shLink", b).value = link; $("#shOpen", b).href = link;
+    $("#shLen", b).textContent = `${link.length.toLocaleString("de-DE")} Zeichen · gültig bis ${new Date(exp()).toLocaleDateString("de-DE")}`;
+    $("#shQr", b).innerHTML = qrSvg(link) || (!window.qrcode ? `<p style="padding:20px 6px">Der QR-Baustein konnte nicht geladen werden. Lade die Seite mit Internetverbindung neu.</p>` : `<p style="padding:20px 6px">Für einen QR-Code ist der Link zu lang (über 2.300 Zeichen). Teile einzelne Karten, kürze Texte oder nutze eine Bildadresse statt eines hochgeladenen Bildes.</p>`);
+    if ($("#shQr svg", b)) $("#shQr", b).appendChild(el(`<p>QR-Code am Beamer zeigen oder per Screenshot weitergeben</p>`));
+  }
+  $("#shScope", b).onclick = (e) => { const x = e.target.closest("button"); if (!x) return; st.scope = x.dataset.v; $$("#shScope button", b).forEach((y) => y.classList.toggle("on", y === x)); upd(); };
+  $("#shDays", b).onclick = (e) => { const x = e.target.closest("button"); if (!x) return; st.days = x.dataset.v; $$("#shDays button", b).forEach((y) => y.classList.toggle("on", y === x)); upd(); };
+  $("#shEmbed", b).onchange = (e) => { st.embed = e.target.checked; upd(); };
+  const copy = (txt, ok) => { const done = () => toast(ok); try { navigator.clipboard.writeText(txt).then(done, () => { $("#shLink", b).select(); toast("Bitte markierten Link selbst kopieren"); }); } catch (e) { $("#shLink", b).select(); } };
+  $("#shCopy", b).onclick = () => copy($("#shLink", b).value, "Link kopiert");
+  $("#shFrame", b).onclick = () => { const l = buildLink(subset(), { exp: exp(), embed: true }); copy(`<iframe src="${l}" title="${esc(subset().t || "Rubbelkarte")}" width="100%" height="680" style="border:0;border-radius:16px" loading="lazy"></iframe>`, "iFrame-Code kopiert"); };
+  $("#shPrint", b).onclick = () => printSheet(exp(), st.embed);
+  upd();
+});
+function qrSvg(text) {
+  if (!window.qrcode) return "";
+  try { const q = qrcode(0, "L"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ""; }
+}
+function printSheet(exp, embed) {
+  const P = $("#printSheet"); P.innerHTML = "";
+  let tooLong = 0;
+  cur.cards.forEach((c, i) => {
+    const link = buildLink({ t: c.ti || cur.t, sq: false, cards: [c] }, { exp, embed });
+    const svg = qrSvg(link); if (!svg) tooLong++;
+    P.appendChild(el(`<div class="pcard"><div class="st">Station ${i + 1}${cur.t ? " · " + esc(cur.t) : ""}</div><h3>${esc(c.ti || TYPES[c.ty].name)}</h3>${svg || "<p>Link zu lang für einen QR-Code</p>"}<p>Scanne den Code mit dem iPad und rubbel los.</p></div>`));
+  });
+  if (tooLong) toast(`${tooLong} Karte(n) zu lang für einen QR-Code`);
+  setTimeout(() => window.print(), 60);
+}
+
+/* ======================= Start ======================= */
+function ensureSet() {
+  const id = store.get(CUR, null);
+  if (id) load(id);
+  if (!cur && lib.length) cur = lib[0].set;
+  if (!cur) { cur = setFrom(TEMPLATES[0].make()); cur.t = "Beispiel: " + cur.t; save(); }
+}
+function startPlayer(ref) {
+  document.body.classList.add("play");
+  const s = unpackSet(ref);
+  const root = $("#player");
+  if (!s) { root.innerHTML = `<div class="fail"><h1 style="font:400 26px var(--f-d)">Karte nicht gefunden</h1><p>${ref.kind === "k" && !window.LZString ? "Ein benötigter Baustein konnte nicht geladen werden. Prüfe die Internetverbindung und lade die Seite neu." : "Der Link ist unvollständig. Bitte deine Lehrkraft um einen neuen Link oder QR-Code."}</p></div>`; return; }
+  document.title = (s.t || s.cards[0].ti || "Rubbelkarte") + " – Rubbelwerk";
+  mountSet(root, s, { preview: false });
+}
+const hashRef = readHash(location.hash);
+window.RUBBEL_PLAYER = !!hashRef;
+if (hashRef) startPlayer(hashRef);
+else { ensureSet(); renderAll(); }
+window.addEventListener("hashchange", () => { if (readHash(location.hash)) location.reload(); });
+</script>
+<script>
+if (!window.RUBBEL_PLAYER) window.TOUR = { steps: [
+  { title: "Willkommen im Rubbelwerk", text: "<p>Hier baust du digitale Rubbelkarten: Lösungswörter, gestufte Tipps, Quizfragen, Auswahlkarten, Rubbellose und Zufallsaufgaben.</p><p>Zum Start ist ein Beispiel-Escape geöffnet.</p>" },
+  { sel: "#cardList", title: "Karten im Set", text: "<p>Ein Set fasst mehrere Karten zusammen – z. B. alle Stationen eines Escape-Rooms. Tippe eine Karte an, um sie zu bearbeiten, oder lege mit „+ Neue Karte“ eine weitere an.</p>" },
+  { sel: "#editor", title: "Inhalt und Optionen", text: "<p>Hier trägst du Texte, Tipps oder Antworten ein. Unter „Folie, Effekte & Code-Sperre“ wählst du die Rubbelfolie und sperrst Karten mit einem Code.</p>" },
+  { sel: "#preview", title: "Vorschau", text: "<p>Probier deine Karte direkt aus – mit Finger, Stift oder Maus. „Zurücksetzen“ legt eine neue Folie darüber.</p>" },
+  { sel: "#btnShare", title: "Teilen", text: "<p>Erzeugt einen Link und QR-Code für Lernende – ohne Anmeldung, zeitlich begrenzt. Dazu gibt es einen Druckbogen mit QR-Codes für Stationen und einen iFrame-Code.</p>" },
+  { sel: "#btnLibrary", title: "Meine Sets", text: "<p>Alles wird automatisch in diesem Browser gespeichert. Hier öffnest du frühere Sets, exportierst sie als Datei oder übernimmst ein Set aus einem Link.</p>" }
+]};
+</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

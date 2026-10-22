@@ -1153,4 +1153,16 @@ const posts = [
     titleEn: "Percentage Detectives",
     excerptEn: "An introductory percentage game: spot the base value, percentage value and percentage rate in ten everyday stories. Solo or in up to four teams, no calculating needed."
    },
+   {
+    title: "Rubbelwerk",
+    excerpt: "Digitale Rubbelkarten bauen: Lösungswörter, gestufte Tipps, Quizfragen, Auswahlkarten, Rubbellose und Zufallsaufgaben nach Niveau – mit Code-Sperre für Escape-Rooms, teilbar per Link, QR-Code oder Druckbogen.",
+    date: "2026-10-22",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "rubbelwerk.html",
+    emoji: "🎟️",
+    tags: ["tool", "raetsel", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Scratch Card Workshop",
+    excerptEn: "Build digital scratch cards: solution words, step-by-step hints, quiz questions, choice cards, lottery tickets and leveled random tasks – with code locks for escape rooms, shared via link, QR code or print sheet."
+   },
 ];
