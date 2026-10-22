@@ -1165,4 +1165,16 @@ const posts = [
     titleEn: "Scratch Card Workshop",
     excerptEn: "Build digital scratch cards: solution words, step-by-step hints, quiz questions, choice cards, lottery tickets and leveled random tasks – with code locks for escape rooms, shared via link, QR code or print sheet."
    },
+   {
+    title: "Mindmap-Werkstatt",
+    excerpt: "Mindmaps erstellen, gestalten und präsentieren: vier Anordnungen, Vorlagen, Aufgaben mit Fortschritt, Querverbindungen, frei formbare Linien, Präsentationsmodus und Export als Bild, PDF oder Gliederung.",
+    date: "2026-10-22",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "mindmap-werkstatt.html",
+    emoji: "🧠",
+    tags: ["tool", "projektarbeit", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Mind Map Workshop",
+    excerptEn: "Create, style and present mind maps: four layouts, templates, tasks with progress, cross-links, freely shaped lines, presentation mode and export as image, PDF or outline."
+   },
 ];
