@@ -97,6 +97,7 @@ const I18N = {
     newBadge: "Neu",
     home: "Start",
     promptlabLabel: "Promptlabor",
+    htmlWerkstattLabel: "HTML-Werkstatt",
     slashLabel: "Slash-Codes",
     programsLabel: "Programme",
     programsSub: "Programme zum Herunterladen, die direkt auf deinem Computer laufen.",
@@ -166,6 +167,7 @@ const I18N = {
     newBadge: "New",
     home: "Home",
     promptlabLabel: "Prompt lab",
+    htmlWerkstattLabel: "HTML workshop",
     slashLabel: "Slash codes",
     programsLabel: "Programs",
     programsSub: "Programs to download that run right on your computer.",
@@ -1469,6 +1471,7 @@ function renderSidebarNav() {
 
   html += `<div class="side-label">${escapeHtml(t("promptlabLabel"))}</div>`;
   html += `<div class="side-row"><a class="${cls(route === "promptlabor", false)}" href="#/promptlabor"${cur(route === "promptlabor")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("promptlabLabel"))}</span></a></div>`;
+  html += `<div class="side-row"><a class="${cls(route === "html-werkstatt", false)}" href="#/html-werkstatt"${cur(route === "html-werkstatt")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("htmlWerkstattLabel"))}</span></a></div>`;
   html += `<div class="side-row"><a class="${cls(route === "promptlabor/slash-codes", false)}" href="#/promptlabor/slash-codes"${cur(route === "promptlabor/slash-codes")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("slashLabel"))}</span></a></div>`;
 
   html += `<div class="side-label">${escapeHtml(t("programsLabel"))}</div>`;
@@ -1677,6 +1680,17 @@ function renderPromptlabor(sub) {
   if (target) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
 }
 
+/* HTML-Werkstatt (#/html-werkstatt): eingebettete Seite html-werkstatt.html
+   mit Formaten, Prompt-Baukasten, Code-Werkbank und Prüf-Checkliste. */
+function renderHtmlWerkstatt() {
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><a href="#/promptlabor">${t("promptlabLabel")}</a><span class="sep">›</span><span class="current">${t("htmlWerkstattLabel")}</span>`;
+  content.innerHTML = `<h1 class="sr-only">${t("htmlWerkstattLabel")}</h1>
+    <div class="hw-embed">
+      <iframe src="html-werkstatt.html" title="${t("htmlWerkstattLabel")}" allow="clipboard-write" loading="lazy"></iframe>
+      <a class="hw-open" href="html-werkstatt.html" target="_blank" rel="noopener">${getLang() === "en" ? "Open in its own tab" : "In eigenem Tab öffnen"} ↗</a>
+    </div>`;
+}
+
 /* Programme zum Herunterladen (#/programme). Neue Programme hier anhängen;
    Dateien liegen in downloads/, Vorschaubilder in assets/programme/. */
 const PROGRAMS = [
@@ -1791,6 +1805,8 @@ function render() {
     renderNeueste();
   } else if (segments[0] === "promptlabor") {
     renderPromptlabor(segments[1]);
+  } else if (segments[0] === "html-werkstatt") {
+    renderHtmlWerkstatt();
   } else if (segments[0] === "programme") {
     renderPrograms();
     const card = segments[1] && document.getElementById(segments[1]);

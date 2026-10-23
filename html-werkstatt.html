@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HTML-Werkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Recursive:wght,MONO@400..800,0..1&display=swap">
+<style>
+/* Layout: Werkbank-Leiste mit fünf Stationen oben, darunter je Station ein klar begrenzter Arbeitsbereich. Demos öffnen als Schublade, nicht als Endlos-Scroll. */
+:root{
+  --bg:#EDF1F2; --surface:#FFFFFF; --sunk:#E2E8EA; --ink:#14212A; --muted:#566872; --line:#CBD5D9;
+  --blue:#1D5C87; --blue-ink:#FFFFFF; --mark:#F2C230; --mark-ink:#14212A;
+  --ok:#1E7A47; --ok-bg:#DDF1E5; --bad:#B3361F; --bad-bg:#F8E0DA;
+  --f-display:"Recursive", ui-sans-serif, system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --f-code:"Recursive", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --surface:#172229; --sunk:#0B1216; --ink:#E4ECEF; --muted:#93A6AF; --line:#2A3A43;
+  --blue:#6DB2DF; --blue-ink:#0B1216; --mark:#F2C230; --mark-ink:#14212A;
+  --ok:#6BD39A; --ok-bg:#163828; --bad:#F08C76; --bad-bg:#3E1E18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --surface:#172229; --sunk:#0B1216; --ink:#E4ECEF; --muted:#93A6AF; --line:#2A3A43;
+  --blue:#6DB2DF; --blue-ink:#0B1216; --mark:#F2C230; --mark-ink:#14212A;
+  --ok:#6BD39A; --ok-bg:#163828; --bad:#F08C76; --bad-bg:#3E1E18; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(23px,3vw,30px);font-weight:750}
+h3{font-size:18px;font-weight:700}
+p{margin:0}
+.lede{max-width:62ch;color:var(--muted);font-size:18px}
+.eyebrow{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+mark,.hl{background:var(--mark);color:var(--mark-ink);padding:0 .2em;border-radius:3px}
+code,.mono{font-family:var(--f-code);font-variation-settings:"MONO" 1}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+/* Kopf */
+header.top{padding-block:28px 18px;display:grid;gap:14px}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px}
+.chip b{font-family:var(--f-code);font-variation-settings:"MONO" 1}
+
+/* Stationsleiste */
+nav.rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.rail ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.rail button{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 6px;cursor:pointer;display:grid;gap:0;text-align:left}
+.rail .n{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:12px;color:var(--muted)}
+.rail .t{font-family:var(--f-display);font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.rail button[aria-current="true"] .n{color:var(--mark)}
+@media (max-width:560px){.rail .t{font-size:13px}.rail .n{font-size:11px}}
+
+section.station{display:grid;gap:20px}
+.sec-head{display:grid;gap:8px}
+
+/* Station 1 */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.trio{grid-template-columns:1fr}}
+.layer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:6px}
+.layer .tag{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-weight:700;font-size:14px}
+.compare{width:100%;border-collapse:collapse;font-size:15px}
+.compare th,.compare td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.compare th{font-family:var(--f-display);font-weight:700}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.next{justify-self:start}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:6px;min-height:44px}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--blue);color:var(--blue-ink);border-color:var(--blue)}
+.btn.mark{background:var(--mark);color:var(--mark-ink);border-color:var(--mark)}
+.btn.small{min-height:36px;padding:6px 10px;font-size:15px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* Station 2: Galerie */
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:15px}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.filters .cnt{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:12px;opacity:.75;margin-left:4px}
+.progress{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
+.bar{flex:1;max-width:220px;height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:8px;grid-template-rows:auto auto 1fr auto;cursor:pointer;text-align:left;position:relative}
+.card:hover{border-color:var(--ink)}
+.card .meta{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.phase{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;background:var(--sunk);color:var(--ink)}
+.done-badge{font-size:13px;color:var(--ok);font-weight:700}
+.card p{color:var(--muted);font-size:15px}
+.card .go{font-weight:700;color:var(--blue);font-size:15px}
+
+/* Schublade */
+dialog.drawer{border:none;padding:0;margin:0 0 0 auto;height:100%;max-height:100%;width:min(720px,100%);background:var(--bg);color:var(--ink)}
+dialog.drawer::backdrop{background:rgba(10,18,22,.55)}
+.drawer-in{display:grid;grid-template-rows:auto 1fr;height:100%}
+.drawer-head{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,calc(env(safe-area-inset-right,0px) + 16px)) 14px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+.drawer-body{overflow-y:auto;padding:18px max(16px,calc(env(safe-area-inset-right,0px) + 16px)) calc(24px + env(safe-area-inset-bottom,0px)) 18px;display:grid;gap:18px;align-content:start}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;min-width:0}
+.use{border-left:4px solid var(--mark);padding:4px 0 4px 12px;font-size:15px}
+.promptbox{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:14px;font-size:15px;white-space:pre-wrap;line-height:1.5;min-width:0;overflow-wrap:anywhere}
+label.fld{display:grid;gap:4px;font-size:14px;font-weight:700;min-width:0}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 10px;font-weight:400;font-size:16px;width:100%;min-width:0}
+
+/* Demo-Bausteine */
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:12px;cursor:pointer;min-height:48px}
+.opt:hover{border-color:var(--ink)}
+.opt.ok{background:var(--ok-bg);border-color:var(--ok)}
+.opt.bad{background:var(--bad-bg);border-color:var(--bad)}
+.fb{padding:10px 12px;border-radius:8px;font-size:15px}
+.fb.ok{background:var(--ok-bg)}.fb.bad{background:var(--bad-bg)}
+.sortwrap{display:grid;gap:10px}
+.pool,.bin{display:flex;flex-wrap:wrap;gap:6px;min-height:52px;padding:8px;border:2px dashed var(--line);border-radius:8px}
+.bins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.bins{grid-template-columns:1fr}}
+.bin{flex-direction:column;align-items:stretch;cursor:pointer;background:var(--bg)}
+.bin h4{margin:0 0 4px;font-family:var(--f-display);font-size:14px}
+.tile{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px;cursor:grab;font-size:15px;user-select:none}
+.tile.sel{outline:3px solid var(--mark)}
+.tile.ok{background:var(--ok-bg);border-color:var(--ok)}.tile.bad{background:var(--bad-bg);border-color:var(--bad)}
+.flip{perspective:900px;height:170px;cursor:pointer}
+.flip-in{position:relative;height:100%;transition:transform .45s;transform-style:preserve-3d}
+.flip.on .flip-in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--r);border:1px solid var(--line);display:grid;place-items:center;padding:16px;text-align:center}
+.face.front{background:var(--ink);color:var(--bg);font-family:var(--f-display);font-size:24px;font-weight:750}
+.face.back{background:var(--surface);transform:rotateY(180deg);font-size:16px}
+.big{font-family:var(--f-display);font-weight:800;font-size:clamp(44px,12vw,88px);text-align:center;font-variant-numeric:tabular-nums;line-height:1}
+.dial{display:flex;gap:8px;justify-content:center}
+.dial button{width:64px;height:76px;border-radius:8px;border:1px solid var(--line);background:var(--ink);color:var(--bg);font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:34px;cursor:pointer}
+.bars{display:grid;gap:8px}
+.bars .b{display:grid;grid-template-columns:90px 1fr 80px;gap:8px;align-items:center;font-size:14px}
+.bars .track{height:16px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.bars .fill{height:100%;background:var(--blue);transition:width .2s}
+.bars .val{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-code);font-variation-settings:"MONO" 1}
+input[type=range]{width:100%;accent-color:var(--blue)}
+.lights{display:flex;gap:4px}
+.lights button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);cursor:pointer;background:var(--bg)}
+.lights button.r[aria-pressed="true"]{background:#D2452B;border-color:#D2452B}
+.lights button.y[aria-pressed="true"]{background:var(--mark);border-color:var(--mark)}
+.lights button.g[aria-pressed="true"]{background:#2E9A5C;border-color:#2E9A5C}
+.cl-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+svg text{fill:var(--ink);font-family:var(--f-body)}
+
+/* Station 3 */
+.builder{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+@media (max-width:860px){.builder{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+fieldset{border:none;margin:0;padding:0;display:grid;gap:6px;min-width:0}
+legend{font-size:14px;font-weight:700;padding:0;margin-bottom:4px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pills label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:14px;cursor:pointer;background:var(--bg)}
+.pills input{accent-color:var(--blue)}
+.pills label:has(input:checked){border-color:var(--blue);background:var(--surface);font-weight:700}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 90px)}
+@media (max-width:860px){.sticky{position:static}}
+.suggest{font-size:14px;color:var(--muted)}
+
+/* Station 4 */
+.steps3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.steps3{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:6px;align-content:start}
+.step .num{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-weight:800;font-size:22px;color:var(--blue)}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.lab{grid-template-columns:1fr}}
+textarea.code{font-family:var(--f-code);font-variation-settings:"MONO" 1;font-size:14px;line-height:1.5;min-height:340px;width:100%;resize:vertical;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:12px;tab-size:2;white-space:pre;overflow:auto}
+.previewbox{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:grid;justify-items:center;min-width:0;overflow-x:auto}
+.previewbox iframe{border:1px solid var(--line);border-radius:6px;background:#fff;width:100%;height:340px;transition:width .25s}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;background:var(--surface);padding:6px 10px;cursor:pointer;font-size:14px;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.status{font-size:14px;color:var(--muted)}
+
+/* Station 5 */
+.checkgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.checkgrid{grid-template-columns:1fr}}
+.check label{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:16px}
+.check input{width:22px;height:22px;accent-color:var(--ok);margin-top:2px}
+.check small{display:block;color:var(--muted);font-size:14px}
+.verdict{padding:12px 14px;border-radius:8px;font-weight:700}
+.fix{display:grid;gap:8px}
+.fix button{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:15px;display:grid;gap:2px}
+.fix button:hover{border-color:var(--ink)}
+.fix .k{font-weight:700}
+.fix .v{color:var(--muted);font-size:14px}
+.limits{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.limit{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:6px;align-content:start}
+.limit p{font-size:15px;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:700;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Werkstatt für Lehrkräfte · Klasse 5 bis 10</span>
+  <h1>Von der Idee zur <span class="hl">HTML-Seite</span> für deine Stunde</h1>
+  <p class="lede">Eine einzelne HTML-Datei läuft auf iPad, Smartboard und Handy, ohne Installation und auch offline. Die KI schreibt den Code. Diese Werkstatt führt dich in fünf Stationen vom Verstehen bis zur geprüften Seite.</p>
+  <div class="facts">
+    <span class="chip"><b>1</b> Datei pro Übung</span>
+    <span class="chip"><b>0</b> Programme installieren</span>
+    <span class="chip"><b>11</b> Formate zum Ausprobieren</span>
+    <span class="chip"><b id="factDone">0</b> davon getestet</span>
+  </div>
+</header>
+
+<nav class="rail" aria-label="Stationen">
+  <ol>
+    <li><button data-go="s1"><span class="n">01</span><span class="t">Verstehen</span></button></li>
+    <li><button data-go="s2"><span class="n">02</span><span class="t">Formate</span></button></li>
+    <li><button data-go="s3"><span class="n">03</span><span class="t">Prompt</span></button></li>
+    <li><button data-go="s4"><span class="n">04</span><span class="t">Bauen</span></button></li>
+    <li><button data-go="s5"><span class="n">05</span><span class="t">Prüfen</span></button></li>
+  </ol>
+</nav>
+
+<main>
+<!-- 1 -->
+<section class="station" id="s1" hidden>
+  <div class="sec-head">
+    <span class="eyebrow">Station 1 von 5 · 3 Minuten</span>
+    <h2>Was eine HTML-Datei ist</h2>
+    <p class="lede">Jede Webseite besteht aus HTML. Anders als ein Arbeitsblatt kann sie reagieren: Antworten prüfen, mitrechnen, Karten umdrehen, Zeit stoppen. Drei Sprachen arbeiten dabei zusammen.</p>
+  </div>
+  <div class="trio">
+    <div class="layer"><span class="tag">HTML</span><h3>Was auf der Seite steht</h3><p>Überschriften, Texte, Bilder, Knöpfe, Eingabefelder. Wie das Gerüst eines Regals.</p></div>
+    <div class="layer"><span class="tag">CSS</span><h3>Wie es aussieht</h3><p>Farben, Schrift, Abstände. Sorgt dafür, dass die Seite auf dem iPad und am Smartboard passt.</p></div>
+    <div class="layer"><span class="tag">JavaScript</span><h3>Was passiert</h3><p>Prüfen, zählen, mischen, Timer laufen lassen. Alles, was auf einen Klick reagiert.</p></div>
+  </div>
+  <div class="tablebox">
+    <table class="compare">
+      <thead><tr><th></th><th>Arbeitsblatt (PDF)</th><th>HTML-Seite</th><th>Lern-App</th></tr></thead>
+      <tbody>
+        <tr><th>Rückmeldung</th><td>durch dich, später</td><td>sofort, auf der Seite</td><td>sofort</td></tr>
+        <tr><th>Aufwand</th><td>gering</td><td>10–20 Min. mit KI</td><td>Konto, Klasse anlegen</td></tr>
+        <tr><th>Daten der Lernenden</th><td>auf Papier</td><td>bleiben auf dem Gerät</td><td>beim Anbieter</td></tr>
+        <tr><th>Anpassbar</th><td>ja</td><td>ja, per Satz an die KI</td><td>meist nicht</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <button class="btn primary next" data-go="s2">Weiter zu den Formaten →</button>
+</section>
+
+<!-- 2 -->
+<section class="station" id="s2" hidden>
+  <div class="sec-head">
+    <span class="eyebrow">Station 2 von 5</span>
+    <h2>Elf Formate, nach Unterrichtsphase sortiert</h2>
+    <p class="lede">Tippe eine Karte an. Die Demo öffnet sich seitlich, darunter steht der passende Prompt, den du direkt mit deinem Thema füllst.</p>
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <div class="filters" id="filters" role="group" aria-label="Phase filtern"></div>
+    <div class="progress"><span id="progTxt">0 von 11 getestet</span><span class="bar"><i id="progBar"></i></span></div>
+  </div>
+  <div class="grid" id="gallery"></div>
+</section>
+
+<!-- 3 -->
+<section class="station" id="s3" hidden>
+  <div class="sec-head">
+    <span class="eyebrow">Station 3 von 5 · Prompt-Baukasten</span>
+    <h2>Beschreib der KI deine Seite</h2>
+    <p class="lede">Wähle aus, der Prompt rechts schreibt sich mit. Kopieren, in ChatGPT, Claude oder Gemini einfügen, fertig.</p>
+  </div>
+  <div class="builder">
+    <form class="panel" id="bform" autocomplete="off">
+      <div class="two">
+        <label class="fld">Fach
+          <select id="b-fach"><option>Mathematik</option><option selected>Arbeitslehre</option><option>Deutsch</option><option>Englisch</option><option>Naturwissenschaften</option><option>Gesellschaftslehre</option><option>Wirtschaft</option><option>Informatik</option><option>anderes Fach</option></select>
+        </label>
+        <label class="fld">Jahrgang
+          <select id="b-jg"><option>5</option><option>6</option><option>7</option><option selected>8</option><option>9</option><option>10</option><option>Oberstufe</option><option>Berufsschule</option></select>
+        </label>
+      </div>
+      <label class="fld">Thema der Stunde
+        <input id="b-thema" value="Rechte und Pflichten in der Ausbildung">
+      </label>
+      <fieldset>
+        <legend>Ziel der Stunde</legend>
+        <div class="pills" id="b-ziel"></div>
+        <span class="suggest" id="b-suggest"></span>
+      </fieldset>
+      <label class="fld">Format
+        <select id="b-format"></select>
+      </label>
+      <fieldset>
+        <legend>Niveau</legend>
+        <div class="pills">
+          <label><input type="radio" name="niv" value="alle" checked> gemischt</label>
+          <label><input type="radio" name="niv" value="C"> C-Kurs / Grundniveau</label>
+          <label><input type="radio" name="niv" value="B"> B-Kurs</label>
+          <label><input type="radio" name="niv" value="A"> A-Kurs / erhöht</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Geräte im Raum</legend>
+        <div class="pills">
+          <label><input type="checkbox" name="dev" value="iPads" checked> iPad</label>
+          <label><input type="checkbox" name="dev" value="das Smartboard" checked> Smartboard</label>
+          <label><input type="checkbox" name="dev" value="Handys"> Handy</label>
+          <label><input type="checkbox" name="dev" value="Laptops"> Laptop</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Extras</legend>
+        <div class="pills">
+          <label><input type="checkbox" name="ext" value="code"> Ergebniscode zum Abgeben</label>
+          <label><input type="checkbox" name="ext" value="tipps" checked> gestufte Tipps</label>
+          <label><input type="checkbox" name="ext" value="diff"> zwei Schwierigkeitsstufen</label>
+          <label><input type="checkbox" name="ext" value="vorlesen"> Vorlese-Knopf</label>
+          <label><input type="checkbox" name="ext" value="kontrast"> extra große Schrift</label>
+        </div>
+      </fieldset>
+    </form>
+    <div class="panel sticky">
+      <div class="row" style="justify-content:space-between">
+        <h3>Dein Prompt</h3>
+        <span class="status mono" id="b-len"></span>
+      </div>
+      <div class="promptbox" id="b-out"></div>
+      <div class="row">
+        <button class="btn primary" id="b-copy">Prompt kopieren</button>
+        <button class="btn" data-go="s4">Weiter: Code einfügen →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="station" id="s4" hidden>
+  <div class="sec-head">
+    <span class="eyebrow">Station 4 von 5 · Werkbank</span>
+    <h2>Code einfügen, ansehen, sichern</h2>
+  </div>
+  <div class="steps3">
+    <div class="step"><span class="num">1</span><h3>Code holen</h3><p>Zeigt die KI eine Vorschau (Canvas bei ChatGPT und Gemini, Artefakt bei Claude), klickst du die Seite dort schon durch. Sonst kopierst du den Code-Block.</p></div>
+    <div class="step"><span class="num">2</span><h3>Hier testen</h3><p>Füge den Code links ein. Rechts siehst du die Seite in iPad-, Handy- oder Tafelbreite.</p></div>
+    <div class="step"><span class="num">3</span><h3>Als Datei sichern</h3><p>Code am Rechner in einen Texteditor einfügen (Windows: Editor, Mac: TextEdit im Modus „reiner Text“) und als <code>quiz-thema.html</code> speichern. Wichtig ist nur die Endung <code>.html</code>. Dann ins Schulportal, auf die Edumap oder per Airdrop verteilen.</p></div>
+  </div>
+  <div class="row">
+    <span class="eyebrow">Vorlagen:</span>
+    <div class="row" id="tpl"></div>
+  </div>
+  <div class="lab">
+    <div style="display:grid;gap:8px;min-width:0">
+      <div class="row" style="justify-content:space-between">
+        <label for="code" class="eyebrow">Code</label>
+        <div class="row"><button class="btn small" id="c-copy">Code kopieren</button><button class="btn small" id="c-clear">Leeren</button></div>
+      </div>
+      <textarea id="code" class="code" spellcheck="false" aria-label="HTML-Code"></textarea>
+    </div>
+    <div style="display:grid;gap:8px;min-width:0">
+      <div class="row" style="justify-content:space-between">
+        <span class="eyebrow">So sieht es aus</span>
+        <div class="seg" role="group" aria-label="Breite">
+          <button data-w="375" aria-pressed="false">Handy</button>
+          <button data-w="768" aria-pressed="false">iPad</button>
+          <button data-w="100%" aria-pressed="true">Voll</button>
+        </div>
+      </div>
+      <div class="previewbox"><iframe id="pv" title="Vorschau" sandbox="allow-scripts allow-forms"></iframe></div>
+      <span class="status" id="c-status"></span>
+    </div>
+  </div>
+  <button class="btn primary next" data-go="s5">Weiter: vor dem Einsatz prüfen →</button>
+</section>
+
+<!-- 5 -->
+<section class="station" id="s5" hidden>
+  <div class="sec-head">
+    <span class="eyebrow">Station 5 von 5</span>
+    <h2>Prüfen, bevor die Klasse sie bekommt</h2>
+    <p class="lede">Die KI macht inhaltliche Fehler, gerade bei Quizlösungen. Den Fehler musst du nicht im Code suchen: beschreib einfach, was du siehst.</p>
+  </div>
+  <div class="checkgrid">
+    <div class="panel check" id="checklist">
+      <h3>Checkliste</h3>
+    </div>
+    <div class="panel">
+      <h3>Reparatur-Sätze zum Kopieren</h3>
+      <p class="suggest">Antippen kopiert den Satz. Ergänze ihn mit dem, was genau falsch ist.</p>
+      <div class="fix" id="fixes"></div>
+    </div>
+  </div>
+  <h3 style="margin-top:8px">Grenzen einer einzelnen Datei</h3>
+  <div class="limits">
+    <div class="limit"><h3>Ergebnisse bleiben am Gerät</h3><p>Es gibt keinen Server. Wer Ergebnisse sehen will, lässt einen Ergebniscode oder Screenshot abgeben.</p></div>
+    <div class="limit"><h3>Keine echten Namen im Netz</h3><p>Schülernamen und Noten gehören nie in eine hochgeladene Datei. Namen erst im Unterricht eintippen.</p></div>
+    <div class="limit"><h3>Klein schlägt groß</h3><p>Eine Seite mit einer Aufgabe gelingt zuverlässig. Eine ganze Reihe in einer Datei wird fehleranfällig.</p></div>
+    <div class="limit"><h3>Bilder und Videos</h3><p>Externe Bilder laden offline nicht. Lass die KI Grafiken lieber selbst zeichnen (SVG) oder Emojis weglassen.</p></div>
+  </div>
+</section>
+</main>
+
+<footer>Alle Demos laufen vollständig in deinem Browser. Nichts wird übertragen. Angelehnt an die HTML-Werkstatt von KILehrkraft.de, neu aufgebaut.</footer>
+</div>
+
+<dialog class="drawer" id="drawer" aria-labelledby="dTitle">
+  <div class="drawer-in">
+    <div class="drawer-head">
+      <div style="display:grid;gap:4px;min-width:0"><span class="phase" id="dPhase"></span><h2 id="dTitle"></h2></div>
+      <button class="btn small" id="dClose" aria-label="Schließen">Schließen ✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="stage" id="dStage"></div>
+      <p class="use" id="dUse"></p>
+      <div style="display:grid;gap:8px">
+        <h3>Prompt für dein Thema</h3>
+        <label class="fld">Dein Thema<input id="dTopic"></label>
+        <div class="promptbox" id="dPrompt"></div>
+        <div class="row"><button class="btn primary" id="dCopy">Prompt kopieren</button><button class="btn" id="dToBuilder">Im Baukasten verfeinern →</button></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1600)}
+function copy(text,el){
+  const done=()=>toast('Kopiert');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(()=>fallback())}else fallback();
+  function fallback(){if(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Markiert – jetzt kopieren')}else toast('Bitte manuell kopieren')}
+}
+const h=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='on')for(const[ev,fn]of Object.entries(v))e.addEventListener(ev,fn);else if(k==='html')e.innerHTML=v;else e.setAttribute(k,v)}kids.flat().forEach(c=>e.append(c));return e};
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- Navigation ---------- */
+function go(id,push){
+  $$('.station').forEach(s=>s.hidden=s.id!==id);
+  $$('.rail button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===id));
+  store.set('hw-station',id);
+  if(push!==false)window.scrollTo({top:0,behavior:'smooth'});
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){go(b.dataset.go)}});
+
+/* ---------- Grundtext für alle Prompts ---------- */
+const BASE='Die Seite soll eine einzelne HTML-Datei sein, die ohne Internetverbindung und ohne Installation in jedem Browser läuft. Verwende keine externen Bilder, Schriften oder Bibliotheken. Schreibe alle Texte auf Deutsch und in einfacher Sprache. Gestalte die Seite übersichtlich mit großen Knöpfen, die sich auch mit dem Finger gut treffen lassen. Prüfe alle fachlichen Inhalte und Lösungen sorgfältig, bevor du antwortest, und gib den vollständigen Code in einem einzigen Block aus.';
+
+/* ---------- Formate ---------- */
+const PH={einstieg:'Einstieg',erarbeitung:'Erarbeitung',uebung:'Übung',sicherung:'Sicherung',orga:'Organisation'};
+const F=[
+{id:'story',ph:'einstieg',t:'Entscheidungsgeschichte',d:'Lernende entscheiden und erleben die Folgen. Am Ende steht der Fachbegriff.',topic:'Kosten und Gewinn',
+ use:'Am Smartboard gemeinsam durchspielen, bei jeder Entscheidung per Handzeichen abstimmen. Danach vergleichen, welcher Weg wohin geführt hat.',
+ p:t=>`eine Entscheidungsgeschichte zum Thema „${t}“. Die Lernenden treffen an drei Stellen jeweils eine von zwei Entscheidungen und sehen sofort, was daraus folgt. Es gibt mindestens drei unterschiedliche Enden. Am Ende jedes Weges wird der zentrale Fachbegriff der Stunde in zwei Sätzen erklärt. Ein Knopf startet die Geschichte neu.`,demo:demoStory},
+{id:'lock',ph:'einstieg',t:'Rätsel mit Zahlenschloss',d:'Drei Aufgaben liefern drei Ziffern. Nur der richtige Code öffnet das Schloss.',topic:'Prozentrechnung im Alltag',
+ use:'Als Einstieg in Partnerarbeit, 10 Minuten. Wer zuerst öffnet, erklärt der Klasse den Lösungsweg einer Aufgabe.',
+ p:t=>`ein Escape-Rätsel zum Thema „${t}“. Es gibt drei Aufgaben, jede Lösung ist eine einstellige Zahl. Die drei Zahlen ergeben den Code für ein Zahlenschloss, dessen Ziffern man mit großen Knöpfen hochzählt. Bei richtigem Code erscheint eine Erfolgsmeldung, bei falschem ein freundlicher Hinweis. Jede Aufgabe hat einen Tipp-Knopf.`,demo:demoLock},
+{id:'sim',ph:'erarbeitung',t:'Simulation mit Schiebereglern',d:'Werte verändern und sofort sehen, was passiert. Zusammenhänge werden greifbar.',topic:'Preis, Absatz und Gewinn',
+ use:'Lernende stellen in Partnerarbeit den besten Preis ein und begründen schriftlich, warum der höchste Preis nicht den höchsten Gewinn bringt.',
+ p:t=>`eine Simulation zum Thema „${t}“ mit zwei bis drei Schiebereglern. Zahlen und ein einfaches Balkendiagramm passen sich beim Verschieben sofort an. Darunter steht ein Satz, der das aktuelle Ergebnis in Worten beschreibt. Ein Knopf setzt alle Werte zurück.`,demo:demoSim},
+{id:'steps',ph:'erarbeitung',t:'Schaubild Schritt für Schritt',d:'Ein Schaubild baut sich per Knopfdruck auf, jeder Schritt mit kurzer Erklärung.',topic:'Der einfache Wirtschaftskreislauf',
+ use:'Am Smartboard Schritt für Schritt erklären lassen. Vor jedem Klick vermutet die Klasse, was als Nächstes erscheint.',
+ p:t=>`ein Schaubild zum Thema „${t}“, das sich mit dem Knopf „Weiter“ Schritt für Schritt aufbaut. Zeichne das Schaubild selbst als SVG. Zu jedem Schritt erscheint ein kurzer Erklärtext. Es gibt die Knöpfe „Zurück“ und „Neu starten“ und eine Anzeige, bei welchem Schritt man ist.`,demo:demoSteps},
+{id:'sort',ph:'uebung',t:'Zuordnen per Ziehen oder Antippen',d:'Begriffe in die richtige Kategorie legen. Funktioniert mit Maus und auf dem iPad.',topic:'Wirtschaftssektoren und Berufe',
+ use:'Einzelarbeit, danach Partnervergleich: Bei falsch zugeordneten Begriffen erklärt die eine Person der anderen den Unterschied.',
+ p:t=>`eine Zuordnungsübung zum Thema „${t}“. Es gibt drei Kategorien und neun Begriffe. Am Rechner zieht man die Begriffe mit der Maus, auf dem Tablet tippt man erst den Begriff und dann die Kategorie an. Der Knopf „Prüfen“ färbt richtige Zuordnungen grün und falsche rot, ein zweiter Knopf setzt alles zurück.`,demo:demoSort},
+{id:'cards',ph:'uebung',t:'Lernkarten zum Umdrehen',d:'Vorne der Begriff, hinten die Erklärung. Selbst einschätzen, was schon sitzt.',topic:'Begriffe rund um die Ausbildung',
+ use:'In Tandems: Eine Person erklärt, die andere dreht um und vergleicht. Karten mit „Nochmal“ kommen am Ende erneut.',
+ p:t=>`Lernkarten zum Thema „${t}“. Es gibt zwölf Karten mit einem Begriff auf der Vorderseite und einer kurzen Erklärung auf der Rückseite. Antippen dreht die Karte um. Mit den Knöpfen „Kann ich“ und „Nochmal“ sortieren die Lernenden selbst. Karten mit „Nochmal“ kommen später erneut, am Ende gibt es eine Übersicht.`,demo:demoCards},
+{id:'gen',ph:'uebung',t:'Aufgabengenerator ohne Ende',d:'Immer neue Aufgaben mit Zufallszahlen, sofortige Rückmeldung und Lösungsweg.',topic:'Prozentwert berechnen',
+ use:'Für schnelle Lernende als Zusatz oder als 10-Minuten-Training zum Stundenbeginn. Ziel: fünf richtige am Stück.',
+ p:t=>`einen Aufgabengenerator zum Thema „${t}“. Er erzeugt mit Zufallszahlen immer neue Aufgaben in drei Schwierigkeitsstufen. Die Lernenden tippen ihr Ergebnis ein und bekommen sofort eine Rückmeldung. Ein Knopf zeigt den Lösungsweg. Ein Zähler zeigt richtige Antworten und die aktuelle Serie. Achte darauf, dass alle Ergebnisse sinnvoll gerundet und eindeutig sind.`,demo:demoGen},
+{id:'quiz',ph:'sicherung',t:'Quiz mit Erklärung',d:'Nach jeder Antwort steht, warum sie richtig oder falsch ist.',topic:'Die duale Ausbildung',
+ use:'Zum Stundenende allein bearbeiten. Die Erklärungen ersetzen die Besprechung jeder einzelnen Frage.',
+ p:t=>`ein Quiz zum Thema „${t}“ mit acht Fragen und je vier Antwortmöglichkeiten. Nach jeder Antwort erscheint eine kurze Erklärung, warum sie richtig oder falsch ist. Erst danach geht es weiter. Am Ende stehen die Punktzahl und ein Knopf zum Wiederholen.`,demo:demoQuiz},
+{id:'check',ph:'sicherung',t:'Lerncheckliste mit Ampel',d:'Ich-kann-Sätze selbst einschätzen und den passenden Übungstipp bekommen.',topic:'Prozentrechnung',
+ use:'Eine Woche vor der Arbeit. Lernende wählen nach der Einschätzung gezielt Aufgaben aus, statt alles zu wiederholen.',
+ p:t=>`eine Lerncheckliste zur Vorbereitung auf eine Klassenarbeit zum Thema „${t}“. Sie enthält sechs bis acht Ich-kann-Sätze. Zu jedem Satz wählen die Lernenden eine Ampelfarbe. Bei Gelb und Rot erscheint ein passender Übungstipp. Die Einschätzung bleibt im Browser gespeichert, ein Knopf löscht sie wieder.`,demo:demoCheck},
+{id:'random',ph:'orga',t:'Zufallsauswahl und Gruppen',d:'Namen eintippen, fair ziehen oder Gruppen bilden. Nichts wird gespeichert.',topic:'',
+ use:'Namen erst im Unterricht eintragen. Die Seite speichert sie nicht, so bleibt die Datei datenschutzfreundlich.',
+ p:t=>`ein Werkzeug für Zufallsauswahl und Gruppen${t?` für „${t}“`:''}. Ich tippe Namen in ein Textfeld, eine Zeile pro Name. Die Namen werden nicht gespeichert. Ein Knopf zieht eine Person, ohne jemanden doppelt zu ziehen, bis alle dran waren. Ein zweiter Knopf bildet Gruppen in einer wählbaren Größe. Die Anzeige ist groß genug fürs Smartboard.`,demo:demoRandom},
+{id:'timer',ph:'orga',t:'Timer für Arbeitsphasen',d:'Große Ziffern, Vorwahlzeiten und ein Farbwechsel in der letzten Minute.',topic:'',
+ use:'Am Smartboard neben dem Arbeitsauftrag. Den Namen der Phase eintragen, damit alle wissen, was gerade dran ist.',
+ p:t=>`einen Timer für Arbeitsphasen${t?` (${t})`:''}. Es gibt Vorwahlknöpfe für 3, 5, 10 und 15 Minuten und eine eigene Eingabe. Die Ziffern sind sehr groß. In der letzten Minute wechselt die Farbe. Über der Zeit kann ich den Namen der Phase eintragen. Start, Pause und Zurücksetzen sind große Knöpfe.`,demo:demoTimer}
+];
+const byId=Object.fromEntries(F.map(f=>[f.id,f]));
+function fullPrompt(f,topic){return 'Erstelle mir '+f.p(topic||f.topic||'mein Thema')+'\n\n'+BASE}
+
+/* ---------- Galerie ---------- */
+let filter='alle', done=new Set(store.get('hw-done',[]));
+function renderFilters(){
+  const wrap=$('#filters');wrap.innerHTML='';
+  const counts={alle:F.length};F.forEach(f=>counts[f.ph]=(counts[f.ph]||0)+1);
+  [['alle','Alle'],...Object.entries(PH)].forEach(([k,lab])=>{
+    wrap.append(h('button',{'aria-pressed':filter===k,on:{click:()=>{filter=k;renderFilters();renderGallery()}}},lab,h('span',{class:'cnt'},String(counts[k]))));
+  });
+}
+function renderGallery(){
+  const g=$('#gallery');g.innerHTML='';
+  F.filter(f=>filter==='alle'||f.ph===filter).forEach(f=>{
+    const c=h('button',{class:'card',on:{click:()=>openDrawer(f.id)}},
+      h('div',{class:'meta'},h('span',{class:'phase'},PH[f.ph]),done.has(f.id)?h('span',{class:'done-badge'},'✓ getestet'):''),
+      h('h3',{},f.t),h('p',{},f.d),h('span',{class:'go'},'Demo öffnen →'));
+    g.append(c);
+  });
+  $('#progTxt').textContent=`${done.size} von ${F.length} getestet`;
+  $('#progBar').style.width=(done.size/F.length*100)+'%';
+  $('#factDone').textContent=done.size;
+}
+
+/* ---------- Schublade ---------- */
+let cleanup=null, current=null;
+function openDrawer(id){
+  const f=byId[id];current=f;
+  $('#dPhase').textContent=PH[f.ph];$('#dTitle').textContent=f.t;$('#dUse').innerHTML='<b>Im Unterricht: </b>'+f.use;
+  const st=$('#dStage');st.innerHTML='';if(cleanup){cleanup();cleanup=null}
+  cleanup=f.demo(st)||null;
+  $('#dTopic').value=f.topic;updDPrompt();
+  done.add(id);store.set('hw-done',[...done]);renderGallery();
+  const d=$('#drawer');if(d.showModal){if(!d.open)d.showModal()}else d.setAttribute('open','');
+  $('.drawer-body').scrollTop=0;
+}
+function closeDrawer(){const d=$('#drawer');if(cleanup){cleanup();cleanup=null}if(d.close)d.close();else d.removeAttribute('open')}
+function updDPrompt(){$('#dPrompt').textContent=fullPrompt(current,$('#dTopic').value.trim())}
+$('#dClose').onclick=closeDrawer;
+$('#drawer').addEventListener('click',e=>{if(e.target.id==='drawer')closeDrawer()});
+$('#drawer').addEventListener('close',()=>{if(cleanup){cleanup();cleanup=null}});
+$('#dTopic').addEventListener('input',updDPrompt);
+$('#dCopy').onclick=()=>copy($('#dPrompt').textContent,$('#dPrompt'));
+$('#dToBuilder').onclick=()=>{ $('#b-format').value=current.id; const t=$('#dTopic').value.trim(); if(t)$('#b-thema').value=t; buildPrompt(); closeDrawer(); go('s3'); };
+
+/* ---------- Demos ---------- */
+function demoStory(el){
+  const N={
+    s:{t:'Eure Klasse übernimmt den Pausenverkauf. Der Förderverein gibt 100 € Startkapital. Was kauft ihr zuerst ein?',o:[['Süßigkeiten in großen Mengen, die gehen immer','a'],['Belegte Brötchen beim Bäcker um die Ecke','b']]},
+    a:{t:'Die Süßigkeiten verkaufen sich gut. Nach zwei Wochen beschwert sich die Schulleitung: Es soll gesünder werden. Was tut ihr?',o:[['Wir ignorieren das und machen weiter','a1'],['Wir nehmen Obstbecher dazu und senken den Preis für Wasser','a2']]},
+    b:{t:'Brötchen sind beliebt, aber was am Mittag übrig ist, wird schlecht. Ihr verliert jeden Tag Geld. Was tut ihr?',o:[['Wir bestellen jeden Tag die gleiche Menge','b1'],['Wir zählen eine Woche lang, wie viel verkauft wird, und bestellen danach','b2']]},
+    a1:{e:'Der Verkauf wird verboten.',k:'Ein Unternehmen muss Regeln und Interessen anderer beachten. Diese Gruppen heißen Anspruchsgruppen (Stakeholder).'},
+    a2:{e:'Der Umsatz sinkt etwas, aber der Pausenverkauf darf bleiben.',k:'Ihr habt euer Angebot an die Nachfrage und an Vorgaben angepasst. Das nennt man Sortimentsplanung.'},
+    b1:{e:'Nach einem Monat ist das Startkapital fast weg.',k:'Wenn die Kosten höher sind als die Einnahmen, macht ein Betrieb Verlust.'},
+    b2:{e:'Ihr bestellt weniger, es bleibt kaum etwas übrig. Ihr macht Gewinn.',k:'Gewinn = Erlöse minus Kosten. Wer die Nachfrage kennt, senkt die Kosten.'}};
+  const show=id=>{
+    const n=N[id];el.innerHTML='';
+    if(n.o){el.append(h('p',{},n.t));n.o.forEach(([txt,to])=>el.append(h('button',{class:'opt',on:{click:()=>show(to)}},txt)))}
+    else{el.append(h('div',{class:'fb '+(id==='a2'||id==='b2'?'ok':'bad')},h('b',{},n.e)),h('p',{},h('b',{},'Fachbegriff: '),n.k),h('button',{class:'btn',on:{click:()=>show('s')}},'Neu starten'))}
+  };show('s');
+}
+function demoLock(el){
+  const T=[['25 % Rabatt auf ein Werkzeug für 12 €. Wie viele Euro sparst du?',3,'25 % ist ein Viertel.'],
+           ['Ein Brett ist 2,40 m lang. Wie viele 30-cm-Stücke kannst du absägen?',8,'Rechne in Zentimetern: 240 : 30.'],
+           ['Ein Würfel hat wie viele Flächen?',6,'Zähle oben, unten und die Seiten.']];
+  const code=[0,0,0];
+  el.append(h('ol',{style:'margin:0;padding-left:20px;display:grid;gap:8px'},...T.map(([q,,tip])=>{const li=h('li',{},q,' ');li.append(h('button',{class:'btn small',on:{click:e=>{e.target.replaceWith(h('em',{},' Tipp: '+tip))}}},'Tipp'));return li})));
+  const dial=h('div',{class:'dial'});
+  code.forEach((_,i)=>{const b=h('button',{'aria-label':'Ziffer '+(i+1)},'0');b.onclick=()=>{code[i]=(code[i]+1)%10;b.textContent=code[i];fb.textContent='';fb.className=''};dial.append(b)});
+  const fb=h('div',{});
+  el.append(dial,h('div',{class:'row',style:'justify-content:center'},h('button',{class:'btn primary',on:{click:()=>{const ok=code.join('')==='386';fb.className='fb '+(ok?'ok':'bad');fb.textContent=ok?'🔓 Geöffnet! Code 3-8-6 ist richtig.':'Noch nicht. Prüfe die Reihenfolge der Aufgaben.'}}},'Öffnen')),fb);
+}
+function demoSim(el){
+  const EK=0.60;
+  const p=h('input',{type:'range',min:'0.8',max:'3',step:'0.1',value:'1.5',id:'simP'});
+  const out=h('div',{class:'bars'}),txt=h('p',{});
+  el.append(h('label',{class:'fld',for:'simP'},'Verkaufspreis pro Brötchen: ',h('span',{id:'simV',class:'mono'})),p,
+            h('p',{class:'suggest'},'Einkauf beim Bäcker: 0,60 € pro Stück. Je teurer, desto weniger wird gekauft.'),out,txt);
+  const eur=v=>v.toFixed(2).replace('.',',')+' €';
+  const upd=()=>{
+    const pr=+p.value, ab=Math.max(0,Math.round(260-80*pr)), um=ab*pr, ge=ab*(pr-EK);
+    $('#simV').textContent=eur(pr);
+    out.innerHTML='';
+    [['Verkauf',ab,260,ab+' Stück'],['Umsatz',um,220,eur(um)],['Gewinn',Math.max(ge,0),100,eur(ge)]].forEach(([l,v,m,s])=>{
+      out.append(h('div',{class:'b'},h('span',{},l),h('div',{class:'track'},h('div',{class:'fill',style:`width:${Math.min(100,v/m*100)}%`})),h('span',{class:'val'},s)));
+    });
+    txt.textContent=pr<1.2?'Viele kaufen, aber pro Stück bleibt wenig übrig.':pr>2.2?'Der Preis schreckt ab. Es wird kaum noch verkauft.':'Ein guter Bereich: Genug Verkäufe und ordentlicher Gewinn pro Stück.';
+  };p.oninput=upd;upd();
+}
+function demoSteps(el){
+  const S=['Zwei Gruppen: private Haushalte und Unternehmen.','Haushalte stellen ihre Arbeitskraft zur Verfügung.','Dafür zahlen Unternehmen Lohn.','Unternehmen stellen Güter her: Waren und Dienstleistungen.','Haushalte bezahlen die Güter. Das Geld fließt zurück. Der Kreislauf ist geschlossen.'];
+  let i=0;
+  const svg=`<svg viewBox="0 0 360 200" width="100%" style="max-width:520px" role="img" aria-label="Wirtschaftskreislauf">
+   <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+   <g class="s0"><rect x="10" y="70" width="100" height="60" rx="8" fill="var(--sunk)" stroke="var(--line)"/><text x="60" y="105" text-anchor="middle" font-size="14">Haushalte</text>
+   <rect x="250" y="70" width="100" height="60" rx="8" fill="var(--sunk)" stroke="var(--line)"/><text x="300" y="105" text-anchor="middle" font-size="14">Unternehmen</text></g>
+   <g class="s1" style="color:var(--blue)"><path d="M110,80 C170,30 190,30 250,80" fill="none" stroke="currentColor" stroke-width="2.5" marker-end="url(#ah)"/><text x="180" y="40" text-anchor="middle" font-size="13">Arbeit</text></g>
+   <g class="s2" style="color:var(--ok)"><path d="M250,92 C200,60 160,60 110,92" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#ah)"/><text x="180" y="70" text-anchor="middle" font-size="13">Lohn</text></g>
+   <g class="s3" style="color:var(--blue)"><path d="M250,120 C190,170 170,170 110,120" fill="none" stroke="currentColor" stroke-width="2.5" marker-end="url(#ah)"/><text x="180" y="180" text-anchor="middle" font-size="13">Güter</text></g>
+   <g class="s4" style="color:var(--ok)"><path d="M110,108 C160,140 200,140 250,108" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#ah)"/><text x="180" y="132" text-anchor="middle" font-size="13">Konsum (Geld)</text></g>
+  </svg>`;
+  const box=h('div',{html:svg,style:'display:grid;justify-items:center'}),cap=h('p',{}),cnt=h('span',{class:'status mono'});
+  const upd=()=>{for(let k=0;k<5;k++){const g=box.querySelector('.s'+k);g.style.opacity=k<=i?1:0;g.style.transition='opacity .4s'}cap.textContent=S[i];cnt.textContent=`Schritt ${i+1} / ${S.length}`};
+  el.append(box,cap,h('div',{class:'row'},h('button',{class:'btn',on:{click:()=>{i=Math.max(0,i-1);upd()}}},'← Zurück'),h('button',{class:'btn primary',on:{click:()=>{i=Math.min(S.length-1,i+1);upd()}}},'Weiter →'),h('button',{class:'btn',on:{click:()=>{i=0;upd()}}},'Neu starten'),cnt));upd();
+}
+function demoSort(el){
+  const C=['Primär (Rohstoffe)','Sekundär (Herstellung)','Tertiär (Dienstleistung)'];
+  const W=[['Landwirtin',0],['Förster',0],['Fischer',0],['Tischlerin',1],['Maurer',1],['Industriemechanikerin',1],['Friseur',2],['Bankkauffrau',2],['Pflegefachmann',2]];
+  let sel=null;
+  const pool=h('div',{class:'pool',role:'list'});
+  const bins=h('div',{class:'bins'});
+  const mk=([w,c])=>{const t=h('div',{class:'tile',draggable:'true',tabindex:'0','data-c':c},w);
+    t.addEventListener('click',e=>{e.stopPropagation();if(sel)sel.classList.remove('sel');sel=sel===t?null:t;if(sel)t.classList.add('sel')});
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t.click()}});
+    t.addEventListener('dragstart',e=>{sel=t;e.dataTransfer.setData('text','x')});return t};
+  const place=(b)=>{if(!sel)return;sel.classList.remove('sel','ok','bad');b.append(sel);sel=null};
+  shuffle(W).forEach(w=>pool.append(mk(w)));
+  C.forEach((c,i)=>{const b=h('div',{class:'bin','data-i':i,tabindex:'0',role:'button','aria-label':'Kategorie '+c},h('h4',{},c));
+    b.addEventListener('click',()=>place(b));b.addEventListener('keydown',e=>{if(e.key==='Enter')place(b)});
+    b.addEventListener('dragover',e=>e.preventDefault());b.addEventListener('drop',e=>{e.preventDefault();place(b)});bins.append(b)});
+  pool.addEventListener('click',()=>place(pool));pool.addEventListener('dragover',e=>e.preventDefault());pool.addEventListener('drop',e=>{e.preventDefault();place(pool)});
+  const fb=h('div',{});
+  el.append(h('p',{class:'suggest'},'Antippen: erst Beruf, dann Kategorie. Mit der Maus: ziehen.'),pool,bins,fb,
+   h('div',{class:'row'},h('button',{class:'btn primary',on:{click:()=>{let r=0,n=0;bins.querySelectorAll('.bin').forEach(b=>b.querySelectorAll('.tile').forEach(t=>{n++;const ok=t.dataset.c===b.dataset.i;t.classList.toggle('ok',ok);t.classList.toggle('bad',!ok);if(ok)r++}));fb.className='fb '+(r===9?'ok':'bad');fb.textContent=`${r} von 9 richtig`+(n<9?` · ${9-n} noch nicht zugeordnet`:'')}}},'Prüfen'),
+   h('button',{class:'btn',on:{click:()=>{el.innerHTML='';demoSort(el)}}},'Zurücksetzen')));
+}
+function demoCards(el){
+  const K=[['Probezeit','Die ersten 1 bis 4 Monate der Ausbildung. Beide Seiten können in dieser Zeit ohne Grund sofort kündigen.'],
+    ['Duale Ausbildung','Lernen an zwei Orten: im Betrieb (Praxis) und in der Berufsschule (Theorie).'],
+    ['Ausbildungsvertrag','Schriftliche Vereinbarung zwischen Betrieb und Azubi über Dauer, Vergütung, Urlaub und Arbeitszeit.'],
+    ['Tarifvertrag','Vertrag zwischen Gewerkschaft und Arbeitgebern über Löhne und Arbeitsbedingungen für eine ganze Branche.'],
+    ['Berichtsheft','Ausbildungsnachweis, in dem Azubis festhalten, was sie gelernt haben. Wird zur Prüfung vorgelegt.']];
+  let deck=shuffle(K),i=0,known=0;
+  const card=h('div',{class:'flip',tabindex:'0',role:'button','aria-label':'Karte umdrehen'},h('div',{class:'flip-in'},h('div',{class:'face front'}),h('div',{class:'face back'})));
+  const info=h('span',{class:'status mono'});
+  const show=()=>{card.classList.remove('on');if(i>=deck.length){card.querySelector('.front').textContent='Fertig!';card.querySelector('.back').textContent=`${known} Karten sitzen.`;info.textContent='';return}
+    card.querySelector('.front').textContent=deck[i][0];card.querySelector('.back').textContent=deck[i][1];info.textContent=`Karte ${i+1} von ${deck.length}`};
+  card.onclick=()=>card.classList.toggle('on');card.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();card.click()}};
+  el.append(card,h('div',{class:'row'},h('button',{class:'btn',on:{click:()=>{if(i<deck.length){deck.push(deck[i]);i++;show()}}}},'↻ Nochmal'),h('button',{class:'btn primary',on:{click:()=>{if(i<deck.length){known++;i++;show()}}}},'✓ Kann ich'),info));show();
+}
+function demoGen(el){
+  let lvl=1,ok=0,streak=0,task;
+  const q=h('p',{style:'font-size:20px;font-weight:700'}),inp=h('input',{id:'genIn',inputmode:'decimal',placeholder:'Ergebnis'}),fb=h('div',{}),stat=h('span',{class:'status mono'});
+  const fmt=v=>String(Math.round(v*100)/100).replace('.',',');
+  const make=()=>{
+    const ps=[[10,25,50],[5,15,20,75],[12,8,35,4]][lvl-1], G=[[40,80,200,60],[120,240,360,90],[150,75,64,230]][lvl-1];
+    const p=ps[Math.floor(Math.random()*ps.length)], g=G[Math.floor(Math.random()*G.length)];
+    task={p,g,w:g*p/100};q.textContent=`${p} % von ${g} € sind wie viel Euro?`;inp.value='';fb.className='';fb.textContent='';};
+  const check=()=>{const v=parseFloat(inp.value.replace(',','.'));if(isNaN(v)){fb.className='fb bad';fb.textContent='Bitte eine Zahl eintragen.';return}
+    if(Math.abs(v-task.w)<0.005){ok++;streak++;fb.className='fb ok';fb.textContent='Richtig! Weiter mit der nächsten Aufgabe.';setTimeout(make,900)}else{streak=0;fb.className='fb bad';fb.textContent='Noch nicht. Schau dir den Lösungsweg an.'}stat.textContent=`richtig: ${ok} · Serie: ${streak}`};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')check()});
+  const levels=h('div',{class:'seg',role:'group','aria-label':'Stufe'});
+  ['leicht','mittel','schwer'].forEach((n,k)=>{const b=h('button',{'aria-pressed':k===0},n);b.onclick=()=>{lvl=k+1;levels.querySelectorAll('button').forEach((x,j)=>x.setAttribute('aria-pressed',j===k));make()};levels.append(b)});
+  el.append(levels,q,h('label',{class:'fld',for:'genIn'},'Ergebnis in €',inp),h('div',{class:'row'},h('button',{class:'btn primary',on:{click:check}},'Prüfen'),
+    h('button',{class:'btn',on:{click:()=>{fb.className='fb';fb.style.background='var(--sunk)';fb.textContent=`Lösungsweg: ${task.g} € : 100 = ${fmt(task.g/100)} € (das ist 1 %). ${fmt(task.g/100)} € · ${task.p} = ${fmt(task.w)} €.`}}},'Lösungsweg'),
+    h('button',{class:'btn',on:{click:make}},'Neue Aufgabe')),fb,stat);make();stat.textContent='richtig: 0 · Serie: 0';
+}
+function demoQuiz(el){
+  const Q=[
+   ['Wo lernt man in der dualen Ausbildung?',['Nur im Betrieb','Im Betrieb und in der Berufsschule','Nur in der Berufsschule','An der Hochschule'],1,'Dual heißt zweifach: Praxis im Betrieb, Theorie in der Berufsschule.'],
+   ['Wie lange darf die Probezeit in einer Ausbildung höchstens dauern?',['2 Wochen','4 Monate','6 Monate','1 Jahr'],1,'Das Berufsbildungsgesetz erlaubt mindestens einen und höchstens vier Monate.'],
+   ['Wer schließt den Ausbildungsvertrag bei einer 16-Jährigen ab?',['Nur die Azubine','Nur die Schule','Betrieb und Azubine, die Eltern unterschreiben mit','Die Arbeitsagentur'],2,'Bei Minderjährigen müssen die Erziehungsberechtigten zustimmen und mitunterschreiben.'],
+   ['Wie viele Werktage Urlaub hat ein 15-jähriger Azubi mindestens?',['20','24','25','30'],3,'Das Jugendarbeitsschutzgesetz: unter 16 Jahren mindestens 30 Werktage.']];
+  let i=0,pts=0;
+  const run=()=>{el.innerHTML='';if(i>=Q.length){el.append(h('p',{class:'big'},`${pts}/${Q.length}`),h('p',{style:'text-align:center'},'Punkte'),h('button',{class:'btn',on:{click:()=>{i=0;pts=0;run()}}},'Nochmal'));return}
+    const [q,o,r,ex]=Q[i];el.append(h('span',{class:'status mono'},`Frage ${i+1} von ${Q.length}`),h('p',{style:'font-weight:700;font-size:18px'},q));
+    const bs=o.map((t,k)=>h('button',{class:'opt'},t));
+    bs.forEach((b,k)=>{b.onclick=()=>{bs.forEach(x=>x.disabled=true);bs[r].classList.add('ok');if(k!==r)b.classList.add('bad');else pts++;
+      el.append(h('div',{class:'fb '+(k===r?'ok':'bad')},h('b',{},k===r?'Richtig. ':'Nicht ganz. '),ex),h('button',{class:'btn primary',on:{click:()=>{i++;run()}}},i<Q.length-1?'Nächste Frage →':'Ergebnis anzeigen'))};el.append(b)});};
+  run();
+}
+function demoCheck(el){
+  const L=[['Ich kann Grundwert, Prozentsatz und Prozentwert in einer Aufgabe erkennen.','Markiere in fünf Textaufgaben die drei Größen mit drei Farben.'],
+    ['Ich kann den Prozentwert berechnen.','Übe mit dem Aufgabengenerator, Stufe leicht, bis 5 richtig am Stück.'],
+    ['Ich kann den Prozentsatz berechnen.','Rechne: Welcher Anteil sind 15 € von 60 €? Erst als Bruch, dann in Prozent.'],
+    ['Ich kann Rabatte und Preiserhöhungen berechnen.','Suche drei Angebote im Prospekt und rechne den neuen Preis aus.']];
+  const saved=store.get('hw-ampel',{});
+  L.forEach(([s,tip],k)=>{
+    const tipEl=h('div',{class:'suggest',style:'grid-column:1/-1'});
+    const lights=h('div',{class:'lights'});
+    const set=v=>{saved[k]=v;store.set('hw-ampel',saved);lights.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));tipEl.textContent=v&&v!=='g'?'Tipp: '+tip:''};
+    [['r','rot: kann ich noch nicht'],['y','gelb: unsicher'],['g','grün: kann ich']].forEach(([v,lab])=>lights.append(h('button',{class:v,'data-v':v,'aria-label':lab,'aria-pressed':'false',on:{click:()=>set(v)}})));
+    el.append(h('div',{class:'cl-item'},h('span',{},s),lights,tipEl));if(saved[k])set(saved[k]);
+  });
+  el.append(h('button',{class:'btn small',on:{click:()=>{store.set('hw-ampel',{});el.innerHTML='';demoCheck(el)}}},'Einschätzung löschen'));
+}
+function demoRandom(el){
+  const ta=h('textarea',{id:'rndNames',rows:'5',style:'font-size:15px'});ta.value='Beispiel A\nBeispiel B\nBeispiel C\nBeispiel D\nBeispiel E\nBeispiel F\nBeispiel G';
+  const big=h('div',{class:'big',style:'font-size:clamp(32px,8vw,56px);min-height:1.2em'},'–'),grp=h('div',{style:'display:grid;gap:6px'}),size=h('input',{type:'number',min:'2',max:'8',value:'3',id:'rndSize',style:'width:80px'});
+  let left=[];
+  const names=()=>ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  el.append(h('label',{class:'fld',for:'rndNames'},'Namen, eine Zeile pro Person (werden nicht gespeichert)',ta),big,
+    h('div',{class:'row'},h('button',{class:'btn primary',on:{click:()=>{if(!left.length)left=shuffle(names());big.textContent=left.pop()||'–'}}},'Person ziehen'),
+      h('label',{class:'row',for:'rndSize',style:'gap:6px'},'Gruppengröße',size),
+      h('button',{class:'btn',on:{click:()=>{const n=shuffle(names()),s=Math.max(2,+size.value||3);grp.innerHTML='';const k=Math.max(1,Math.round(n.length/s));const G=Array.from({length:k},()=>[]);n.forEach((x,j)=>G[j%k].push(x));G.forEach((g,j)=>grp.append(h('div',{class:'fb',style:'background:var(--sunk)'},h('b',{},`Gruppe ${j+1}: `),g.join(', '))))}}},'Gruppen bilden')),grp);
+  ta.addEventListener('input',()=>left=[]);
+}
+function demoTimer(el){
+  let total=300,rest=300,iv=null;
+  const name=h('input',{id:'tmName',value:'Einzelarbeit',style:'text-align:center;font-weight:700'}),big=h('div',{class:'big'});
+  const show=()=>{const m=Math.floor(rest/60),s=rest%60;big.textContent=`${m}:${String(s).padStart(2,'0')}`;big.style.color=rest===0?'var(--bad)':rest<=60?'var(--bad)':'var(--ink)'};
+  const stop=()=>{clearInterval(iv);iv=null};
+  const set=m=>{stop();total=rest=m*60;show()};
+  const pre=h('div',{class:'row',style:'justify-content:center'},...[3,5,10,15].map(m=>h('button',{class:'btn small',on:{click:()=>set(m)}},m+' Min')));
+  el.append(h('label',{class:'fld',for:'tmName'},'Phase',name),big,pre,h('div',{class:'row',style:'justify-content:center'},
+    h('button',{class:'btn primary',on:{click:()=>{if(iv||rest===0)return;iv=setInterval(()=>{rest--;show();if(rest<=0){stop();big.textContent='Zeit!'}},1000)}}},'Start'),
+    h('button',{class:'btn',on:{click:stop}},'Pause'),h('button',{class:'btn',on:{click:()=>{stop();rest=total;show()}}},'Zurück')));show();
+  return stop;
+}
+
+/* ---------- Baukasten ---------- */
+const ZIELE=[['neugier','Neugier wecken',['story','lock']],['verstehen','Neues verstehen',['sim','steps']],['ueben','Üben',['sort','cards','gen']],['pruefen','Wissen sichern',['quiz','check']],['orga','Organisieren',['random','timer']]];
+const zw=$('#b-ziel');
+ZIELE.forEach(([v,l],k)=>zw.append(h('label',{},h('input',{type:'radio',name:'ziel',value:v,...(k===2?{checked:''}:{})}),' '+l)));
+const fs=$('#b-format');F.forEach(f=>fs.append(h('option',{value:f.id},`${f.t} · ${PH[f.ph]}`)));fs.value='sort';
+function suggest(){const z=(document.querySelector('input[name=ziel]:checked')||{}).value;const e=ZIELE.find(x=>x[0]===z);
+  const s=$('#b-suggest');s.innerHTML='';if(!e)return;s.append('Passt dazu: ');
+  e[2].forEach((id,k)=>{s.append(h('button',{type:'button',class:'btn small',style:'margin:2px 4px 0 0',on:{click:()=>{fs.value=id;buildPrompt()}}},byId[id].t))});
+  if(!e[2].includes(fs.value)){fs.value=e[2][0]}}
+function buildPrompt(){
+  const f=byId[fs.value],fach=$('#b-fach').value,jg=$('#b-jg').value,thema=$('#b-thema').value.trim()||'mein Thema';
+  const niv=document.querySelector('input[name=niv]:checked').value;
+  const dev=$$('input[name=dev]:checked').map(x=>x.value),ext=$$('input[name=ext]:checked').map(x=>x.value);
+  const grp=/^\d+$/.test(jg)?`eine ${jg}. Klasse an einer Integrierten Gesamtschule`:(jg==='Oberstufe'?'eine Oberstufenklasse':'eine Berufsschulklasse');
+  const nivTxt={alle:'Die Klasse ist leistungsgemischt.',C:'Die Lerngruppe arbeitet auf grundlegendem Niveau (C-Kurs). Nutze kurze Sätze, wenige Fachwörter und viele Beispiele aus dem Alltag.',B:'Die Lerngruppe arbeitet auf mittlerem Niveau (B-Kurs).',A:'Die Lerngruppe arbeitet auf erhöhtem Niveau (A-Kurs). Baue auch eine Transferaufgabe ein.'}[niv];
+  const ex={code:'Am Ende zeigt die Seite einen kurzen Ergebniscode, den die Lernenden abgeben können.',tipps:'Wo es passt, gibt es einen Hilfe-Knopf mit zwei gestuften Tipps.',diff:'Es gibt zwei Schwierigkeitsstufen, zwischen denen die Lernenden wählen können.',vorlesen:'Ein Lautsprecher-Knopf liest Aufgaben mit der Sprachausgabe des Browsers vor.',kontrast:'Nutze extra große Schrift und starke Kontraste.'};
+  const lines=[
+    `Erstelle mir für das Fach ${fach} `+f.p(thema),
+    `Zielgruppe ist ${grp}. ${nivTxt}`,
+    dev.length?`Die Seite wird auf ${dev.join(', ').replace(/, ([^,]*)$/,' und $1')} genutzt und muss dort per Finger und Maus bedienbar sein.`:'',
+    ext.map(x=>ex[x]).join(' '),
+    BASE].filter(Boolean);
+  const out=lines.join('\n\n');$('#b-out').textContent=out;$('#b-len').textContent=out.split(/\s+/).length+' Wörter';
+}
+$('#bform').addEventListener('input',e=>{if(e.target.name==='ziel')suggest();buildPrompt()});
+$('#bform').addEventListener('submit',e=>e.preventDefault());
+$('#b-copy').onclick=()=>copy($('#b-out').textContent,$('#b-out'));
+
+/* ---------- Werkbank ---------- */
+const TPL={
+ 'Überschrift & Text':`<h1>Der Kaufvertrag</h1>\n<p>Ein Kaufvertrag entsteht durch <b>zwei übereinstimmende Willenserklärungen</b>: Angebot und Annahme.</p>\n<p>Ändere diesen Text und schau rechts zu.</p>`,
+ 'Lösung aufklappen':`<h2>Aufgabe</h2>\n<p>Ein Pullover kostet 40 €. Er wird um 25 % reduziert. Was kostet er jetzt?</p>\n<details>\n  <summary>Lösung anzeigen</summary>\n  <p>25 % von 40 € sind 10 €. Neuer Preis: <b>30 €</b>.</p>\n</details>`,
+ 'Tabelle':`<table border="1" cellpadding="8" style="border-collapse:collapse">\n  <tr><th>Sektor</th><th>Beispielberuf</th></tr>\n  <tr><td>Primär</td><td>Landwirtin</td></tr>\n  <tr><td>Sekundär</td><td>Tischler</td></tr>\n  <tr><td>Tertiär</td><td>Bankkauffrau</td></tr>\n</table>`,
+ 'Merkkasten':`<div style="background:#FFF4C2;border-left:6px solid #F2C230;padding:14px;font-family:sans-serif">\n  <b>Merke:</b> Gewinn = Erlöse − Kosten\n</div>`,
+ 'Mini-Quiz mit Skript':`<p style="font:20px sans-serif">Wie viel sind 10 % von 80?</p>\n<input id="a" style="font-size:20px">\n<button onclick="r.textContent = a.value==8 ? '✅ Richtig' : '❌ Nochmal'" style="font-size:20px">Prüfen</button>\n<p id="r" style="font:20px sans-serif"></p>`};
+const code=$('#code'),pv=$('#pv'),tw=$('#tpl');
+Object.keys(TPL).forEach((k,i)=>tw.append(h('button',{class:'btn small',on:{click:()=>{code.value=TPL[k];render()}}},k)));
+let rt;function render(){clearTimeout(rt);rt=setTimeout(()=>{
+  const v=code.value;pv.srcdoc=/<html|<body|<!doctype/i.test(v)?v:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui,sans-serif;padding:12px">${v}</body>`;
+  try{store.set('hw-code',v)}catch(e){}
+  const lines=v.split('\n').length;$('#c-status').textContent=v.trim()?`${lines} Zeilen · ${(new Blob([v]).size/1024).toFixed(1)} KB`:'Füge hier den Code aus der KI ein.';},200)}
+code.addEventListener('input',render);
+code.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const s=code.selectionStart;code.setRangeText('  ',s,code.selectionEnd,'end');render()}});
+$('#c-copy').onclick=()=>{code.select();copy(code.value,null)};
+$('#c-clear').onclick=()=>{code.value='';render();code.focus()};
+$$('.seg [data-w]').forEach(b=>b.onclick=()=>{$$('.seg [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));const w=b.dataset.w;pv.style.width=w==='100%'?'100%':w+'px';pv.style.height=w==='375'?'560px':'340px'});
+code.value=store.get('hw-code',null)||TPL['Lösung aufklappen'];render();
+
+/* ---------- Prüfen ---------- */
+const CL=[['Ich habe jede Aufgabe selbst gelöst','und jede angezeigte Lösung nachgerechnet.'],['Ich habe alle Knöpfe einmal gedrückt','auch Zurücksetzen und Nochmal.'],['Auf dem iPad getestet','Ziehen, Antippen und Tastatur funktionieren.'],['Ohne WLAN geöffnet','im Flugmodus lädt alles.'],['Keine echten Namen oder Noten in der Datei',''],['Sprache passt zur Lerngruppe','Fachwörter erklärt, Sätze kurz.']];
+const cs=store.get('hw-check',[]);const clEl=$('#checklist');
+const verdict=h('div',{class:'verdict'});
+const updV=()=>{const n=$$('#checklist input:checked').length;verdict.style.background=n===CL.length?'var(--ok-bg)':'var(--sunk)';verdict.textContent=n===CL.length?'✓ Bereit für die Klasse.':`${n} von ${CL.length} erledigt`};
+CL.forEach(([a,b],i)=>{const inp=h('input',{type:'checkbox',id:'cl'+i});inp.checked=!!cs[i];inp.onchange=()=>{cs[i]=inp.checked;store.set('hw-check',cs);updV()};clEl.append(h('label',{for:'cl'+i},inp,h('span',{},a,b?h('small',{},b):'')))});
+clEl.append(verdict,h('button',{class:'btn small',on:{click:()=>{$$('#checklist input').forEach(x=>x.checked=false);cs.length=0;store.set('hw-check',[]);updV()}}},'Für die nächste Seite zurücksetzen'));updV();
+const FIX=[['Auf dem iPad geht etwas nicht','Auf dem iPad lassen sich die Begriffe nicht verschieben. Bitte so ändern, dass man erst den Begriff und dann das Ziel antippt.'],
+ ['Falsche Lösung','Bei Frage 3 wird die falsche Antwort als richtig angezeigt. Bitte prüfe alle Lösungen noch einmal Schritt für Schritt und korrigiere sie.'],
+ ['Zu schwer','Die Texte sind für meine Klasse zu schwer. Bitte kürzere Sätze, weniger Fachwörter und ein Beispiel pro Aufgabe.'],
+ ['Zu klein am Smartboard','Am Smartboard ist alles zu klein. Bitte Schrift und Knöpfe deutlich größer machen.'],
+ ['Code bricht ab','Der Code ist mittendrin abgebrochen. Bitte gib ihn vollständig in einem einzigen Block aus.'],
+ ['Nur einen Teil ändern','Ändere nur das Folgende und lass alles andere genau so: …']];
+FIX.forEach(([k,v])=>$('#fixes').append(h('button',{on:{click:()=>copy(v,null)}},h('span',{class:'k'},k),h('span',{class:'v'},v))));
+
+/* ---------- Start ---------- */
+renderFilters();renderGallery();suggest();buildPrompt();
+const hashId=(location.hash||'').slice(1);
+go(['s1','s2','s3','s4','s5'].includes(hashId)?hashId:store.get('hw-station','s1'),false);
+})();
+</script>
+
+</body>
+</html>
