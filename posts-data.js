@@ -1177,4 +1177,16 @@ const posts = [
     titleEn: "Mind Map Workshop",
     excerptEn: "Create, style and present mind maps: four layouts, templates, tasks with progress, cross-links, freely shaped lines, presentation mode and export as image, PDF or outline."
    },
+   {
+    title: "HTML-Werkstatt",
+    excerpt: "Eigene HTML-Seiten für den Unterricht mit KI bauen: elf Formate zum Ausprobieren, Prompt-Baukasten mit Fach, Jahrgang und Kursniveau, Code-Vorschau für iPad und Smartboard und eine Checkliste vor dem Einsatz.",
+    date: "2026-10-23",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "html-werkstatt.html",
+    emoji: "🛠️",
+    tags: ["tool", "ki"],
+    titleEn: "HTML Workshop",
+    excerptEn: "Build your own HTML pages for class with AI: eleven formats to try, a prompt builder for subject, year and course level, a code preview for iPad and smartboard and a checklist before use."
+   },
 ];
