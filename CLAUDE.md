@@ -67,6 +67,10 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
 
 Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
 
+## Programme zum Herunterladen (`#/programme`)
+
+Eigener Menüpunkt „Programme“ für Programme, die auf dem Computer laufen (nicht im Browser), z. B. Heft2PDF für den Mac. Diese stehen **nicht** in `posts-data.js`, sondern in der Liste `PROGRAMS` in `app.js` (Felder siehe Heft2PDF-Eintrag, jeweils mit `…En`-Übersetzung). Dateien: ZIP und Anleitung (PDF) in `downloads/` (Kleinbuchstaben, z. B. `heft2pdf-mac.zip`), Symbol und Vorschaubild in `assets/programme/`. Bei einer neuen Programmversion ZIP/PDF ersetzen und `version` sowie die Dateigrößen in `PROGRAMS` anpassen.
+
 ## Regeln für Tool-Seiten
 
 - **Eine eigenständige Datei**: CSS und JS inline, keine lokalen Abhängigkeiten. Externe Bibliotheken nur per CDN (bevorzugt cdnjs), mit fester Version.

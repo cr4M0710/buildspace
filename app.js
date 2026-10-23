@@ -98,6 +98,11 @@ const I18N = {
     home: "Start",
     promptlabLabel: "Promptlabor",
     slashLabel: "Slash-Codes",
+    programsLabel: "Programme",
+    programsSub: "Programme zum Herunterladen, die direkt auf deinem Computer laufen.",
+    programsDownload: "Herunterladen",
+    programsManual: "Anleitung",
+    programsInstall: "In drei Schritten startklar",
     emptyState: "Hier gibt es noch keine Beiträge.",
     filterTitle: "Filtern",
     filterReset: "Zurücksetzen",
@@ -160,6 +165,11 @@ const I18N = {
     home: "Home",
     promptlabLabel: "Prompt lab",
     slashLabel: "Slash codes",
+    programsLabel: "Programs",
+    programsSub: "Programs to download that run right on your computer.",
+    programsDownload: "Download",
+    programsManual: "Manual (German)",
+    programsInstall: "Ready in three steps",
     emptyState: "There are no posts here yet.",
     filterTitle: "Filter",
     filterReset: "Reset",
@@ -1346,6 +1356,7 @@ function initSettings() {
    fokussierter Suche.
 --------------------------------------------------------- */
 const PROMPT_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5L5.5 19v-3.5H4z"/><path d="m8.5 9.5 2 1.5-2 1.5M12.5 12.5h3"/></svg>';
+const PROGRAM_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20h7M12 16.5V20"/><path d="M12 7v5.5m-2.3-2.2L12 12.6l2.3-2.3"/></svg>';
 const HOME_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.5 10v9.5h4.6v-5.2h3.8v5.2h4.6V10"/></svg>';
 const ADMIN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 const CHEVRON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
@@ -1413,7 +1424,7 @@ function currentSegments() {
 }
 
 function sideIcon(id) {
-  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : id === "prompt" ? PROMPT_GLYPH : MINI_ICONS[id] || "";
+  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : id === "prompt" ? PROMPT_GLYPH : id === "programs" ? PROGRAM_GLYPH : MINI_ICONS[id] || "";
   return `<span class="side-ico side-ico--${id}" aria-hidden="true">${glyph}</span>`;
 }
 
@@ -1455,6 +1466,9 @@ function renderSidebarNav() {
   html += `<div class="side-label">${escapeHtml(t("promptlabLabel"))}</div>`;
   html += `<div class="side-row"><a class="${cls(route === "promptlabor", false)}" href="#/promptlabor"${cur(route === "promptlabor")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("promptlabLabel"))}</span></a></div>`;
   html += `<div class="side-row"><a class="${cls(route === "promptlabor/slash-codes", false)}" href="#/promptlabor/slash-codes"${cur(route === "promptlabor/slash-codes")}>${sideIcon("prompt")}<span class="side-text">${escapeHtml(t("slashLabel"))}</span></a></div>`;
+
+  html += `<div class="side-label">${escapeHtml(t("programsLabel"))}</div>`;
+  html += `<div class="side-row"><a class="${cls(seg[0] === "programme", false)}" href="#/programme"${cur(seg[0] === "programme")}>${sideIcon("programs")}<span class="side-text">${escapeHtml(t("programsLabel"))}</span><span class="side-count">${PROGRAMS.length}</span></a></div>`;
 
   html += `<div class="side-label" id="side-admin-label" style="display:none">${escapeHtml(t("navAdmin"))}</div>`;
   html += `<div class="side-row"><a class="${cls(route === "kollegen" || route.startsWith("kollegen/"), false)}" href="#/kollegen" id="kollegen-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kollegenLabel"))}</span></a></div>`;
@@ -1659,6 +1673,68 @@ function renderPromptlabor(sub) {
   if (target) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
 }
 
+/* Programme zum Herunterladen (#/programme). Neue Programme hier anhängen;
+   Dateien liegen in downloads/, Vorschaubilder in assets/programme/. */
+const PROGRAMS = [
+  {
+    id: "heft2pdf",
+    title: "Heft2PDF",
+    version: "2.1",
+    platform: "macOS 11 oder neuer",
+    platformEn: "macOS 11 or later",
+    icon: "assets/programme/heft2pdf-icon.png",
+    shot: "assets/programme/heft2pdf-vorschau.jpg",
+    text: "Blättert ein digitales Heft automatisch durch, fotografiert jede Seite in voller Retina-Auflösung und speichert alles als eine PDF. Du markierst die Seite einmal mit einem Rahmen, wählst, wie umgeblättert wird, und die App erledigt den Rest. Eine Anzeige sagt dir vorher, ob das Ergebnis scharf wird.",
+    textEn: "Automatically pages through a digital workbook, captures every page in full Retina resolution and saves everything as one PDF. Mark the page once with a frame, choose how to turn the page, and the app does the rest. A gauge tells you in advance whether the result will be sharp.",
+    steps: [
+      "ZIP herunterladen und mit Doppelklick entpacken.",
+      "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
+      "Heft2PDF startet von selbst und zeigt, welche zwei Freigaben es braucht."
+    ],
+    stepsEn: [
+      "Download the ZIP and double-click to unpack it.",
+      "Double-click <b>Installieren.command</b> in the folder. If macOS reports an “unidentified developer”: System Settings › Privacy &amp; Security › <b>Open Anyway</b>.",
+      "Heft2PDF starts by itself and shows the two permissions it needs."
+    ],
+    note: "Bitte nur für Hefte nutzen, die du speichern darfst (eigenes Material oder passende Lizenz).",
+    noteEn: "Please only use it for workbooks you are allowed to save (your own material or a suitable licence).",
+    download: { href: "downloads/heft2pdf-mac.zip", name: "Heft2PDF-Mac.zip", size: "0,5 MB", type: "ZIP" },
+    manual: { href: "downloads/heft2pdf-anleitung.pdf", name: "Heft2PDF-Anleitung.pdf", size: "1,1 MB", type: "PDF" }
+  }
+];
+
+function renderPrograms() {
+  const en = getLang() === "en";
+  breadcrumb.innerHTML = `<a href="#/">${t("home")}</a><span class="sep">›</span><span class="current">${t("programsLabel")}</span>`;
+  const file = (f) => `${f.type}, ${en ? f.size.replace(",", ".") : f.size}`;
+  content.innerHTML = `
+    <h1 class="section-label">${escapeHtml(t("programsLabel"))}</h1>
+    <p class="prog-intro">${escapeHtml(t("programsSub"))}</p>
+    ${PROGRAMS.map((p) => `
+    <article class="mp-card prog-card" id="${p.id}" aria-labelledby="prog-${p.id}">
+      <div class="prog-head">
+        <img class="prog-icon" src="${p.icon}" alt="" width="64" height="64">
+        <div>
+          <h2 id="prog-${p.id}">${escapeHtml(p.title)}</h2>
+          <p class="prog-meta">Version ${escapeHtml(p.version)} · ${escapeHtml(en ? p.platformEn : p.platform)}</p>
+        </div>
+      </div>
+      <p class="prog-text">${escapeHtml(en ? p.textEn : p.text)}</p>
+      <div class="prog-actions">
+        <a class="mp-copy prog-dl" href="${p.download.href}" download="${p.download.name}">${DOWNLOAD_GLYPH}<span>${escapeHtml(t("programsDownload"))}</span><small>${file(p.download)}</small></a>
+        <a class="mp-example prog-dl" href="${p.manual.href}" download="${p.manual.name}">${DOC_GLYPH}<span>${escapeHtml(t("programsManual"))}</span><small>${file(p.manual)}</small></a>
+      </div>
+      <img class="prog-shot" src="${p.shot}" alt="${escapeHtml(p.title)}" loading="lazy" width="1600" height="1067">
+      <h3 class="prog-sub">${escapeHtml(t("programsInstall"))}</h3>
+      <ol class="mp-steps prog-steps">${(en ? p.stepsEn : p.steps).map((x) => `<li>${x}</li>`).join("")}</ol>
+      <p class="prog-note">${escapeHtml(en ? p.noteEn : p.note)}</p>
+    </article>`).join("")}
+  `;
+}
+
+const DOWNLOAD_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>';
+const DOC_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/></svg>';
+
 function render() {
   ensureShareHomeHash();
   /* Falls noch ein Passwort-Fenster von der vorherigen Route offen ist (z. B.
@@ -1689,6 +1765,8 @@ function render() {
     renderNeueste();
   } else if (segments[0] === "promptlabor") {
     renderPromptlabor(segments[1]);
+  } else if (segments[0] === "programme") {
+    renderPrograms();
   } else if (segments[0] === "vertretung") {
     renderVertretung();
   } else if (segments[0] === "kursmappe") {
