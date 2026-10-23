@@ -103,6 +103,8 @@ const I18N = {
     programsDownload: "Herunterladen",
     programsManual: "Anleitung",
     programsInstall: "In drei Schritten startklar",
+    programsShare: "Teilen",
+    programsCopied: "Link kopiert",
     emptyState: "Hier gibt es noch keine Beiträge.",
     filterTitle: "Filtern",
     filterReset: "Zurücksetzen",
@@ -170,6 +172,8 @@ const I18N = {
     programsDownload: "Download",
     programsManual: "Manual (German)",
     programsInstall: "Ready in three steps",
+    programsShare: "Share",
+    programsCopied: "Link copied",
     emptyState: "There are no posts here yet.",
     filterTitle: "Filter",
     filterReset: "Reset",
@@ -1679,7 +1683,7 @@ const PROGRAMS = [
   {
     id: "heft2pdf",
     title: "Heft2PDF",
-    version: "2.2",
+    version: "2.3",
     platform: "macOS 11 oder neuer",
     platformEn: "macOS 11 or later",
     icon: "assets/programme/heft2pdf-icon.png",
@@ -1699,6 +1703,7 @@ const PROGRAMS = [
     note: "Bitte nur für Hefte nutzen, die du speichern darfst (eigenes Material oder passende Lizenz).",
     noteEn: "Please only use it for workbooks you are allowed to save (your own material or a suitable licence).",
     download: { href: "downloads/heft2pdf-mac.zip", name: "Heft2PDF-Mac.zip", size: "0,5 MB", type: "ZIP" },
+    share: "programme/heft2pdf.html",
     manual: { href: "downloads/heft2pdf-anleitung.pdf", name: "Heft2PDF-Anleitung.pdf", size: "1,2 MB", type: "PDF" }
   }
 ];
@@ -1723,6 +1728,8 @@ function renderPrograms() {
       <div class="prog-actions">
         <a class="mp-copy prog-dl" href="${p.download.href}" download="${p.download.name}">${DOWNLOAD_GLYPH}<span>${escapeHtml(t("programsDownload"))}</span><small>${file(p.download)}</small></a>
         <a class="mp-example prog-dl" href="${p.manual.href}" download="${p.manual.name}">${DOC_GLYPH}<span>${escapeHtml(t("programsManual"))}</span><small>${file(p.manual)}</small></a>
+        ${p.share ? `<button type="button" class="mp-example prog-dl prog-share" data-share="${p.share}" data-title="${escapeHtml(p.title)}">${SHARE_GLYPH}<span>${escapeHtml(t("programsShare"))}</span></button>` : ""}
+        <span class="mp-status prog-status" role="status" aria-live="polite"></span>
       </div>
       <img class="prog-shot" src="${p.shot}" alt="${escapeHtml(p.title)}" loading="lazy" width="1600" height="1067">
       <h3 class="prog-sub">${escapeHtml(t("programsInstall"))}</h3>
@@ -1732,6 +1739,25 @@ function renderPrograms() {
   `;
 }
 
+/* Teilen: eigene Seite mit Vorschaubild (programme/<id>.html), damit WhatsApp,
+   iMessage & Co. eine passende Karte zeigen. Teilen-Menü des Geräts, sonst Link kopieren. */
+async function shareProgram(btn) {
+  const url = new URL(btn.dataset.share, location.href).href;
+  const status = btn.parentElement.querySelector(".prog-status");
+  const say = (m) => { if (status) { status.textContent = m; setTimeout(() => { status.textContent = ""; }, 3000); } };
+  if (navigator.share) {
+    try { await navigator.share({ title: btn.dataset.title, url }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(url); say(t("programsCopied")); }
+  catch (e) { window.prompt(t("programsShare"), url); }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest(".prog-share");
+  if (b) shareProgram(b);
+});
+
+const SHARE_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4m-4 4 4-4 4 4"/><path d="M7 11H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18 11h-1"/></svg>';
 const DOWNLOAD_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>';
 const DOC_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/></svg>';
 
@@ -1767,6 +1793,8 @@ function render() {
     renderPromptlabor(segments[1]);
   } else if (segments[0] === "programme") {
     renderPrograms();
+    const card = segments[1] && document.getElementById(segments[1]);
+    if (card) setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   } else if (segments[0] === "vertretung") {
     renderVertretung();
   } else if (segments[0] === "kursmappe") {

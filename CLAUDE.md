@@ -69,7 +69,7 @@ Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
 
 ## Programme zum Herunterladen (`#/programme`)
 
-Eigener Menüpunkt „Programme“ für Programme, die auf dem Computer laufen (nicht im Browser), z. B. Heft2PDF für den Mac. Diese stehen **nicht** in `posts-data.js`, sondern in der Liste `PROGRAMS` in `app.js` (Felder siehe Heft2PDF-Eintrag, jeweils mit `…En`-Übersetzung). Dateien: ZIP und Anleitung (PDF) in `downloads/` (Kleinbuchstaben, z. B. `heft2pdf-mac.zip`), Symbol und Vorschaubild in `assets/programme/`. Bei einer neuen Programmversion ZIP/PDF ersetzen und `version` sowie die Dateigrößen in `PROGRAMS` anpassen.
+Eigener Menüpunkt „Programme“ für Programme, die auf dem Computer laufen (nicht im Browser), z. B. Heft2PDF für den Mac. Diese stehen **nicht** in `posts-data.js`, sondern in der Liste `PROGRAMS` in `app.js` (Felder siehe Heft2PDF-Eintrag, jeweils mit `…En`-Übersetzung). Dateien: ZIP und Anleitung (PDF) in `downloads/` (Kleinbuchstaben, z. B. `heft2pdf-mac.zip`), Symbol und Vorschaubild in `assets/programme/`. Bei einer neuen Programmversion ZIP/PDF ersetzen und `version` sowie die Dateigrößen in `PROGRAMS` anpassen. Zum Teilen hat jedes Programm eine eigene Seite `programme/<id>.html` mit Vorschau-Tags (og:image `assets/og/<id>.jpg`, 1200×630), die Besucher per JS nach `#/programme/<id>` weiterleitet; der „Teilen“-Knopf der Karte nutzt sie (`share` in `PROGRAMS`).
 
 ## Regeln für Tool-Seiten
 
