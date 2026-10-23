@@ -1679,13 +1679,13 @@ const PROGRAMS = [
   {
     id: "heft2pdf",
     title: "Heft2PDF",
-    version: "2.1",
+    version: "2.2",
     platform: "macOS 11 oder neuer",
     platformEn: "macOS 11 or later",
     icon: "assets/programme/heft2pdf-icon.png",
     shot: "assets/programme/heft2pdf-vorschau.jpg",
-    text: "Blättert ein digitales Heft automatisch durch, fotografiert jede Seite in voller Retina-Auflösung und speichert alles als eine PDF. Du markierst die Seite einmal mit einem Rahmen, wählst, wie umgeblättert wird, und die App erledigt den Rest. Eine Anzeige sagt dir vorher, ob das Ergebnis scharf wird.",
-    textEn: "Automatically pages through a digital workbook, captures every page in full Retina resolution and saves everything as one PDF. Mark the page once with a frame, choose how to turn the page, and the app does the rest. A gauge tells you in advance whether the result will be sharp.",
+    text: "Blättert ein digitales Heft automatisch durch, fotografiert jede Seite in voller Retina-Auflösung und speichert alles als eine PDF. Du markierst die Seite einmal mit einem Rahmen, wählst, wie umgeblättert wird, und die App erledigt den Rest. Auf Wunsch erkennt sie auch den Text: Die PDF wird durchsuchbar, Aufgaben lassen sich markieren und kopieren.",
+    textEn: "Automatically pages through a digital workbook, captures every page in full Retina resolution and saves everything as one PDF. Mark the page once with a frame, choose how to turn the page, and the app does the rest. It can also recognise the text, so the PDF becomes searchable and tasks can be selected and copied.",
     steps: [
       "ZIP herunterladen und mit Doppelklick entpacken.",
       "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
@@ -1699,7 +1699,7 @@ const PROGRAMS = [
     note: "Bitte nur für Hefte nutzen, die du speichern darfst (eigenes Material oder passende Lizenz).",
     noteEn: "Please only use it for workbooks you are allowed to save (your own material or a suitable licence).",
     download: { href: "downloads/heft2pdf-mac.zip", name: "Heft2PDF-Mac.zip", size: "0,5 MB", type: "ZIP" },
-    manual: { href: "downloads/heft2pdf-anleitung.pdf", name: "Heft2PDF-Anleitung.pdf", size: "1,1 MB", type: "PDF" }
+    manual: { href: "downloads/heft2pdf-anleitung.pdf", name: "Heft2PDF-Anleitung.pdf", size: "1,2 MB", type: "PDF" }
   }
 ];
 
