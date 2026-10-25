@@ -69,7 +69,7 @@ posts.forEach((p, i) => {
   if (/[^a-z0-9\-\/\.]/.test(file)) warn(`${id}: Dateiname "${file}" sollte Kleinbuchstaben/Bindestriche ohne Umlaute nutzen`);
 
   const html = fs.readFileSync(full, "utf8");
-  if (!NO_PROTECT.includes(file) && !/strafenkasse\//.test(file)) {
+  if (!NO_PROTECT.includes(file) && !/(strafenkasse|anwurf)\//.test(file)) {
     const m = /<script[^>]*data-category="([a-z]+)"[^>]*src="protect\.js"[^>]*>|<script[^>]*src="protect\.js"[^>]*data-category="([a-z]+)"[^>]*>/.exec(html);
     if (!m) err(`${id}: ${file} bindet protect.js nicht mit data-category ein (Freigabe für Lernende fehlt)`);
     else if (!posts.filter((q) => q.url === p.url).some((q) => (q.gate || q.category) === (m[1] || m[2]))) err(`${id}: data-category "${m[1] || m[2]}" ≠ category "${p.gate || p.category}" in ${file}`);
@@ -79,7 +79,7 @@ posts.forEach((p, i) => {
   else if (!t[1].trim().toLowerCase().startsWith(p.title.trim().toLowerCase().slice(0, 8))) warn(`${id}: <title> "${t[1].trim()}" weicht vom Beitragstitel ab`);
   if (!/<html[^>]*lang="de"/i.test(html)) warn(`${id}: ${file} hat kein <html lang="de">`);
   if (!/name="viewport"/i.test(html)) err(`${id}: ${file} hat keinen viewport-Meta-Tag (iPad/iPhone)`);
-  if (!/property="og:image"/i.test(html) && !/strafenkasse\//.test(file)) warn(`${id}: ${file} hat keine Vorschau-Tags (og:image)`);
+  if (!/property="og:image"/i.test(html) && !/(strafenkasse|anwurf)\//.test(file)) warn(`${id}: ${file} hat keine Vorschau-Tags (og:image)`);
   /* Ausnahme: Seiten, bei denen Nutzende freiwillig einen EIGENEN API-Schlüssel eintragen (kein Schlüssel in der Datei). */
   if (!API_KEY_OPT_IN.includes(file) && /api\.anthropic\.com|sk-ant-/.test(html)) err(`${id}: ${file} enthält einen Claude-API-Aufruf/Schlüssel (gibt es auf GitHub Pages nicht)`);
   if (/window\.storage/.test(html) && !/localStorage/.test(html)) err(`${id}: ${file} nutzt window.storage ohne localStorage-Ersatz (gibt es auf GitHub Pages nicht)`);

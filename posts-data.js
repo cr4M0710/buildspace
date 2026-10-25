@@ -1189,4 +1189,28 @@ const posts = [
     titleEn: "HTML Workshop",
     excerptEn: "Build your own HTML pages for class with AI: eleven formats to try, a prompt builder for subject, year and course level, a code preview for iPad and smartboard and a checklist before use."
    },
+   {
+    title: "Anwurf – Spielplan & Tabelle Männer 1",
+    excerpt: "Spielplan, Tabelle, Ergebnisse und Statistiken von Männer 1 und 2, automatisch von hessenschau.de abgeglichen, mit Push-Nachricht bei Anwurf und Endstand. Als App installierbar.",
+    date: "2026-10-25",
+    category: "handball",
+    subcategory: "maenner1",
+    url: "anwurf/index.html",
+    emoji: "🤾",
+    tags: ["tool"],
+    titleEn: "Anwurf – Fixtures & Table Men's 1",
+    excerptEn: "Fixtures, table, results and stats for the men's 1st and 2nd teams, synced automatically from hessenschau.de, with push alerts at throw-off and full time. Installable as an app."
+   },
+   {
+    title: "Anwurf – Spielplan & Tabelle Männer 2",
+    excerpt: "Spielplan, Tabelle, Ergebnisse und Statistiken von Männer 1 und 2, automatisch von hessenschau.de abgeglichen, mit Push-Nachricht bei Anwurf und Endstand. Als App installierbar.",
+    date: "2026-10-25",
+    category: "handball",
+    subcategory: "maenner2",
+    url: "anwurf/index.html?team=m2",
+    emoji: "🤾",
+    tags: ["tool"],
+    titleEn: "Anwurf – Fixtures & Table Men's 2",
+    excerptEn: "Fixtures, table, results and stats for the men's 1st and 2nd teams, synced automatically from hessenschau.de, with push alerts at throw-off and full time. Installable as an app."
+   },
 ];
