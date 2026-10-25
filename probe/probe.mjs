@@ -1,17 +1,18 @@
 import fs from "node:fs";
 fs.rmSync("out",{recursive:true,force:true}); fs.mkdirSync("out",{recursive:true});
 const UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15","Accept-Language":"de-DE"};
-const N="https://hhv-handball.liga.nu/cgi-bin/WebObjects/nuLigaHBDE.woa/wa/";
 const log=[];
-async function get(name,url){ try{ const r=await fetch(url,{headers:UA}); const t=await r.text(); log.push(`${r.status} ${(r.headers.get("content-type")||"").slice(0,25)} ${t.length} ${url}`); fs.writeFileSync("out/"+name,t); }catch(e){ log.push("ERR "+url+" "+e.message) } }
-const M1="championship=HHV+26%2F27&group=492123", M2="championship=Gie%C3%9Fen+26%2F27&group=491948";
-await get("m1-gesamt.html",N+"groupPage?displayTyp=gesamt&displayDetail=meetings&"+M1);
-await get("m2-gesamt.html",N+"groupPage?displayTyp=gesamt&displayDetail=meetings&"+M2);
-await get("m1-table.html",N+"groupPage?"+M1);
-await get("m2-table.html",N+"groupPage?"+M2);
-await get("report-kastel.html",N+"groupMeetingReport?meeting=8256673&"+M1);
-await get("report-eppla.html",N+"groupMeetingReport?meeting=8256778&"+M1);
-await get("goals-m1.html",N+"groupMeetingStatistics?displayType=playerGoals&"+M1);
-await get("team-m1.html",N+"teamPortrait?teamtable=2208207&pageState=vorrunde&"+M1);
-await get("pdf-kastel.pdf","https://hhv-handball.liga.nu/cgi-bin/WebObjects/nuLigaDokumentHBDE.woa/wa/nuDokument?dokument=meetingReportHB&meeting=8256673");
+async function get(name,url,opt={}){ try{ const r=await fetch(url,{headers:{...UA,...(opt.headers||{})}}); const t=await r.text(); log.push(`${r.status} ${(r.headers.get("content-type")||"").slice(0,30)} ${t.length} ${url}`); if(name) fs.writeFileSync("out/"+name,t.slice(0,400000)); return t }catch(e){ log.push("ERR "+url+" "+e.message); return "" } }
+const B="https://hbde-live.liga.nu/nuScoreLive/";
+const html=await get("index.html",B);
+const assets=[...new Set([...html.matchAll(/(?:src|href)="([^"]+\.js)"/g)].map(m=>m[1]))];
+log.push("assets: "+assets.join(" "));
+const hits=new Set();
+for(const a of assets){
+  const u=a.startsWith("http")?a:new URL(a,B).href;
+  const t=await get("", u);
+  fs.writeFileSync("out/"+a.replace(/\W/g,"_"),t);
+  for(const m of t.matchAll(/["'`]((?:https?:\/\/|\/)[^"'`\s]{0,40}(?:rest|api|Rest|Api|json|live|Live)[^"'`\s]{0,120})["'`]/g)) hits.add(m[1]);
+}
+fs.writeFileSync("out/hits.txt",[...hits].join("\n"));
 fs.writeFileSync("out/log.txt",log.join("\n"));
