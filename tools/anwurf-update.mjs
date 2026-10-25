@@ -204,11 +204,77 @@ function writeIfChanged(file, obj, ignore = []) {
   return true;
 }
 
+// ---------- nuScoreLive (öffentlicher Liveticker des Kampfgerichts) ----------
+// REST: meetings/<Liga>/time/<t> (Spielliste), meeting/<Spiel>/time/<t> (Stand, uuid), events/<Spiel> (alle Ereignisse).
+// Die App verbindet sich zusätzlich selbst mit dem Live-Kanal (WebSocket) und bekommt jedes Ereignis sofort.
+const NSL = "https://hbde-live.liga.nu/nuScoreLiveRestBackend/api/1/";
+const NSL_TYPES = { 2: "Auszeit Heim", 3: "Auszeit Gast", 4: "Tor", 5: "7m mit Tor", 6: "7m ohne Tor", 7: "Eigentor", 8: "2 Minuten", 9: "Verwarnung",
+  10: "Disqualifikation mit Bericht", 11: "Disqualifikation", 12: "2 Minuten (Team)", 13: "2 Minuten (Team)", 14: "Halbzeit", 15: "Anpfiff", 16: "Spielende", 17: "Spielbeginn" };
+const nslTime = () => Math.floor(Date.now() / 15000) * 15;
+async function nslGet(p) {
+  const res = await fetch(NSL + p, { headers: { Accept: "application/json", "User-Agent": "Anwurf-App (private Vereinsnutzung HSG Wettenberg)" } });
+  if (!res.ok) throw new Error(`nuScoreLive ${p} -> HTTP ${res.status}`);
+  return res.json();
+}
+const mmss = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+// nuScore-Ereignis -> [Seite, Zeit, Stand, Ereignis, Name, Trikot, idx]
+function nslEvent(e, youth) {
+  const type = NSL_TYPES[e.event];
+  if (!type) return null;
+  const side = e.event === 2 || e.event === 12 ? "H" : e.event === 3 || e.event === 13 ? "A" : e.teamHome === true ? "H" : e.teamHome === false ? "A" : "";
+  const name = youth ? "" : [e.personFirstname, e.personLastname].filter(Boolean).join(" ");
+  return [side, mmss(e.second || 0), `${e.pointsHome ?? 0}:${e.pointsGuest ?? 0}`, type, name, "", e.idx];
+}
+async function liveCycle(data, state, fallback = []) {
+  const now = Date.now();
+  const out = [];
+  for (const lg of data.leagues || []) {
+    const due = lg.games.filter(g => isLiveWindow(g, now) && lg.hsg.some(h => h.team === g.h || h.team === g.a));
+    if (!due.length) continue;
+    let list = [];
+    try { list = (await nslGet(`meetings/${lg.id}/time/${nslTime()}`)).meetings || []; } catch (e) { console.warn(e.message); }
+    for (const g of due) {
+      const h = lg.hsg.find(x => x.team === g.h || x.team === g.a);
+      const m = list.find(x => x.teamHome === g.h && x.teamGuest === g.a) || (g.mid && list.find(x => +x.meetingID === g.mid));
+      let entry = null;
+      if (m) {
+        try {
+          const info = await nslGet(`meeting/${m.meetingID}/time/${nslTime()}`);
+          const evs = ((await nslGet(`events/${m.meetingID}`)).events || [])
+            .sort((a, b) => (a.second - b.second) || (a.idx - b.idx));
+          const events = evs.map(e => nslEvent(e, lg.youth)).filter(Boolean);
+          const lastIdx = evs.reduce((mx, e) => Math.max(mx, e.idx || 0), 0);
+          const lastSec = evs.reduce((mx, e) => Math.max(mx, e.second || 0), 0);
+          const timer = [...evs].reverse().find(e => e.event === 0 || e.event === 1);
+          entry = { lid: lg.id, n: g.n, d: g.d, h: g.h, a: g.a, label: h.label, src: "nuScore", mid: +m.meetingID, uuid: info.meetingUuid || m.meetingUuid || null,
+            live: !!info.live, ended: evs.some(e => e.event === 16), score: `${info.matchesHome ?? 0}:${info.matchesGuest ?? 0}`,
+            ht: info.halfTimeScoreHome || info.halfTimeScoreGuest ? `${info.halfTimeScoreHome}:${info.halfTimeScoreGuest}` : null,
+            second: lastSec, clock: timer ? (timer.event === 0 ? "running" : "stopped") : null, lastIdx, events: events.slice(-120), at: new Date().toISOString() };
+        } catch (e) { console.warn(`nuScoreLive ${m.meetingID}: ${e.message}`); }
+      }
+      if (!entry) entry = fallback.find(f => f.lid === lg.id && f.n === g.n) || { lid: lg.id, n: g.n, d: g.d, h: g.h, a: g.a, label: h.label, src: null, score: null, events: [] };
+      out.push(entry);
+      // pushes from live data
+      const key = `${lg.id}-${g.n}`, vs = `${g.h} – ${g.a}`, team = { label: h.label };
+      const started = entry.live || (entry.events || []).some(e => e[3] === "Spielbeginn" || e[3] === "Tor");
+      if (started && !state.kickoff[key]) { state.kickoff[key] = now; await push(team, `${h.label}: Anwurf`, `${vs} hat begonnen.`, ["handball"]); }
+      if ((entry.events || []).some(e => e[3] === "Halbzeit") && !state.half[key]) { state.half[key] = now; await push(team, `${h.label}: Halbzeit`, `${vs} ${entry.ht || entry.score}`, ["hourglass"]); }
+      if (entry.ended && !state.ended[key]) {
+        state.ended[key] = now;
+        const [sh, sa] = (entry.score || "0:0").split(":").map(Number);
+        const own = h.team === g.h ? sh : sa, opp = h.team === g.h ? sa : sh;
+        await push(team, `${h.label}: ${own > opp ? "Sieg" : own < opp ? "Niederlage" : "Unentschieden"}`, `Endstand ${vs} ${entry.score}${entry.ht ? ` (Halbzeit ${entry.ht})` : ""}`, [own > opp ? "tada" : "handball"]);
+      }
+    }
+  }
+  return out;
+}
+
 // ---------- one update cycle ----------
 async function cycle({ liveOnly = false } = {}) {
   const prev = readJSON(DATA_FILE, null);
   const state = readJSON(STATE_FILE, {});
-  for (const k of ["kickoff", "half", "lastScore"]) state[k] ||= {};
+  for (const k of ["kickoff", "half", "lastScore", "ended"]) state[k] ||= {};
   const now = Date.now();
 
   // club teams -> leagues (refresh daily)
@@ -222,7 +288,7 @@ async function cycle({ liveOnly = false } = {}) {
   const leagueIds = [...new Set(teams.map(t => t.id))];
   const out = { version: 3, updatedAt: new Date().toISOString(), source: "nuLiga HHV", club: CLUB.name, leagues: [], players: [] };
   const errors = [];
-  const liveGames = [];
+  const reportLive = [];
 
   for (const id of leagueIds) {
     const clubTeams = teams.filter(t => t.id === id);
@@ -273,7 +339,7 @@ async function cycle({ liveOnly = false } = {}) {
         const rep = lf.reports[g.mid];
         const ev = rep?.events || [];
         const last = [...ev].reverse().find(e => /\d+:\d+/.test(e[2]));
-        liveGames.push({ lid: id, mid: g.mid || null, n: g.n, d: g.d, h: g.h, a: g.a, label: h.label, score: last ? last[2] : null, time: ev.length ? ev[ev.length - 1][1] : null, events: youth ? [] : ev.slice(-60) });
+        reportLive.push({ lid: id, mid: g.mid || null, n: g.n, d: g.d, h: g.h, a: g.a, label: h.label, src: "nuLiga", score: last ? last[2] : null, time: ev.length ? ev[ev.length - 1][1] : null, events: youth ? [] : ev.slice(-80) });
       }
       // players (adult leagues) – aggregated per team and name, values per game
       if (!youth) {
@@ -319,21 +385,17 @@ async function cycle({ liveOnly = false } = {}) {
       const h = lg.hsg.find(x => x.team === g.h || x.team === g.a);
       if (!h) continue;
       const team = { label: h.label };
-      const key = `${lg.id}-${g.mid || g.n}`;
+      const key = `${lg.id}-${g.n}`;
       const vs = `${g.h} – ${g.a}`;
       const start = berlinDate(g.d).getTime();
       if (now >= start && now < start + 30 * 60000 && !state.kickoff[key] && g.gh == null && !g.note) {
         state.kickoff[key] = now;
         await push(team, `${h.label}: Anwurf`, `${vs} hat begonnen.`, ["handball"]);
       }
-      const lv = liveGames.find(l => l.lid === lg.id && l.n === g.n);
-      if (lv?.score && state.lastScore[key] !== lv.score) {
-        if (lv.time && parseInt(lv.time) >= 30 && !state.half[key]) { state.half[key] = now; await push(team, `${h.label}: Halbzeit`, `${vs} ${lv.score}`, ["hourglass"]); }
-        state.lastScore[key] = lv.score;
-      }
       const og = old?.games?.find(x => (g.mid && x.mid === g.mid) || (g.n && x.n === g.n));
       if (!og) continue;
-      if (og.gh == null && g.gh != null) {
+      if (og.gh == null && g.gh != null && !state.ended[key]) {
+        state.ended[key] = now;
         const ownHome = h.team === g.h, own = ownHome ? g.gh : g.ga, opp = ownHome ? g.ga : g.gh;
         const res = own > opp ? "Sieg" : own < opp ? "Niederlage" : "Unentschieden";
         await push(team, `${h.label}: ${res}`, `Endstand ${vs} ${g.gh}:${g.ga}${g.ht ? ` (Halbzeit ${g.ht})` : ""}`, [own > opp ? "tada" : "handball"]);
@@ -341,9 +403,10 @@ async function cycle({ liveOnly = false } = {}) {
       if (og.d !== g.d && g.gh == null) await push(team, `${h.label}: Spiel verlegt`, `${vs}: neu ${fmtDE(g.d)} (vorher ${fmtDE(og.d)})`, ["calendar"]);
     }
   }
-  for (const k of ["kickoff", "half", "lastScore"]) for (const [key, t] of Object.entries(state[k])) if (typeof t === "number" && now - t > 60 * 864e5) delete state[k][key];
+  for (const k of ["kickoff", "half", "lastScore", "ended"]) for (const [key, t] of Object.entries(state[k])) if (typeof t === "number" && now - t > 60 * 864e5) delete state[k][key];
 
-  if (DRY) { console.log(JSON.stringify(out).length, "Bytes data.json"); return liveGames; }
+  const liveGames = await liveCycle(out, state, reportLive);
+  if (DRY) { console.log(JSON.stringify(out).length, "Bytes data.json", liveGames.length, "Live-Spiele"); return liveGames; }
   if (writeIfChanged(DATA_FILE, out, ["updatedAt", "asOf"])) console.log("data.json aktualisiert");
   writeIfChanged(LIVE_FILE, { updatedAt: new Date().toISOString(), games: liveGames }, liveGames.length ? [] : ["updatedAt"]);
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 1) + "\n");
@@ -360,16 +423,30 @@ function commit() {
   } catch (e) { console.warn("commit:", e.message); }
 }
 
+async function liveOnlyCycle() {
+  const data = readJSON(DATA_FILE, null);
+  const state = readJSON(STATE_FILE, {});
+  for (const k of ["kickoff", "half", "lastScore", "ended"]) state[k] ||= {};
+  const live = await liveCycle(data || { leagues: [] }, state);
+  if (!DRY) {
+    writeIfChanged(LIVE_FILE, { updatedAt: new Date().toISOString(), games: live }, live.length ? [] : ["updatedAt"]);
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 1) + "\n");
+  }
+  return live;
+}
 async function main() {
   let live = await cycle();
   if (!WATCH) return;
-  // während eines HSG-Spiels: alle 90 Sekunden nur die betroffenen Ligen neu holen, bis zu ~25 Minuten pro Lauf
+  // während eines HSG-Spiels: alle 30 Sekunden nuScoreLive, alle 5 Minuten die betroffenen Ligen aus nuLiga; bis zu ~25 Minuten pro Lauf
   const until = Date.now() + 25 * 60000;
+  let lastFull = Date.now();
   while (live.length && Date.now() < until) {
     commit();
-    await sleep(90000);
-    live = await cycle({ liveOnly: true });
+    await sleep(30000);
+    if (Date.now() - lastFull > 5 * 60000) { live = await cycle({ liveOnly: true }); lastFull = Date.now(); }
+    else live = await liveOnlyCycle();
   }
+  commit();
 }
-export { parseClub, parseTable, parseSchedule, parseReport, parseHeadline };
+export { parseClub, parseTable, parseSchedule, parseReport, parseHeadline, nslEvent };
 if (!process.env.ANWURF_NO_MAIN) main().catch(e => { console.error(e); process.exit(1); });
