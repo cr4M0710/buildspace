@@ -1191,7 +1191,7 @@ const posts = [
    },
    {
     title: "Anwurf – Spielplan & Tabelle Männer 1",
-    excerpt: "Spielplan, Tabelle, Spielverlauf Tor für Tor, Torschützen und Kaderstatistik von Männer 1 und 2, automatisch aus nuLiga, mit Push bei Anwurf, Halbzeit und Endstand. Als App installierbar.",
+    excerpt: "Alle Ligen der HSG: Tabellen, Spielpläne, Spielverlauf Tor für Tor, Team-, Kader- und Spielerstatistiken, Suche und Favoriten, automatisch aus nuLiga, mit Push bei Anwurf und Endstand. Als App installierbar.",
     date: "2026-10-25",
     category: "handball",
     subcategory: "maenner1",
@@ -1199,11 +1199,11 @@ const posts = [
     emoji: "🤾",
     tags: ["tool"],
     titleEn: "Anwurf – Fixtures & Table Men's 1",
-    excerptEn: "Fixtures, table, goal-by-goal match flow, scorers and squad stats for the men's 1st and 2nd teams, synced automatically from nuLiga, with push alerts at throw-off, half-time and full time. Installable as an app."
+    excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
    },
    {
     title: "Anwurf – Spielplan & Tabelle Männer 2",
-    excerpt: "Spielplan, Tabelle, Spielverlauf Tor für Tor, Torschützen und Kaderstatistik von Männer 1 und 2, automatisch aus nuLiga, mit Push bei Anwurf, Halbzeit und Endstand. Als App installierbar.",
+    excerpt: "Alle Ligen der HSG: Tabellen, Spielpläne, Spielverlauf Tor für Tor, Team-, Kader- und Spielerstatistiken, Suche und Favoriten, automatisch aus nuLiga, mit Push bei Anwurf und Endstand. Als App installierbar.",
     date: "2026-10-25",
     category: "handball",
     subcategory: "maenner2",
@@ -1211,6 +1211,6 @@ const posts = [
     emoji: "🤾",
     tags: ["tool"],
     titleEn: "Anwurf – Fixtures & Table Men's 2",
-    excerptEn: "Fixtures, table, goal-by-goal match flow, scorers and squad stats for the men's 1st and 2nd teams, synced automatically from nuLiga, with push alerts at throw-off, half-time and full time. Installable as an app."
+    excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
    },
 ];
