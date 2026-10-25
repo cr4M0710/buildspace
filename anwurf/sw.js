@@ -2,7 +2,7 @@
    network-first für die eigene Seite: online immer aktuell, offline aus dem Cache.
    Die Spieldaten (data.json, auch von raw.githubusercontent.com) lädt die App
    selbst mit cache:"no-store" und merkt sich die letzte Version im localStorage. */
-const CACHE = 'anwurf-v4';
+const CACHE = 'anwurf-v5';
 self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
@@ -19,7 +19,8 @@ self.addEventListener('fetch', event => {
   if (url.pathname.endsWith('/data.json') || url.pathname.endsWith('/state.json')) return;
   event.respondWith((async () => {
     try {
-      const net = await fetch(req);
+      // HTML immer frisch vom Server holen (GitHub Pages lässt Seiten sonst bis zu 10 Minuten im Browser-Cache)
+      const net = await fetch(req, (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) ? { cache: 'no-cache' } : undefined);
       if (net.ok) (await caches.open(CACHE)).put(req, net.clone());
       return net;
     } catch (err) {
