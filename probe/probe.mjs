@@ -1,29 +1,35 @@
 import fs from "node:fs";
 fs.rmSync("out",{recursive:true,force:true}); fs.mkdirSync("out",{recursive:true});
-const UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15","Accept-Language":"de-DE","Accept":"application/json, text/plain, */*"};
-const log=[];
+const UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15","Accept-Language":"de-DE"};
 const B="https://www.handball.net";
-async function grab(name,url,keep=200000){
-  try{ const r=await fetch(url,{headers:UA}); const t=await r.text();
-    log.push(`${r.status} ${(r.headers.get("content-type")||"").slice(0,30)} ${t.length} ${url}`);
-    if(name) fs.writeFileSync("out/"+name,t.slice(0,keep)); return t;
-  }catch(e){ log.push(`ERR ${url} ${e.message}`); return "" }
+const log=[];
+const dec=t=>t.replace(/&q;/g,'"').replace(/&a;/g,'&').replace(/&s;/g,"'").replace(/&l;/g,'<').replace(/&g;/g,'>');
+async function page(name,p){
+  try{
+    const r=await fetch(B+p,{headers:UA}); const h=await r.text();
+    log.push(`${r.status} ${h.length} ${p}`);
+    const m=/<script id="serverApp-state" type="application\/json">([\s\S]*?)<\/script>/.exec(h);
+    let state={}; if(m){ try{ state=JSON.parse(dec(m[1])) }catch(e){ log.push("state parse "+e.message) } }
+    const keys=Object.keys(state).filter(k=>k.startsWith("http")).map(k=>k.replace("http://127.0.0.1:4055",""));
+    log.push("   keys: "+keys.join("\n         "));
+    fs.writeFileSync("out/"+name+".state.json",JSON.stringify(state,null,1).slice(0,400000));
+    const links=[...new Set([...h.matchAll(/href="(\/[^"#]+)"/g)].map(x=>x[1]))].filter(l=>!/assets|\.js|\.css/.test(l));
+    fs.writeFileSync("out/"+name+".links.txt",links.join("\n"));
+    const text=h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ");
+    fs.writeFileSync("out/"+name+".txt",text.slice(0,120000));
+    return {h,state,links};
+  }catch(e){ log.push(`ERR ${p} ${e.message}`); return {h:"",state:{},links:[]} }
 }
-const page=await grab("", B+"/suche?q=Wettenberg");
-const js=[...new Set([...page.matchAll(/(?:href|src)="((?:\/)?(?:chunk|main|polyfills)[^"]*\.js)"/g)].map(m=>m[1]))];
-const hits=new Map();
-for(const s of js){
-  const t=await grab("", B+"/"+s.replace(/^\//,""));
-  for(const m of t.matchAll(/[`"']([^`"']{0,30}(?:api\/new|\/new\/)[^`"']{0,160})[`"']/g)) hits.set(m[1], s);
-  for(const m of t.matchAll(/[`"'](\/?(?:clubs|teams|matches|games|competitions|tournaments|live|ticker|events|organizations|federations)[a-z\/\-_{}$.?=&\[\]%]*)[`"']/gi)) hits.set(m[1], s);
+await page("tos","/nutzungsbedingungen");
+const v=await page("vereine","/spielbetrieb/vereine?search=Wettenberg");
+await page("vereine2","/spielbetrieb/vereine?q=Wettenberg");
+await page("live","/live");
+await page("kalender","/spielbetrieb/spielkalender");
+await page("wettbewerbe","/spielbetrieb/wettbewerbe");
+// follow first Wettenberg-ish club link
+const cl=[...v.links].find(l=>/wettenberg/i.test(l));
+if(cl){ const c=await page("club",cl);
+  const tl=c.links.filter(l=>/mannschaft|team/i.test(l)).slice(0,6);
+  let i=0; for(const t of tl) await page("team"+(i++),t);
 }
-fs.writeFileSync("out/js-paths.txt",[...hits].map(([k,v])=>k+"   <"+v+">").sort().join("\n"));
-for(const [n,p] of [
- ["seasons.json","/api/new/seasons"],
- ["clubs1.json","/api/new/clubs?filter%5Bsearch%5D=Wettenberg"],
- ["teams1.json","/api/new/teams?filter%5Bsearch%5D=Wettenberg"],
- ["search1.json","/api/new/search?q=Wettenberg"],
- ["search2.json","/api/new/search?query=Wettenberg"],
- ["search3.json","/api/new/search?filter%5Bsearch%5D=Wettenberg"],
-]) await grab(n,B+p);
-fs.writeFileSync("out/log.txt",log.join("\n")+`\njs files: ${js.length}\n`);
+fs.writeFileSync("out/log.txt",log.join("\n"));
