@@ -193,6 +193,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .topic{display:flex;gap:8px;align-items:center;margin:10px 0}
 .topic code{flex:1;min-width:0;overflow-wrap:anywhere;background:var(--surface-2);border-radius:8px;padding:9px 10px;font-size:14px;user-select:all}
 .steps{margin:0;padding-left:20px;display:grid;gap:6px;max-width:65ch}
+.sortbtn{border:0;background:none;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;padding:0;cursor:pointer}
+.sortbtn[aria-pressed="true"]{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -222,11 +224,12 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 <script>
 // ---------- Data ----------
 // Seed snapshot (used until the first download succeeds). Live data comes from
-// anwurf/data.json, which a GitHub Action refreshes from hessenschau.de.
-const DATA_URLS = [
-  "https://raw.githubusercontent.com/cr4M0710/buildspace/main/anwurf/data.json",
-  "data.json"
-];
+// anwurf/data.json, which a GitHub Action refreshes from nuLiga (HHV).
+const RAW = "https://raw.githubusercontent.com/cr4M0710/buildspace/main/anwurf/";
+const API = "https://api.github.com/repos/cr4M0710/buildspace/contents/anwurf/";
+// raw.githubusercontent.com is cached ~5 minutes; during a live game the GitHub API is fresher.
+const dataUrls = file => anyLiveSoon() ? [API+file+"?ref=main", RAW+file, file] : [RAW+file, file];
+let REPORTS = null, reportsAt = 0;
 const PUSH_TOPIC = "hsg-wettenberg-anwurf-79866c71";
 let DATA = {
   updatedAt: "2026-10-25T16:00:00.000Z",
@@ -292,22 +295,36 @@ let loadState = { ok:null, at:null, error:null, busy:false };
 async function loadData(){
   if(loadState.busy) return; loadState.busy=true; setStatus();
   let lastErr=null;
-  for(const u of DATA_URLS){
+  for(const u of dataUrls("data.json")){
     try{
-      const res = await fetch(u + (u.includes("?")?"&":"?") + "t=" + Date.now(), { cache:"no-store" });
+      const isApi=u.startsWith(API);
+      const res = await fetch(isApi?u:u + (u.includes("?")?"&":"?") + "t=" + Date.now(), isApi?{ headers:{ Accept:"application/vnd.github.raw+json" }, cache:"no-store" }:{ cache:"no-store" });
       if(!res.ok) throw new Error("HTTP "+res.status);
       const d = await res.json();
       if(!d.teams || !d.teams.length) throw new Error("leere Daten");
       const changed = JSON.stringify(d.teams)!==JSON.stringify(DATA.teams);
       DATA = d; store.set("data", d);
       loadState = { ok:true, at:new Date(), error:null, busy:false };
-      setStatus(); if(changed) refresh();
+      setStatus();
+      if(REPORTS && changed) loadReports(true); else if(changed) refresh();
       return;
     }catch(e){ lastErr=e }
   }
   loadState = { ok:false, at:new Date(), error:lastErr?lastErr.message:"unbekannt", busy:false };
   setStatus();
 }
+async function loadReports(force){
+  if(REPORTS && !force && Date.now()-reportsAt<5*60000) return REPORTS;
+  for(const u of [RAW+"reports.json","reports.json"]){
+    try{
+      const res=await fetch(u+"?t="+Date.now(),{cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      REPORTS=await res.json(); reportsAt=Date.now(); refresh(); return REPORTS;
+    }catch(e){}
+  }
+  REPORTS=REPORTS||{}; return REPORTS;
+}
+function fmtAsOf(a){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(a||""); return m?`${m[3]}.${m[2]}.${m[1]}`:(a||"–") }
 function ago(d){
   const m=Math.round((Date.now()-d.getTime())/60000);
   if(m<1) return "gerade eben"; if(m<60) return `vor ${m} Min.`;
@@ -321,17 +338,17 @@ function setStatus(){
   let t;
   if(loadState.busy) t="Aktualisiere …";
   else if(loadState.ok===false) t=`Offline – zeige gespeicherte Daten${upd?" ("+ago(upd)+")":""}`;
-  else t = upd ? `Datenabgleich ${ago(upd)} · hessenschau.de` : "Daten von hessenschau.de";
+  else t = upd ? `Datenabgleich ${ago(upd)} · nuLiga` : "Daten aus nuLiga";
   document.getElementById("statusText").textContent=t;
 }
 function anyLiveSoon(){
   const t=Date.now();
-  return DATA.teams.some(team=>team.games.some(g=>{ const s=parseDate(g[1]).getTime(); return g.length<=4 && t>s-30*60000 && t<s+150*60000 }));
+  return DATA.teams.some(team=>rawGames(team).some(g=>{ const s=parseDate(g.d).getTime(); return g.gf==null && t>s-30*60000 && t<s+150*60000 }));
 }
 let pollTimer=null;
 function schedulePoll(){
   clearTimeout(pollTimer);
-  pollTimer=setTimeout(async()=>{ if(document.visibilityState==="visible") await loadData(); schedulePoll() }, anyLiveSoon()?60000:10*60000);
+  pollTimer=setTimeout(async()=>{ if(document.visibilityState==="visible") await loadData(); schedulePoll() }, anyLiveSoon()?90000:10*60000);
 }
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ loadData(); schedulePoll() } });
 
@@ -358,18 +375,24 @@ function badge(name,cls=""){
 }
 
 const now = () => new Date();
+function rawGames(team){
+  return team.games.map(g=>Array.isArray(g)?{r:g[0],d:g[1],ha:g[2],opp:g[3],gf:g[4],ga:g[5]}:g);
+}
+function liveOf(mid){ return (DATA.live||[]).find(l=>l.mid===mid) }
 function games(team){
-  return team.games.map(g=>{
-    const key=team.id+"-"+g[0];
-    const d=parseDate(g[1]);
-    let own=g[4], opp=g[5], src="data";
+  return rawGames(team).map(g=>{
+    const key=team.id+"-"+(g.mid||g.nr||g.r);
+    const d=parseDate(g.d);
+    let own=g.gf, opp=g.ga, src="data";
     if(own==null && manual[key]){ [own,opp]=manual[key]; src="manual" }
     const has=own!=null;
     const res=has?(own>opp?"S":own<opp?"N":"U"):null;
     const t=now().getTime();
     const past=d.getTime()+100*60000 < t;
     const live=!has && t>=d.getTime() && !past;
-    return {key,round:g[0],date:d,home:g[2]==="H",opp:g[3],own,opp_:opp,has,res,src,past,live,team};
+    const lv=g.mid?liveOf(g.mid):null;
+    return {key,round:g.r,date:d,home:g.ha==="H",opp:g.opp,own,opp_:opp,has,res,src,past,live:live||(!!lv&&!has),lv,team,
+      mid:g.mid||null,ht:g.ht||null,moved:!!g.moved,from:g.from?parseDate(g.from):null,venue:g.venue||null,note:g.note||null};
   });
 }
 function scoreText(g){ return g.home?`${g.own}:${g.opp_}`:`${g.opp_}:${g.own}` }
@@ -395,16 +418,22 @@ function gameRow(g,opts={}){
   if(g.has){
     right=`<span class="score ${g.res} num">${scoreText(g)}${g.src==="manual"?'<span class="manual">eigene Eingabe</span>':""}</span>`;
   } else if(g.live){
-    right=`<span class="score live">läuft</span>`;
+    right=`<span class="score live">${g.lv&&g.lv.score?esc(g.lv.score):"läuft"}</span>`;
+  } else if(g.note){
+    right=`<span class="score open" title="Sonderwertung laut Verband">${esc(g.note)}</span>`;
   } else if(g.past){
     right=`<span class="score open">Ergebnis<br>eintragen</span>`;
   } else {
     right=`<span class="score time num">${fmtTime(g.date)}</span>`;
   }
-  const tap = !g.has && g.past;
+  const enter = !g.has && g.past && !g.note && !g.live;
+  const open = !!g.mid && (g.has || g.live || g.note);
+  const tap = enter || open;
   const tag = tap ? "button" : "div";
-  const who = opts.showTeam?`<span class="m">${esc(g.team.label)} · ${esc(g.team.league)}</span>`:`<span class="m">${g.round}. Spieltag · ${g.home?"Heimspiel":"Auswärtsspiel"}</span>`;
-  return `<${tag} class="grow${tap?" tap":""}" ${tap?`type="button" data-enter="${g.key}" aria-label="Ergebnis gegen ${esc(g.opp)} eintragen"`:""}>
+  const moved = g.moved?` · <span title="${g.from?"ursprünglich "+fmtDay(g.from)+" "+fmtTime(g.from):""}">verlegt</span>`:"";
+  const who = opts.showTeam?`<span class="m">${esc(g.team.label)} · ${esc(g.team.league)}${moved}</span>`:`<span class="m">${g.round}. Spieltag · ${g.home?"Heim":"Auswärts"}${g.ht?" · HZ "+(g.home?g.ht:g.ht.split(":").reverse().join(":")):""}${moved}</span>`;
+  const act = enter?`data-enter="${g.key}" aria-label="Ergebnis gegen ${esc(g.opp)} eintragen"`:open?`data-match="${g.team.id}:${g.mid}" aria-label="Spiel gegen ${esc(g.opp)} öffnen"`:"";
+  return `<${tag} class="grow${tap?" tap":""}" ${tap?`type="button" ${act}`:""}>
     <div class="gdate"><b>${fmtDay(g.date)}</b>${g.date.getFullYear()}</div>
     <div class="gopp"><div class="o"><span class="ha">${g.home?"H":"A"}</span>${esc(g.opp)}</div>${who}</div>
     ${right}</${tag}>`;
@@ -422,7 +451,7 @@ function viewStart(){
     const gs=games(t);
     const next=gs.find(g=>!g.past && !g.live);
     const last=[...gs].reverse().find(g=>g.has);
-    const open=gs.filter(g=>g.past&&!g.has).length;
+    const open=gs.filter(g=>g.past&&!g.has&&!g.note&&!g.live).length;
     const r=rowOf(t);
     const lv=gs.find(g=>g.live);
     return `<button class="tcard${lv?" is-live":""}" type="button" data-team="${t.id}">
@@ -439,7 +468,7 @@ function viewStart(){
       </div>
       <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">
         ${formDots(t)}
-        <span class="note" style="margin:0">${open?`${open} Ergebnis${open>1?"se":""} fehlt`:"Alles aktuell"} · Tabelle ${esc(t.asOf)}</span>
+        <span class="note" style="margin:0">${open?`${open} Ergebnis${open>1?"se":""} fehlt`:"Alles aktuell"} · Stand ${esc(fmtAsOf(t.asOf))}</span>
       </div>
     </button>`;
   }).join("");
@@ -479,7 +508,7 @@ function tableHTML(t){
   return `<div class="tablewrap"><table>
     <thead><tr><th class="l">#</th><th class="l">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>Tore</th><th>Diff</th><th>Pkt</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <p class="note">${esc(t.league)} · Stand ${esc(t.asOf)} · Quelle: hessenschau.de. Selbst eingetragene Ergebnisse ändern die Tabelle nicht.</p>`;
+    <p class="note">${esc(t.league)} · Quelle: ${DATA.version>=2?"nuLiga":"hessenschau.de"}. Selbst eingetragene Ergebnisse ändern die Tabelle nicht.</p>`;
 }
 function viewTabellen(){
   const t=DATA.teams.find(x=>x.id===tabTeam);
@@ -542,11 +571,23 @@ function viewLive(){
   const all=DATA.teams.flatMap(games);
   const lives=all.filter(x=>x.live);
   const upcoming=all.filter(x=>!x.past&&!x.live).sort((a,b)=>a.date-b.date).slice(0,2);
+  const liveBoard = x => {
+    const homeName=x.home?x.team.name:x.opp, awayName=x.home?x.opp:x.team.name;
+    const ev=(x.lv&&x.lv.events)||[];
+    return `<div class="scoreboard" aria-live="polite" style="margin-bottom:10px">
+        <div class="sb-team">${esc(homeName)}</div>
+        <div><div class="sb-score">${esc(x.lv&&x.lv.score||"0:0")}</div><div class="sb-clock"><span class="pulse" aria-hidden="true"></span>${x.lv&&x.lv.time?esc(x.lv.time):"läuft"}</div></div>
+        <div class="sb-team">${esc(awayName)}</div></div>
+      ${ev.length?`<div class="ticker">${eventRows(ev.slice(-25),homeName,awayName,true)}</div>
+        <div class="controls"><button class="btn ghost" type="button" data-match="${x.team.id}:${x.mid}">Ganzen Spielverlauf öffnen</button></div>`
+      :`<p class="note">${esc(x.team.label)}: Das Spiel läuft. Der Spielverlauf erscheint hier, sobald das Kampfgericht ihn über nuScore an nuLiga überträgt, oft erst zum Spielende. Die App prüft alle 90 Sekunden.</p>`}`;
+  };
+  const lastDone=all.filter(x=>x.has&&x.mid).sort((a,b)=>b.date-a.date)[0];
   const realBlock = lives.length
-    ? `<div class="list">${lives.map(x=>gameRow(x,{showTeam:true})).join("")}</div>
-       <p class="note">Das Spiel läuft. hessenschau.de meldet nur den Endstand; die App prüft jede Minute und zeigt ihn, sobald er da ist. Per Push kommt er ebenfalls.</p>`
+    ? lives.map(liveBoard).join("")
     : `<div class="list">${upcoming.map(x=>gameRow(x,{showTeam:true})).join("")}</div>
-       <p class="note">Gerade läuft kein Spiel. Zum Anwurf und beim Endstand kommt eine Push-Nachricht, wenn du sie unter „Mehr“ eingerichtet hast.</p>`;
+       <p class="note">Gerade läuft kein Spiel. Zum Anwurf, zur Halbzeit und beim Endstand kommt eine Push-Nachricht, wenn du sie unter „Mehr“ eingerichtet hast.</p>
+       ${lastDone?`<h2>Zuletzt</h2><div class="list">${gameRow(lastDone,{showTeam:true})}</div><p class="note">Antippen für Spielverlauf und Torschützen.</p>`:""}`;
   return `<h2>Jetzt</h2>${realBlock}
     <h2>Ticker-Vorschau</h2>
     <div class="scoreboard" aria-live="polite">
@@ -560,7 +601,7 @@ function viewLive(){
       <button class="btn ghost" type="button" id="lvSpeed">Tempo ${live.speed}×</button>
     </div>
     <div class="ticker">${evs||'<div class="empty">Noch keine Ereignisse. Starte die Simulation, um den Ticker zu testen.</div>'}</div>
-    <p class="demo">Vorschau mit zufälligen Ereignissen im Zeitraffer (15 Spielsekunden pro Sekunde). So sieht der Ticker aus, sobald eine Quelle mit Tor-für-Tor-Daten angebunden ist.</p>`;
+    <p class="demo">Simulation mit zufälligen Ereignissen im Zeitraffer (15 Spielsekunden pro Sekunde), um den Ticker auszuprobieren.</p>`;
 }
 function renderLive(){ if(currentTab==="live") render() }
 
@@ -570,7 +611,7 @@ function viewMehr(){
   const upd=DATA.updatedAt?new Date(DATA.updatedAt):null;
   return `<h2>Push-Nachrichten</h2>
     <div class="prose">
-      <p>Du bekommst eine Nachricht beim Anwurf, beim Endstand und wenn ein Spiel verlegt wird, für Männer 1 und Männer 2. Die Nachrichten laufen über die kostenlose App ntfy.</p>
+      <p>Du bekommst eine Nachricht beim Anwurf, zur Halbzeit (wenn der Spielverlauf schon da ist), beim Endstand und wenn ein Spiel verlegt wird, für Männer 1 und Männer 2. Die Nachrichten laufen über die kostenlose App ntfy.</p>
       <ol class="steps">
         <li>ntfy aus dem App Store laden und Mitteilungen erlauben.</li>
         <li>In ntfy auf „+“ tippen und diesen Kanal abonnieren:</li>
@@ -581,13 +622,121 @@ function viewMehr(){
     <h2>Daten</h2>
     <div class="list setlist">
       <div class="set"><div><div class="k">Letzter Abgleich</div><div class="d">${upd?`${ago(upd)} (${upd.toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})})`:"–"}</div></div></div>
-      <div class="set"><div><div class="k">Tabellenstand laut Quelle</div><div class="d">Männer 1: ${esc(DATA.teams[0]?.asOf||"–")} · Männer 2: ${esc(DATA.teams[1]?.asOf||"–")}</div></div></div>
-      <div class="set"><div><div class="k">So oft wird abgeglichen</div><div class="d">Freitagabend und am Wochenende alle 10 Minuten, sonst alle 3 Stunden. Die App lädt beim Öffnen nach und während eines Spiels jede Minute.</div></div></div>
+      <div class="set"><div><div class="k">Zuletzt abgerufen</div><div class="d">Männer 1: ${esc(fmtAsOf(DATA.teams[0]?.asOf))} · Männer 2: ${esc(fmtAsOf(DATA.teams[1]?.asOf))}</div></div></div>
+      <div class="set"><div><div class="k">So oft wird abgeglichen</div><div class="d">Freitagabend und am Wochenende alle 5 Minuten, während eines Spiels alle 90 Sekunden, sonst alle 3 Stunden. Die App lädt beim Öffnen nach.</div></div></div>
       <div class="set"><div><div class="k">Selbst eingetragene Ergebnisse</div><div class="d">${n?`${n} gespeichert, nur auf diesem Gerät. Sobald die Quelle ein Ergebnis hat, gilt das.`:"Keine"}</div></div>${n?'<button class="iconbtn" type="button" id="clearManual">Löschen</button>':""}</div>
-      <div class="set"><div><div class="k">Quelle</div><div class="d">Spielpläne und Tabellen von hessenschau.de. Alle Angaben ohne Gewähr.</div></div></div>
+      <div class="set"><div><div class="k">Quelle</div><div class="d">nuLiga des Hessischen Handball-Verbands: Tabelle, Spielplan, Spielberichte mit Spielverlauf und Torschützen. Private Nutzung, alle Angaben ohne Gewähr.</div></div></div>
     </div>
     <h2>Auf den Homescreen</h2>
     <div class="prose"><p>In Safari auf „Teilen“ tippen und „Zum Home-Bildschirm“ wählen. Dann startet Anwurf wie eine App und funktioniert auch offline mit den zuletzt geladenen Daten.</p></div>`;
+}
+
+
+// ---------- match reports (nuLiga Spielbericht: Spielverlauf + Torschützen) ----------
+function evTag(type){
+  if(/^7m.*Tor/i.test(type) && !/ohne|kein|verworfen|gehalten/i.test(type)) return ["sev","7m"];
+  if(/^7m/i.test(type)) return ["miss","7m"];
+  if(/^Tor/i.test(type)) return ["goal","Tor"];
+  if(/2 ?Min/i.test(type)) return ["pen","2 Min"];
+  if(/Disq|Rot|Blau/i.test(type)) return ["pen","Disq."];
+  if(/Verwarn|Gelb/i.test(type)) return ["sev","Gelb"];
+  if(/Auszeit|Timeout/i.test(type)) return ["to","Auszeit"];
+  return ["info","Info"];
+}
+function eventRows(events, homeName, awayName, newestFirst){
+  const list = newestFirst ? [...events].reverse() : events;
+  return list.map(e=>{
+    const [cls,lbl]=evTag(e[3]);
+    const side = e[0]==="A"?"away":"";
+    const who = e[4] ? esc(e[4]) + (e[5]?` <span class="note" style="margin:0">#${esc(e[5])}</span>`:"") : esc(e[3]);
+    const team = e[0]==="H"?homeName:e[0]==="A"?awayName:"";
+    return `<div class="ev ${side}"><span class="t">${esc(e[1])}</span><span class="txt"><span class="tag ${cls}">${lbl}</span>${who}${team?`<span class="note" style="display:block;margin:0">${esc(team)}</span>`:""}</span><span class="st">${esc(e[2]||"")}</span></div>`;
+  }).join("");
+}
+function leadChart(events, usHome){
+  const pts=[[0,0]];
+  events.forEach(e=>{ const m=/(\d+):(\d+)/.exec(e[2]||""); const t=/(\d+):(\d+)/.exec(e[1]||""); if(m&&t){ const d=(+m[1])-(+m[2]); pts.push([+t[1]+(+t[2])/60, usHome?d:-d]) } });
+  if(pts.length<3) return "";
+  const W=340,H=130,pl=24,pr=8,pt=10,pb=20;
+  const tmax=Math.max(60,...pts.map(p=>p[0]));
+  const amp=Math.max(4,...pts.map(p=>Math.abs(p[1])));
+  const top=Math.ceil(amp/2)*2;
+  const x=t=>pl+(W-pl-pr)*t/tmax, y=v=>pt+(H-pt-pb)*(1-(v+top)/(2*top));
+  let path=`M${x(0)},${y(0)}`; pts.forEach(p=>{ path+=`H${x(p[0]).toFixed(1)}V${y(p[1]).toFixed(1)}` }); path+=`H${x(tmax)}`;
+  const area=path+`V${y(0)}H${x(0)}Z`;
+  let grid=`<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/>`;
+  [top,-top].forEach(v=>grid+=`<text x="${pl-5}" y="${y(v)+3}" text-anchor="end" font-size="9" fill="var(--muted)">${v>0?"+":""}${v}</text>`);
+  [0,30,60].forEach(t=>grid+=`<line x1="${x(t)}" x2="${x(t)}" y1="${pt}" y2="${H-pb}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${x(t)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--muted)">${t}'</text>`);
+  return `<div class="chart"><div class="legend"><span><i style="background:var(--win);opacity:.5"></i>Wettenberg führt</span><span><i style="background:var(--loss);opacity:.5"></i>Gegner führt</span></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spielverlauf, Tordifferenz über die Spielzeit">${grid}
+    <clipPath id="above"><rect x="0" y="0" width="${W}" height="${y(0)}"/></clipPath><clipPath id="below"><rect x="0" y="${y(0)}" width="${W}" height="${H}"/></clipPath>
+    <path d="${area}" fill="var(--win)" opacity=".18" clip-path="url(#above)"/><path d="${area}" fill="var(--loss)" opacity=".18" clip-path="url(#below)"/>
+    <path d="${path}" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></div>`;
+}
+function scorerList(players, title, highlight){
+  const ps=players.filter(p=>p[2]>0||p[6]>0||p[5]>0).sort((a,b)=>b[2]-a[2]);
+  if(!ps.length) return "";
+  return `<div class="list" style="${highlight?"border-color:var(--accent)":""}"><div class="set"><div class="k">${esc(title)}</div></div>${ps.map(p=>`<div class="set"><div><div class="k">${esc(p[1])} <span class="note" style="margin:0">#${esc(p[0])}</span></div><div class="d">${p[4]?`7m ${p[3]}/${p[4]}`:""}${p[6]?`${p[4]?" · ":""}${p[6]}× 2 Min`:""}${p[5]?" · Gelb":""}${p[7]?" · Disq.":""}</div></div><b class="num" style="font-family:var(--f-display);font-size:22px">${p[2]}</b></div>`).join("")}</div>`;
+}
+function openMatch(teamId, mid){
+  const t=DATA.teams.find(x=>x.id===teamId); if(!t) return;
+  const g=games(t).find(x=>x.mid===mid); if(!g) return;
+  const rep=(REPORTS||{})[String(mid)];
+  const lv=g.lv;
+  const homeName=g.home?t.name:g.opp, awayName=g.home?g.opp:t.name;
+  const ev = lv&&lv.events&&lv.events.length&&(!rep||!rep.final) ? lv.events : (rep?rep.events:[]);
+  const score = g.has ? (g.home?`${g.own}:${g.opp_}`:`${g.opp_}:${g.own}`) : (lv&&lv.score) || (g.note||"–:–");
+  const status = g.has ? `Endstand${g.ht?" · Halbzeit "+(g.home?g.ht:g.ht.split(":").reverse().join(":")):""}` : g.live ? (lv&&lv.time?`läuft · ${esc(lv.time)}`:"läuft") : g.note ? "Sonderwertung laut Verband" : `${fmtDay(g.date)} · ${fmtTime(g.date)} Uhr`;
+  const sh=$("#sheet"), same=!sh.hidden && sh.dataset.match===teamId+":"+mid, keep=same?sh.scrollTop:0;
+  $("#sheetInner").innerHTML=`
+    <div class="back"><button class="iconbtn" type="button" id="closeSheet" aria-label="Zurück">‹ Zurück</button></div>
+    <div class="scoreboard" style="margin-top:8px">
+      <div class="sb-team">${esc(homeName)}</div>
+      <div><div class="sb-score">${esc(score)}</div><div class="sb-clock">${g.live?'<span class="pulse" aria-hidden="true"></span>':""}${status}</div></div>
+      <div class="sb-team">${esc(awayName)}</div>
+    </div>
+    <p class="note">${esc(t.label)} · ${esc(t.league)} · ${g.round}. Spieltag · ${fmtDay(g.date)}${g.date.getFullYear()} ${fmtTime(g.date)} Uhr${g.venue?" · "+esc(g.venue):""}${g.moved&&g.from?` · verlegt, ursprünglich ${fmtDay(g.from)} ${fmtTime(g.from)} Uhr`:""}</p>
+    ${!REPORTS?'<div class="empty">Lade Spielbericht …</div>':""}
+    ${ev.length?`<h2>Spielverlauf</h2>${leadChart(ev, g.home)}`:""}
+    ${rep?`<h2>Torschützen</h2><div style="display:grid;gap:10px">${scorerList(rep.players[rep.us]||[], t.name, true)}${scorerList(rep.players[rep.us==="home"?"away":"home"]||[], g.opp, false)}</div>`:""}
+    ${ev.length?`<h2>Ticker</h2><div class="ticker">${eventRows(ev, homeName, awayName, g.live)}</div>`:(REPORTS&&!g.note?'<div class="empty">Für dieses Spiel gibt es noch keinen Spielverlauf. Er erscheint, sobald das Kampfgericht den Spielbericht in nuLiga überträgt.</div>':"")}
+    <p class="note">Quelle: nuLiga, Hessischer Handball-Verband. Alle Angaben ohne Gewähr.</p>`;
+  sh.hidden=false; sh.scrollTop=keep; delete sh.dataset.team; sh.dataset.match=teamId+":"+mid;
+  if(!same) $("#closeSheet").focus();
+  if(!REPORTS) loadReports();
+}
+function squadStats(team){
+  const rows={};
+  let n=0;
+  games(team).forEach(g=>{
+    const rep=g.mid&&REPORTS?REPORTS[String(g.mid)]:null; if(!rep||!rep.final) return; n++;
+    (rep.players[rep.us]||[]).forEach(p=>{
+      const r=rows[p[1]]||(rows[p[1]]={name:p[1],no:p[0],sp:0,goals:0,sg:0,sa:0,two:0,y:0,dq:0,best:0});
+      r.sp++; r.goals+=p[2]; r.sg+=p[3]; r.sa+=p[4]; r.two+=p[6]; r.y+=p[5]; r.dq+=p[7]; r.best=Math.max(r.best,p[2]); r.no=p[0];
+    });
+  });
+  return {n, rows:Object.values(rows).sort((a,b)=>b.goals-a.goals||a.name.localeCompare(b.name))};
+}
+let squadSort = "goals";
+function squadHTML(team){
+  if(!REPORTS) return `<div class="empty">Lade Spielberichte …</div>`;
+  const sq=squadStats(team);
+  if(!sq.rows.length) return `<div class="empty">Noch keine Spielberichte mit Aufstellung.</div>`;
+  const key={goals:r=>-r.goals,sp:r=>-r.sp,avg:r=>-(r.goals/r.sp),two:r=>-r.two,name:r=>0}[squadSort]||(r=>-r.goals);
+  const rows=[...sq.rows].sort((a,b)=>key(a)-key(b)||a.name.localeCompare(b.name));
+  const th=(k,l)=>`<th><button type="button" class="sortbtn" data-sq="${k}" aria-pressed="${squadSort===k}">${l}</button></th>`;
+  return `<div class="tablewrap"><table>
+    <thead><tr><th class="l">#</th><th class="l">Spieler</th>${th("sp","Sp")}${th("goals","Tore")}${th("avg","Ø")}<th>7m</th>${th("two","2'")}<th>Gelb</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="pl">${esc(r.no)}</td><td class="l">${esc(r.name)}</td><td>${r.sp}</td><td class="pts">${r.goals}</td><td>${(r.goals/r.sp).toFixed(1)}</td><td>${r.sa?`${r.sg}/${r.sa}`:"–"}</td><td>${r.two||"–"}</td><td>${r.y||"–"}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note">${sq.n} Spielberichte ausgewertet · Quelle: nuLiga. Spalten antippen zum Sortieren.</p>`;
+}
+function leagueScorersHTML(team){
+  const list=(team.scorers||[]).slice(0,15);
+  if(!list.length) return "";
+  const us=team.tableName;
+  return `<h2>Torschützen der Liga</h2><div class="tablewrap"><table>
+    <thead><tr><th class="l">#</th><th class="l">Spieler</th><th class="l">Verein</th><th>Tore</th><th>Sp</th></tr></thead>
+    <tbody>${list.map((r,i)=>`<tr class="${r[1]===us?"me":""}"><td class="pl">${i+1}</td><td class="l">${esc(r[0])}</td><td class="l">${esc(r[1])}</td><td class="pts">${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 // ---------- team sheet ----------
@@ -631,14 +780,17 @@ function openTeam(id){
     <p class="note">${st.n} Spiele ausgewertet, Siegquote ${pct(st.w/(st.n||1))}, ${st.close} knappe Spiele (höchstens 2 Tore)${st.best?`, höchster Sieg gegen ${esc(st.best.opp)} (${scoreText(st.best)})`:""}.</p>
     <h2>Torverlauf</h2>
     <div class="chart">${chartSVG(st)}</div>
+    <h2>Kader</h2>${squadHTML(t)}
     <h2>Tabelle</h2>${tableHTML(t)}
+    ${leagueScorersHTML(t)}
     <h2>Spielplan</h2>
     <div class="list">${games(t).map(g=>gameRow(g)).join("")}</div>`;
   $("#sheetInner").innerHTML=html; sh.hidden=false; sh.scrollTop=keep;
-  sh.dataset.team=id;
+  sh.dataset.team=id; delete sh.dataset.match;
   if(!same) $("#closeSheet").focus();
+  if(!REPORTS) loadReports();
 }
-function closeTeam(){ $("#sheet").hidden=true; delete $("#sheet").dataset.team }
+function closeTeam(){ $("#sheet").hidden=true; delete $("#sheet").dataset.team; delete $("#sheet").dataset.match }
 
 // ---------- result entry ----------
 function openEntry(key){
@@ -672,7 +824,12 @@ function openEntry(key){
 let currentTab = "start";
 const VIEWS={start:viewStart,spiele:viewSpiele,tabellen:viewTabellen,live:viewLive,mehr:viewMehr};
 function render(){ $("#view").innerHTML=VIEWS[currentTab]() }
-function refresh(){ render(); const id=$("#sheet").dataset.team; if(id && !$("#sheet").hidden) openTeam(id) }
+function refresh(){
+  render();
+  const sh=$("#sheet"); if(sh.hidden) return;
+  if(sh.dataset.team) openTeam(sh.dataset.team);
+  else if(sh.dataset.match){ const [tid,mid]=sh.dataset.match.split(":"); openMatch(tid,+mid) }
+}
 function go(tab){
   currentTab=tab;
   document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===tab) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current") });
@@ -684,6 +841,8 @@ document.addEventListener("click",e=>{
   if(el.dataset.tab){ closeTeam(); return go(el.dataset.tab) }
   if(el.dataset.team) return openTeam(el.dataset.team);
   if(el.dataset.enter) return openEntry(el.dataset.enter);
+  if(el.dataset.match){ const [tid,mid]=el.dataset.match.split(":"); return openMatch(tid,+mid) }
+  if(el.dataset.sq){ squadSort=el.dataset.sq; const id=$("#sheet").dataset.team; if(id) openTeam(id); return }
   if(el.dataset.sf){ spieleFilter=el.dataset.sf; store.set("spieleFilter",spieleFilter); return render() }
   if(el.dataset.sw){ spieleWhen=el.dataset.sw; store.set("spieleWhen",spieleWhen); return render() }
   if(el.dataset.tt){ tabTeam=el.dataset.tt; store.set("tabTeam",tabTeam); return render() }

@@ -1,12 +1,14 @@
 name: Anwurf – Spieldaten holen
-# Holt Spielplan und Tabelle für HSG Wettenberg Männer 1 + 2 von hessenschau.de,
-# schreibt anwurf/data.json und schickt Push-Nachrichten über ntfy.sh.
+# Holt Tabelle, Spielplan, Spielberichte (Tor für Tor) und Torschützen für
+# HSG Wettenberg Männer 1 + 2 aus nuLiga (HHV), schreibt anwurf/data.json +
+# anwurf/reports.json und schickt Push-Nachrichten über ntfy.sh.
+# Läuft gerade ein Spiel, bleibt der Job bis zu 25 Minuten aktiv und gleicht alle 90 Sekunden ab.
 # Zeiten in UTC (deutsche Zeit = UTC+1 im Winter, UTC+2 im Sommer).
 on:
   schedule:
-    - cron: "*/10 16-22 * * 5"   # Freitag Abend: alle 10 Minuten
-    - cron: "*/10 11-22 * * 6"   # Samstag: alle 10 Minuten
-    - cron: "*/10 10-20 * * 0"   # Sonntag: alle 10 Minuten
+    - cron: "*/5 16-22 * * 5"    # Freitag Abend: alle 5 Minuten
+    - cron: "*/5 11-22 * * 6"    # Samstag: alle 5 Minuten
+    - cron: "*/5 10-20 * * 0"    # Sonntag: alle 5 Minuten
     - cron: "17 */3 * * *"       # sonst alle 3 Stunden
   workflow_dispatch:
   push:
@@ -25,7 +27,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 35
     env:
       NTFY_TOPIC: hsg-wettenberg-anwurf-79866c71
     steps:
@@ -33,13 +35,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Daten holen
-        run: node tools/anwurf-update.mjs
-      - name: Änderungen speichern
+      - name: Git einrichten
         run: |
           git config user.name "anwurf-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add anwurf/data.json anwurf/state.json
+      - name: Daten holen
+        run: node tools/anwurf-update.mjs --watch
+      - name: Änderungen speichern
+        run: |
+          git add anwurf/data.json anwurf/reports.json anwurf/state.json
           if git diff --cached --quiet; then echo "Nichts zu speichern"; exit 0; fi
           git commit -m "Anwurf: Spieldaten aktualisiert"
           for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
