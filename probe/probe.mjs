@@ -7,29 +7,20 @@ const dec=t=>t.replace(/&q;/g,'"').replace(/&a;/g,'&').replace(/&s;/g,"'").repla
 async function page(name,p){
   try{
     const r=await fetch(B+p,{headers:UA}); const h=await r.text();
-    log.push(`${r.status} ${h.length} ${p}`);
     const m=/<script id="serverApp-state" type="application\/json">([\s\S]*?)<\/script>/.exec(h);
-    let state={}; if(m){ try{ state=JSON.parse(dec(m[1])) }catch(e){ log.push("state parse "+e.message) } }
-    const keys=Object.keys(state).filter(k=>k.startsWith("http")).map(k=>k.replace("http://127.0.0.1:4055",""));
-    log.push("   keys: "+keys.join("\n         "));
-    fs.writeFileSync("out/"+name+".state.json",JSON.stringify(state,null,1).slice(0,400000));
-    const links=[...new Set([...h.matchAll(/href="(\/[^"#]+)"/g)].map(x=>x[1]))].filter(l=>!/assets|\.js|\.css/.test(l));
+    let state={}; if(m){ try{ state=JSON.parse(dec(m[1])) }catch(e){} }
+    const keys=Object.keys(state).filter(k=>k.startsWith("http")&&!/mega-menu|press\/config|\/seasons|\/news\?|age-categories|federations$/.test(k)).map(k=>k.replace("http://127.0.0.1:4055",""));
+    log.push(`${r.status} ${h.length} ${p}\n   ${keys.join("\n   ")}`);
+    const keep={}; for(const k of Object.keys(state)) if(k.startsWith("http")&&!/mega-menu|press\/config|\/news\?/.test(k)) keep[k]=state[k];
+    fs.writeFileSync("out/"+name+".json",JSON.stringify(keep));
+    const links=[...new Set([...h.matchAll(/href="(\/[^"#]+)"/g)].map(x=>x[1]))].filter(l=>!/assets|\.js|\.css|^\/(news|hn-tv|service|spielbetrieb|login|mein|impressum|nutzung|specials)/.test(l));
     fs.writeFileSync("out/"+name+".links.txt",links.join("\n"));
-    const text=h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g,"").replace(/<[^>]+>/g," ").replace(/\s+/g," ");
-    fs.writeFileSync("out/"+name+".txt",text.slice(0,120000));
     return {h,state,links};
   }catch(e){ log.push(`ERR ${p} ${e.message}`); return {h:"",state:{},links:[]} }
 }
-await page("tos","/nutzungsbedingungen");
-const v=await page("vereine","/spielbetrieb/vereine?search=Wettenberg");
-await page("vereine2","/spielbetrieb/vereine?q=Wettenberg");
-await page("live","/live");
-await page("kalender","/spielbetrieb/spielkalender");
-await page("wettbewerbe","/spielbetrieb/wettbewerbe");
-// follow first Wettenberg-ish club link
-const cl=[...v.links].find(l=>/wettenberg/i.test(l));
-if(cl){ const c=await page("club",cl);
-  const tl=c.links.filter(l=>/mannschaft|team/i.test(l)).slice(0,6);
-  let i=0; for(const t of tl) await page("team"+(i++),t);
-}
+const home=await (await fetch(B+"/spielbetrieb/vereine",{headers:UA})).text();
+const main=[...home.matchAll(/(main-[A-Z0-9]+\.js)/g)].map(m=>m[1])[0];
+if(main){ const t=await (await fetch(B+"/"+main,{headers:UA})).text(); fs.writeFileSync("out/main.js",t); log.push("main "+main+" "+t.length) }
+const t=await page("team","/team/61901?phaseId=15835");
+for(const p of ["/spiel/482840","/match/482840","/spielbetrieb/spiel/482840","/spiele/482840","/partido/482840"]) await page(p.replace(/\W/g,"_"),p);
 fs.writeFileSync("out/log.txt",log.join("\n"));
