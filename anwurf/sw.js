@@ -2,7 +2,7 @@
    network-first für die eigene Seite: online immer aktuell, offline aus dem Cache.
    Die Spieldaten (data.json, auch von raw.githubusercontent.com) lädt die App
    selbst mit cache:"no-store" und merkt sich die letzte Version im localStorage. */
-const CACHE = 'anwurf-v5';
+const CACHE = 'anwurf-v6';
 self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
