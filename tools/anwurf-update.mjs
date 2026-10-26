@@ -163,6 +163,22 @@ function parseReport(html) {
   return out;
 }
 
+// Ersatz, falls nuLiga keine Tabelle liefert: 2 Punkte Sieg, 1 Remis; Sortierung Punkte, Minuspunkte, Tordifferenz, Tore
+function computeTable(games) {
+  const rows = {};
+  const row = t => rows[t] ||= [t, 0, 0, 0, 0, 0, 0, 0, 0];
+  for (const g of games) {
+    row(g.h); row(g.a);
+    if (g.gh == null) continue;
+    const H = row(g.h), A = row(g.a);
+    H[1]++; A[1]++; H[5] += g.gh; H[6] += g.ga; A[5] += g.ga; A[6] += g.gh;
+    if (g.gh > g.ga) { H[2]++; A[4]++; H[7] += 2; A[8] += 2; }
+    else if (g.gh < g.ga) { A[2]++; H[4]++; A[7] += 2; H[8] += 2; }
+    else { H[3]++; A[3]++; H[7]++; H[8]++; A[7]++; A[8]++; }
+  }
+  return Object.values(rows).sort((x, y) => y[7] - x[7] || x[8] - y[8] || (y[5] - y[6]) - (x[5] - x[6]) || y[5] - x[5]);
+}
+
 // ---------- time ----------
 function berlinDate(iso) {
   const [d, t] = iso.split("T");
@@ -334,8 +350,10 @@ async function cycle({ liveOnly = false } = {}) {
       const hsgLive = old && old.games.some(g => isLiveWindow(g, now) && old.hsg.some(h => h.team === g.h || h.team === g.a));
       if (liveOnly && !hsgLive) { out.leagues.push(old); out.players.push(...(prev.players || []).filter(p => p[2] === id)); continue; }
       const [tableHtml, schedHtml] = await Promise.all([get(NU + "groupPage?" + group), get(NU + "groupPage?displayTyp=gesamt&displayDetail=meetings&" + group)]);
-      const table = parseTable(tableHtml);
+      let table = parseTable(tableHtml);
       const games = parseSchedule(schedHtml);
+      let tableComputed = false;
+      if (!table.length && games.some(g => g.gh != null)) { table = computeTable(games); tableComputed = true; console.warn(`${id}: offizielle Tabelle fehlt, aus Ergebnissen berechnet`); }
       const title = parseHeadline(tableHtml) || clubTeams[0].league;
       // which table entries are HSG teams (e.g. "HSG Wettenberg II"); youth leagues may list a JSG
       const names = [...new Set([...table.map(r => r[0]), ...games.flatMap(g => [g.h, g.a])])].filter(n => CLUB.match.test(n));
@@ -348,6 +366,7 @@ async function cycle({ liveOnly = false } = {}) {
         id, name: clubTeams[0].league, title, cat: /^weibl|Frauen/i.test(clubTeams[0].league) ? (youth ? "Jugend weiblich" : "Frauen") : (youth ? "Jugend männlich" : "Männer"),
         youth, url: NU + "groupPage?" + group, hsg, table, games, asOf: new Date().toISOString().slice(0, 10),
       };
+      if (tableComputed) league.tableComputed = true;
       league.logos = liveOnly ? (old?.logos || {}) : await leagueLogos(id, old, state);
       // reports (adult leagues): finished games without a final report, plus HSG games running right now
       if (!youth) {
