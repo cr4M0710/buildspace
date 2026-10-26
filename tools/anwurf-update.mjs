@@ -270,6 +270,39 @@ async function liveCycle(data, state, fallback = []) {
   return out;
 }
 
+// ---------- Vereinslogos (aus nuScoreLive, einmal pro Tag je Liga) ----------
+const LOGO_DIR = path.join(DIR, "logos");
+const EXT = { "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/gif": "gif", "image/webp": "webp", "image/svg+xml": "svg" };
+async function leagueLogos(id, old, state) {
+  state.logosAt ||= {};
+  const have = old?.logos || {};
+  if (Date.now() - (state.logosAt[id] || 0) < 864e5 && Object.keys(have).length) return have;
+  const logos = { ...have };
+  try {
+    const list = (await nslGet(`meetings/${id}/time/${nslTime()}`)).meetings || [];
+    const byTeam = {};
+    for (const m of list) { if (m.homeImgUrl) byTeam[m.teamHome] = m.homeImgUrl; if (m.guestImgUrl) byTeam[m.teamGuest] = m.guestImgUrl; }
+    for (const [team, uuid] of Object.entries(byTeam)) {
+      if (!/^[0-9a-f-]{20,}$/i.test(uuid)) continue;
+      const existing = fs.existsSync(LOGO_DIR) && fs.readdirSync(LOGO_DIR).find(f => f.startsWith(uuid + "."));
+      if (existing) { logos[team] = existing; continue; }
+      try {
+        const res = await fetch(NSL + "images/" + uuid, { headers: { "User-Agent": "Anwurf-App (private Vereinsnutzung HSG Wettenberg)" } });
+        const type = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+        if (!res.ok || !EXT[type]) continue;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length < 200 || buf.length > 400000) continue;
+        const file = `${uuid}.${EXT[type]}`;
+        if (!DRY) { fs.mkdirSync(LOGO_DIR, { recursive: true }); fs.writeFileSync(path.join(LOGO_DIR, file), buf); }
+        logos[team] = file;
+        await sleep(200);
+      } catch (e) { console.warn(`Logo ${team}: ${e.message}`); }
+    }
+    state.logosAt[id] = Date.now();
+  } catch (e) { console.warn(`${id}: Logos: ${e.message}`); }
+  return logos;
+}
+
 // ---------- one update cycle ----------
 async function cycle({ liveOnly = false } = {}) {
   const prev = readJSON(DATA_FILE, null);
@@ -315,6 +348,7 @@ async function cycle({ liveOnly = false } = {}) {
         id, name: clubTeams[0].league, title, cat: /^weibl|Frauen/i.test(clubTeams[0].league) ? (youth ? "Jugend weiblich" : "Frauen") : (youth ? "Jugend männlich" : "Männer"),
         youth, url: NU + "groupPage?" + group, hsg, table, games, asOf: new Date().toISOString().slice(0, 10),
       };
+      league.logos = liveOnly ? (old?.logos || {}) : await leagueLogos(id, old, state);
       // reports (adult leagues): finished games without a final report, plus HSG games running right now
       if (!youth) {
         for (const g of games) {
@@ -416,7 +450,7 @@ async function cycle({ liveOnly = false } = {}) {
 function commit() {
   if (DRY) return;
   try {
-    execSync("git add anwurf/data.json anwurf/live.json anwurf/state.json anwurf/leagues", { cwd: ROOT });
+    execSync("git add anwurf/data.json anwurf/live.json anwurf/state.json anwurf/leagues anwurf/logos", { cwd: ROOT });
     try { execSync("git diff --cached --quiet", { cwd: ROOT }); return; } catch {}
     execSync('git commit -q -m "Anwurf: Spieldaten aktualisiert"', { cwd: ROOT });
     for (let i = 0; i < 3; i++) { try { execSync("git pull -q --rebase && git push -q", { cwd: ROOT }); return; } catch (e) { console.warn("push:", e.message); } }
