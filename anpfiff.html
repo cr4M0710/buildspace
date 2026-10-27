@@ -500,9 +500,10 @@ function evKind(text = "", d = {}) {
   if (/penalty.*(miss|saved)/.test(s)) return "pmiss";
   if (d.scoringPlay || /goal|penalty - scored|scored/.test(s)) return "goal";
   if (/substitut/.test(s)) return "sub";
-  if (/kickoff|kick off|start/.test(s)) return "start";
-  if (/halftime|half-time|half time|end of first/.test(s)) return "ht";
+  if (/delay/.test(s)) return "info";
   if (/second half|2nd half/.test(s)) return "sh";
+  if (/kickoff|kick off|^start/.test(s)) return "start";
+  if (/halftime|half-time|half time|end of first/.test(s)) return "ht";
   if (/full time|end regular|match ends|end of game|final/.test(s)) return "end";
   if (/var/.test(s)) return "var";
   return "info";
@@ -593,9 +594,12 @@ async function getMatches(lg, key) {
   const ttl = isToday ? liveTTL() : 10 * 60000;
   let list;
   if (lg.src === "espn") {
-    const url = `${BASE}/${lg.path}/scoreboard?dates=${compact(addDays(key, -1))}-${compact(addDays(key, 1))}&limit=300`;
-    const d = await getJSON(url, ttl);
-    list = (d.events || []).map(e => normEspn(e, lg)).filter(m => dayKey(m.start) === key);
+    // ESPN gruppiert nach US-Ostküstenzeit: US-Sport-Abende landen in Berlin am Folgetag
+    const keys = lg.sport === "soccer" ? [key] : [addDays(key, -1), key];
+    const ds = await Promise.all(keys.map(k => getJSON(`${BASE}/${lg.path}/scoreboard?dates=${compact(k)}`, ttl)));
+    const seen = new Set();
+    list = ds.flatMap(d => d.events || []).filter(e => !seen.has(e.id) && seen.add(e.id))
+      .map(e => normEspn(e, lg)).filter(m => dayKey(m.start) === key);
   } else {
     const season = await oldbSeason(lg);
     let byId = new Map((season || []).map(m => [m.matchID, m]));
@@ -922,6 +926,7 @@ function espnTicker(d, m, lg) {
         case "sh": html = "Wiederanpfiff"; break;
         case "end": html = "Abpfiff"; break;
         case "var": html = `Videobeweis<small>${esc(e.text || "")}</small>`; break;
+        case "info": html = /start delay/i.test(e.type?.text || "") ? "Spielunterbrechung" : /end delay/i.test(e.type?.text || "") ? "Weiter geht's" : esc(e.text || e.type?.text || ""); break;
         default: html = esc(e.text || e.type?.text || "");
       }
       ticker.push({ min: e.clock?.displayValue || "", kind, side, html, seq: +e.sequenceNumber || 0 });
@@ -1114,8 +1119,9 @@ async function renderPick() {
       const d = await getJSON(`${OLDB}/getavailableteams/${lg.path}/${OLDB_SEASON}`, 30 * 60000);
       teams = (d || []).map(t => ({ id: String(t.teamId), name: t.teamName, logo: t.teamIconUrl || "" }));
     } else {
-      const d = await getJSON(`${BASE}/${lg.path}/teams`, 30 * 60000);
-      teams = (d.sports?.[0]?.leagues?.[0]?.teams || []).map(x => x.team).map(t => ({ id: String(t.id), name: t.displayName, logo: t.logos?.[0]?.href || "" }));
+      const groups = await getTable(lg);
+      const seen = new Set();
+      teams = groups.flatMap(g => g.rows.map(r => r.team)).filter(t => !seen.has(t.id) && seen.add(t.id)).map(t => ({ id: t.id, name: t.name, logo: t.logo }));
     }
   } catch (e) { box.innerHTML = `<div style="padding:0 14px 14px">${errNote("Teams gerade nicht abrufbar.")}</div>`; return; }
   if (pickLg !== lg.id) return;
