@@ -1215,7 +1215,7 @@ const posts = [
    },
    {
     title: "Anpfiff – Sport live",
-    excerpt: "Deine eigene Sportzentrale wie kicker oder Sportschau: Liveticker, Ergebnisse, Tabellen und News aus Bundesliga, 3. Liga, Pokal, Europapokal, Top-Ligen und US-Sport, mit Lieblingsteams, frei wählbaren Wettbewerben und Tor-Hinweisen.",
+    excerpt: "Deine eigene Sportzentrale für Fußball und Handball: Liveticker, Ergebnisse, Tabellen, Team- und Spielerstatistiken aus Bundesliga, HBL, Europapokal und Top-Ligen, mit Lieblingsteams, Tor-Hinweisen und eingebautem Anwurf für die HSG.",
     date: "2026-10-27",
     category: "freizeit",
     subcategory: null,
@@ -1223,6 +1223,6 @@ const posts = [
     emoji: "⚽",
     tags: ["tool"],
     titleEn: "Anpfiff – Live Sports",
-    excerptEn: "Your own sports hub like kicker or Sportschau: live tickers, scores, tables and news from the Bundesliga, 3. Liga, cup, European competitions, top leagues and US sports, with favourite teams, your choice of competitions and goal alerts."
+    excerptEn: "Your own sports hub for football and handball: live tickers, scores, tables, team and player stats from the Bundesliga, HBL, European competitions and top leagues, with favourite teams, goal alerts and Anwurf built in for the HSG."
    },
 ];
