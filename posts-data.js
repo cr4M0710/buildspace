@@ -1213,4 +1213,16 @@ const posts = [
     titleEn: "Anwurf – Fixtures & Table Men's 2",
     excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
    },
+   {
+    title: "Anpfiff – Sport live",
+    excerpt: "Deine eigene Sportzentrale wie kicker oder Sportschau: Liveticker, Ergebnisse, Tabellen und News aus Bundesliga, 3. Liga, Pokal, Europapokal, Top-Ligen und US-Sport, mit Lieblingsteams, frei wählbaren Wettbewerben und Tor-Hinweisen.",
+    date: "2026-10-27",
+    category: "freizeit",
+    subcategory: null,
+    url: "anpfiff.html",
+    emoji: "⚽",
+    tags: ["tool"],
+    titleEn: "Anpfiff – Live Sports",
+    excerptEn: "Your own sports hub like kicker or Sportschau: live tickers, scores, tables and news from the Bundesliga, 3. Liga, cup, European competitions, top leagues and US sports, with favourite teams, your choice of competitions and goal alerts."
+   },
 ];
