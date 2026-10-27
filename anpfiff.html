@@ -615,14 +615,14 @@ function normSr(f, lg) {
   const home = srTeam(h), away = srTeam(a);
   const t = f.startTimeUTC || f.startDateTime || "";
   const start = new Date(/Z$|[+-]\d\d:?\d\d$/.test(t) ? t : t + "Z");
-  const v = (f.status?.value || "").toUpperCase();
-  let state = "pre", status = fmtTime.format(start), odd = false;
+  const v = String((typeof f.status === "string" ? f.status : f.status?.value) || "").toUpperCase();
+  let state = "pre", status = isNaN(start) ? "offen" : fmtTime.format(start), odd = false;
   if (/CANCEL|POSTPON|ABANDON|FORFEIT/.test(v)) { state = "post"; odd = true; status = f.status?.label || "Abgesagt"; }
   else if (/CONFIRMED|FINISHED|COMPLETE|ENDED|CLOSED|FINAL/.test(v)) { state = "post"; status = "Ende"; }
   else if (home.score != null || /LIVE|PROGRESS|PERIOD|INTERRUPT|HALF|BREAK|RUNNING|STARTED|WARM/.test(v)) { state = "in"; status = f.status?.label || "live"; if (home.score == null) { home.score = "0"; away.score = "0"; } }
   if (state === "pre") { home.score = null; away.score = null; }
   return { key: lg.id + "|" + f.fixtureId, id: f.fixtureId || f.id, lg: lg.id, start, state, status, odd, home, away, events: [], reds: {},
-    venue: f.venue?.name || f.venue || "", round: f.round || "", attendance: f.attendance };
+    venue: typeof f.venue === "string" ? f.venue : (f.venue?.name || ""), round: f.round || "", attendance: f.attendance };
 }
 async function srFixtures(lg) {
   const [up, res] = await Promise.allSettled([
@@ -632,7 +632,7 @@ async function srFixtures(lg) {
   if (up.status === "rejected" && res.status === "rejected") throw up.reason;
   const byId = new Map();
   for (const r of [res, up]) if (r.status === "fulfilled") Object.values(r.value.fixtures || {}).forEach(f => byId.set(f.fixtureId, f));
-  return [...byId.values()].map(f => normSr(f, lg)).sort((a, b) => a.start - b.start);
+  return [...byId.values()].map(f => normSr(f, lg)).filter(m => !isNaN(m.start)).sort((a, b) => a.start - b.start);
 }
 
 /* ---------- ESPN normalisieren ---------- */
@@ -998,7 +998,7 @@ async function viewSpiel(lgId, id, silent) {
     <div class="comp">${esc(lg.name)}${m.round && !/^\d{4}/.test(m.round) ? " · " + esc(m.round) : ""}</div>
     <div class="score-grid">${bigTeam(m.home)}
       <div><div class="big-score ${m.state}">${m.state === "pre" ? "– : –" : `${esc(m.home.score ?? 0)}:${esc(m.away.score ?? 0)}`}</div>
-        <div class="big-status">${m.state === "pre" ? `<span class="muted">${esc(fmtLong.format(m.start))}</span>` : statusHTML(m)}</div>
+        <div class="big-status">${m.state === "pre" ? `<span class="muted">${isNaN(m.start) ? "Termin offen" : esc(fmtLong.format(m.start))}</span>` : statusHTML(m)}</div>
         ${m.ht && m.state !== "pre" ? `<div class="muted" style="font-size:.84rem;margin-top:4px">HZ ${esc(m.ht)}</div>` : ""}</div>
       ${bigTeam(m.away)}</div>
     ${D.extra ? `<div class="sub">${esc(D.extra)}</div>` : ""}
@@ -1135,10 +1135,8 @@ async function srDetail(lg, id) {
   if (!base) throw new Error("keine Daten");
   const fx = base.value.banner?.fixture || base.value.fixture || {};
   const m = normSr({ ...fx, fixtureId: id, startTimeUTC: fx.startTimeUTC || fx.startDateTime }, lg);
-  if (!fx.startTimeUTC && !fx.startDateTime) {
-    const known = (await srFixtures(lg).catch(() => [])).find(x => x.id === id);
-    if (known) m.start = known.start;
-  }
+  const known = (await srFixtures(lg).catch(() => [])).find(x => x.id === id);
+  if (known) { m.start = known.start; if (m.state === "pre" || known.state === "post") { m.state = known.state; m.status = known.status; } if (!m.round) m.round = known.round; if (!m.venue) m.venue = known.venue; }
   const homeId = m.home.id;
   // Ticker
   const ticker = [];
@@ -1245,7 +1243,7 @@ async function getTable(lg) {
     const pc = d.promotionColors || {};
     return (d.standings || []).map(g => ({ name: g.label || "", kind: "handball", rows: (g.rows || []).map(r => {
       const z = pc[r.position]; let zone = null;
-      if (z) { const [t, c] = SR_ZONE[z.value] || SR_ZONE[z.type] || [z.value, "#888"]; zone = { t: z.isBorder ? (z.type === "relegation" ? "Relegation" : t + " (Quali)") : t, c: z.color && z.isBorder ? (z.type === "relegation" ? "#E09A2B" : c) : c }; if (z.isBorder) zone.c = z.type === "relegation" ? "#E09A2B" : "color-mix(in srgb," + c + " 55%, transparent)"; }
+      if (z) { const [t, c] = SR_ZONE[z.value] || SR_ZONE[z.type] || [z.value, "#888"]; zone = z.isBorder ? { t: t + " (möglich)", c: z.type === "relegation" ? "#E09A2B" : "color-mix(in srgb," + c + " 50%, transparent)" } : { t, c }; }
       const x = r.results || {};
       return { rank: r.position, team: { id: r.team?.entityId, name: r.team?.name, logo: r.team?.logoURL || "", abbr: "" },
         gp: x.played, w: x.wins, d: x.draws, l: x.losses, gf: x.scoredFor, ga: x.scoredAgainst, gd: x.pointDifference, pts: x.combinedStandingPoints, form: x.resultString, zone };
@@ -1453,7 +1451,7 @@ async function espnPlayer(lg, id) {
   ]);
   if (a.status === "rejected") throw a.reason;
   const at = a.value.athlete || {};
-  const facts = [["Alter", at.age], ["Geboren", at.displayDOB], ["Nation", natDe(at.citizenship)], ["Größe", ftIn(at.displayHeight)], ["Gewicht", lbs(at.displayWeight)]].filter(x => x[1]);
+  const facts = [["Alter", at.age], ["Geboren", (/^(\d+)\/(\d+)\/(\d{4})$/.exec(at.displayDOB || "") || []).length ? at.displayDOB.replace(/^(\d+)\/(\d+)\/(\d{4})$/, "$2.$1.$3") : at.displayDOB], ["Nation", natDe(at.citizenship)], ["Größe", ftIn(at.displayHeight)], ["Gewicht", lbs(at.displayWeight)]].filter(x => x[1]);
   let table = null;
   const st = ov.status === "fulfilled" ? ov.value.statistics : null;
   if (st?.splits?.length) {
