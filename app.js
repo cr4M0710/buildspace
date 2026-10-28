@@ -1958,7 +1958,7 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "1.1",
+    version: "1.1.1",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",

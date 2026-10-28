@@ -15,7 +15,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: Kopfzeile (Begrüßung · Uhr) → KI-Schnellzeile → Schnellstart → App-Bereiche | rechte Spalte Notizen */
 :root{
@@ -410,13 +410,21 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 /* Speicher: im Browser localStorage, in der Mac-App eine Datei unter ~/Library/Application Support/Cockpit */
 const MEM = window.NATIVE_STATE || {};
 let saveTimer = null;
+let saveWarned = false;
+const saveFailed = () => { if (!saveWarned) { saveWarned = true; setTimeout(() => toast('Speichern hat nicht geklappt – Änderungen gehen beim Beenden verloren'), 0); } };
+const flushNative = () => { clearTimeout(saveTimer); saveTimer = null; return NATIVE.save_state(MEM).then(ok => { if (ok === false) saveFailed(); return ok; }, () => { saveFailed(); return false; }); };
 const store = NATIVE ? {
   get(k, d) { return MEM[k] === undefined ? d : JSON.parse(JSON.stringify(MEM[k])); },
-  set(k, v) { MEM[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(() => NATIVE.save_state(MEM), 300); }
+  set(k, v) { MEM[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(flushNative, 120); }
 } : {
   get(k, d) { try { const v = localStorage.getItem('cockpit:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('cockpit:' + k, JSON.stringify(v)); } catch (e) {} }
+  set(k, v) { try { localStorage.setItem('cockpit:' + k, JSON.stringify(v)); } catch (e) { saveFailed(); } }
 };
+/* Beim Beenden der Mac-App ruft Python dies auf, damit nichts Ungespeichertes verloren geht */
+window.__cockpitFlush = () => (NATIVE && saveTimer ? flushNative() : true);
+window.__cockpitPending = () => !!(NATIVE && saveTimer);
+/* Im Browser: um dauerhaften Speicher bitten (Safari/Chrome löschen ihn dann nicht von selbst) */
+if (!NATIVE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 /* ---------- Bereiche & Apps ---------- */
 const GROUPS = [
@@ -1026,15 +1034,32 @@ if (!NATIVE && location.protocol.startsWith('http') && 'serviceWorker' in naviga
 /* Start: im Browser sofort, in der Mac-App erst, wenn die Verbindung zur App steht */
 (function boot() {
   if (location.protocol !== 'file:') return cockpitMain();
-  let started = false;
+  /* Mac-App: Gespeichertes liegt in einer Datei, die nur über die App-Verbindung erreichbar ist.
+     Deshalb wird hier gewartet, bis sie steht – nie ohne sie gestartet, sonst wäre nach dem
+     Beenden alles weg. */
+  let started = false, tries = 0;
+  const ready = () => window.pywebview && window.pywebview.api && typeof window.pywebview.api.load_state === 'function';
   const go = async () => {
-    if (started) return; started = true;
-    try { window.NATIVE = window.pywebview.api; window.NATIVE_STATE = (await window.NATIVE.load_state()) || {}; }
-    catch (e) { window.NATIVE = null; }
+    if (started || !ready()) return;
+    started = true;
+    let state = null;
+    for (let i = 0; i < 3 && state === null; i++) {
+      try { state = await window.pywebview.api.load_state(); } catch (e) { await new Promise(r => setTimeout(r, 400)); }
+    }
+    window.NATIVE = window.pywebview.api; window.NATIVE_STATE = state || {};
+    document.getElementById('bootMsg')?.remove();
     cockpitMain();
   };
-  if (window.pywebview && window.pywebview.api) go();
-  else { window.addEventListener('pywebviewready', go); setTimeout(() => { if (!started) { started = true; cockpitMain(); } }, 4000); }
+  window.addEventListener('pywebviewready', go);
+  const poll = setInterval(() => {
+    if (started) return clearInterval(poll);
+    if (ready()) return go();
+    if (++tries === 15 && !document.getElementById('bootMsg')) {
+      const m = document.createElement('div'); m.id = 'bootMsg'; m.className = 'toast glass'; m.textContent = 'Cockpit startet …';
+      document.body.appendChild(m);
+    }
+  }, 100);
+  go();
 })();
 </script>
 </body>
