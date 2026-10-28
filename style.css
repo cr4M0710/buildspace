@@ -34,7 +34,7 @@
   --glass-a2: 0.02;
   --side-a1: 0.05;
   --side-a2: 0.015;
-  --glass-blur: 16px;
+  --glass-blur: var(--look-blur, 16px);
   --glass-border: rgba(255, 255, 255, 0.13);
   --glass-hi: rgba(255, 255, 255, 0.24);
   --glass-glow: rgba(255, 255, 255, 0.025);
@@ -116,7 +116,7 @@ a { color: inherit; }
 .cm-account-bar, .cm-admin-panel {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(160deg, rgba(var(--glass-tint), var(--glass-a1)), rgba(var(--glass-tint), var(--glass-a2)));
+  background: linear-gradient(160deg, rgba(var(--glass-tint), min(0.92, calc(var(--glass-a1) * var(--glass-mul, 1)))), rgba(var(--glass-tint), min(0.92, calc(var(--glass-a2) * var(--glass-mul, 1)))));
   backdrop-filter: blur(var(--glass-blur)) saturate(120%) brightness(1);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%) brightness(1);
   border: 1px solid var(--glass-border);
@@ -243,7 +243,7 @@ a { color: inherit; }
   overflow: hidden;
   --glass-a1: var(--side-a1);
   --glass-a2: var(--side-a2);
-  --glass-blur: 9px;
+  --glass-blur: calc(var(--look-blur, 16px) * 0.56);
   transform: translateX(calc(-100% - 28px)) scale(0.96);
   transform-origin: left center;
   opacity: 0;
@@ -283,7 +283,7 @@ html.search-open .search-backdrop { display: block; }
   overflow: hidden;
   --glass-a1: var(--side-a1);
   --glass-a2: var(--side-a2);
-  --glass-blur: 9px;
+  --glass-blur: calc(var(--look-blur, 16px) * 0.56);
   transform: translateY(-10px) scale(0.96);
   transform-origin: top right;
   opacity: 0;
@@ -538,6 +538,7 @@ html.share-mode .search-panel, html.share-mode .search-backdrop, html.embed-mode
    Navigation komplett weg — sonst könnten Lernende aus der Freigabe
    herausnavigieren. */
 html.share-mode .sidebar, html.share-mode .sidebar-backdrop, html.share-mode .menu-fab, html.share-mode .search-fab,
+html.share-mode .rail, html.embed-mode .rail, html.share-mode .look-panel, html.embed-mode .look-panel,
 html.embed-mode .sidebar, html.embed-mode .sidebar-backdrop, html.embed-mode .menu-fab, html.embed-mode .search-fab,
 html.embed-mode .hero { display: none !important; }
 
@@ -1827,3 +1828,184 @@ a, button, summary, label, input, select, textarea, .post-card, .folder-card { t
   }
   .post-excerpt, .folder-count, .post-meta { font-weight: 500; }
 }
+
+/* =========================================================
+   Aussehen (Einstellungen › Aussehen anpassen)
+   Werte kommen als CSS-Variablen auf <html>: --look-blur, --glass-mul,
+   --bg-dim, --accent (siehe applyLook in app.js und das kleine Skript
+   im <head> von index.html).
+========================================================= */
+#bg-space::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: rgba(0, 0, 0, var(--bg-dim, 0)); transition: background 0.3s ease;
+}
+html.no-stars #bg-stars { display: none !important; }
+html.calm *, html.calm *::before, html.calm *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+html.calm #bg-stars { display: none !important; }
+
+/* Akzentfarbe: nur wenn eine gewählt ist (Standard bleibt das neutrale Glas) */
+html.has-accent ::selection { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+html.has-accent :focus-visible { outline-color: var(--accent); }
+html.has-accent .hero-eyebrow { color: var(--accent); }
+html.has-accent .side-link.is-active, html.has-accent .side-sublink.is-active {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 38%, transparent), color-mix(in srgb, var(--accent) 14%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+html.has-accent .seg button[aria-pressed="true"] {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 70%, transparent), color-mix(in srgb, var(--accent) 40%, transparent));
+  color: #fff;
+}
+html.has-accent .folder-card:hover, html.has-accent .post-card:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+html.has-accent .breadcrumb a:hover { color: var(--accent); }
+
+.look-open-btn {
+  height: 36px; padding: 0 14px; border-radius: 12px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  color: var(--ink); background: rgba(var(--glass-tint), calc(0.45 * var(--ta))); border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-hi); touch-action: manipulation;
+}
+.look-open-btn:hover { background: rgba(var(--glass-tint), calc(0.7 * var(--ta))); }
+
+.look-backdrop { position: fixed; inset: 0; z-index: 64; display: none; }
+html.look-open .look-backdrop { display: block; }
+.look-panel {
+  position: fixed; z-index: 65;
+  left: calc(max(14px, env(safe-area-inset-left)) + 84px); top: 50%;
+  width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto;
+  padding: 18px 18px 16px; border-radius: 28px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(28px) saturate(140%); -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1.5px 0 var(--glass-hi), 0 24px 60px rgba(var(--glass-shadow), 0.45);
+  transform: translate(-12px, -50%) scale(0.97); opacity: 0; visibility: hidden;
+  transition: transform 0.4s cubic-bezier(.2,1.15,.3,1), opacity 0.25s ease, visibility 0s linear 0.4s;
+}
+html[data-theme="dark"] .look-panel { background: linear-gradient(160deg, rgba(30, 28, 42, 0.74), rgba(16, 15, 24, 0.68)); }
+html:not(.has-rail) .look-panel { left: max(12px, env(safe-area-inset-left)); }
+html.look-open .look-panel { transform: translate(0, -50%); opacity: 1; visibility: visible; transition-delay: 0s; }
+.look-panel:focus { outline: none; }
+.look-head { display: flex; align-items: center; justify-content: space-between; }
+.look-head h2 { margin: 0; font-size: 19px; letter-spacing: -0.01em; }
+.look-lead { margin: -6px 0 0; font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+.look-range label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.look-range output { color: var(--ink-soft); font-variant-numeric: tabular-nums; font-weight: 600; }
+.look-range input[type=range] { width: 100%; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; touch-action: pan-y; }
+.look-range input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--accent, var(--ink-soft)) var(--fill, 50%), rgba(var(--glass-tint), calc(0.6 * var(--ta))) var(--fill, 50%)); box-shadow: inset 0 1px 2px rgba(var(--glass-shadow), 0.2); }
+.look-range input[type=range]::-moz-range-track { height: 6px; border-radius: 999px; background: rgba(var(--glass-tint), calc(0.6 * var(--ta))); }
+.look-range input[type=range]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--accent, var(--ink-soft)); }
+.look-range input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.look-range input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.look-block > span { display: block; font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.look-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.look-swatches button {
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer; padding: 0; position: relative;
+  border: 2px solid transparent; box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 4px 12px -4px rgba(0,0,0,.4); touch-action: manipulation;
+  transition: transform 0.2s ease;
+}
+.look-swatches button:hover { transform: scale(1.08); }
+.look-swatches button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(var(--glass-tint), calc(0.5 * var(--ta))); }
+.look-swatches button[data-accent="none"] { background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(160,160,175,.5)); }
+.look-toggles { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--divider); }
+.look-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.look-toggle b { display: block; font-size: 14px; }
+.look-toggle small { display: block; font-size: 12px; color: var(--ink-soft); line-height: 1.35; }
+.look-switch {
+  width: 50px; height: 30px; flex: none; border-radius: 999px; position: relative; cursor: pointer; padding: 0;
+  background: rgba(var(--glass-tint), calc(0.55 * var(--ta))); border: 1px solid var(--glass-border); transition: background 0.25s ease; touch-action: manipulation;
+}
+html[data-theme="dark"] .look-switch { background: rgba(255, 255, 255, 0.14); }
+.look-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: transform 0.25s cubic-bezier(.3,1.4,.5,1); }
+.look-switch[aria-checked="true"], html[data-theme="dark"] .look-switch[aria-checked="true"] { background: var(--accent, #34C759); border-color: transparent; }
+.look-switch[aria-checked="true"]::after { transform: translateX(20px); }
+.look-reset {
+  align-self: flex-start; height: 38px; padding: 0 16px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 700;
+  color: var(--ink-soft); background: transparent; border: 1px solid var(--glass-border);
+}
+.look-reset:hover { color: var(--ink); background: rgba(var(--glass-tint), calc(0.35 * var(--ta))); }
+
+/* =========================================================
+   Minimierte Leiste am Rand (Rail)
+   Schmale Glas-Kapsel links (iPhone: unten). Der oberste Knopf klappt
+   die volle Seitenleiste auf. Ein- und ausschalten über
+   Aussehen › „Leiste am Rand“ (Klasse has-rail auf <html>).
+========================================================= */
+.rail { display: none; }
+html.has-rail .rail {
+  position: fixed; z-index: 42;
+  left: max(14px, env(safe-area-inset-left)); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px; border-radius: 999px;
+  background: linear-gradient(160deg, rgba(var(--glass-tint), min(0.92, calc(var(--glass-a1) * var(--glass-mul, 1) + 0.03))), rgba(var(--glass-tint), min(0.92, calc(var(--glass-a2) * var(--glass-mul, 1) + 0.02))));
+  backdrop-filter: blur(var(--glass-blur)) saturate(130%); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1.5px 0 var(--glass-hi), 0 14px 38px rgba(var(--glass-shadow), 0.3);
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(.2,1.15,.3,1);
+}
+html.has-rail.sidebar-open .rail { opacity: 0; transform: translate(-16px, -50%); pointer-events: none; }
+html.has-rail .menu-fab { display: none; }
+@media (min-width: 761px) {
+  html.has-rail body { padding-left: 84px; }
+}
+.rail-btn {
+  position: relative; width: 44px; height: 44px; flex: none; border-radius: 50%;
+  display: grid; place-items: center; color: var(--ink); text-decoration: none; cursor: pointer;
+  background: transparent; border: 1px solid transparent; padding: 0; touch-action: manipulation;
+  transition: background 0.2s ease, transform 0.25s cubic-bezier(.3,1.4,.5,1), box-shadow 0.25s ease, color 0.2s ease;
+}
+.rail-btn > svg { width: 19px; height: 19px; }
+.rail-btn .side-ico { width: 34px; height: 34px; border-radius: 50%; background: none; border: 0; box-shadow: none; color: inherit; }
+.rail-btn:hover { background: rgba(var(--glass-tint), calc(0.5 * var(--ta))); border-color: var(--glass-border); }
+html[data-theme="dark"] .rail-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.rail-btn:active { transform: scale(0.92); }
+.rail-btn.is-active, html[data-theme="dark"] .rail-btn.is-active { background: #fff; color: #111; border-color: transparent; box-shadow: 0 6px 18px -6px rgba(255, 255, 255, 0.55); }
+html[data-theme="light"] .rail-btn.is-active { background: #12141C; color: #fff; box-shadow: 0 6px 18px -6px rgba(18, 20, 28, 0.5); }
+html.has-accent .rail-btn.is-active, html.has-accent[data-theme="light"] .rail-btn.is-active, html.has-accent[data-theme="dark"] .rail-btn.is-active { background: var(--accent); color: #fff; box-shadow: 0 6px 20px -6px var(--accent); }
+.rail-btn.is-locked { opacity: 0.55; }
+.rail-brand img { width: 36px; height: 36px; border-radius: 11px; box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.rail-brand .rail-more {
+  position: absolute; right: -1px; bottom: 1px; width: 16px; height: 16px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--ink); color: var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.rail-brand .rail-more svg { width: 10px; height: 10px; }
+.rail-sep { width: 24px; height: 1px; flex: none; background: var(--divider); margin: 2px 0; }
+.rail-tip {
+  position: absolute; left: calc(100% + 14px); top: 50%; transform: translate(-4px, -50%);
+  white-space: nowrap; pointer-events: none; opacity: 0;
+  padding: 6px 11px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--ink);
+  background: rgba(20, 20, 30, 0.82); border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+html[data-theme="light"] .rail-tip { background: rgba(255, 255, 255, 0.92); }
+.rail-btn:focus-visible .rail-tip { opacity: 1; transform: translate(0, -50%); }
+@media (hover: hover) { .rail-btn:hover .rail-tip { opacity: 1; transform: translate(0, -50%); } }
+@media (max-height: 640px) and (min-width: 761px) { .rail-opt { display: none; } }
+
+/* iPhone & schmale Fenster: Leiste als Glas-Leiste unten */
+@media (max-width: 760px) {
+  html.has-rail .rail {
+    top: auto; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    flex-direction: row; max-width: calc(100vw - 24px);
+  }
+  html.has-rail.sidebar-open .rail { transform: translate(-50%, 16px); }
+  html.has-rail body { padding-bottom: 86px; }
+  .rail-sep { width: 1px; height: 24px; margin: 0 2px; }
+  .rail-opt, .rail-tip { display: none; }
+  .rail-btn { width: 42px; height: 42px; }
+  .look-panel, html:not(.has-rail) .look-panel {
+    left: 50%; top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 72px);
+    transform: translate(-50%, 16px) scale(0.98); max-height: calc(100vh - 120px);
+  }
+  html:not(.has-rail) .look-panel { bottom: max(12px, env(safe-area-inset-bottom)); }
+  html.look-open .look-panel { transform: translate(-50%, 0); }
+}
+@media print { .rail, .look-panel, .look-backdrop { display: none !important; } }
+/* Unten schwebende Knöpfe aus protect.js über die iPhone-Leiste heben */
+@media (max-width: 760px) {
+  html.has-rail #protect-share-btn { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 74px); }
+  html.has-rail #protect-poster-btn { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 126px); }
+  html.has-rail #protect-ui-handle, html.has-rail .protect-feedback-widget, html.has-rail .protect-update-banner, html.has-rail .protect-install-banner { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 74px); }
+  html.has-rail .protect-highscore-btn { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 122px); }
+}
+html.sidebar-open #protect-share-btn, html.sidebar-open #protect-poster-btn,
+html.look-open #protect-share-btn, html.look-open #protect-poster-btn { opacity: 0; pointer-events: none; }

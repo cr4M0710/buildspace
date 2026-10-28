@@ -105,6 +105,27 @@ const I18N = {
     programsManual: "Anleitung",
     programsInstall: "In drei Schritten startklar",
     programsShare: "Teilen",
+    setLook: "Aussehen",
+    lookOpen: "Anpassen",
+    lookTitle: "Aussehen",
+    lookLead: "Stell das Glas so ein, wie es dir gefällt. Änderungen wirken sofort und gelten für dieses Gerät.",
+    lookBlur: "Glas-Unschärfe",
+    lookGlass: "Glas-Deckkraft",
+    lookDim: "Hintergrund abdunkeln",
+    lookAccent: "Akzentfarbe",
+    lookRail: "Leiste am Rand",
+    lookRailHint: "Schnellnavigation links, auf dem iPhone unten",
+    lookStars: "Sternschnuppen",
+    lookStarsHint: "Fliegen über den Hintergrund",
+    lookMotion: "Bewegung reduzieren",
+    lookMotionHint: "Schaltet Animationen und Übergänge ab",
+    lookReset: "Auf Standard zurücksetzen",
+    lookClose: "Schließen",
+    railLabel: "Schnellnavigation",
+    railExpand: "Menü aufklappen",
+    railSearch: "Suche",
+    railLook: "Aussehen",
+    accentNames: { none: "Standard", blue: "Blau", violet: "Violett", magenta: "Magenta", orange: "Orange", green: "Grün", red: "Rot" },
     programsCopied: "Link kopiert",
     emptyState: "Hier gibt es noch keine Beiträge.",
     filterTitle: "Filtern",
@@ -175,6 +196,27 @@ const I18N = {
     programsManual: "Manual (German)",
     programsInstall: "Ready in three steps",
     programsShare: "Share",
+    setLook: "Look",
+    lookOpen: "Customise",
+    lookTitle: "Look",
+    lookLead: "Adjust the glass to your liking. Changes apply instantly and are saved on this device.",
+    lookBlur: "Glass blur",
+    lookGlass: "Glass opacity",
+    lookDim: "Darken background",
+    lookAccent: "Accent colour",
+    lookRail: "Side rail",
+    lookRailHint: "Quick navigation on the left, at the bottom on iPhone",
+    lookStars: "Shooting stars",
+    lookStarsHint: "Fly across the background",
+    lookMotion: "Reduce motion",
+    lookMotionHint: "Turns off animations and transitions",
+    lookReset: "Reset to default",
+    lookClose: "Close",
+    railLabel: "Quick navigation",
+    railExpand: "Expand menu",
+    railSearch: "Search",
+    railLook: "Look",
+    accentNames: { none: "Default", blue: "Blue", violet: "Violet", magenta: "Magenta", orange: "Orange", green: "Green", red: "Red" },
     programsCopied: "Link copied",
     emptyState: "There are no posts here yet.",
     filterTitle: "Filter",
@@ -1317,6 +1359,7 @@ function updateSettingsUI() {
   const txt = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
   txt("set-theme-label", "setTheme");
   txt("set-lang-label", "setLang");
+  if (typeof updateLookTexts === "function") updateLookTexts();
   const setBtnText = (sel, key) => { const el = document.querySelector(sel); if (el) el.textContent = t(key); };
   setBtnText('[data-theme-set="light"]', "themeLight");
   setBtnText('[data-theme-set="dark"]', "themeDark");
@@ -1352,6 +1395,202 @@ function initSettings() {
       renderSearchResults();
       render();
     });
+  });
+}
+
+/* ---------------------------------------------------------
+   Aussehen: Glas-Unschärfe, Deckkraft, Abdunklung, Akzentfarbe,
+   Sternschnuppen, Bewegung und die Leiste am Rand. Gespeichert pro
+   Gerät unter "myhome_look". Das Skript im <head> von index.html wendet
+   dieselben Werte schon vor dem ersten Bild an (gleiche Logik!).
+--------------------------------------------------------- */
+const LOOK_KEY = "myhome_look";
+const LOOK_DEFAULT = { blur: 16, glass: 100, dim: 0, accent: "none", rail: true, stars: true, motion: true };
+const LOOK_ACCENTS = { none: "", blue: "#4F7BFF", violet: "#A46BFF", magenta: "#F25FB0", orange: "#FF9A4D", green: "#34C759", red: "#E0483D" };
+const LOOK_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>';
+const SEARCH_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>';
+
+function getLook() {
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem(LOOK_KEY) || "{}") || {}; } catch (e) {}
+  return Object.assign({}, LOOK_DEFAULT, stored);
+}
+
+function saveLook(look) {
+  const diff = {};
+  Object.keys(LOOK_DEFAULT).forEach((k) => { if (look[k] !== LOOK_DEFAULT[k]) diff[k] = look[k]; });
+  try {
+    if (Object.keys(diff).length) localStorage.setItem(LOOK_KEY, JSON.stringify(diff));
+    else localStorage.removeItem(LOOK_KEY);
+  } catch (e) {}
+}
+
+function applyLook(look) {
+  const root = document.documentElement;
+  const st = root.style;
+  const setVar = (name, val, isDefault) => (isDefault ? st.removeProperty(name) : st.setProperty(name, val));
+  setVar("--look-blur", look.blur + "px", look.blur === LOOK_DEFAULT.blur);
+  setVar("--glass-mul", String(look.glass / 100), look.glass === LOOK_DEFAULT.glass);
+  setVar("--bg-dim", String(look.dim / 100), look.dim === LOOK_DEFAULT.dim);
+  const accent = LOOK_ACCENTS[look.accent] || "";
+  setVar("--accent", accent, !accent);
+  root.classList.toggle("has-accent", !!accent);
+  root.classList.toggle("has-rail", look.rail !== false);
+  root.classList.toggle("no-stars", look.stars === false);
+  root.classList.toggle("calm", look.motion === false);
+}
+
+function setLook(patch) {
+  const look = Object.assign(getLook(), patch);
+  saveLook(look);
+  applyLook(look);
+  updateLookUI(look);
+}
+
+const LOOK_RANGES = [
+  { id: "look-blur", key: "blur", unit: " px" },
+  { id: "look-glass", key: "glass", unit: " %" },
+  { id: "look-dim", key: "dim", unit: " %" }
+];
+
+function updateLookUI(look) {
+  look = look || getLook();
+  LOOK_RANGES.forEach((r) => {
+    const input = document.getElementById(r.id);
+    const out = document.getElementById(r.id + "-out");
+    if (!input) return;
+    input.value = look[r.key];
+    const pct = ((look[r.key] - input.min) / (input.max - input.min)) * 100;
+    input.style.setProperty("--fill", pct + "%");
+    if (out) out.textContent = look[r.key] + r.unit;
+  });
+  document.querySelectorAll("#look-swatches [data-accent]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.accent === look.accent)));
+  const sw = (id, on) => { const el = document.getElementById(id); if (el) el.setAttribute("aria-checked", String(on)); };
+  sw("look-rail", look.rail !== false);
+  sw("look-stars", look.stars !== false);
+  sw("look-motion", look.motion === false);
+}
+
+function updateLookTexts() {
+  const txt = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+  txt("set-look-label", "setLook");
+  txt("look-open", "lookOpen");
+  txt("look-title", "lookTitle");
+  txt("look-lead", "lookLead");
+  txt("look-theme-label", "setTheme");
+  txt("look-blur-label", "lookBlur");
+  txt("look-glass-label", "lookGlass");
+  txt("look-dim-label", "lookDim");
+  txt("look-accent-label", "lookAccent");
+  txt("look-rail-label", "lookRail");
+  txt("look-rail-hint", "lookRailHint");
+  txt("look-stars-label", "lookStars");
+  txt("look-stars-hint", "lookStarsHint");
+  txt("look-motion-label", "lookMotion");
+  txt("look-motion-hint", "lookMotionHint");
+  txt("look-reset", "lookReset");
+  document.querySelectorAll('#look-panel [data-theme-set="light"]').forEach((b) => (b.textContent = t("themeLight")));
+  document.querySelectorAll('#look-panel [data-theme-set="dark"]').forEach((b) => (b.textContent = t("themeDark")));
+  const close = document.getElementById("look-close");
+  if (close) close.setAttribute("aria-label", t("lookClose"));
+  const names = t("accentNames");
+  document.querySelectorAll("#look-swatches [data-accent]").forEach((b) => {
+    b.setAttribute("aria-label", names[b.dataset.accent] || b.dataset.accent);
+    b.title = names[b.dataset.accent] || "";
+  });
+  const rail = document.getElementById("rail");
+  if (rail) rail.setAttribute("aria-label", t("railLabel"));
+}
+
+function isLookOpen() {
+  return document.documentElement.classList.contains("look-open");
+}
+
+function openLook() {
+  closeSidebar(false);
+  closeSearch(false);
+  document.documentElement.classList.add("look-open");
+  const panel = document.getElementById("look-panel");
+  panel.setAttribute("aria-hidden", "false");
+  document.querySelectorAll("[aria-controls='look-panel']").forEach((b) => b.setAttribute("aria-expanded", "true"));
+  updateLookUI();
+  renderRail();
+  setTimeout(() => panel.focus({ preventScroll: true }), 60);
+}
+
+function closeLook(returnFocus) {
+  if (!isLookOpen()) return;
+  document.documentElement.classList.remove("look-open");
+  document.getElementById("look-panel").setAttribute("aria-hidden", "true");
+  document.querySelectorAll("[aria-controls='look-panel']").forEach((b) => b.setAttribute("aria-expanded", "false"));
+  renderRail();
+  if (returnFocus) {
+    const btn = document.querySelector(".rail [data-rail='look']");
+    if (btn && document.documentElement.classList.contains("has-rail")) btn.focus({ preventScroll: true });
+  }
+}
+
+function initLook() {
+  const panel = document.getElementById("look-panel");
+  if (!panel) return;
+  const sw = document.getElementById("look-swatches");
+  sw.innerHTML = Object.keys(LOOK_ACCENTS).map((k) => `<button type="button" data-accent="${k}" aria-pressed="false"${LOOK_ACCENTS[k] ? ` style="background:${LOOK_ACCENTS[k]}"` : ""}></button>`).join("");
+  sw.addEventListener("click", (e) => { const b = e.target.closest("[data-accent]"); if (b) setLook({ accent: b.dataset.accent }); });
+  LOOK_RANGES.forEach((r) => {
+    const input = document.getElementById(r.id);
+    if (input) input.addEventListener("input", () => setLook({ [r.key]: Number(input.value) }));
+  });
+  document.getElementById("look-rail").addEventListener("click", () => setLook({ rail: !(getLook().rail !== false) }));
+  document.getElementById("look-stars").addEventListener("click", () => setLook({ stars: !(getLook().stars !== false) }));
+  document.getElementById("look-motion").addEventListener("click", () => setLook({ motion: getLook().motion === false }));
+  document.getElementById("look-reset").addEventListener("click", () => setLook(Object.assign({}, LOOK_DEFAULT)));
+  document.getElementById("look-close").addEventListener("click", () => closeLook(true));
+  document.getElementById("look-backdrop").addEventListener("click", () => closeLook(false));
+  const openBtn = document.getElementById("look-open");
+  if (openBtn) openBtn.addEventListener("click", openLook);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && isLookOpen()) closeLook(true); });
+  applyLook(getLook());
+  updateLookUI();
+  updateLookTexts();
+}
+
+/* ---------------------------------------------------------
+   Minimierte Leiste am Rand: Symbole für alle Bereiche, Suche und
+   Aussehen. Der oberste Knopf klappt die volle Seitenleiste auf.
+--------------------------------------------------------- */
+function renderRail() {
+  const rail = document.getElementById("rail");
+  if (!rail || typeof folderStructure === "undefined") return;
+  const seg = currentSegments();
+  const route = seg.join("/");
+  const lockOf = (id) => (window.Protect ? !window.Protect.isCategoryAllowed(id) : false);
+  const item = (href, icon, label, active, extra) =>
+    `<a class="rail-btn${active ? " is-active" : ""}${extra || ""}" href="${href}"${active ? ' aria-current="page"' : ""} aria-label="${escapeHtml(label)}">${icon}<span class="rail-tip" aria-hidden="true">${escapeHtml(label)}</span></a>`;
+  let html = `<button type="button" class="rail-btn rail-brand" data-rail="expand" aria-controls="sidebar" aria-expanded="${isSidebarOpen()}" aria-label="${escapeHtml(t("railExpand"))}"><img src="assets/app-icon-v3-96.png" alt=""><span class="rail-more" aria-hidden="true">${CHEVRON_GLYPH}</span><span class="rail-tip" aria-hidden="true">${escapeHtml(t("railExpand"))}</span></button>`;
+  html += '<span class="rail-sep" aria-hidden="true"></span>';
+  html += item("#/", sideIcon("home"), t("home"), route === "");
+  html += item("#/neueste", sideIcon("neueste"), folderLabel("neueste"), seg[0] === "neueste", (lockOf("neueste") ? " is-locked" : "") + " rail-opt");
+  Object.keys(folderStructure).forEach((id) => {
+    html += item(`#/${id}`, sideIcon(id), folderLabel(id), seg[0] === id, lockOf(id) ? " is-locked" : "");
+  });
+  html += item("#/promptlabor", sideIcon("prompt"), t("promptlabLabel"), seg[0] === "promptlabor", " rail-opt");
+  html += item("#/programme", sideIcon("programs"), t("programsLabel"), seg[0] === "programme", " rail-opt");
+  html += '<span class="rail-sep" aria-hidden="true"></span>';
+  html += `<button type="button" class="rail-btn${isSearchOpen() ? " is-active" : ""}" data-rail="search" aria-label="${escapeHtml(t("railSearch"))}">${SEARCH_GLYPH}<span class="rail-tip" aria-hidden="true">${escapeHtml(t("railSearch"))}</span></button>`;
+  html += `<button type="button" class="rail-btn${isLookOpen() ? " is-active" : ""}" data-rail="look" aria-controls="look-panel" aria-expanded="${isLookOpen()}" aria-label="${escapeHtml(t("railLook"))}">${LOOK_GLYPH}<span class="rail-tip" aria-hidden="true">${escapeHtml(t("railLook"))}</span></button>`;
+  rail.innerHTML = html;
+}
+
+function initRail() {
+  const rail = document.getElementById("rail");
+  if (!rail) return;
+  rail.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rail]");
+    if (!b) { closeLook(false); return; }
+    const what = b.dataset.rail;
+    if (what === "expand") openSidebar();
+    else if (what === "search") { closeLook(false); isSearchOpen() ? closeSearch(true) : openSearch(); renderRail(); }
+    else if (what === "look") isLookOpen() ? closeLook(true) : openLook();
   });
 }
 
@@ -1395,7 +1634,10 @@ function closeSidebar(returnFocus) {
   const toggle = document.getElementById("menu-toggle");
   if (toggle) {
     toggle.setAttribute("aria-expanded", "false");
-    if (returnFocus) toggle.focus({ preventScroll: true });
+    if (returnFocus) {
+      const railBrand = document.querySelector(".rail [data-rail='expand']");
+      (toggle.offsetParent === null && railBrand ? railBrand : toggle).focus({ preventScroll: true });
+    }
   }
 }
 
@@ -1410,6 +1652,7 @@ function openSearch() {
   const fab = document.getElementById("search-fab");
   if (panel) panel.setAttribute("aria-hidden", "false");
   if (fab) fab.setAttribute("aria-expanded", "true");
+  renderRail();
   setTimeout(() => searchInputEl && searchInputEl.focus(), 60);
 }
 
@@ -1423,6 +1666,7 @@ function closeSearch(returnFocus) {
     fab.setAttribute("aria-expanded", "false");
     if (returnFocus) fab.focus({ preventScroll: true });
   }
+  renderRail();
 }
 
 function currentSegments() {
@@ -1481,6 +1725,7 @@ function renderSidebarNav() {
   html += `<div class="side-row"><a class="${cls(route === "kursmappe-erstellen", false)}" href="#/kursmappe-erstellen" id="kursmappe-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kursmappeLabel"))}</span></a></div>`;
   sidebarNavEl.innerHTML = html;
   updateAdminNavLinks();
+  renderRail();
 }
 
 function renderSearchResults() {
@@ -1602,7 +1847,9 @@ function initSidebar() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initSettings();
+  initLook();
   initSidebar();
+  initRail();
   renderSidebarNav();
   initHero();
 });

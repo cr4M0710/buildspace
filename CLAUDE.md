@@ -11,6 +11,7 @@ Reines HTML/CSS/JS, **kein Framework, kein Build-Schritt**. Was im Repo liegt, i
 - `app.js` – Routing, Seitenleiste (Menü, Suche, Einstellungen), Ordner-Navigation, Übersetzungen (`I18N`)
 - `protect.js` – Login/Schutz für Classroom Management (Firebase)
 - `style.css` – Liquid-Glass-Design: gemeinsame Glas-Oberfläche für alle Bausteine (Selektorliste „Glas-Oberfläche“ ganz oben), Seitenleiste; `space.js` malt den Weltraum-Hintergrund, `stars.js` die Sternschnuppen
+- **Aussehen & Rand-Leiste** (`app.js`: `applyLook`, `renderRail`; `style.css` ganz unten): Einstellungen › Aussehen speichert Glas-Unschärfe, Deckkraft, Abdunklung, Akzentfarbe, Sternschnuppen, Bewegung und „Leiste am Rand“ unter `myhome_look`. Das kleine Skript im `<head>` von `index.html` wendet dieselben Werte vor dem ersten Bild an – bei Änderungen beide Stellen anpassen. Die Rail (links, iPhone unten) klappt per oberstem Knopf die volle Seitenleiste auf.
 - `tools/check-site.js` – Link-Prüfer (siehe „Vor dem Abschluss prüfen“); `sw.js` cacht alle Tool-Seiten aus `posts-data.js` automatisch für offline
 - Tool-/Spielseiten liegen als einzelne `.html`-Dateien **im Root** (z. B. `hallenplan.html`, `minigolf-winkel.html`). `protect.js` baut auf jeder Tool-Seite automatisch Zurück-Link, „QR-Aushang“ und „Für Lernende freigeben“ ein.
 
