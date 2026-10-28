@@ -1958,13 +1958,13 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "1.0",
+    version: "1.1",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",
     shot: "assets/programme/cockpit-vorschau.jpg",
-    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Die Mac-App startet zusätzlich jedes Programm direkt und zeigt deine Termine von heute. Auf dem iPad läuft Cockpit als Web-App.",
-    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. The Mac app can also launch any program directly and shows today's appointments. On the iPad, Cockpit runs as a web app.",
+    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Die Mac-App startet zusätzlich jedes Programm direkt und zeigt deine Termine von heute. Name, App-Symbol, Hintergrund und Widgets (Timer, Countdown, Notizen …) passt du selbst an. Auf dem iPad läuft Cockpit als Web-App.",
+    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. The Mac app can also launch any program directly and shows today's appointments. You can customise your name, app icon, background and widgets (timer, countdown, notes …). On the iPad, Cockpit runs as a web app.",
     steps: [
       "ZIP herunterladen und mit Doppelklick entpacken.",
       "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
@@ -1978,8 +1978,8 @@ const PROGRAMS = [
     note: "Einstellungen und Notizen bleiben auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern.",
     noteEn: "Settings and notes stay on your device. Cockpit stores no login details and only reads appointments without changing them.",
     open: { href: "cockpit/" },
-    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "1,7 MB", type: "ZIP" },
-    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "4,4 MB", type: "PDF" },
+    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,1 MB", type: "ZIP" },
+    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "6,4 MB", type: "PDF" },
     share: "programme/cockpit.html"
   }
 ];
