@@ -1730,11 +1730,37 @@
     schedule();
   }
 
+  /* Anonymer Aufrufzähler (für das Cockpit-Widget „buildspace-Aufrufe“):
+     zählt pro Tag und Seite in Firestore page_views/{JJJJ-MM-TT} hoch.
+     Keine Cookies, keine Kennung, keine IP-Speicherung. Nicht gezählt wird
+     bei „Do Not Track“, mit localStorage bs_nocount = "1" (Cockpit ›
+     Einstellungen › Mitteilungen), lokal und mehrfach in derselben Sitzung. */
+  function countView() {
+    try {
+      if (!/(^|\.)buildspaceos\.de$/.test(location.hostname)) return;
+      if (navigator.doNotTrack === "1" || global.doNotTrack === "1") return;
+      try { if (localStorage.getItem("bs_nocount") === "1") return; } catch (e) {}
+      const file = (location.pathname.split("/").pop() || "index.html").replace(/\.html?$/i, "") || "index";
+      const key = "p_" + (file === "index" ? "start" : file).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
+      try { if (sessionStorage.getItem("bs_counted_" + key)) return; sessionStorage.setItem("bs_counted_" + key, "1"); } catch (e) {}
+      const d = new Date(), day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const base = "projects/" + FIREBASE_CONFIG.projectId + "/databases/(default)/documents";
+      fetch("https://firestore.googleapis.com/v1/" + base + ":commit?key=" + FIREBASE_CONFIG.apiKey, {
+        method: "POST", keepalive: true, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ writes: [{ transform: { document: base + "/page_views/" + day, fieldTransforms: [
+          { fieldPath: "total", increment: { integerValue: "1" } },
+          { fieldPath: "pages." + key, increment: { integerValue: "1" } }
+        ] } }] })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
   function initStandalone() {
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
     ensureStyle();
     if (isEmbedMode()) document.documentElement.classList.add("embed-mode");
+    setTimeout(countView, 1500);
     initUpdateBanner();
     initInstallPrompt();
     function reveal() {

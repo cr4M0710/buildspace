@@ -1812,6 +1812,15 @@ function initSidebar() {
     searchInputEl.focus();
   });
 
+  // buildspaceos.de/?q=Begriff öffnet direkt die Suche (z. B. aus dem Cockpit).
+  try {
+    const q0 = new URLSearchParams(location.search).get("q");
+    if (q0) {
+      searchInputEl.value = q0.slice(0, 80);
+      setTimeout(() => { openSearch(); renderSearchResults(); }, 120);
+    }
+  } catch (e) {}
+
   // Klick auf ein Suchergebnis schließt die Suche.
   sideResultsEl.addEventListener("click", (e) => {
     if (e.target.closest("a[href]")) closeSearch(false);
@@ -1958,28 +1967,28 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "1.1.1",
+    version: "2.0",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",
     shot: "assets/programme/cockpit-vorschau.jpg",
-    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Die Mac-App startet zusätzlich jedes Programm direkt und zeigt deine Termine von heute. Name, App-Symbol, Hintergrund und Widgets (Timer, Countdown, Notizen …) passt du selbst an. Auf dem iPad läuft Cockpit als Web-App.",
-    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. The Mac app can also launch any program directly and shows today's appointments. You can customise your name, app icon, background and widgets (timer, countdown, notes …). On the iPad, Cockpit runs as a web app.",
+    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Mail, Kalender, Erinnerungen, WhatsApp, Jamf und Apple School Manager mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage an Claude, ChatGPT, DeepL Write oder WhatsApp. Dazu ein Kalender mit Tagesplan und Abos (WebUntis, IServ), Projekte &amp; To-dos (In Planung, In Bearbeitung, Fertig), Lesezeichen, ein Whiteboard für Stift und Finger und PDFs, die du mit Stift oder Textfeld beschriftest. Mitteilungen erinnern an Termine und Fälliges, die Suche findet auch alle buildspace-Tools, ein Widget zeigt die Aufrufe der Webseite.",
+    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Mail, Calendar, Reminders, WhatsApp, Jamf and Apple School Manager with one click. A quick AI bar sends text with a template to Claude, ChatGPT, DeepL Write or WhatsApp. Plus a calendar with a day plan and subscriptions (WebUntis, IServ), projects &amp; to-dos (planned, in progress, done), bookmarks, a whiteboard for pen and finger, and PDFs you can annotate with a pen or text boxes. Notifications remind you of appointments and due tasks, search also finds every buildspace tool, and a widget shows the site's page views.",
     steps: [
       "ZIP herunterladen und mit Doppelklick entpacken.",
       "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
-      "Cockpit startet von selbst. Rechts <b>Kalender verbinden</b> und die Adressen mit orangem Punkt (IServ, Jamf) eintragen. Fürs iPad: <b>Öffnen</b> › Teilen › Zum Home-Bildschirm."
+      "Cockpit startet von selbst. Namen eintippen, unter <b>Kalender › Quellen</b> verbinden und die Adressen mit orangem Punkt (IServ, Jamf) eintragen. Fürs iPad: <b>Öffnen</b> › Teilen › Zum Home-Bildschirm."
     ],
     stepsEn: [
       "Download the ZIP and double-click to unpack it.",
       "Double-click <b>Installieren.command</b> in the folder. If macOS reports an “unidentified developer”: System Settings › Privacy &amp; Security › <b>Open Anyway</b>.",
-      "Cockpit starts by itself. Click <b>Connect calendar</b> on the right and fill in the addresses with an orange dot (IServ, Jamf). For the iPad: <b>Open</b> › Share › Add to Home Screen."
+      "Cockpit starts by itself. Enter your name, connect under <b>Calendar › Sources</b> and fill in the addresses with an orange dot (IServ, Jamf). For the iPad: <b>Open</b> › Share › Add to Home Screen."
     ],
-    note: "Einstellungen und Notizen bleiben auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern.",
-    noteEn: "Settings and notes stay on your device. Cockpit stores no login details and only reads appointments without changing them.",
+    note: "Alles bleibt auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern. Von Version 1.x einfach drüber installieren, deine Daten bleiben.",
+    noteEn: "Everything stays on your device. Cockpit stores no login details and only reads appointments without changing them. Install over version 1.x; your data is kept.",
     open: { href: "cockpit/" },
-    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,1 MB", type: "ZIP" },
-    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "6,4 MB", type: "PDF" },
+    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,3 MB", type: "ZIP" },
+    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "3,4 MB", type: "PDF" },
     share: "programme/cockpit.html"
   }
 ];
@@ -2040,6 +2049,7 @@ const DOWNLOAD_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const DOC_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/></svg>';
 
 function render() {
+  if (isSearchOpen() && searchInputEl && searchInputEl.value) setTimeout(renderSearchResults, 0);
   ensureShareHomeHash();
   /* Falls noch ein Passwort-Fenster von der vorherigen Route offen ist (z. B.
      wenn per Zurück-Button aus einem geschützten, noch nicht entsperrten
