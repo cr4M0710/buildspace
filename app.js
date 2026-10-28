@@ -1712,25 +1712,27 @@ const PROGRAMS = [
     id: "cockpit",
     title: "Cockpit",
     version: "1.0",
-    platform: "Web-App für Mac und iPad",
-    platformEn: "Web app for Mac and iPad",
+    platform: "macOS 11 oder neuer · iPad als Web-App",
+    platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",
     shot: "assets/programme/cockpit-vorschau.jpg",
-    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Dazu Notizen, eine Suche mit ⌘K und frei anpassbare Kacheln.",
-    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. Plus notes, ⌘K search and fully customisable tiles.",
+    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Die Mac-App startet zusätzlich jedes Programm direkt und zeigt deine Termine von heute. Auf dem iPad läuft Cockpit als Web-App.",
+    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. The Mac app can also launch any program directly and shows today's appointments. On the iPad, Cockpit runs as a web app.",
     steps: [
-      "Cockpit öffnen. Mac: in Safari <b>Ablage › Zum Dock hinzufügen</b>. iPad: <b>Teilen › Zum Home-Bildschirm</b>.",
-      "Unter <b>Einrichtung › Kurzbefehle</b> die fünf Kurzbefehle anlegen, damit Kalender, Erinnerungen, Mail und iDoceo starten.",
-      "Fehlende Adressen (orange Punkte, z. B. IServ) eintragen und Einstellungen per <b>Übertragen</b> aufs zweite Gerät holen."
+      "ZIP herunterladen und mit Doppelklick entpacken.",
+      "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
+      "Cockpit startet von selbst. Rechts <b>Kalender verbinden</b> und die Adressen mit orangem Punkt (IServ, Jamf) eintragen. Fürs iPad: <b>Öffnen</b> › Teilen › Zum Home-Bildschirm."
     ],
     stepsEn: [
-      "Open Cockpit. Mac: in Safari choose <b>File › Add to Dock</b>. iPad: <b>Share › Add to Home Screen</b>.",
-      "Under <b>Setup › Shortcuts</b>, create the five shortcuts so Calendar, Reminders, Mail and iDoceo can launch.",
-      "Fill in missing addresses (orange dots, e.g. IServ) and copy your settings to the second device via <b>Transfer</b>."
+      "Download the ZIP and double-click to unpack it.",
+      "Double-click <b>Installieren.command</b> in the folder. If macOS reports an “unidentified developer”: System Settings › Privacy &amp; Security › <b>Open Anyway</b>.",
+      "Cockpit starts by itself. Click <b>Connect calendar</b> on the right and fill in the addresses with an orange dot (IServ, Jamf). For the iPad: <b>Open</b> › Share › Add to Home Screen."
     ],
-    note: "Alle Einstellungen und Notizen bleiben auf deinem Gerät. Cockpit speichert keine Zugangsdaten.",
-    noteEn: "All settings and notes stay on your device. Cockpit does not store any login details.",
+    note: "Einstellungen und Notizen bleiben auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern.",
+    noteEn: "Settings and notes stay on your device. Cockpit stores no login details and only reads appointments without changing them.",
     open: { href: "cockpit/" },
+    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "1,7 MB", type: "ZIP" },
+    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "4,4 MB", type: "PDF" },
     share: "programme/cockpit.html"
   }
 ];

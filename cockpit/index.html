@@ -131,6 +131,16 @@ button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-c
 .note:hover .del,.note .del:focus-visible{opacity:1}
 @media (hover:none){.note .del{opacity:.6}}
 .empty{color:var(--ink-3);font-size:12px;padding:6px}
+.evs{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto}
+.ev{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:start}
+.ev time{font-size:12px;color:var(--ink-3);padding-top:9px}
+.ev .box{padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-left:3px solid var(--c)}
+.ev .box b{display:block;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.ev .box span{font-size:11px;color:var(--ink-3)}
+.ev.past{opacity:.45}
+.ev.now .box{background:rgba(255,255,255,.13);border-color:var(--line-hi)}
+.perm{display:flex;flex-direction:column;gap:10px;font-size:12px;color:var(--ink-2)}
+.perm .row{justify-content:flex-start;margin:0}
 .tip{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--ink-2);padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
 .tip:first-of-type{border-top:0}
 .tip b{color:var(--ink);font-weight:500}
@@ -148,6 +158,8 @@ button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-c
 .field textarea{height:110px;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:11px;resize:vertical}
 .field select option{background:#1b1828}
 .field small{color:var(--ink-3)}
+.field input,.field select{width:100%;min-width:0}
+.two>*{min-width:0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .seg{display:flex;padding:4px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);gap:4px}
 .seg button{flex:1;height:36px;border-radius:10px;font-size:13px;color:var(--ink-2)}
@@ -263,6 +275,10 @@ button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-c
       <div class="groups" id="groups"></div>
     </div>
     <aside class="col side">
+      <section class="glass card" id="todayCard" hidden>
+        <div class="h"><h3>Heute</h3><small id="evCount"></small></div>
+        <div id="evs"></div>
+      </section>
       <section class="glass card">
         <div class="h"><h3>Notizen & To-dos</h3><small id="noteCount"></small></div>
         <form class="add" id="noteForm"><input id="noteIn" placeholder="Neue Notiz …" aria-label="Neue Notiz" autocomplete="off"><button aria-label="Hinzufügen"><svg class="i sm"><use href="#i-plus"/></svg></button></form>
@@ -271,7 +287,7 @@ button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-c
       <section class="glass card">
         <div class="h"><h3>Gut zu wissen</h3></div>
         <div class="tip"><svg class="i sm"><use href="#i-search"/></svg><div><b>⌘K</b> oder <b>/</b> öffnet die Suche. Tippst du eine Frage ein, kannst du sie direkt an Claude oder ChatGPT schicken.</div></div>
-        <div class="tip"><svg class="i sm"><use href="#i-bolt"/></svg><div><b>Kalender, Erinnerungen, Mail und iDoceo</b> öffnen sich über Kurzbefehle. Einmal anlegen unter <button class="chipbtn" data-open-setup="shortcuts" style="height:24px">Einrichtung</button></div></div>
+        <div class="tip" id="tipShort"><svg class="i sm"><use href="#i-bolt"/></svg><div><b>Kalender, Erinnerungen, Mail und iDoceo</b> öffnen sich über Kurzbefehle. Einmal anlegen unter <button class="chipbtn" data-open-setup="shortcuts" style="height:24px">Einrichtung</button></div></div>
         <div class="tip"><svg class="i sm"><use href="#i-copy"/></svg><div>Deine Einstellungen liegen nur auf diesem Gerät. Mit <b>Übertragen</b> bringst du sie vom Mac aufs iPad.</div></div>
       </section>
     </aside>
@@ -280,12 +296,19 @@ button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-c
 <div id="ov"></div>
 
 <script>
-(() => {
+function cockpitMain() {
 'use strict';
+const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const store = {
+/* Speicher: im Browser localStorage, in der Mac-App eine Datei unter ~/Library/Application Support/Cockpit */
+const MEM = window.NATIVE_STATE || {};
+let saveTimer = null;
+const store = NATIVE ? {
+  get(k, d) { return MEM[k] === undefined ? d : JSON.parse(JSON.stringify(MEM[k])); },
+  set(k, v) { MEM[k] = v; clearTimeout(saveTimer); saveTimer = setTimeout(() => NATIVE.save_state(MEM), 300); }
+} : {
   get(k, d) { try { const v = localStorage.getItem('cockpit:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('cockpit:' + k, JSON.stringify(v)); } catch (e) {} }
 };
@@ -303,11 +326,11 @@ const ICONS = ['school', 'cal', 'list', 'mail', 'pen', 'sparkle', 'bubble', 'gri
 const DEFAULT_APPS = [
   { id: 'iserv', name: 'IServ', sub: 'Schulserver', group: 'schule', icon: 'school', color: '#2FA36B', type: 'web', target: '', hint: 'Adresse deiner Schule, z. B. https://deine-schule.de/iserv' },
   { id: 'untis', name: 'WebUntis', sub: 'Stundenplan', group: 'schule', icon: 'grid', color: '#FF9A4D', type: 'web', target: 'https://webuntis.com/' },
-  { id: 'idoceo', name: 'iDoceo', sub: 'Lehrerkalender', group: 'schule', icon: 'book', color: '#4F7BFF', type: 'shortcut', target: 'Cockpit iDoceo' },
+  { id: 'idoceo', name: 'iDoceo', sub: 'Lehrerkalender', group: 'schule', icon: 'book', color: '#4F7BFF', type: 'shortcut', target: 'Cockpit iDoceo', mac: { name: 'iDoceo' } },
   { id: 'edumaps', name: 'Edumaps', sub: 'Pinnwände', group: 'schule', icon: 'board', color: '#A46BFF', type: 'web', target: 'https://www.edumaps.de/' },
-  { id: 'kalender', name: 'Kalender', sub: 'Termine', group: 'planung', icon: 'cal', color: '#EF4444', type: 'shortcut', target: 'Cockpit Kalender' },
-  { id: 'erinnerungen', name: 'Erinnerungen', sub: 'Aufgaben', group: 'planung', icon: 'list', color: '#E0B24A', type: 'shortcut', target: 'Cockpit Erinnerungen' },
-  { id: 'mail', name: 'Mail', sub: 'Postfach', group: 'planung', icon: 'mail', color: '#2DD4BF', type: 'shortcut', target: 'Cockpit Mail' },
+  { id: 'kalender', name: 'Kalender', sub: 'Termine', group: 'planung', icon: 'cal', color: '#EF4444', type: 'shortcut', target: 'Cockpit Kalender', mac: { bundle: 'com.apple.iCal', name: 'Kalender' } },
+  { id: 'erinnerungen', name: 'Erinnerungen', sub: 'Aufgaben', group: 'planung', icon: 'list', color: '#E0B24A', type: 'shortcut', target: 'Cockpit Erinnerungen', mac: { bundle: 'com.apple.reminders', name: 'Erinnerungen' } },
+  { id: 'mail', name: 'Mail', sub: 'Postfach', group: 'planung', icon: 'mail', color: '#2DD4BF', type: 'shortcut', target: 'Cockpit Mail', mac: { bundle: 'com.apple.mail', name: 'Mail' } },
   { id: 'claude', name: 'Claude', sub: 'KI-Assistent', group: 'ki', icon: 'sparkle', color: '#D97757', type: 'web', target: 'https://claude.ai/new' },
   { id: 'chatgpt', name: 'ChatGPT', sub: 'KI-Assistent', group: 'ki', icon: 'bubble', color: '#10a37f', type: 'web', target: 'https://chatgpt.com/' },
   { id: 'deepl', name: 'DeepL Write', sub: 'Texte verbessern', group: 'ki', icon: 'pen', color: '#1b4d8f', type: 'web', target: 'https://www.deepl.com/write' },
@@ -316,9 +339,11 @@ const DEFAULT_APPS = [
   { id: 'buildspace', name: 'buildspace', sub: 'Meine Tools', group: 'eigene', icon: 'rocket', color: '#A46BFF', type: 'web', target: 'https://buildspaceos.de/' }
 ];
 let apps = store.get('apps', null) || DEFAULT_APPS.map(a => ({ ...a }));
+const fillMac = () => apps.forEach(a => { const d = DEFAULT_APPS.find(x => x.id === a.id); if (d && d.mac && !a.mac) a.mac = { ...d.mac }; });
+fillMac();
 let usage = store.get('usage', {});
 let notes = store.get('notes', null) || [
-  { id: 1, t: 'Kurzbefehle für Kalender, Erinnerungen, Mail und iDoceo anlegen (Einrichtung)', d: false },
+  NATIVE ? { id: 1, t: 'Kalender verbinden (rechts unter „Heute“)', d: false } : { id: 1, t: 'Kurzbefehle für Kalender, Erinnerungen, Mail und iDoceo anlegen (Einrichtung)', d: false },
   { id: 2, t: 'IServ- und Jamf-Adresse eintragen (orange Punkte)', d: false }
 ];
 const TEMPLATES = [
@@ -330,6 +355,11 @@ const TEMPLATES = [
 ];
 const save = () => { store.set('apps', apps); };
 const needsSetup = a => a.type === 'web' && !/^https?:\/\/.+/i.test(a.target || '');
+const nativeApp = a => NATIVE && (a.type === 'mac' ? { name: a.target } : (a.type === 'shortcut' && a.mac ? a.mac : null));
+function openUrl(u) {
+  if (NATIVE) { NATIVE.open_url(u).then(r => { if (r && !r.ok) toast(r.error); }); return; }
+  const w = window.open(u, '_blank', 'noopener'); if (!w && !/^https?:/i.test(u)) location.href = u;
+}
 const shortcutUrl = (name, text) => 'shortcuts://run-shortcut?name=' + encodeURIComponent(name) + (text != null ? '&input=text&text=' + encodeURIComponent(text) : '');
 
 /* ---------- Kopf: Begrüßung, Datum, KW, Uhr ---------- */
@@ -346,7 +376,7 @@ tick(); setInterval(tick, 15000);
 /* ---------- Apps darstellen ---------- */
 const tileHtml = a => `<span class="tile" style="--c:${a.color}">${ic(a.icon)}</span>`;
 function appHtml(a, inDock, key) {
-  const meta = needsSetup(a) ? 'Adresse eintragen' : (a.type === 'shortcut' ? 'Kurzbefehl · ' : '') + esc(a.sub || '');
+  const meta = needsSetup(a) ? 'Adresse eintragen' : (a.type === 'shortcut' && !nativeApp(a) ? 'Kurzbefehl · ' : a.type === 'mac' && !NATIVE ? 'Nur Mac-App · ' : '') + esc(a.sub || '');
   return `<button class="app" data-app="${a.id}" title="${esc(a.name)}">${inDock && key ? `<span class="key num">${key}</span>` : ''}${tileHtml(a)}
     <span class="txt"><span class="nm">${esc(a.name)}</span><span class="meta">${meta}</span></span>
     ${needsSetup(a) ? '<span class="setup" aria-label="Einrichtung nötig"></span>' : ''}
@@ -373,9 +403,12 @@ function render() {
 function openApp(a, text) {
   if (!a) return;
   if (needsSetup(a)) { editor(a); toast(`Trag zuerst die Adresse für ${a.name} ein`); return; }
+  const nat = nativeApp(a);
+  if (a.type === 'mac' && !NATIVE) { toast(`${a.name} lässt sich nur in der Mac-App öffnen`); return; }
   usage[a.id] = (usage[a.id] || 0) + 1; store.set('usage', usage);
-  if (a.type === 'shortcut') { location.href = shortcutUrl(a.target, text); }
-  else { const w = window.open(a.target, '_blank', 'noopener'); if (!w) location.href = a.target; }
+  if (nat) { NATIVE.open_app(nat).then(r => { if (r && !r.ok) toast(r.error); }); }
+  else if (a.type === 'shortcut') { if (NATIVE) openUrl(shortcutUrl(a.target, text)); else location.href = shortcutUrl(a.target, text); }
+  else openUrl(a.target);
   setTimeout(render, 400);
 }
 document.addEventListener('click', e => {
@@ -407,17 +440,21 @@ function editor(a, group) {
   const d = a ? { ...a } : { id: 'app' + Date.now().toString(36), name: '', sub: '', group: group || 'eigene', icon: 'globe', color: COLORS[0], type: 'web', target: '' };
   modal(`<form class="glass modal" id="edf">
     <h3>${isNew ? 'App hinzufügen' : esc(d.name) + ' bearbeiten'}</h3>
-    <p class="lead">${d.hint ? esc(d.hint) : 'Webseiten öffnen sich im Browser, Apps auf dem Gerät über einen Kurzbefehl.'}</p>
+    <p class="lead">${d.hint ? esc(d.hint) : NATIVE ? 'Webseiten öffnen sich im Browser, Mac-Apps direkt, Kurzbefehle über die Kurzbefehle-App.' : 'Webseiten öffnen sich im Browser, Apps auf dem Gerät über einen Kurzbefehl.'}</p>
     <div class="two"><label class="field">Name<input id="eN" required value="${esc(d.name)}"></label><label class="field">Untertitel<input id="eS" value="${esc(d.sub)}"></label></div>
-    <div class="field">Öffnen als<div class="seg" id="eT"><button type="button" data-t="web" aria-pressed="${d.type === 'web'}">Webseite</button><button type="button" data-t="shortcut" aria-pressed="${d.type === 'shortcut'}">Kurzbefehl</button></div></div>
-    <label class="field"><span id="eLl">${d.type === 'web' ? 'Adresse (https://…)' : 'Name des Kurzbefehls'}</span><input id="eU" value="${esc(d.target)}" autocomplete="off" spellcheck="false"><small id="eHint">${d.type === 'shortcut' ? 'Muss genauso heißen wie in der Kurzbefehle-App.' : ''}</small></label>
+    <div class="field">Öffnen als<div class="seg" id="eT"><button type="button" data-t="web" aria-pressed="${d.type === 'web'}">Webseite</button><button type="button" data-t="shortcut" aria-pressed="${d.type === 'shortcut'}">Kurzbefehl</button>${NATIVE || d.type === 'mac' ? `<button type="button" data-t="mac" aria-pressed="${d.type === 'mac'}">Mac-App</button>` : ''}</div></div>
+    <label class="field"><span id="eLl"></span><input id="eU" value="${esc(d.target)}" autocomplete="off" spellcheck="false"><datalist id="macApps"></datalist><small id="eHint"></small></label>
     <div class="two"><label class="field">Bereich<select id="eG">${GROUPS.map(g => `<option value="${g.id}"${g.id === d.group ? ' selected' : ''}>${g.name}</option>`).join('')}</select></label>
       <label class="field">Symbol<select id="eI">${ICONS.map(i => `<option${i === d.icon ? ' selected' : ''}>${i}</option>`).join('')}</select></label></div>
     <div class="field">Farbe<div class="swatches" id="eC">${COLORS.map(c => `<button type="button" style="background:${c}" data-c="${c}" aria-label="Farbe ${c}" aria-pressed="${c === d.color}"></button>`).join('')}</div></div>
     <div class="row">${isNew ? '' : '<button type="button" class="btn danger" id="eDel">Entfernen</button>'}<span class="spacer"></span><button type="button" class="btn" data-close>Abbrechen</button><button class="btn pri">Speichern</button></div>
   </form>`);
-  $('#eT').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; d.type = b.dataset.t; $$('#eT button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    $('#eLl').textContent = d.type === 'web' ? 'Adresse (https://…)' : 'Name des Kurzbefehls'; $('#eHint').textContent = d.type === 'shortcut' ? 'Muss genauso heißen wie in der Kurzbefehle-App.' : ''; });
+  const LBL = { web: ['Adresse (https://…)', ''], shortcut: ['Name des Kurzbefehls', 'Muss genauso heißen wie in der Kurzbefehle-App.'], mac: ['Name der Mac-App', 'Wie im Ordner „Programme“, z. B. Keynote. Beim Tippen erscheinen Vorschläge.'] };
+  const PH = { web: 'https://deine-schule.de/iserv', shortcut: 'Cockpit …', mac: 'z. B. Keynote' };
+  const setType = () => { $('#eLl').textContent = LBL[d.type][0]; $('#eHint').textContent = LBL[d.type][1]; const u = $('#eU'); u.placeholder = PH[d.type]; if (d.type === 'mac') u.setAttribute('list', 'macApps'); else u.removeAttribute('list'); };
+  setType();
+  if (NATIVE) NATIVE.list_apps().then(list => { const dl = $('#macApps'); if (dl) dl.innerHTML = (list || []).map(n => `<option value="${esc(n)}">`).join(''); });
+  $('#eT').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; if (d.type !== b.dataset.t) $('#eU').value = ''; d.type = b.dataset.t; $$('#eT button').forEach(x => x.setAttribute('aria-pressed', x === b)); setType(); });
   $('#eC').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b) return; d.color = b.dataset.c; $$('#eC button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   $('#eDel')?.addEventListener('click', () => { apps = apps.filter(x => x.id !== d.id); save(); close(); render(); toast(`${d.name} entfernt`); });
   $('#edf').addEventListener('submit', e => {
@@ -426,6 +463,7 @@ function editor(a, group) {
     if (d.type === 'web' && url && !/^[a-z]+:/i.test(url)) url = 'https://' + url;
     Object.assign(d, { name: $('#eN').value.trim(), sub: $('#eS').value.trim(), target: url, group: $('#eG').value, icon: $('#eI').value });
     delete d.hint;
+    if (d.type !== 'shortcut') delete d.mac;
     if (isNew) apps.push(d); else apps[apps.findIndex(x => x.id === d.id)] = d;
     save(); close(); render(); toast('Gespeichert');
   });
@@ -442,16 +480,19 @@ $('#tpl').addEventListener('click', e => {
 });
 const q = $('#q');
 const fullText = () => { const t = q.value.trim(); return (tplActive != null ? TEMPLATES[tplActive].p : '') + t; };
-async function copy(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; } }
+async function copy(t) { if (NATIVE) { try { return !!(await NATIVE.copy(t)); } catch (e) { return false; } } try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; } }
 function clearQ() { q.value = ''; tplActive = null; $$('[data-tpl]').forEach(x => x.setAttribute('aria-pressed', 'false')); }
 async function sendQ(kind) {
   const t = fullText();
   if (!q.value.trim() && kind !== 'claude' && kind !== 'chatgpt') { q.focus(); toast('Erst etwas eingeben'); return; }
   const find = id => apps.find(a => a.id === id);
-  if (kind === 'claude') { bump('claude'); window.open(t ? 'https://claude.ai/new?q=' + encodeURIComponent(t) : 'https://claude.ai/new', '_blank', 'noopener'); }
-  if (kind === 'chatgpt') { bump('chatgpt'); window.open(t ? 'https://chatgpt.com/?q=' + encodeURIComponent(t) : 'https://chatgpt.com/', '_blank', 'noopener'); }
-  if (kind === 'deepl') { const ok = await copy(q.value.trim()); bump('deepl'); window.open('https://www.deepl.com/write', '_blank', 'noopener'); toast(ok ? 'Text kopiert – in DeepL Write einfügen' : 'DeepL Write geöffnet'); }
-  if (kind === 'reminder') { location.href = shortcutUrl('Cockpit Erinnerung neu', q.value.trim()); toast('Erinnerung wird angelegt …'); }
+  if (kind === 'claude') { bump('claude'); openUrl(t ? 'https://claude.ai/new?q=' + encodeURIComponent(t) : 'https://claude.ai/new'); }
+  if (kind === 'chatgpt') { bump('chatgpt'); openUrl(t ? 'https://chatgpt.com/?q=' + encodeURIComponent(t) : 'https://chatgpt.com/'); }
+  if (kind === 'deepl') { const ok = await copy(q.value.trim()); bump('deepl'); openUrl('https://www.deepl.com/write'); toast(ok ? 'Text kopiert – in DeepL Write einfügen' : 'DeepL Write geöffnet'); }
+  if (kind === 'reminder') {
+    if (NATIVE) { const r = await NATIVE.add_reminder(q.value.trim()); if (!r.ok) { toast(r.error); return; } toast('Erinnerung angelegt'); }
+    else { location.href = shortcutUrl('Cockpit Erinnerung neu', q.value.trim()); toast('Erinnerung wird angelegt …'); }
+  }
   if (kind === 'note') { addNote(q.value.trim()); toast('Als Notiz gespeichert'); }
   clearQ(); render();
 }
@@ -475,6 +516,26 @@ $('#notes').addEventListener('click', e => {
   if (e.target.closest('[data-tg]')) { n.d = !n.d; notes.sort((a, b) => a.d - b.d); renderNotes(); }
   if (e.target.closest('[data-dl]')) { notes = notes.filter(x => x !== n); renderNotes(); }
 });
+
+/* ---------- Heute (nur Mac-App) ---------- */
+async function loadEvents() {
+  let r; try { r = await NATIVE.today_events(); } catch (e) { r = { state: 'error', error: String(e) }; }
+  const box = $('#evs');
+  if (r.state === 'ask' || r.state === 'denied' || r.state === 'error') {
+    $('#evCount').textContent = '';
+    box.innerHTML = `<div class="perm"><span>${r.state === 'ask' ? 'Cockpit kann deine heutigen Termine aus der Kalender-App zeigen.' : r.state === 'denied' ? 'Der Zugriff auf den Kalender ist gesperrt.' : esc(r.error || 'Termine konnten nicht geladen werden.')}</span>
+      <div class="row">${r.state === 'ask' ? '<button class="btn pri" id="evAsk">Kalender verbinden</button>' : '<button class="btn" id="evPrefs">Systemeinstellungen öffnen</button>'}<button class="btn" id="evRetry">Erneut prüfen</button></div></div>`;
+    $('#evAsk')?.addEventListener('click', async () => { await NATIVE.request_calendar(); loadEvents(); });
+    $('#evPrefs')?.addEventListener('click', () => NATIVE.open_privacy('calendar'));
+    $('#evRetry').addEventListener('click', loadEvents);
+    return;
+  }
+  const now = Date.now() / 1000, ev = r.events || [];
+  const fmt = t => new Date(t * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  $('#evCount').textContent = ev.length ? `${ev.filter(e => e.end > now).length} offen` : '';
+  box.innerHTML = ev.length ? `<div class="evs">${ev.map(e => `<div class="ev${e.end <= now ? ' past' : ''}${e.start <= now && e.end > now ? ' now' : ''}"><time class="num">${e.allDay ? 'ganzt.' : fmt(e.start)}</time><div class="box" style="--c:${esc(e.color || '#4F7BFF')}"><b>${esc(e.title)}</b><span>${e.allDay ? 'Ganztägig' : fmt(e.start) + ' – ' + fmt(e.end)}${e.location ? ' · ' + esc(e.location) : ''}${e.calendar ? ' · ' + esc(e.calendar) : ''}</span></div></div>`).join('')}</div>`
+    : '<p class="empty">Heute stehen keine Termine im Kalender.</p>';
+}
 
 /* ---------- Overlays ---------- */
 function modal(html) { $('#ov').innerHTML = `<div class="scrim" id="scrim">${html}</div>`; $('#scrim').addEventListener('mousedown', e => { if (e.target.id === 'scrim') close(); }); $$('[data-close]').forEach(b => b.onclick = close); }
@@ -527,13 +588,19 @@ const SHORTCUTS = [
   { n: 'Cockpit Erinnerung neu', a: 'Aktion „Erinnerung hinzufügen“, als Titel die „Kurzbefehleingabe“ wählen. In den Details „Eingabe empfangen: Text“ einschalten.' }
 ];
 function setup(tab = 'install') {
-  const isMac = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
+  const isMac = !!NATIVE || (/Macintosh/.test(navigator.userAgent) && !('ontouchend' in document));
   const body = {
-    install: `<ol class="steps">
+    install: NATIVE ? `<ol class="steps">
+      <li><b>Mac-App läuft.</b> Zieh Cockpit aus dem Ordner „Programme“ ins Dock, dann ist es immer einen Klick entfernt.</li>
+      <li><b>Termine anzeigen:</b> Erlaube beim ersten Start den Zugriff auf den Kalender. Später änderbar unter Systemeinstellungen › Datenschutz & Sicherheit › Kalender.</li>
+      <li><b>Erinnerungen anlegen:</b> Beim ersten Mal fragt macOS, ob Cockpit „Erinnerungen“ steuern darf. Mit „OK“ bestätigen.</li>
+      <li><b>iPad:</b> Safari öffnen, buildspaceos.de/cockpit aufrufen, <b>Teilen › Zum Home-Bildschirm</b>. Einstellungen holst du mit „Übertragen“ rüber.</li></ol>` : `<ol class="steps">
       <li><b>${isMac ? 'Mac' : 'iPad'} (dieses Gerät):</b> ${isMac ? 'In Safari oben auf <b>Ablage → Zum Dock hinzufügen</b> (ab macOS Sonoma). Cockpit startet dann wie ein eigenes Programm aus dem Dock.' : 'In Safari auf <b>Teilen → Zum Home-Bildschirm</b>. Cockpit öffnet sich danach im Vollbild wie eine App.'}</li>
       <li><b>${isMac ? 'iPad' : 'Mac'}:</b> ${isMac ? 'Safari öffnen, buildspaceos.de/cockpit aufrufen, <b>Teilen → Zum Home-Bildschirm</b>.' : 'Safari öffnen, buildspaceos.de/cockpit aufrufen, <b>Ablage → Zum Dock hinzufügen</b>.'}</li>
       <li><b>Einstellungen übertragen:</b> Im Reiter „Übertragen“ den Code kopieren und auf dem anderen Gerät einfügen.</li></ol>`,
-    shortcuts: `<p class="lead">Kalender, Erinnerungen, Mail und iDoceo sind Apps auf dem Gerät. Eine Webseite darf sie nicht direkt starten, ein Kurzbefehl schon. Leg diese fünf Kurzbefehle <b>einmal auf dem Mac und einmal auf dem iPad</b> in der App „Kurzbefehle“ an. Antippen kopiert den Namen.</p>
+    shortcuts: NATIVE ? `<p class="lead">In der Mac-App brauchst du keine Kurzbefehle: Kalender, Erinnerungen, Mail und iDoceo öffnen direkt. Unter „Anpassen“ kannst du jede weitere Mac-App als Kachel anlegen (Typ „Mac-App“).</p>
+      <p class="lead">Die Kurzbefehle brauchst du nur auf dem iPad:</p>
+      <ol class="steps">${SHORTCUTS.map(s => `<li><code data-cp="${esc(s.n)}">${esc(s.n)}</code><br><span style="color:var(--ink-2);font-size:12px">${s.a}</span></li>`).join('')}</ol>` : `<p class="lead">Kalender, Erinnerungen, Mail und iDoceo sind Apps auf dem Gerät. Eine Webseite darf sie nicht direkt starten, ein Kurzbefehl schon. Leg diese fünf Kurzbefehle <b>einmal auf dem Mac und einmal auf dem iPad</b> in der App „Kurzbefehle“ an. Antippen kopiert den Namen.</p>
       <ol class="steps">${SHORTCUTS.map(s => `<li><code data-cp="${esc(s.n)}">${esc(s.n)}</code><br><span style="color:var(--ink-2);font-size:12px">${s.a}</span></li>`).join('')}</ol>
       <p class="lead" style="margin-top:14px">Weitere Apps kannst du genauso einbinden: Kurzbefehl anlegen, dann unter „Anpassen“ eine App vom Typ „Kurzbefehl“ hinzufügen.</p>`,
     transfer: `<p class="lead">Apps, Reihenfolge und Notizen liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät hier ein.</p>
@@ -561,7 +628,25 @@ $('#setupBtn').addEventListener('click', () => setup());
 document.addEventListener('click', e => { const b = e.target.closest('[data-open-setup]'); if (b) setup(b.dataset.openSetup); });
 
 render(); renderNotes();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (NATIVE) {
+  $('#tipShort').innerHTML = `${ic('bolt', 'i sm')}<div><b>Mac-Apps</b> wie Kalender, Mail oder iDoceo öffnen direkt. Weitere legst du unter <b>Anpassen</b> als „Mac-App“ an.</div>`;
+  $('#todayCard').hidden = false; loadEvents(); setInterval(loadEvents, 5 * 60 * 1000);
+}
+if (!NATIVE && location.protocol.startsWith('http') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* Start: im Browser sofort, in der Mac-App erst, wenn die Verbindung zur App steht */
+(function boot() {
+  if (location.protocol !== 'file:') return cockpitMain();
+  let started = false;
+  const go = async () => {
+    if (started) return; started = true;
+    try { window.NATIVE = window.pywebview.api; window.NATIVE_STATE = (await window.NATIVE.load_state()) || {}; }
+    catch (e) { window.NATIVE = null; }
+    cockpitMain();
+  };
+  if (window.pywebview && window.pywebview.api) go();
+  else { window.addEventListener('pywebviewready', go); setTimeout(() => { if (!started) { started = true; cockpitMain(); } }, 4000); }
 })();
 </script>
 </body>
