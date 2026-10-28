@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.1';
+const APP_VERSION = '2.2';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -115,6 +115,7 @@ async function openUrl(u, label) {
   return false;
 }
 async function openApp(a, srcEl) {
+  if (NATIVE && a && a.id === 'whatsapp') { usage[a.id] = (usage[a.id] || 0) + 1; store.set('usage', usage); go('whatsapp'); return; }
   if (!a) return;
   if (needsSetup(a)) { editor(a); toast(`Trag zuerst die Adresse für ${a.name} ein`, 'edit'); return; }
   if (srcEl) { srcEl.classList.remove('opening'); void srcEl.offsetWidth; srcEl.classList.add('opening'); }
@@ -160,6 +161,7 @@ const WIDGETS = [
   { id: 'groups', name: 'App-Bereiche', desc: 'Alle Kacheln nach Bereichen', icon: 'grid', color: '#4F7BFF', sel: '#w-groups' },
   { id: 'today', name: 'Heute', desc: 'Deine Termine des Tages als Zeitleiste', icon: 'cal', color: '#EF4444', sel: '#w-today' },
   { id: 'projects', name: 'Projekte', desc: 'Überblick über In Planung · In Bearbeitung · Fertig', icon: 'kanban', color: '#4F7BFF', sel: '#w-projects' },
+  { id: 'whatsapp', name: 'WhatsApp', desc: 'Ungelesene Chats (nur Mac-App)', icon: 'phonechat', color: '#25D366', sel: '#w-whatsapp', nativeOnly: true },
   { id: 'stats', name: 'buildspace-Aufrufe', desc: 'Wie oft deine Website besucht wurde', icon: 'chart', color: '#A46BFF', sel: '#w-stats' },
   { id: 'notes', name: 'Notizen & To-dos', desc: 'Schnelle Notizen zum Abhaken', icon: 'note', color: '#2FA36B', sel: '#w-notes' },
   { id: 'saved', name: 'Gespeichert', desc: 'Zuletzt gespeicherte Links', icon: 'bookmark', color: '#E0B24A', sel: '#w-saved' },
@@ -229,7 +231,7 @@ async function shrink(file, max, square) {
 }
 /* ---------- Anordnung der Widgets: drei Zonen ---------- */
 const ZONES = [['top', 'Oben · volle Breite', '#startTop'], ['main', 'Hauptspalte', '#startMain'], ['side', 'Seitenspalte', '#startSide']];
-const LAYOUT_DEFAULT = { top: ['quick'], main: ['dock', 'groups'], side: ['today', 'projects', 'stats', 'notes', 'saved', 'timer', 'countdown', 'tips'] };
+const LAYOUT_DEFAULT = { top: ['quick'], main: ['dock', 'groups'], side: ['today', 'projects', 'whatsapp', 'stats', 'notes', 'saved', 'timer', 'countdown', 'tips'] };
 const MOVABLE = WIDGETS.filter(w => w.id !== 'clock').map(w => w.id);
 function getLayout() {
   const raw = store.get('layout', null) || {}, L = { top: [], main: [], side: [] }, seen = new Set();
@@ -249,7 +251,7 @@ function applyWidgets() {
     /* nur umhängen, wenn sich die Reihenfolge ändert (sonst verliert z. B. das Textfeld den Fokus) */
     if (want.length !== cur.length || want.some((el, i) => cur[i] !== el)) want.forEach(el => zone.appendChild(el));
   });
-  WIDGETS.forEach(w => { const el = $(w.sel); if (el) el.hidden = !widgetOn(w.id) && !arranging; if (el) el.classList.toggle('w-off', !widgetOn(w.id)); });
+  WIDGETS.forEach(w => { const el = $(w.sel); if (el) el.hidden = (w.nativeOnly && !NATIVE) || (!widgetOn(w.id) && !arranging); if (el) el.classList.toggle('w-off', !widgetOn(w.id)); });
   const has = sel => $$(sel + ' > [data-w]').some(x => !x.hidden);
   const top = has('#startTop'), main = has('#startMain'), side = has('#startSide');
   $('#startTop').hidden = !top && !arranging; $('#startMain').hidden = !main && !arranging; $('#startSide').hidden = !side && !arranging;
@@ -270,7 +272,7 @@ function zoneWidget(id, zone) { const L = getLayout(); ZONES.forEach(([z]) => { 
 function decorateWidgets() {
   const L = getLayout();
   ZONES.forEach(([z, , sel]) => { const zone = $(sel); zone.dataset.label = ZONES.find(x => x[0] === z)[1]; });
-  WIDGETS.filter(w => w.id !== 'clock').forEach(w => {
+  WIDGETS.filter(w => w.id !== 'clock' && !(w.nativeOnly && !NATIVE)).forEach(w => {
     const el = $(w.sel); if (!el) return; el.querySelector(':scope > .wbar')?.remove();
     const z = ZONES.map(x => x[0]).find(k => L[k].includes(w.id)), on = widgetOn(w.id);
     const bar = document.createElement('div'); bar.className = 'wbar'; bar.dataset.for = w.id;
@@ -280,7 +282,7 @@ function decorateWidgets() {
       <button type="button" data-wvis aria-pressed="${on}" aria-label="${w.name} ${on ? 'ausblenden' : 'einblenden'}" title="${on ? 'Ausblenden' : 'Einblenden'}">${ic(on ? 'eye' : 'eyeoff', 'i sm')}</button>`;
     el.prepend(bar);
   });
-  const off = WIDGETS.filter(w => !widgetOn(w.id));
+  const off = WIDGETS.filter(w => !widgetOn(w.id) && !(w.nativeOnly && !NATIVE));
   $('#arrangeBar').innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Widgets anordnen</b><span>Am Griff ziehen oder mit ↑ ↓ verschieben, Bereich wählen, mit dem Auge aus- und einblenden.${off.length ? ` Ausgeblendet: ${off.map(w => w.name).join(', ')}.` : ''}</span></div>
     <button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
   $('#arrReset').onclick = () => { store.set('layout', null); applyWidgets(); toast('Anordnung zurückgesetzt', 'layout'); };
@@ -332,7 +334,7 @@ document.addEventListener('pointerdown', e => {
   grip.addEventListener('pointermove', onMove); grip.addEventListener('pointerup', onUp); grip.addEventListener('pointercancel', onUp);
 });
 function setWidget(id, on) { const W = getWidgets(); W[id] = on; store.set('widgets', W); applyWidgets(); if (on) refreshWidget(id); if (id === 'dock') renderApps(); }
-function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini })[id]?.(); }
+function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini, whatsapp: renderWaWidget })[id]?.(); }
 
 /* =====================================================================
    SEITENREITER & ANSICHTEN
@@ -340,6 +342,7 @@ function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, st
 const VIEWS = [
   { id: 'start', name: 'Start', icon: 'home' },
   { id: 'kalender', name: 'Kalender', icon: 'cal' },
+  ...(NATIVE ? [{ id: 'whatsapp', name: 'WhatsApp', icon: 'phonechat' }] : []),
   { id: 'projekte', name: 'Projekte', icon: 'kanban' },
   { id: 'gespeichert', name: 'Gespeichert', icon: 'bookmark' },
   { id: 'whiteboard', name: 'Whiteboard', icon: 'whiteboard' },
@@ -352,7 +355,7 @@ function renderRail() {
   $('#rail').innerHTML = `
     <button class="rb brand opt" id="railBrand" aria-label="Persönlich anpassen"><img src="${esc(iconCache || 'icon-192.png')}" alt=""><span class="lb">${esc(P.title || 'Cockpit')}</span><span class="tt">${esc(P.title || 'Cockpit')}</span></button>
     <hr class="opt">
-    ${VIEWS.map(v => `<a class="rb" href="#${v.id}" data-view-link="${v.id}" ${v.id === currentView ? 'aria-current="page"' : ''} aria-label="${v.name}">${ic(v.icon)}<span class="lb">${v.name}</span><span class="tt">${v.name}</span></a>`).join('')}
+    ${VIEWS.map(v => `<a class="rb" href="#${v.id}" data-view-link="${v.id}" ${v.id === currentView ? 'aria-current="page"' : ''} aria-label="${v.name}">${ic(v.icon)}${v.id === 'whatsapp' ? '<span class="badge num" id="waBadge" hidden>0</span>' : ''}<span class="lb">${v.name}</span><span class="tt">${v.name}</span></a>`).join('')}
     <hr>
     <button class="rb" id="railSearch" aria-label="Suchen (⌘K)">${ic('search')}<span class="lb">Suchen</span><span class="tt">Suchen · ⌘K</span></button>
     <button class="rb" id="railBell" aria-label="Mitteilungen">${ic('bell')}<span class="badge num" id="bellBadge" hidden>0</span><span class="lb">Mitteilungen</span><span class="tt">Mitteilungen</span></button>
@@ -369,10 +372,12 @@ function showView(id) {
   if (id !== 'start' && document.body.classList.contains('edit-on')) setEdit(false);
   if (!VIEWS.some(v => v.id === id)) id = 'start';
   if (currentView === 'whiteboard' && id !== 'whiteboard') wbLeave();
+  if (currentView === 'whatsapp' && id !== 'whatsapp') waLeave();
+  document.body.classList.toggle('wa-on', id === 'whatsapp');
   currentView = id;
   $$('.view').forEach(s => { s.hidden = s.dataset.view !== id; });
   $$('#rail [data-view-link]').forEach(a => a.dataset.viewLink === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
-  ({ start: renderStart, kalender: renderCalendar, projekte: renderKanban, gespeichert: renderSaved, whiteboard: renderWhiteboard, dateien: renderFiles })[id]();
+  ({ start: renderStart, kalender: renderCalendar, projekte: renderKanban, gespeichert: renderSaved, whiteboard: renderWhiteboard, dateien: renderFiles, whatsapp: renderWhatsApp })[id]();
   window.scrollTo({ top: 0 });
   closeNotif();
 }
@@ -390,7 +395,7 @@ function tick() {
   $('#kw').textContent = 'KW ' + isoWeek(n);
   $('#clock').textContent = n.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
-function renderStart() { tick(); renderApps(); renderNotes(); renderCds(); applyWidgets(); renderToday(); renderProjMini(); renderSavedMini(); if (widgetOn('stats')) loadStats(); }
+function renderStart() { tick(); renderApps(); renderNotes(); renderCds(); applyWidgets(); renderToday(); renderProjMini(); renderSavedMini(); renderWaWidget(); if (widgetOn('stats')) loadStats(); }
 
 /* ---------- Kacheln ---------- */
 const tileHtml = (a, sm) => `<span class="tile${sm ? ' sm' : ''}" style="--c:${a.color}">${ic(a.icon, sm ? 'i sm' : 'i')}</span>`;
@@ -1221,6 +1226,7 @@ async function computeNotifs() {
     r2.events.slice(0, 3).forEach(e => items.push({ id: 'ev:' + e.key, icon: 'cal', color: e.color, title: e.title, sub: `morgen${e.allDay ? ', ganztägig' : ' ' + hm(e.start) + ' Uhr'}`, go: 'kalender' }));
   } catch (e) {}
   tasks.filter(t => t.col !== 'done' && t.due).forEach(t => { const n = daysUntil(t.due); if (n <= 1) items.push({ id: `task:${t.id}:${t.due}`, icon: 'kanban', color: n < 0 ? '#F87171' : n === 0 ? '#FACC15' : '#4F7BFF', title: t.title, sub: n < 0 ? `überfällig seit ${-n} Tag${n < -1 ? 'en' : ''}` : n === 0 ? 'heute fällig' : 'morgen fällig', go: 'projekte' }); });
+  const wn = waCount(); if (NATIVE && wn) items.push({ id: 'wa:' + wn, icon: 'phonechat', color: '#25D366', title: 'WhatsApp', sub: `${wn} ${wn === 1 ? 'ungelesener Chat' : 'ungelesene Chats'}`, go: 'whatsapp' });
   cds.forEach(c => { const n = daysUntil(c.date); if (n >= 0 && n <= 7) items.push({ id: `cd:${c.id}:${n}`, icon: 'flag', color: '#F25FB0', title: c.label, sub: n === 0 ? 'heute!' : `noch ${n} Tag${n > 1 ? 'e' : ''}`, go: 'start' }); });
   return items;
 }
@@ -1256,6 +1262,70 @@ async function notifyTick() {
   const dayKey = 'due:' + isoDay(new Date()), due = tasks.filter(t => t.col !== 'done' && t.due && daysUntil(t.due) <= 0);
   if (due.length && !notified.has(dayKey) && new Date().getHours() >= 7) { notified.add(dayKey); systemNotify(`${due.length} Aufgabe${due.length > 1 ? 'n' : ''} fällig`, due.slice(0, 3).map(t => t.title).join(' · ')); }
   store.set('notifiedN', [...notified].slice(-300));
+}
+
+
+/* =====================================================================
+   WHATSAPP (nur Mac-App): WhatsApp Web als eigene Ansicht im Fenster
+   ===================================================================== */
+let waShown = false, waRect = '', waLoop = null, waState = { web: null, desktop: { running: false, count: null } };
+const waCount = () => { const w = waState.web, d = waState.desktop || {}; return w != null ? w : (d.running && d.count != null ? d.count : 0); };
+const waBlocked = () => !!($('#ov').innerHTML.trim() || $('#notifP'));
+function waTick() {
+  if (currentView !== 'whatsapp' || !NATIVE) return;
+  const r = $('#waFrame').getBoundingClientRect(), k = 6;
+  const rect = { x: Math.round(r.left + k), y: Math.round(r.top + k), w: Math.round(r.width - 2 * k), h: Math.round(r.height - 2 * k) }, key = JSON.stringify(rect);
+  if (waBlocked() || document.hidden) { if (waShown) { waShown = false; NATIVE.wa_hide(); } return; }
+  if (!waShown) {
+    waShown = true; waRect = key;
+    NATIVE.wa_show(rect).then(res => { if (!res || !res.ok) { waShown = false; clearInterval(waLoop); $('#waPh').innerHTML = `${ic('phonechat', 'i')}<b>WhatsApp ließ sich nicht einbetten</b><span>${esc((res && res.error) || '')} Öffne es über „Im Browser“ oder die WhatsApp-App.</span>`; } }).catch(() => {});
+  } else if (key !== waRect) { waRect = key; NATIVE.wa_move(rect); }
+}
+function renderWhatsApp() {
+  if (!NATIVE) return go('start');
+  store.set('waUsed', true);
+  clearInterval(waLoop); waShown = false; waRect = '';
+  /* erst einsetzen, wenn die Ansicht eingeblendet ist – sonst springt WhatsApp kurz */
+  const start = () => { if (currentView === 'whatsapp' && !waLoop) { waLoop = setInterval(waTick, 120); waTick(); } };
+  waLoop = null; setTimeout(start, 360);
+  setTimeout(waPoll, 5000);
+}
+function waLeave() { clearInterval(waLoop); waLoop = null; if (waShown && NATIVE) NATIVE.wa_hide(); waShown = false; }
+if (NATIVE) {
+  $('#waReload').onclick = () => { NATIVE.wa_reload(); toast('WhatsApp wird neu geladen', 'refresh'); };
+  $('#waDesk').onclick = async () => { const r = await NATIVE.open_app({ bundle: 'net.whatsapp.WhatsApp', name: 'WhatsApp' }).catch(() => null); toast(r && r.ok ? 'WhatsApp-App wird geöffnet' : 'Die WhatsApp-App ist auf diesem Mac nicht installiert', r && r.ok ? 'phonechat' : 'x'); };
+  $('#waExt').onclick = () => openUrl('https://web.whatsapp.com/', 'WhatsApp Web');
+}
+function renderWaWidget() {
+  const box = $('#waBox'); if (!box || !NATIVE) return;
+  const w = waState.web, d = waState.desktop || {}, used = store.get('waUsed', false);
+  const n = w != null ? w : (d.running && d.count != null ? d.count : null);
+  if (n == null) {
+    box.innerHTML = `<p class="empty">${used ? 'WhatsApp wird geladen …' : 'Öffne WhatsApp einmal hier im Cockpit und melde dich mit dem QR-Code an. Danach zeigt das Widget deine ungelesenen Chats.'}</p><button class="btn sm pri" data-wa-open>${ic('phonechat', 'i xs')} WhatsApp öffnen</button>`;
+  } else {
+    box.innerHTML = `<div class="wa-count${n ? ' has' : ''}"><b class="num">${n}</b><span>${n === 1 ? 'ungelesener Chat' : 'ungelesene Chats'}${w == null ? '<small>laut WhatsApp-App</small>' : ''}</span></div>
+      ${w != null && d.running && d.count ? `<p class="lead" style="margin:8px 0 0">WhatsApp-App: ${d.count} ungelesen</p>` : ''}
+      <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn sm pri" data-wa-open>${ic('phonechat', 'i xs')} Chats öffnen</button></div>`;
+  }
+  const b = $('#waBadge'); if (b) { const c = waCount(); b.textContent = c > 99 ? '99+' : c; b.hidden = !c; }
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-wa-open]')) go('whatsapp'); });
+let waPrev = null;
+async function waPoll() {
+  if (!NATIVE || !NATIVE.wa_status) return;
+  try {
+    const st = await NATIVE.wa_status(); if (!st) return;
+    waState = { web: st.web, desktop: st.desktop || { running: false, count: null } };
+    const c = waState.web;
+    if (c != null && waPrev != null && c > waPrev && !waState.desktop.running && currentView !== 'whatsapp' && notifyPrefs().whatsapp !== false) systemNotify('WhatsApp', `${c} ${c === 1 ? 'ungelesener Chat' : 'ungelesene Chats'}`);
+    if (c != null) waPrev = c;
+    renderWaWidget(); updateBadge();
+  } catch (e) {}
+}
+if (NATIVE && NATIVE.wa_status) {
+  /* Wer WhatsApp im Cockpit schon einmal geöffnet hat: im Hintergrund laden, damit Widget und Zähler stimmen */
+  if (store.get('waUsed', false) && NATIVE.wa_preload) setTimeout(() => NATIVE.wa_preload().then(() => setTimeout(waPoll, 6000)).catch(() => {}), 2500);
+  setInterval(waPoll, 20000); setTimeout(waPoll, 3000);
 }
 
 /* =====================================================================
@@ -1360,6 +1430,7 @@ function setup(tab = 'personal') {
         <div class="row" style="justify-content:flex-start"><button class="btn pri">${ic('plus', 'i sm')} Abo hinzufügen</button></div></form>
       <ol class="steps" style="margin-top:14px"><li><b>WebUntis:</b> In der App unter Kalender › Menü › Kalender › „abo (alle)“ den Link kopieren.</li><li><b>IServ:</b> Kalender › Kalender abonnieren (oder Exportieren) › iCal-Adresse kopieren.</li></ol>`,
     notify: `<div class="wlist"><div class="wrow"><span class="tile sm" style="--c:#E0B24A">${ic('bell', 'i sm')}</span><span class="t"><b>System-Mitteilungen</b><span>${NATIVE ? 'macOS meldet sich 15 Minuten vor Terminen, bei fälligen Aufgaben und wenn der Timer abläuft.' : 'Der Browser meldet sich 15 Minuten vor Terminen und bei fälligen Aufgaben, solange Cockpit geöffnet ist.'}</span></span><button class="sw" role="switch" id="nSys" aria-checked="${notifyPrefs().system}" aria-label="System-Mitteilungen"></button></div>
+      ${NATIVE ? `<div class="wrow"><span class="tile sm" style="--c:#25D366">${ic('phonechat', 'i sm')}</span><span class="t"><b>WhatsApp-Hinweise</b><span>Meldet neue ungelesene Chats aus WhatsApp im Cockpit (nicht, wenn die WhatsApp-App läuft – die meldet sich selbst).</span></span><button class="sw" role="switch" id="nWa" aria-checked="${notifyPrefs().whatsapp !== false}" aria-label="WhatsApp-Hinweise"></button></div>` : ''}
       ${!NATIVE && 'Notification' in window ? `<div class="wrow"><span class="t"><b>Browser-Erlaubnis</b><span>Status: ${Notification.permission === 'granted' ? 'erlaubt' : Notification.permission === 'denied' ? 'blockiert (in den Browser-Einstellungen ändern)' : 'noch nicht gefragt'}</span></span>${Notification.permission === 'default' ? '<button class="btn sm" id="nAsk">Erlauben</button>' : ''}</div>` : ''}</div>
       <h4 style="margin:18px 0 8px;font-size:13px">buildspace-Aufrufe</h4>
       <div class="wlist"><div class="wrow"><span class="t"><b>Eigene Aufrufe nicht zählen</b><span>${location.host === 'buildspaceos.de' ? 'Gilt für diesen Browser.' : 'Öffne dafür Cockpit unter buildspaceos.de/cockpit in dem Browser, mit dem du buildspace nutzt.'}</span></span>${location.host === 'buildspaceos.de' ? `<button class="sw" role="switch" id="nNoCount" aria-checked="${(() => { try { return localStorage.getItem('bs_nocount') === '1'; } catch (e) { return false; } })()}" aria-label="Eigene Aufrufe nicht zählen"></button>` : ''}</div></div>
@@ -1376,7 +1447,7 @@ function setup(tab = 'personal') {
     diag: `<dl class="diag"><dt>Version</dt><dd>Cockpit ${APP_VERSION}${NATIVE ? ' · Mac-App' : ' · Web-App'}</dd>
       <dt>Verbindung</dt><dd>${NATIVE ? '<span class="ok">Mac-App verbunden</span>' : location.protocol === 'file:' ? '<span class="bad">Keine Verbindung zur Mac-App</span>' : 'Browser'}</dd>
       <dt>Speicher</dt><dd>${NATIVE ? '~/Library/Application Support/Cockpit/state.json' : 'Browser-Speicher dieses Geräts'}</dd>
-      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
+      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download', 'wa_show', 'wa_status'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
       <div class="row" style="justify-content:flex-start"><button class="btn" id="dgUrl">${ic('ext', 'i sm')} Test: buildspace öffnen</button>${NATIVE ? `<button class="btn" id="dgApp">${ic('cal', 'i sm')} Test: Kalender-App öffnen</button><button class="btn" id="dgNote">${ic('bell', 'i sm')} Test: Mitteilung</button>` : ''}</div>`
   };
   modal(`<div class="glass modal wide" role="dialog" aria-label="Einstellungen"><div class="mh"><h3>Einstellungen</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
@@ -1396,7 +1467,7 @@ function widgetsTab() {
   return `<p class="lead">Ein- und ausblenden, Reihenfolge und Bereich festlegen. Noch schneller geht es direkt auf der Startseite: <b>Anpassen</b> und die Widgets am Griff ziehen.</p>
     <div class="wlist" style="margin-bottom:14px">${widgetRow(WIDGETS.find(w => w.id === 'clock'))}
       <div class="wrow${dockOn ? '' : ' dis'}"><span class="tile sm" style="--c:#64748B">${ic('keyboard', 'i sm')}</span><span class="t"><b>Kurzwahltasten 1–6</b><span>${dockOn ? 'Die Tasten 1 bis 6 öffnen die Apps im Schnellstart.' : 'Nur mit eingeblendetem Schnellstart verfügbar.'}</span></span><button type="button" class="sw" role="switch" id="hkSw" aria-checked="${dockOn && hk}" aria-label="Kurzwahltasten 1 bis 6" ${dockOn ? '' : 'aria-disabled="true" disabled'}></button></div></div>
-    ${ZONES.map(([z, n]) => `<h4 class="zh">${n}</h4><div class="wlist" data-szlist="${z}">${L[z].length ? L[z].map(id => widgetRow(WIDGETS.find(w => w.id === id), z)).join('') : '<p class="empty" style="margin:0">Leer – wähle bei einem Widget diesen Bereich.</p>'}</div>`).join('')}
+    ${ZONES.map(([z, n]) => `<h4 class="zh">${n}</h4><div class="wlist" data-szlist="${z}">${L[z].filter(id => NATIVE || !WIDGETS.find(w => w.id === id).nativeOnly).length ? L[z].filter(id => NATIVE || !WIDGETS.find(w => w.id === id).nativeOnly).map(id => widgetRow(WIDGETS.find(w => w.id === id), z)).join('') : '<p class="empty" style="margin:0">Leer – wähle bei einem Widget diesen Bereich.</p>'}</div>`).join('')}
     <div class="row" style="justify-content:flex-start;margin-top:14px"><button type="button" class="btn" id="lyReset">Anordnung zurücksetzen</button><button type="button" class="btn" id="lyArrange">${ic('layout', 'i sm')} Auf der Startseite anordnen</button></div>`;
 }
 function bindWidgetsTab() {
@@ -1446,6 +1517,7 @@ function bindSettings(tab) {
   }
   if (tab === 'notify') {
     $('#nSys').onclick = () => { const p = notifyPrefs(); p.system = !p.system; store.set('notify', p); $('#nSys').setAttribute('aria-checked', p.system); };
+    $('#nWa')?.addEventListener('click', () => { const p = notifyPrefs(); p.whatsapp = p.whatsapp === false; store.set('notify', p); $('#nWa').setAttribute('aria-checked', p.whatsapp); });
     $('#nAsk')?.addEventListener('click', async () => { await Notification.requestPermission(); setup('notify'); });
     $('#nNoCount')?.addEventListener('click', () => { try { const on = localStorage.getItem('bs_nocount') !== '1'; if (on) localStorage.setItem('bs_nocount', '1'); else localStorage.removeItem('bs_nocount'); $('#nNoCount').setAttribute('aria-checked', on); toast(on ? 'Deine Aufrufe werden nicht mehr gezählt' : 'Deine Aufrufe werden wieder gezählt'); } catch (e) {} });
   }
@@ -1501,7 +1573,7 @@ function welcome() {
 applyLook();
 renderRail();
 applyProfile().then(() => renderRail());
-if (NATIVE) $('#tipShort').innerHTML = `${ic('bolt', 'i sm')}<div><b>Mac-Apps</b> wie Kalender, Mail, iDoceo oder WhatsApp öffnen direkt. Weitere legst du unter <b>Anpassen</b> als „Mac-App“ an.</div>`;
+if (NATIVE) $('#tipShort').innerHTML = `${ic('bolt', 'i sm')}<div><b>Mac-Apps</b> wie Kalender, Mail oder iDoceo öffnen direkt. <b>WhatsApp</b> läuft hier im Cockpit (Seitenreiter). Weitere Apps legst du unter <b>Anpassen</b> als „Mac-App“ an.</div>`;
 showView(location.hash.slice(1) || 'start');
 if (store.get('profile', null) === null) setTimeout(welcome, 400);
 setInterval(tick, 15000);
