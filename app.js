@@ -99,8 +99,9 @@ const I18N = {
     promptlabLabel: "Promptlabor",
     slashLabel: "Slash-Codes",
     programsLabel: "Programme",
-    programsSub: "Programme zum Herunterladen, die direkt auf deinem Computer laufen.",
+    programsSub: "Programme zum Herunterladen und Web-Apps zum Installieren, die direkt auf deinem Computer oder iPad laufen.",
     programsDownload: "Herunterladen",
+    programsOpen: "Öffnen",
     programsManual: "Anleitung",
     programsInstall: "In drei Schritten startklar",
     programsShare: "Teilen",
@@ -168,8 +169,9 @@ const I18N = {
     promptlabLabel: "Prompt lab",
     slashLabel: "Slash codes",
     programsLabel: "Programs",
-    programsSub: "Programs to download that run right on your computer.",
+    programsSub: "Programs to download and web apps to install that run right on your computer or iPad.",
     programsDownload: "Download",
+    programsOpen: "Open",
     programsManual: "Manual (German)",
     programsInstall: "Ready in three steps",
     programsShare: "Share",
@@ -1705,6 +1707,31 @@ const PROGRAMS = [
     download: { href: "downloads/heft2pdf-mac.zip", name: "Heft2PDF-Mac.zip", size: "0,5 MB", type: "ZIP" },
     share: "programme/heft2pdf.html",
     manual: { href: "downloads/heft2pdf-anleitung.pdf", name: "Heft2PDF-Anleitung.pdf", size: "1,2 MB", type: "PDF" }
+  },
+  {
+    id: "cockpit",
+    title: "Cockpit",
+    version: "1.0",
+    platform: "Web-App für Mac und iPad",
+    platformEn: "Web app for Mac and iPad",
+    icon: "assets/programme/cockpit-icon.png",
+    shot: "assets/programme/cockpit-vorschau.jpg",
+    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Kalender, Erinnerungen, Mail, Jamf, Apple School Manager und buildspace mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage (Elternbrief, Arbeitsblatt, Mail umformulieren …) direkt an Claude, ChatGPT oder DeepL Write oder legt ihn als Erinnerung an. Dazu Notizen, eine Suche mit ⌘K und frei anpassbare Kacheln.",
+    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Calendar, Reminders, Mail, Jamf, Apple School Manager and buildspace with one click. A quick AI bar sends text with a template (parent letter, worksheet, rewrite an email …) straight to Claude, ChatGPT or DeepL Write, or saves it as a reminder. Plus notes, ⌘K search and fully customisable tiles.",
+    steps: [
+      "Cockpit öffnen. Mac: in Safari <b>Ablage › Zum Dock hinzufügen</b>. iPad: <b>Teilen › Zum Home-Bildschirm</b>.",
+      "Unter <b>Einrichtung › Kurzbefehle</b> die fünf Kurzbefehle anlegen, damit Kalender, Erinnerungen, Mail und iDoceo starten.",
+      "Fehlende Adressen (orange Punkte, z. B. IServ) eintragen und Einstellungen per <b>Übertragen</b> aufs zweite Gerät holen."
+    ],
+    stepsEn: [
+      "Open Cockpit. Mac: in Safari choose <b>File › Add to Dock</b>. iPad: <b>Share › Add to Home Screen</b>.",
+      "Under <b>Setup › Shortcuts</b>, create the five shortcuts so Calendar, Reminders, Mail and iDoceo can launch.",
+      "Fill in missing addresses (orange dots, e.g. IServ) and copy your settings to the second device via <b>Transfer</b>."
+    ],
+    note: "Alle Einstellungen und Notizen bleiben auf deinem Gerät. Cockpit speichert keine Zugangsdaten.",
+    noteEn: "All settings and notes stay on your device. Cockpit does not store any login details.",
+    open: { href: "cockpit/" },
+    share: "programme/cockpit.html"
   }
 ];
 
@@ -1726,8 +1753,9 @@ function renderPrograms() {
       </div>
       <p class="prog-text">${escapeHtml(en ? p.textEn : p.text)}</p>
       <div class="prog-actions">
-        <a class="mp-copy prog-dl" href="${p.download.href}" download="${p.download.name}">${DOWNLOAD_GLYPH}<span>${escapeHtml(t("programsDownload"))}</span><small>${file(p.download)}</small></a>
-        <a class="mp-example prog-dl" href="${p.manual.href}" download="${p.manual.name}">${DOC_GLYPH}<span>${escapeHtml(t("programsManual"))}</span><small>${file(p.manual)}</small></a>
+        ${p.open ? `<a class="mp-copy prog-dl" href="${p.open.href}" target="_blank" rel="noopener">${OPEN_GLYPH}<span>${escapeHtml(t("programsOpen"))}</span></a>` : ""}
+        ${p.download ? `<a class="mp-copy prog-dl" href="${p.download.href}" download="${p.download.name}">${DOWNLOAD_GLYPH}<span>${escapeHtml(t("programsDownload"))}</span><small>${file(p.download)}</small></a>` : ""}
+        ${p.manual ? `<a class="mp-example prog-dl" href="${p.manual.href}" download="${p.manual.name}">${DOC_GLYPH}<span>${escapeHtml(t("programsManual"))}</span><small>${file(p.manual)}</small></a>` : ""}
         ${p.share ? `<button type="button" class="mp-example prog-dl prog-share" data-share="${p.share}" data-title="${escapeHtml(p.title)}">${SHARE_GLYPH}<span>${escapeHtml(t("programsShare"))}</span></button>` : ""}
         <span class="mp-status prog-status" role="status" aria-live="polite"></span>
       </div>
@@ -1758,6 +1786,7 @@ document.addEventListener("click", (e) => {
 });
 
 const SHARE_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4m-4 4 4-4 4 4"/><path d="M7 11H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18 11h-1"/></svg>';
+const OPEN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
 const DOWNLOAD_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>';
 const DOC_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/></svg>';
 
