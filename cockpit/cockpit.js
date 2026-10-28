@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -227,14 +227,111 @@ async function shrink(file, max, square) {
     return cv.toDataURL('image/jpeg', square ? .9 : .82);
   } finally { URL.revokeObjectURL(url); }
 }
-function applyWidgets() {
-  WIDGETS.forEach(w => { const el = $(w.sel); if (el) el.hidden = !widgetOn(w.id); });
-  const sideVisible = $$('#startSide > section').some(x => !x.hidden);
-  const mainVisible = $$('#startMain > *').some(x => !x.hidden);
-  $('#startSide').hidden = !sideVisible; $('#startMain').hidden = !mainVisible;
-  $('#startGrid').classList.toggle('no-side', !sideVisible || !mainVisible);
+/* ---------- Anordnung der Widgets: drei Zonen ---------- */
+const ZONES = [['top', 'Oben · volle Breite', '#startTop'], ['main', 'Hauptspalte', '#startMain'], ['side', 'Seitenspalte', '#startSide']];
+const LAYOUT_DEFAULT = { top: ['quick'], main: ['dock', 'groups'], side: ['today', 'projects', 'stats', 'notes', 'saved', 'timer', 'countdown', 'tips'] };
+const MOVABLE = WIDGETS.filter(w => w.id !== 'clock').map(w => w.id);
+function getLayout() {
+  const raw = store.get('layout', null) || {}, L = { top: [], main: [], side: [] }, seen = new Set();
+  ZONES.forEach(([z]) => (Array.isArray(raw[z]) ? raw[z] : []).forEach(id => { if (MOVABLE.includes(id) && !seen.has(id)) { L[z].push(id); seen.add(id); } }));
+  /* neue oder fehlende Widgets an ihrer Standardstelle ergänzen */
+  ZONES.forEach(([z]) => LAYOUT_DEFAULT[z].forEach(id => { if (!seen.has(id)) { L[z].push(id); seen.add(id); } }));
+  return L;
 }
-function setWidget(id, on) { const W = getWidgets(); W[id] = on; store.set('widgets', W); applyWidgets(); if (on) refreshWidget(id); }
+const setLayout = L => { store.set('layout', L); applyWidgets(); };
+const wEl = id => { const w = WIDGETS.find(x => x.id === id); return w ? $(w.sel) : null; };
+const hotkeysOn = () => widgetOn('dock') && store.get('hotkeys', true) !== false;
+function applyWidgets() {
+  const L = getLayout(), arranging = document.body.classList.contains('arrange-on');
+  ZONES.forEach(([z, , sel]) => {
+    const zone = $(sel), want = L[z].map(wEl).filter(Boolean), cur = [...zone.children].filter(k => k.dataset.w);
+    want.forEach(el => { el.dataset.w = WIDGETS.find(w => $(w.sel) === el).id; });
+    /* nur umhängen, wenn sich die Reihenfolge ändert (sonst verliert z. B. das Textfeld den Fokus) */
+    if (want.length !== cur.length || want.some((el, i) => cur[i] !== el)) want.forEach(el => zone.appendChild(el));
+  });
+  WIDGETS.forEach(w => { const el = $(w.sel); if (el) el.hidden = !widgetOn(w.id) && !arranging; if (el) el.classList.toggle('w-off', !widgetOn(w.id)); });
+  const has = sel => $$(sel + ' > [data-w]').some(x => !x.hidden);
+  const top = has('#startTop'), main = has('#startMain'), side = has('#startSide');
+  $('#startTop').hidden = !top && !arranging; $('#startMain').hidden = !main && !arranging; $('#startSide').hidden = !side && !arranging;
+  $('#startGrid').hidden = !main && !side && !arranging;
+  $('#startGrid').classList.toggle('no-side', !arranging && (!side || !main));
+  $('#startGrid').classList.toggle('only-side', !arranging && side && !main);
+  if (arranging) decorateWidgets();
+}
+function readLayoutFromDom() { const L = { top: [], main: [], side: [] }; ZONES.forEach(([z, , sel]) => $$(sel + ' > [data-w]').forEach(el => L[z].push(el.dataset.w))); return L; }
+function moveWidget(id, dir) {
+  const L = getLayout(); const z = ZONES.map(x => x[0]).find(k => L[k].includes(id)); const arr = L[z], i = arr.indexOf(id), j = i + dir;
+  if (j >= 0 && j < arr.length) { [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  else { /* am Rand: in die nächste Zone weiterwandern */ const zi = ZONES.findIndex(x => x[0] === z), nz = ZONES[zi + dir]; if (!nz) return; arr.splice(i, 1); dir < 0 ? L[nz[0]].push(id) : L[nz[0]].unshift(id); }
+  setLayout(L);
+}
+function zoneWidget(id, zone) { const L = getLayout(); ZONES.forEach(([z]) => { L[z] = L[z].filter(x => x !== id); }); L[zone].push(id); setLayout(L); }
+/* Anordnen-Modus auf der Startseite */
+function decorateWidgets() {
+  const L = getLayout();
+  ZONES.forEach(([z, , sel]) => { const zone = $(sel); zone.dataset.label = ZONES.find(x => x[0] === z)[1]; });
+  WIDGETS.filter(w => w.id !== 'clock').forEach(w => {
+    const el = $(w.sel); if (!el) return; el.querySelector(':scope > .wbar')?.remove();
+    const z = ZONES.map(x => x[0]).find(k => L[k].includes(w.id)), on = widgetOn(w.id);
+    const bar = document.createElement('div'); bar.className = 'wbar'; bar.dataset.for = w.id;
+    bar.innerHTML = `<button type="button" class="grip" data-wgrip aria-label="${w.name} verschieben (ziehen)">${ic('grip', 'i sm')}</button><b>${w.name}</b><span class="spacer"></span>
+      <button type="button" data-wmv="-1" aria-label="${w.name} nach oben">${ic('up', 'i sm')}</button><button type="button" data-wmv="1" aria-label="${w.name} nach unten">${ic('down', 'i sm')}</button>
+      <select data-wzone aria-label="Bereich für ${w.name}">${ZONES.map(([k, n]) => `<option value="${k}"${k === z ? ' selected' : ''}>${n.split(' ·')[0]}</option>`).join('')}</select>
+      <button type="button" data-wvis aria-pressed="${on}" aria-label="${w.name} ${on ? 'ausblenden' : 'einblenden'}" title="${on ? 'Ausblenden' : 'Einblenden'}">${ic(on ? 'eye' : 'eyeoff', 'i sm')}</button>`;
+    el.prepend(bar);
+  });
+  const off = WIDGETS.filter(w => !widgetOn(w.id));
+  $('#arrangeBar').innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Widgets anordnen</b><span>Am Griff ziehen oder mit ↑ ↓ verschieben, Bereich wählen, mit dem Auge aus- und einblenden.${off.length ? ` Ausgeblendet: ${off.map(w => w.name).join(', ')}.` : ''}</span></div>
+    <button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
+  $('#arrReset').onclick = () => { store.set('layout', null); applyWidgets(); toast('Anordnung zurückgesetzt', 'layout'); };
+  $('#arrDone').onclick = () => setEdit(false);
+}
+function setArrange(on) {
+  document.body.classList.toggle('arrange-on', on);
+  $('#arrangeBar').hidden = !on;
+  if (!on) $$('.wbar').forEach(b => b.remove());
+  applyWidgets();
+  if (on) { $('#arrangeBar').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  const b = $('#arrangeBtn'); if (b) b.setAttribute('aria-pressed', on);
+}
+document.addEventListener('click', e => {
+  const bar = e.target.closest('.wbar'); if (!bar) return; const id = bar.dataset.for;
+  const mv = e.target.closest('[data-wmv]'); if (mv) { moveWidget(id, +mv.dataset.wmv); requestAnimationFrame(() => document.querySelector(`.wbar[data-for="${id}"] [data-wmv="${mv.dataset.wmv}"]`)?.focus()); return; }
+  if (e.target.closest('[data-wvis]')) { setWidget(id, !widgetOn(id)); }
+});
+document.addEventListener('change', e => { const sel = e.target.closest('[data-wzone]'); if (sel) zoneWidget(sel.closest('.wbar').dataset.for, sel.value); });
+/* Ziehen mit Maus, Finger oder Stift */
+document.addEventListener('pointerdown', e => {
+  const grip = e.target.closest('[data-wgrip]'); if (!grip || e.button > 0) return;
+  e.preventDefault();
+  const el = grip.closest('[data-w]'), r = el.getBoundingClientRect();
+  const ph = document.createElement('div'); ph.className = 'wph'; ph.style.height = Math.min(r.height, 220) + 'px';
+  el.after(ph);
+  document.body.classList.add('dragging-w');
+  const ghost = el; ghost.classList.add('wdrag'); Object.assign(ghost.style, { width: r.width + 'px', left: r.left + 'px', top: r.top + 'px' });
+  const dx = e.clientX - r.left, dy = e.clientY - r.top;
+  try { grip.setPointerCapture(e.pointerId); } catch (er) {}
+  const zones = ZONES.map(z => $(z[2]));
+  const onMove = ev => {
+    ghost.style.left = ev.clientX - dx + 'px'; ghost.style.top = ev.clientY - dy + 'px';
+    /* Zone unter dem Zeiger, sonst die nächstgelegene */
+    let best = null, bd = Infinity;
+    zones.forEach(z => { const b = z.getBoundingClientRect(); if (!b.width) return; const ddx = ev.clientX < b.left ? b.left - ev.clientX : ev.clientX > b.right ? ev.clientX - b.right : 0, ddy = ev.clientY < b.top ? b.top - ev.clientY : ev.clientY > b.bottom ? ev.clientY - b.bottom : 0, d = ddx + ddy; if (d < bd) { bd = d; best = z; } });
+    if (!best) return;
+    const kids = [...best.children].filter(k => k.dataset.w && k !== ghost && !k.hidden);
+    const before = kids.find(k => { const b = k.getBoundingClientRect(); return ev.clientY < b.top + b.height / 2; });
+    if (before) { if (ph.nextElementSibling !== before) best.insertBefore(ph, before); } else if (best.lastElementChild !== ph) best.appendChild(ph);
+    if (ev.clientY < 60) window.scrollBy(0, -14); else if (ev.clientY > innerHeight - 60) window.scrollBy(0, 14);
+  };
+  const onUp = () => {
+    grip.removeEventListener('pointermove', onMove); grip.removeEventListener('pointerup', onUp); grip.removeEventListener('pointercancel', onUp);
+    document.body.classList.remove('dragging-w');
+    ph.replaceWith(ghost); ghost.classList.remove('wdrag'); ghost.removeAttribute('style');
+    setLayout(readLayoutFromDom());
+  };
+  grip.addEventListener('pointermove', onMove); grip.addEventListener('pointerup', onUp); grip.addEventListener('pointercancel', onUp);
+});
+function setWidget(id, on) { const W = getWidgets(); W[id] = on; store.set('widgets', W); applyWidgets(); if (on) refreshWidget(id); if (id === 'dock') renderApps(); }
 function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini })[id]?.(); }
 
 /* =====================================================================
@@ -269,6 +366,7 @@ function renderRail() {
   updateBadge();
 }
 function showView(id) {
+  if (id !== 'start' && document.body.classList.contains('edit-on')) setEdit(false);
   if (!VIEWS.some(v => v.id === id)) id = 'start';
   if (currentView === 'whiteboard' && id !== 'whiteboard') wbLeave();
   currentView = id;
@@ -310,8 +408,9 @@ function appHtml(a, inDock, key) {
 }
 function dockApps() { const used = apps.filter(a => usage[a.id]).sort((a, b) => usage[b.id] - usage[a.id]); return [...used, ...apps.filter(a => !usage[a.id])].slice(0, 6); }
 function renderApps() {
-  $('#dock').innerHTML = dockApps().map((a, i) => appHtml(a, true, i + 1)).join('');
-  $('#dockHint').textContent = Object.keys(usage).length ? 'Am häufigsten genutzt · Tasten 1–6' : 'Tasten 1–6';
+  const hk = hotkeysOn();
+  $('#dock').innerHTML = dockApps().map((a, i) => appHtml(a, true, hk ? i + 1 : 0)).join('');
+  $('#dockHint').textContent = [Object.keys(usage).length ? 'Am häufigsten genutzt' : '', hk ? 'Tasten 1–6' : ''].filter(Boolean).join(' · ');
   const editing = document.body.classList.contains('edit-on');
   $('#w-groups').innerHTML = GROUPS.map(g => {
     const list = apps.filter(a => a.group === g.id);
@@ -336,10 +435,12 @@ function move(a, dir) {
   const ai = apps.indexOf(a), bi = apps.indexOf(same[j]); [apps[ai], apps[bi]] = [apps[bi], apps[ai]];
   saveApps(); renderApps();
 }
-$('#editBtn').addEventListener('click', () => {
-  const on = document.body.classList.toggle('edit-on');
+function setEdit(on) {
+  document.body.classList.toggle('edit-on', on);
   $('#editBtn').setAttribute('aria-pressed', on); $('#editBtn span').textContent = on ? 'Fertig' : 'Anpassen'; renderApps();
-});
+  setArrange(on);
+}
+$('#editBtn').addEventListener('click', () => setEdit(!document.body.classList.contains('edit-on')));
 function editor(a, group) {
   const isNew = !a;
   const d = a ? { ...a } : { id: 'app' + uid(), name: '', sub: '', group: group || 'eigene', icon: 'globe', color: COLORS[0], type: 'web', target: '' };
@@ -353,7 +454,7 @@ function editor(a, group) {
     <div class="two"><label class="field">Bereich<select id="eG">${GROUPS.map(g => `<option value="${g.id}"${g.id === d.group ? ' selected' : ''}>${g.name}</option>`).join('')}</select></label>
       <label class="field">Symbol<select id="eI">${ICONS.map(i => `<option${i === d.icon ? ' selected' : ''}>${i}</option>`).join('')}</select></label></div>
     <div class="field">Farbe<div class="swatches" id="eC">${COLORS.map(c => `<button type="button" style="background:${c}" data-c="${c}" aria-label="Farbe ${c}" aria-pressed="${c === d.color}"></button>`).join('')}</div></div>
-    <div class="row">${isNew ? '' : '<button type="button" class="btn danger" id="eDel">Entfernen</button>'}<span class="spacer"></span>${!isNew && d.target ? '<button type="button" class="btn" id="eTest">Testen</button>' : ''}<button type="button" class="btn" data-close>Abbrechen</button><button class="btn pri">Speichern</button></div>
+    <div class="row">${isNew ? '' : '<button type="button" class="btn danger" id="eDel">Entfernen</button>'}<span class="spacer"></span><button type="button" class="btn" id="eTest">Testen</button><button type="button" class="btn" data-close>Abbrechen</button><button class="btn pri">Speichern</button></div>
   </form>`);
   const LBL = { web: ['Adresse (https://…)', 'Am einfachsten die Adresse aus der Adresszeile des Browsers kopieren.'], shortcut: ['Name des Kurzbefehls', 'Muss genauso heißen wie in der Kurzbefehle-App.'], mac: ['Name der Mac-App', 'Wie im Ordner „Programme“, z. B. Keynote. Beim Tippen erscheinen Vorschläge.'] };
   const PH = { web: 'https://deine-schule.de/iserv', shortcut: 'Cockpit …', mac: 'z. B. Keynote' };
@@ -373,7 +474,7 @@ function editor(a, group) {
     if (out.type === 'mac') delete out.mac;
     return out;
   };
-  $('#eTest')?.addEventListener('click', () => openApp(collect()));
+  $('#eTest')?.addEventListener('click', () => { const t = collect(); if (!t.target) { toast(t.type === 'mac' ? 'Bitte den Namen der Mac-App eintragen' : t.type === 'shortcut' ? 'Bitte den Namen des Kurzbefehls eintragen' : 'Bitte zuerst eine Adresse eintragen', 'x'); return; } openApp(t); });
   $('#edf').addEventListener('submit', e => {
     e.preventDefault();
     const out = collect();
@@ -405,7 +506,7 @@ async function sendQ(kind, textOverride) {
   if (!raw && !['claude', 'chatgpt', 'whatsapp'].includes(kind)) { q.focus(); toast('Erst etwas eingeben', 'edit'); return; }
   if (kind === 'claude') { bump('claude'); openUrl(t ? 'https://claude.ai/new?q=' + encodeURIComponent(t) : 'https://claude.ai/new', 'Claude'); }
   if (kind === 'chatgpt') { bump('chatgpt'); openUrl(t ? 'https://chatgpt.com/?q=' + encodeURIComponent(t) : 'https://chatgpt.com/', 'ChatGPT'); }
-  if (kind === 'deepl') { const ok = await copy(raw); bump('deepl'); await openUrl('https://www.deepl.com/write', 'DeepL Write'); if (ok) setTimeout(() => toast('Text kopiert – in DeepL Write mit ⌘V einfügen', 'copy'), 900); }
+  if (kind === 'deepl') { const cp = copy(raw); bump('deepl'); await openUrl('https://www.deepl.com/write', 'DeepL Write'); const ok = await cp; if (ok) setTimeout(() => toast('Text kopiert – in DeepL Write mit ⌘V einfügen', 'copy'), 900); }
   if (kind === 'whatsapp') { bump('whatsapp'); openUrl(raw ? 'https://wa.me/?text=' + encodeURIComponent(raw) : 'https://web.whatsapp.com/', 'WhatsApp'); }
   if (kind === 'task') { addTask({ title: raw }); toast('Als Projekt „In Planung“ angelegt', 'kanban'); }
   if (kind === 'reminder') {
@@ -1205,13 +1306,13 @@ async function palette() {
 document.addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette(); return; }
-  if (e.key === 'Escape') { if ($('#tmBigView')) $('#tmBigView').remove(); else if ($('#ov').innerHTML) close(); else if ($('#notifP')) closeNotif(); else wbExitFull(); return; }
+  if (e.key === 'Escape') { if ($('#tmBigView')) $('#tmBigView').remove(); else if ($('#ov').innerHTML) close(); else if ($('#notifP')) closeNotif(); else if (document.body.classList.contains('edit-on')) setEdit(false); else wbExitFull(); return; }
   if ($('#tmBigView') && e.key === ' ') { e.preventDefault(); tmToggle(); return; }
   if (typing || $('#ov').innerHTML) return;
   if (currentView === 'whiteboard' && wb && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? wb.redo() : wb.undo(); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === '/') { e.preventDefault(); palette(); }
-  if (currentView === 'start' && /^[1-6]$/.test(e.key)) openApp(dockApps()[+e.key - 1]);
+  if (currentView === 'start' && hotkeysOn() && /^[1-6]$/.test(e.key)) { const a = dockApps()[+e.key - 1]; if (a) openApp(a); }
 });
 
 /* =====================================================================
@@ -1250,8 +1351,7 @@ function setup(tab = 'personal') {
       <div class="lrange"><label for="lDim">Hintergrund abdunkeln <output id="oDim" class="num">${L.dim} %</output></label><input type="range" id="lDim" min="0" max="90" value="${L.dim}"></div>
       <div class="field">Akzentfarbe<div class="swatches" id="lAcc">${Object.keys(ACCENTS).map(k => `<button type="button" data-acc="${k}" aria-pressed="${L.accent === k}" style="background:linear-gradient(135deg,${ACCENTS[k][0]},${ACCENTS[k][1]})" aria-label="${ACCENT_NAMES[k]}" title="${ACCENT_NAMES[k]}"></button>`).join('')}</div></div>
       <div class="row" style="justify-content:flex-start"><button type="button" class="btn" id="lReset">Aussehen zurücksetzen</button></div>`,
-    widgets: `<p class="lead">Wähle, was die Startseite zeigt. Ausgeblendete Widgets behalten ihre Inhalte.</p>
-      <div class="wlist">${WIDGETS.map(w => `<div class="wrow"><span class="tile sm" style="--c:${w.color}">${ic(w.icon, 'i sm')}</span><span class="t"><b>${w.name}</b><span>${w.desc}</span></span><button type="button" class="sw" role="switch" data-w="${w.id}" aria-checked="${widgetOn(w.id)}" aria-label="${w.name}"></button></div>`).join('')}</div>`,
+    widgets: widgetsTab(),
     calendar: `<p class="lead">${NATIVE ? 'Termine aus der Mac-Kalender-App erscheinen automatisch, sobald du den Zugriff erlaubst. Zusätzlich kannst du Kalender-Abos (iCal-Links) eintragen.' : 'Im Browser kann Cockpit nur eigene Termine und Abos von Servern laden, die das erlauben. IServ- und WebUntis-Abos funktionieren zuverlässig in der Mac-App.'}</p>
       <h4 style="margin:0 0 8px;font-size:13px">Kalender-Abos</h4>
       <div class="wlist" id="feedList">${getFeeds().map(f => `<div class="wrow"><span class="tile sm" style="--c:${esc(f.color)}">${ic('cal', 'i sm')}</span><span class="t"><b>${esc(f.name)}</b><span>${esc(f.url)}</span></span><button class="sw" role="switch" data-feedon="${f.id}" aria-checked="${f.on !== false}" aria-label="Anzeigen"></button><button class="x" data-feeddel="${f.id}" aria-label="Entfernen">${ic('trash', 'i sm')}</button></div>`).join('') || '<p class="empty">Noch kein Abo.</p>'}</div>
@@ -1268,8 +1368,8 @@ function setup(tab = 'personal') {
       : `<ol class="steps"><li><b>${isMac ? 'Mac' : 'iPad'} (dieses Gerät):</b> ${isMac ? 'In Safari oben auf <b>Ablage › Zum Dock hinzufügen</b>. Oder besser: die <b>Mac-App</b> von buildspace › Programme laden – sie kann zusätzlich deinen Kalender, Mac-Programme und Mitteilungen.' : 'In Safari auf <b>Teilen › Zum Home-Bildschirm</b>. Cockpit öffnet sich danach im Vollbild wie eine App.'}</li><li><b>Einstellungen übertragen:</b> Im Reiter „Übertragen“ den Code kopieren und auf dem anderen Gerät einfügen.</li></ol>`,
     shortcuts: `<p class="lead">${NATIVE ? 'In der Mac-App brauchst du keine Kurzbefehle: Kalender, Erinnerungen, Mail, iDoceo und WhatsApp öffnen direkt. Die Kurzbefehle brauchst du nur auf dem iPad:' : 'Kalender, Erinnerungen, Mail und iDoceo sind Apps auf dem Gerät. Eine Webseite darf sie nicht direkt starten, ein Kurzbefehl schon. Leg diese fünf Kurzbefehle in der App „Kurzbefehle“ an. Antippen kopiert den Namen.'}</p>
       <ol class="steps">${SHORTCUTS.map(s => `<li><code data-cp="${esc(s.n)}">${esc(s.n)}</code><br><span style="color:var(--ink-2);font-size:12px">${s.a}</span></li>`).join('')}</ol>`,
-    transfer: `<p class="lead">Apps, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Name, Aussehen und Widgets liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät ein. Whiteboards, Dateien und eigene Bilder werden nicht mit übertragen.</p>
-      <label class="field">Code dieses Geräts<textarea class="code" id="exp" readonly>${esc(btoa(unescape(encodeURIComponent(JSON.stringify({ v: 3, apps, notes, countdowns: cds, tasks, saved, events: ownEvents, icsFeeds: getFeeds(), profile: getProfile(), look: getLook(), widgets: getWidgets() })))))}</textarea></label>
+    transfer: `<p class="lead">Apps, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Name, Aussehen, Widgets und ihre Anordnung liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät ein. Whiteboards, Dateien und eigene Bilder werden nicht mit übertragen.</p>
+      <label class="field">Code dieses Geräts<textarea class="code" id="exp" readonly>${esc(btoa(unescape(encodeURIComponent(JSON.stringify({ v: 3, apps, notes, countdowns: cds, tasks, saved, events: ownEvents, icsFeeds: getFeeds(), profile: getProfile(), look: getLook(), widgets: getWidgets(), layout: getLayout(), hotkeys: store.get('hotkeys', true) })))))}</textarea></label>
       <div class="row" style="justify-content:flex-start;margin:-4px 0 14px"><button class="btn" id="cpExp">${ic('copy', 'i sm')} Code kopieren</button></div>
       <label class="field">Code vom anderen Gerät einfügen<textarea class="code" id="imp" placeholder="Code hier einfügen …"></textarea></label>
       <div class="row" style="justify-content:flex-start"><button class="btn pri" id="doImp">Übernehmen</button><span class="spacer"></span><button class="btn danger" id="reset">Apps auf Standard zurücksetzen</button></div>`,
@@ -1283,6 +1383,30 @@ function setup(tab = 'personal') {
     <div class="tabs">${TABS.map(([k, l]) => `<button class="chipbtn" data-tab="${k}" aria-pressed="${k === tab}">${l}</button>`).join('')}</div>${body[tab]}</div>`);
   $$('[data-tab]').forEach(b => b.onclick = () => setup(b.dataset.tab));
   bindSettings(tab);
+}
+
+function widgetRow(w, z) {
+  return `<div class="wrow" data-wrow="${w.id}"><span class="tile sm" style="--c:${w.color}">${ic(w.icon, 'i sm')}</span><span class="t"><b>${w.name}</b><span>${w.desc}</span></span>
+    ${z ? `<span class="wpos"><button type="button" class="orb sm" data-smv="-1" aria-label="${w.name} nach oben">${ic('up', 'i xs')}</button><button type="button" class="orb sm" data-smv="1" aria-label="${w.name} nach unten">${ic('down', 'i xs')}</button>
+    <select data-szone aria-label="Bereich für ${w.name}">${ZONES.map(([k, n]) => `<option value="${k}"${k === z ? ' selected' : ''}>${n.split(' ·')[0]}</option>`).join('')}</select></span>` : ''}
+    <button type="button" class="sw" role="switch" data-wsw="${w.id}" aria-checked="${widgetOn(w.id)}" aria-label="${w.name} anzeigen"></button></div>`;
+}
+function widgetsTab() {
+  const L = getLayout(), dockOn = widgetOn('dock'), hk = store.get('hotkeys', true) !== false;
+  return `<p class="lead">Ein- und ausblenden, Reihenfolge und Bereich festlegen. Noch schneller geht es direkt auf der Startseite: <b>Anpassen</b> und die Widgets am Griff ziehen.</p>
+    <div class="wlist" style="margin-bottom:14px">${widgetRow(WIDGETS.find(w => w.id === 'clock'))}
+      <div class="wrow${dockOn ? '' : ' dis'}"><span class="tile sm" style="--c:#64748B">${ic('keyboard', 'i sm')}</span><span class="t"><b>Kurzwahltasten 1–6</b><span>${dockOn ? 'Die Tasten 1 bis 6 öffnen die Apps im Schnellstart.' : 'Nur mit eingeblendetem Schnellstart verfügbar.'}</span></span><button type="button" class="sw" role="switch" id="hkSw" aria-checked="${dockOn && hk}" aria-label="Kurzwahltasten 1 bis 6" ${dockOn ? '' : 'aria-disabled="true" disabled'}></button></div></div>
+    ${ZONES.map(([z, n]) => `<h4 class="zh">${n}</h4><div class="wlist" data-szlist="${z}">${L[z].length ? L[z].map(id => widgetRow(WIDGETS.find(w => w.id === id), z)).join('') : '<p class="empty" style="margin:0">Leer – wähle bei einem Widget diesen Bereich.</p>'}</div>`).join('')}
+    <div class="row" style="justify-content:flex-start;margin-top:14px"><button type="button" class="btn" id="lyReset">Anordnung zurücksetzen</button><button type="button" class="btn" id="lyArrange">${ic('layout', 'i sm')} Auf der Startseite anordnen</button></div>`;
+}
+function bindWidgetsTab() {
+  const re = () => { const y = $('#ov .modal')?.scrollTop || 0, f = document.activeElement?.closest('[data-wrow]')?.dataset.wrow, fa = document.activeElement?.dataset?.smv; setup('widgets'); const m = $('#ov .modal'); if (m) m.scrollTop = y; if (f && fa) $(`[data-wrow="${f}"] [data-smv="${fa}"]`)?.focus(); };
+  $$('[data-wsw]').forEach(b => b.addEventListener('click', () => { const on = b.getAttribute('aria-checked') !== 'true'; setWidget(b.dataset.wsw, on); re(); }));
+  $('#hkSw')?.addEventListener('click', () => { if (!widgetOn('dock')) return; const on = store.get('hotkeys', true) === false; store.set('hotkeys', on); renderApps(); re(); toast(on ? 'Kurzwahltasten 1–6 an' : 'Kurzwahltasten 1–6 aus', 'keyboard'); });
+  $$('[data-smv]').forEach(b => b.addEventListener('click', () => { moveWidget(b.closest('[data-wrow]').dataset.wrow, +b.dataset.smv); re(); }));
+  $$('[data-szone]').forEach(sl => sl.addEventListener('change', () => { zoneWidget(sl.closest('[data-wrow]').dataset.wrow, sl.value); re(); }));
+  $('#lyReset').onclick = () => { store.set('layout', null); applyWidgets(); re(); toast('Anordnung zurückgesetzt', 'layout'); };
+  $('#lyArrange').onclick = () => { close(); go('start'); setTimeout(() => setEdit(true), 60); };
 }
 function bindSettings(tab) {
   $$('[data-cp]').forEach(c => c.onclick = async () => toast((await copy(c.dataset.cp)) ? `„${c.dataset.cp}“ kopiert` : c.dataset.cp, 'copy'));
@@ -1310,7 +1434,7 @@ function bindSettings(tab) {
     $('#lAcc').addEventListener('click', e => { const b = e.target.closest('[data-acc]'); if (!b) return; $$('#lAcc button').forEach(x => x.setAttribute('aria-pressed', x === b)); setLook({ accent: b.dataset.acc }); });
     $('#lReset').addEventListener('click', () => { store.set('look', {}); applyLook(); setup('look'); toast('Aussehen zurückgesetzt'); });
   }
-  if (tab === 'widgets') $$('[data-w]').forEach(b => b.addEventListener('click', () => { const on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); setWidget(b.dataset.w, on); }));
+  if (tab === 'widgets') bindWidgetsTab();
   if (tab === 'calendar') {
     let col = EV_COLORS[4];
     $('#fdC').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; col = b.dataset.c; $$('#fdC button').forEach(x => x.setAttribute('aria-pressed', x === b)); };
@@ -1339,6 +1463,8 @@ function bindSettings(tab) {
         if (d.profile) { const ic0 = d.profile.icon || {}; if (ic0.kind === 'custom' && !store.get('iconImage', '')) ic0.kind = 'logo'; store.set('profile', d.profile); applyProfile(); }
         if (d.look) { if (d.look.bg === 'custom' && !store.get('bgImage', '')) d.look.bg = 'horizont'; store.set('look', d.look); applyLook(); }
         if (d.widgets) store.set('widgets', d.widgets);
+        if (d.layout) store.set('layout', d.layout);
+        if (typeof d.hotkeys === 'boolean') store.set('hotkeys', d.hotkeys);
         close(); invalidateCal(); renderRail(); showView(currentView); toast('Einstellungen übernommen');
       } catch (e) { toast('Der Code ist ungültig. Bitte vollständig kopieren.', 'x'); }
     };

@@ -1967,13 +1967,13 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "2.0",
+    version: "2.1",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",
     shot: "assets/programme/cockpit-vorschau.jpg",
-    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Mail, Kalender, Erinnerungen, WhatsApp, Jamf und Apple School Manager mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage an Claude, ChatGPT, DeepL Write oder WhatsApp. Dazu ein Kalender mit Tagesplan und Abos (WebUntis, IServ), Projekte &amp; To-dos (In Planung, In Bearbeitung, Fertig), Lesezeichen, ein Whiteboard für Stift und Finger und PDFs, die du mit Stift oder Textfeld beschriftest. Mitteilungen erinnern an Termine und Fälliges, die Suche findet auch alle buildspace-Tools, ein Widget zeigt die Aufrufe der Webseite.",
-    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Mail, Calendar, Reminders, WhatsApp, Jamf and Apple School Manager with one click. A quick AI bar sends text with a template to Claude, ChatGPT, DeepL Write or WhatsApp. Plus a calendar with a day plan and subscriptions (WebUntis, IServ), projects &amp; to-dos (planned, in progress, done), bookmarks, a whiteboard for pen and finger, and PDFs you can annotate with a pen or text boxes. Notifications remind you of appointments and due tasks, search also finds every buildspace tool, and a widget shows the site's page views.",
+    text: "Die Startzentrale für den Schulalltag: IServ, WebUntis, iDoceo, Edumaps, Mail, Kalender, Erinnerungen, WhatsApp, Jamf und Apple School Manager mit einem Klick öffnen. Eine KI-Schnellzeile schickt Text samt Vorlage an Claude, ChatGPT, DeepL Write oder WhatsApp. Dazu ein Kalender mit Tagesplan und Abos (WebUntis, IServ), Projekte &amp; To-dos (In Planung, In Bearbeitung, Fertig), Lesezeichen, ein Whiteboard für Stift und Finger und PDFs, die du mit Stift oder Textfeld beschriftest. Mitteilungen erinnern an Termine und Fälliges, die Suche findet auch alle buildspace-Tools, ein Widget zeigt die Aufrufe der Webseite. Alle Widgets ordnest du per Ziehen frei an; Schnellstart und Kurzwahltasten lassen sich abschalten.",
+    textEn: "A launchpad for the school day: open IServ, WebUntis, iDoceo, Edumaps, Mail, Calendar, Reminders, WhatsApp, Jamf and Apple School Manager with one click. A quick AI bar sends text with a template to Claude, ChatGPT, DeepL Write or WhatsApp. Plus a calendar with a day plan and subscriptions (WebUntis, IServ), projects &amp; to-dos (planned, in progress, done), bookmarks, a whiteboard for pen and finger, and PDFs you can annotate with a pen or text boxes. Notifications remind you of appointments and due tasks, search also finds every buildspace tool, and a widget shows the site's page views. Drag widgets to arrange them freely; quick start and number-key shortcuts can be switched off.",
     steps: [
       "ZIP herunterladen und mit Doppelklick entpacken.",
       "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>.",
@@ -1987,8 +1987,8 @@ const PROGRAMS = [
     note: "Alles bleibt auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern. Von Version 1.x einfach drüber installieren, deine Daten bleiben.",
     noteEn: "Everything stays on your device. Cockpit stores no login details and only reads appointments without changing them. Install over version 1.x; your data is kept.",
     open: { href: "cockpit/" },
-    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,3 MB", type: "ZIP" },
-    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "3,4 MB", type: "PDF" },
+    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,4 MB", type: "ZIP" },
+    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "3,7 MB", type: "PDF" },
     share: "programme/cockpit.html"
   }
 ];
