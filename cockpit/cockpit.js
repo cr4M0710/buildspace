@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
