@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.8';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -77,7 +77,7 @@ const GROUPS = [
   { id: 'eigene', name: 'Eigene Projekte' }
 ];
 const COLORS = ['#4F7BFF', '#A46BFF', '#F25FB0', '#FF9A4D', '#E0B24A', '#2FA36B', '#2DD4BF', '#D97757', '#64748B', '#EF4444', '#25D366'];
-const ICONS = ['school', 'cal', 'list', 'mail', 'pen', 'sparkle', 'bubble', 'phonechat', 'grid', 'book', 'board', 'tablet', 'cap', 'rocket', 'globe', 'note', 'bolt', 'whiteboard', 'chart', 'link'];
+const ICONS = ['school', 'cal', 'list', 'mail', 'pen', 'sparkle', 'bubble', 'phonechat', 'grid', 'book', 'board', 'tablet', 'cap', 'rocket', 'globe', 'note', 'bolt', 'whiteboard', 'chart', 'link', 'sun'];
 const DEFAULT_APPS = [
   { id: 'iserv', name: 'IServ', sub: 'Schulserver', group: 'schule', icon: 'school', color: '#2FA36B', type: 'web', target: '', hint: 'Adresse deiner Schule, z. B. https://deine-schule.de/iserv' },
   { id: 'untis', name: 'WebUntis', sub: 'Stundenplan', group: 'schule', icon: 'grid', color: '#FF9A4D', type: 'web', target: 'https://webuntis.com/', mac: { name: 'Untis Mobile' } },
@@ -85,6 +85,7 @@ const DEFAULT_APPS = [
   { id: 'edumaps', name: 'Edumaps', sub: 'Pinnwände', group: 'schule', icon: 'board', color: '#A46BFF', type: 'web', target: 'https://www.edumaps.de/' },
   { id: 'kalender', name: 'Kalender', sub: 'Termine', group: 'planung', icon: 'cal', color: '#EF4444', type: 'shortcut', target: 'Cockpit Kalender', mac: { bundle: 'com.apple.iCal', name: 'Kalender' } },
   { id: 'erinnerungen', name: 'Erinnerungen', sub: 'Aufgaben', group: 'planung', icon: 'list', color: '#E0B24A', type: 'shortcut', target: 'Cockpit Erinnerungen', mac: { bundle: 'com.apple.reminders', name: 'Erinnerungen' } },
+  { id: 'wetter', name: 'Wetter', sub: 'Vorhersage', group: 'planung', icon: 'sun', color: '#3B9BFF', type: 'shortcut', target: 'Cockpit Wetter', mac: { bundle: 'com.apple.weather', name: 'Wetter' } },
   { id: 'mail', name: 'Mail', sub: 'Postfach', group: 'planung', icon: 'mail', color: '#2DD4BF', type: 'shortcut', target: 'Cockpit Mail', mac: { bundle: 'com.apple.mail', name: 'Mail' } },
   { id: 'whatsapp', name: 'WhatsApp', sub: 'Nachrichten', group: 'planung', icon: 'phonechat', color: '#25D366', type: 'web', target: 'https://web.whatsapp.com/', mac: { name: 'WhatsApp' } },
   { id: 'claude', name: 'Claude', sub: 'KI-Assistent', group: 'ki', icon: 'sparkle', color: '#D97757', type: 'web', target: 'https://claude.ai/new' },
@@ -188,6 +189,8 @@ const WIDGETS = [
   { id: 'stats', name: 'buildspace-Aufrufe', desc: 'Wie oft deine Website besucht wurde', icon: 'chart', color: '#A46BFF', sel: '#w-stats' },
   { id: 'notes', name: 'Notizen & To-dos', desc: 'Schnelle Notizen zum Abhaken', icon: 'note', color: '#2FA36B', sel: '#w-notes' },
   { id: 'saved', name: 'Gespeichert', desc: 'Zuletzt gespeicherte Links', icon: 'bookmark', color: '#E0B24A', sel: '#w-saved' },
+  { id: 'weather', name: 'Wetter', desc: 'Aktuelles Wetter, die nächsten Stunden und Tage', icon: 'sun', color: '#3B9BFF', sel: '#w-weather' },
+  { id: 'reminders', name: 'Erinnerungen', desc: 'Deine Listen aus „Erinnerungen“ – abhaken und neu anlegen', icon: 'list', color: '#E0B24A', sel: '#w-reminders' },
   { id: 'timer', name: 'Timer', desc: 'Für Arbeitsphasen, auch groß für den Beamer', icon: 'timer', color: '#A46BFF', sel: '#w-timer' },
   { id: 'countdown', name: 'Countdown', desc: 'Tage bis Ferien, Konferenz, Abgabe …', icon: 'flag', color: '#F25FB0', sel: '#w-countdown' },
   { id: 'tips', name: 'Gut zu wissen', desc: 'Kurze Tipps zur Bedienung', icon: 'bolt', color: '#2DD4BF', sel: '#w-tips' }
@@ -254,21 +257,67 @@ async function shrink(file, max, square) {
 /* =====================================================================
    STARTSEITE ALS RASTER (wie Apple-Widgets)
    Jeder Baustein – Widget oder einzelne App/Link – liegt in einem Raster
-   aus quadratischen Zellen. Reihenfolge und Größe sind frei; das Raster
-   füllt Lücken automatisch (dichte Anordnung), damit es auf jeder
-   Fenstergröße aufgeht.
+   aus quadratischen Zellen und kann frei platziert werden – auch mit Lücken –
+   und an der Ecke in ganzen Zellen größer oder kleiner gezogen werden.
+   Positionen gelten je Spaltenzahl (Mac-Fenster, iPad quer/hoch, iPhone);
+   wo es noch keine gibt, werden die Bausteine in Listenreihenfolge eingepasst.
    ===================================================================== */
 const SIZES = { S: [2, 2], M: [4, 2], L: [4, 4], XL: [8, 4], W: [99, 2], A1: [1, 1], A2: [2, 1], A4: [2, 2] };
 const SIZE_NAMES = { S: 'Klein', M: 'Mittel', L: 'Groß', XL: 'Sehr groß', W: 'Ganze Breite', A1: 'Symbol', A2: 'Breit', A4: 'Groß' };
 const WSIZES = { quick: ['W', 'XL', 'L'], dock: ['M', 'W', 'L'], groups: ['XL', 'W', 'L'], today: ['L', 'M', 'S', 'XL'], projects: ['M', 'S', 'L'], whatsapp: ['S', 'M'],
-  stats: ['M', 'S', 'L'], notes: ['L', 'M', 'S'], saved: ['M', 'S', 'L'], timer: ['S', 'M', 'L'], countdown: ['M', 'S', 'L'], tips: ['M', 'L'] };
+  weather: ['M', 'S', 'L'], reminders: ['L', 'M', 'S'], stats: ['M', 'S', 'L'], notes: ['L', 'M', 'S'], saved: ['M', 'S', 'L'], timer: ['S', 'M', 'L'], countdown: ['M', 'S', 'L'], tips: ['M', 'L'] };
 const APP_SIZES = ['A1', 'A2', 'A4'];
-const BOARD_DEFAULT_ORDER = ['quick', 'today', 'dock', 'projects', '@apps', 'whatsapp', 'timer', 'notes', 'saved', 'countdown', 'stats', 'tips'];
+const BOARD_DEFAULT_ORDER = ['quick', 'today', 'weather', 'dock', 'projects', 'reminders', '@apps', 'whatsapp', 'timer', 'notes', 'saved', 'countdown', 'stats', 'tips'];
 const wDef = id => WIDGETS.find(w => w.id === id);
 const wEl = id => { const w = wDef(id); return w ? $(w.sel) : null; };
 const itemKey = it => it.k + ':' + it.id;
 const sizesFor = it => it.k === 'a' ? APP_SIZES : (WSIZES[it.id] || ['M']);
 const showable = it => it.k === 'a' ? apps.some(a => a.id === it.id) : !!wDef(it.id) && !(wDef(it.id).nativeOnly && !NATIVE);
+const presetDims = (s, cols) => { const [w, h] = SIZES[s]; return [w >= 99 ? cols : Math.min(w, cols), h]; };
+/* kleinste und größte erlaubte Größe (in Zellen) */
+function sizeLimits(it, cols) {
+  if (it.k === 'a') return { w0: 1, h0: 1, w1: Math.min(4, cols), h1: 3 };
+  const d = sizesFor(it).map(s => presetDims(s, cols));
+  return { w0: Math.min(...d.map(x => x[0]), cols), h0: Math.min(...d.map(x => x[1])), w1: cols, h1: Math.max(...d.map(x => x[1])) + 2 };
+}
+function dims(it, cols) {
+  const L = sizeLimits(it, cols);
+  let [w, h] = it.w ? [it.w, it.h] : presetDims(it.s, cols);
+  if (!it.w && it.k === 'w' && it.id === 'quick' && cols <= 4) h = Math.max(h, 3);   /* iPhone: Schnellzeile braucht mehr Höhe */
+  return [Math.max(L.w0, Math.min(L.w1, w)), Math.max(L.h0, Math.min(L.h1, h))];
+}
+/* nächstliegende Stufe – bestimmt das Aussehen (sz-S, sz-M …) */
+function nearestPreset(it, w, h, cols) {
+  let best = sizesFor(it)[0], bd = Infinity;
+  sizesFor(it).forEach(s => { const [pw, ph] = presetDims(s, cols); const d = (pw - w) ** 2 * 1.2 + (ph - h) ** 2 - (pw <= w && ph <= h ? .5 : 0); if (d < bd) { bd = d; best = s; } });
+  return best;
+}
+/* Anordnung für eine Spaltenzahl: gespeicherte Positionen zuerst, der Rest füllt die erste freie Stelle */
+function layoutFor(items, cols) {
+  const ck = String(cols), placed = [], res = new Map();
+  const fits = (x, y, w, h) => x >= 0 && x + w <= cols && y >= 0 && !placed.some(r => x < r.x + r.w && r.x < x + w && y < r.y + r.h && r.y < y + h);
+  const put = (it, x, y, w, h) => { const r = { x, y, w, h }; placed.push(r); res.set(itemKey(it), r); };
+  items.forEach(it => { const p = it.p && it.p[ck]; if (!p) return; const [w, h] = dims(it, cols); let x = Math.max(0, Math.min(p[0], cols - w)), y = Math.max(0, p[1] | 0), n = 0; while (!fits(x, y, w, h) && n++ < 400) y++; put(it, x, y, w, h); });
+  items.forEach(it => { if (res.has(itemKey(it))) return; const [w, h] = dims(it, cols);
+    for (let y = 0; y < 400; y++) { for (let x = 0; x + w <= cols; x++) if (fits(x, y, w, h)) { put(it, x, y, w, h); return; } } });
+  return res;
+}
+/* Nach Verschieben/Größe ändern: alle Positionen für diese Spaltenzahl festhalten,
+   das bewegte Teil bekommt seinen Platz, überdeckte rutschen nach unten. */
+function settleBoard(b, cols, movedKey, target) {
+  const ck = String(cols), vis = b.filter(showable), lay = layoutFor(vis, cols);
+  vis.forEach(it => { const r = lay.get(itemKey(it)); if (r) it.p = Object.assign({}, it.p, { [ck]: [r.x, r.y] }); });
+  const moved = movedKey && vis.find(it => itemKey(it) === movedKey);
+  if (moved && target) moved.p[ck] = target;
+  const order = vis.filter(it => it.p && it.p[ck]).sort((a, c) => (a === moved ? -1 : c === moved ? 1 : (a.p[ck][1] - c.p[ck][1]) || (a.p[ck][0] - c.p[ck][0])));
+  const placed = [];
+  const fits = (x, y, w, h) => !placed.some(r => x < r.x + r.w && r.x < x + w && y < r.y + r.h && r.y < y + h);
+  order.forEach(it => { const [w, h] = dims(it, cols); let [x, y] = it.p[ck]; x = Math.max(0, Math.min(x, cols - w)); y = Math.max(0, y); let n = 0; while (!fits(x, y, w, h) && n++ < 400) y++; placed.push({ x, y, w, h }); it.p[ck] = [x, y]; });
+  /* Listenreihenfolge folgt der Anordnung – andere Geräte übernehmen sie so sinngemäß */
+  const pos = it => it.p && it.p[ck] ? it.p[ck][1] * 100 + it.p[ck][0] : 1e9;
+  b.sort((a, c) => pos(a) - pos(c));
+  return b;
+}
 
 function defaultBoard() {
   const W = store.get('widgets', {}) || {}, on = id => W[id] !== false;
@@ -301,6 +350,19 @@ function getBoard() {
   return out;
 }
 const setBoard = b => { store.set('homeBoard', b); renderBoard(); };
+/* Neue Widgets (ab 2.8: Wetter, Erinnerungen) einmalig auf bestehende Startseiten legen */
+(() => {
+  const NEW = ['weather', 'reminders'];
+  let known = store.get('widgetsKnown', null);
+  const fresh = !Array.isArray(store.get('homeBoard', null)) && !Array.isArray(store.get('board', null));
+  if (!known) known = WIDGETS.map(w => w.id).filter(id => fresh || !NEW.includes(id));
+  const add = WIDGETS.filter(w => !known.includes(w.id) && w.id !== 'clock');
+  if (add.length) {
+    const b = getBoard(); add.forEach(w => { if (!b.some(it => it.k === 'w' && it.id === w.id)) { const at = b.findIndex(it => it.k === 'a'); b.splice(at < 0 ? b.length : at, 0, { k: 'w', id: w.id, s: WSIZES[w.id][0] }); } });
+    rawSet('homeBoard', b); add.forEach(w => known.push(w.id));
+  }
+  rawSet('widgetsKnown', known);
+})();
 const onBoard = (k, id) => getBoard().some(it => it.k === k && it.id === id);
 const widgetOn = id => id === 'clock' ? (store.get('widgets', {}) || {}).clock !== false : onBoard('w', id);
 const hotkeysOn = () => widgetOn('dock') && store.get('hotkeys', true) !== false;
@@ -316,7 +378,7 @@ function setAppOnBoard(id, on) {
   if (on) { off.delete(id); b.push({ k: 'a', id, s: 'A1' }); } else off.add(id);
   store.set('boardOff', [...off]); setBoard(b);
 }
-function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini, whatsapp: renderWaWidget, notes: renderNotes, countdown: renderCds })[id]?.(); }
+function refreshWidget(id) { ({ weather: renderWeather, reminders: renderReminders, today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini, whatsapp: renderWaWidget, notes: renderNotes, countdown: renderCds })[id]?.(); }
 
 /* --- Zeichnen --- */
 const appEls = new Map();
@@ -341,24 +403,28 @@ function applyBoardMetrics() {
   bd.style.setProperty('--cols', m.cols); bd.style.setProperty('--cell', m.cell.toFixed(1) + 'px'); bd.style.setProperty('--gap', m.gap + 'px');
   return m;
 }
-function spanStyle(el, s) {
-  const [w, h] = SIZES[s];
-  el.style.gridColumn = w >= 99 ? '1 / -1' : `span ${Math.min(w, boardCols)}`;
-  el.style.gridRow = `span ${h}`;
+function placeEl(el, r, s) {
+  el.style.gridColumn = `${r.x + 1} / span ${r.w}`;
+  el.style.gridRow = `${r.y + 1} / span ${r.h}`;
+  el.dataset.size = s; el.dataset.wh = r.w + 'x' + r.h;
   Object.keys(SIZES).forEach(k => el.classList.toggle('sz-' + k, k === s));
-  /* schmale Fenster: zu breite Bausteine werden wie „Ganze Breite“ dargestellt */
-  el.classList.toggle('sz-full', w >= 99 || w >= boardCols);
+  /* volle Breite: wie „Ganze Breite“ darstellen */
+  el.classList.toggle('sz-full', r.w >= boardCols && boardCols > 1);
 }
+const sizeLabel = r => `${r.w} × ${r.h}`;
 function renderBoard() {
   const bd = $('#board'), park = $('#parking'); if (!bd) return;
   applyBoardMetrics();
   const items = getBoard().filter(showable), editing = document.body.classList.contains('edit-on');
-  const want = items.map(it => {
+  const lay = layoutFor(items, boardCols);
+  const sorted = items.slice().sort((a, c) => { const ra = lay.get(itemKey(a)), rc = lay.get(itemKey(c)); return (ra.y - rc.y) || (ra.x - rc.x); });
+  const want = sorted.map(it => {
     const el = it.k === 'a' ? appItemEl(apps.find(a => a.id === it.id)) : wEl(it.id);
     if (!el) return null;
-    el.classList.add('bitem'); el.dataset.key = itemKey(it); el.dataset.size = it.s; el.hidden = false;
-    spanStyle(el, it.s);
-    decorateItem(el, it, editing);
+    const r = lay.get(itemKey(it));
+    el.classList.add('bitem'); el.dataset.key = itemKey(it); el.hidden = false;
+    placeEl(el, r, it.w ? nearestPreset(it, r.w, r.h, boardCols) : it.s);
+    decorateItem(el, it, editing, r);
     return el;
   }).filter(Boolean);
   /* nicht (mehr) platzierte Widgets parken */
@@ -370,14 +436,14 @@ function renderBoard() {
   bd.classList.toggle('empty', !want.length);
 }
 function applyWidgets() { renderBoard(); }
-function decorateItem(el, it, editing) {
+function decorateItem(el, it, editing, r) {
   let c = el.querySelector(':scope > .bctl');
   if (!editing) { c?.remove(); return; }
   const name = it.k === 'a' ? (apps.find(a => a.id === it.id) || {}).name : wDef(it.id).name;
   const sizes = sizesFor(it);
   if (!c) { c = document.createElement('span'); c.className = 'bctl'; el.appendChild(c); }
   c.innerHTML = `<span role="button" tabindex="0" class="bdel" data-bdel aria-label="${esc(name)} von der Startseite nehmen">${ic('x', 'i xs')}</span>`
-    + (sizes.length > 1 ? `<span role="button" tabindex="0" class="bsize" data-bsize aria-label="Größe von ${esc(name)}: ${SIZE_NAMES[it.s]} – tippen zum Wechseln, Ecke ziehen zum Ändern" title="${SIZE_NAMES[it.s]}"><b>${SIZE_NAMES[it.s]}</b>${ic('expand', 'i xs')}</span>` : '');
+    + `<span role="button" tabindex="0" class="bsize" data-bsize aria-label="Größe von ${esc(name)}: ${r ? sizeLabel(r) : ''} – Ecke ziehen zum Ändern, tippen für die nächste Stufe" title="Ecke ziehen: größer oder kleiner"><b>${r ? sizeLabel(r) : ''}</b>${ic('expand', 'i xs')}</span>`;
 }
 new ResizeObserver(() => { if (currentView === 'start') { const before = boardCols; applyBoardMetrics(); if (boardCols !== before) renderBoard(); } }).observe(document.getElementById('board'));
 
@@ -387,7 +453,7 @@ function setEdit(on) {
   $('#editBtn').setAttribute('aria-pressed', on); $('#editBtn span').textContent = on ? 'Fertig' : 'Anpassen';
   const bar = $('#arrangeBar'); bar.hidden = !on;
   if (on) {
-    bar.innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Startseite anpassen</b><span>Bausteine ziehen zum Verschieben · Ecke ziehen oder Größe antippen · ✕ nimmt sie von der Startseite. Apps antippen zum Bearbeiten.</span></div>
+    bar.innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Startseite anpassen</b><span>Bausteine an jede freie Stelle ziehen – Lücken bleiben · Ecke ziehen macht sie größer oder kleiner · ✕ nimmt sie von der Startseite. Apps antippen zum Bearbeiten.</span></div>
       <button class="btn sm" id="arrAdd">${ic('plus', 'i xs')} Hinzufügen</button><button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
     $('#arrAdd').onclick = gallery;
     $('#arrReset').onclick = () => { if (!$('#arrReset').dataset.sure) { $('#arrReset').dataset.sure = 1; $('#arrReset').textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('homeBoard', null); renderBoard(); setEdit(true); toast('Startseite zurückgesetzt', 'layout'); };
@@ -399,8 +465,9 @@ $('#editBtn').addEventListener('click', () => setEdit(!document.body.classList.c
 
 function cycleSize(key, dir = 1) {
   const b = getBoard(), it = b.find(x => itemKey(x) === key); if (!it) return;
-  const s = sizesFor(it), i = s.indexOf(it.s); it.s = s[(i + dir + s.length) % s.length];
-  setBoard(b); refreshWidget(it.id);
+  const s = sizesFor(it), cur = it.w ? nearestPreset(it, ...dims(it, boardCols), boardCols) : it.s, i = s.indexOf(cur);
+  it.s = s[(i + dir + s.length) % s.length]; delete it.w; delete it.h;
+  setBoard(settleBoard(b, boardCols, key)); refreshWidget(it.id);
   toast(`Größe: ${SIZE_NAMES[it.s]}`, 'expand');
   requestAnimationFrame(() => document.querySelector(`[data-key="${key}"] [data-bsize]`)?.focus());
 }
@@ -446,48 +513,45 @@ document.addEventListener('pointerdown', e => {
   const x0 = e.clientX, y0 = e.clientY, m = boardMetrics(), step = m.cell + m.gap;
   let moved = false;
   if (handle) {
-    /* Größe: Ecke ziehen → nächste erlaubte Größe; nur antippen → nächste Größe */
-    const b = getBoard(), it = b.find(x => itemKey(x) === key), allowed = sizesFor(it);
-    const [w0, h0] = SIZES[it.s].map((v, i) => i === 0 ? Math.min(v, m.cols) : v);
-    let cur = it.s;
+    /* Größe: Ecke ziehen → in ganzen Zellen größer/kleiner; nur antippen → nächste Stufe */
+    const b = getBoard(), it = b.find(x => itemKey(x) === key), cols = m.cols, L = sizeLimits(it, cols);
+    const r0 = layoutFor(b.filter(showable), cols).get(key);
+    let cw = r0.w, chh = r0.h;
+    el.classList.add('bresizing');
     const mv = ev => {
       const dx = ev.clientX - x0, dy = ev.clientY - y0;
       if (!moved && Math.abs(dx) + Math.abs(dy) < 8) return; moved = true;
-      const tw = w0 + dx / step, th = h0 + dy / step;
-      let best = cur, bd = Infinity;
-      allowed.forEach(s => { const [w, h] = SIZES[s], ww = Math.min(w, m.cols), d = (ww - tw) ** 2 + (h - th) ** 2; if (d < bd) { bd = d; best = s; } });
-      if (best !== cur) { cur = best; el.dataset.size = cur; spanStyle(el, cur); el.querySelector('[data-bsize] b').textContent = SIZE_NAMES[cur]; }
+      const w = Math.max(L.w0, Math.min(L.w1, Math.round(r0.w + dx / step))), h = Math.max(L.h0, Math.min(L.h1, Math.round(r0.h + dy / step)));
+      if (w !== cw || h !== chh) { cw = w; chh = h; const r = { x: Math.min(r0.x, cols - w), y: r0.y, w, h };   /* am rechten Rand wächst es nach links */ placeEl(el, r, nearestPreset(it, w, h, cols)); const lb = el.querySelector('[data-bsize] b'); if (lb) lb.textContent = sizeLabel(r); }
     };
     const up = () => {
       removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
-      swallow(60);
+      el.classList.remove('bresizing'); swallow(60);
       if (!moved) { cycleSize(key); return; }
-      if (cur !== it.s) { it.s = cur; setBoard(b); refreshWidget(it.id); toast(`Größe: ${SIZE_NAMES[cur]}`, 'expand'); }
+      if (cw !== r0.w || chh !== r0.h) { it.w = cw; it.h = chh; it.s = nearestPreset(it, cw, chh, cols); setBoard(settleBoard(b, cols, key, [Math.min(r0.x, cols - cw), r0.y])); refreshWidget(it.id); toast(`Größe: ${cw} × ${chh}`, 'expand'); }
+      else renderBoard();
     };
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     return;
   }
-  /* Verschieben */
-  let ph = null, dx = 0, dy = 0;
-  const start = ev => {
+  /* Verschieben: an jede Zelle, auch mit Lücken; überdeckte Bausteine rutschen nach unten */
+  let ph = null, dx = 0, dy = 0, tgt = null, r0 = null;
+  const bd = $('#board');
+  const start = () => {
     const r = el.getBoundingClientRect(); dx = x0 - r.left; dy = y0 - r.top;
+    r0 = layoutFor(getBoard().filter(showable), m.cols).get(key);
     ph = document.createElement('div'); ph.className = 'bph'; ph.style.gridColumn = el.style.gridColumn; ph.style.gridRow = el.style.gridRow;
-    el.after(ph);
+    bd.appendChild(ph);
     el.classList.add('bdrag'); Object.assign(el.style, { width: r.width + 'px', height: r.height + 'px', left: r.left + 'px', top: r.top + 'px' });
     document.body.classList.add('dragging-w');
   };
   const mv = ev => {
-    if (!moved) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 8) return; moved = true; start(ev); }
+    if (!moved) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 8) return; moved = true; start(); }
     el.style.left = ev.clientX - dx + 'px'; el.style.top = ev.clientY - dy + 'px';
-    const hit = document.elementFromPoint(ev.clientX, ev.clientY), over = hit && hit.closest('#board > .bitem:not(.bdrag)');
-    const bd = $('#board');
-    if (over) {
-      const r = over.getBoundingClientRect(), after = (ev.clientX - r.left) / r.width + (ev.clientY - r.top) / r.height * 0.35 > 0.6;
-      if (after) { if (over.nextElementSibling !== ph) over.after(ph); } else if (over.previousElementSibling !== ph) over.before(ph);
-    } else if (hit && (hit === bd || bd.contains(hit)) && !hit.closest('.bph')) {
-      const last = [...bd.children].filter(c => c !== el && c !== ph).pop();
-      if (last && ev.clientY > last.getBoundingClientRect().bottom - 4 && bd.lastElementChild !== ph) bd.appendChild(ph);
-    }
+    const br = bd.getBoundingClientRect();
+    const x = Math.max(0, Math.min(m.cols - r0.w, Math.round((ev.clientX - dx - br.left) / step)));
+    const y = Math.max(0, Math.round((ev.clientY - dy - br.top) / step));
+    if (!tgt || tgt[0] !== x || tgt[1] !== y) { tgt = [x, y]; ph.style.gridColumn = `${x + 1} / span ${r0.w}`; ph.style.gridRow = `${y + 1} / span ${r0.h}`; }
     if (ev.clientY < 70) scrollBy(0, -16); else if (ev.clientY > innerHeight - 70) scrollBy(0, 16);
   };
   const up = () => {
@@ -495,11 +559,8 @@ document.addEventListener('pointerdown', e => {
     if (!moved) return;           /* nur angetippt: der normale Klick übernimmt (App bearbeiten) */
     swallow(60);
     document.body.classList.remove('dragging-w');
-    ph.replaceWith(el); el.classList.remove('bdrag'); ['width', 'height', 'left', 'top'].forEach(p => el.style[p] = '');
-    const order = [...$('#board').children].map(c => c.dataset.key).filter(Boolean);
-    const b = getBoard(), byKey = new Map(b.map(it => [itemKey(it), it]));
-    const nb = order.map(k => byKey.get(k)).filter(Boolean); b.forEach(it => { if (!order.includes(itemKey(it))) nb.push(it); });
-    setBoard(nb);
+    ph.remove(); el.classList.remove('bdrag'); ['width', 'height', 'left', 'top'].forEach(p => el.style[p] = '');
+    if (tgt && (tgt[0] !== r0.x || tgt[1] !== r0.y)) setBoard(settleBoard(getBoard(), m.cols, key, tgt)); else renderBoard();
   };
   addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
 });
@@ -741,8 +802,9 @@ function tmDraw() {
   const left = TM.run ? (TM.end - Date.now()) / 1000 : TM.left;
   $('#tmT').textContent = mmss(left);
   const ring = $('#tmRing'); ring.style.strokeDasharray = C; ring.style.strokeDashoffset = C * (1 - Math.max(0, left) / (TM.total || 1));
-  $('#tmS').textContent = TM.run ? 'läuft' : left <= 0 ? 'fertig' : left < TM.total ? 'pausiert' : 'bereit';
-  $('#tmGo').textContent = TM.run ? 'Pause' : left < TM.total && left > 0 ? 'Weiter' : 'Start';
+  if (!$('#tmEdit')) $('#tmS').innerHTML = TM.run ? `${ic('pause', 'i xs')}Pause` : left <= 0 ? `${ic('play', 'i xs')}Neu starten` : left < TM.total ? `${ic('play', 'i xs')}Weiter` : `${ic('play', 'i xs')}Start`;
+  $('#w-timer').classList.toggle('running', TM.run);
+  $('#tmGo').setAttribute('aria-label', TM.run ? 'Timer anhalten' : 'Timer starten');
   const big = $('#tmBigView');
   if (big) { big.querySelector('.t').textContent = mmss(left); big.querySelector('.bar i').style.width = (100 * Math.max(0, left) / (TM.total || 1)) + '%'; big.classList.toggle('over', left <= 0); }
   if (TM.run && left <= 0) tmDone();
@@ -756,8 +818,36 @@ function tmToggle() {
 function beep() { try { const A = new (window.AudioContext || window.webkitAudioContext)(); [0, .35, .7].forEach(t => { const o = A.createOscillator(), g = A.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(.0001, A.currentTime + t); g.gain.exponentialRampToValueAtTime(.4, A.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, A.currentTime + t + .28); o.connect(g).connect(A.destination); o.start(A.currentTime + t); o.stop(A.currentTime + t + .3); }); } catch (e) {} }
 function tmDone() { TM.run = false; TM.left = 0; clearInterval(TM.iv); beep(); toast('Die Zeit ist um', 'timer'); pushTransient({ id: 'timer:' + Date.now(), icon: 'timer', color: '#A46BFF', title: 'Timer abgelaufen', sub: 'Die eingestellte Zeit ist um' }); systemNotify('Timer', 'Die Zeit ist um'); const w = $('#w-timer'); w.classList.remove('done-pulse'); void w.offsetWidth; w.classList.add('done-pulse'); tmDraw(); }
 $('#tmPre').addEventListener('click', e => { const b = e.target.closest('[data-tm]'); if (b) tmSet(+b.dataset.tm * 60); });
-$('#tmGo').addEventListener('click', tmToggle);
-$('#tmReset').addEventListener('click', () => tmSet(TM.total));
+/* Ring antippen: Start/Stopp · kleiner Pfeil: zurücksetzen · Zeit antippen: eintragen */
+$('#tmGo').addEventListener('click', e => { if (e.target.closest('#tmT,#tmReset,#tmEdit')) return; tmToggle(); });
+$('#tmGo').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'tmGo') { e.preventDefault(); tmToggle(); } });
+$('#tmReset').addEventListener('click', e => { e.stopPropagation(); tmSet(TM.total); toast('Timer zurückgesetzt', 'timer'); });
+/* „5“ = 5 Minuten · „5:30“ · „1:30:00“ · „90s“ */
+function parseTime(v) {
+  v = String(v || '').trim().toLowerCase().replace(/,/g, '.').replace(/\s+/g, '');
+  if (!v) return null;
+  let m;
+  if ((m = /^(\d+(?:\.\d+)?)s(ek)?$/.exec(v))) return +m[1];
+  if ((m = /^(\d+(?:\.\d+)?)(m|min)?$/.exec(v))) return Math.round(+m[1] * 60);
+  if ((m = /^(\d+(?:\.\d+)?)h$/.exec(v))) return Math.round(+m[1] * 3600);
+  const parts = v.split(/[:.]/).map(Number); if (parts.some(isNaN) || parts.length > 3) return null;
+  return parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+}
+$('#tmT').addEventListener('click', e => {
+  e.stopPropagation();
+  if (document.body.classList.contains('edit-on')) return;
+  if (TM.run) tmToggle();
+  const t = $('#tmT'), inp = document.createElement('input');
+  inp.id = 'tmEdit'; inp.className = 'tm-in num'; inp.value = mmss(TM.left > 0 ? TM.left : TM.total); inp.inputMode = 'decimal'; inp.setAttribute('aria-label', 'Zeit, z. B. 5 oder 7:30'); inp.autocomplete = 'off'; inp.enterKeyHint = 'done';
+  t.hidden = true; t.after(inp); $('#tmS').innerHTML = 'Minuten oder mm:ss'; inp.focus(); inp.select();
+  let done = false;
+  const finish = ok => { if (done) return; done = true; const sec = ok ? parseTime(inp.value) : null; inp.remove(); t.hidden = false;
+    if (ok && sec == null) toast('Bitte z. B. „5“ oder „7:30“ eingeben', 'timer');
+    if (sec != null) tmSet(Math.min(sec, 24 * 3600)); else tmDraw(); };
+  inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); finish(true); } else if (ev.key === 'Escape') { ev.stopPropagation(); finish(false); } });
+  inp.addEventListener('blur', () => finish(true));
+  inp.addEventListener('click', ev => ev.stopPropagation());
+});
 $('#tmPlus').addEventListener('click', () => { if (TM.run) TM.end += 60000; else TM.left += 60; TM.total += 60; tmDraw(); });
 $('#tmMinus').addEventListener('click', () => { if (TM.run) TM.end = Math.max(Date.now() + 1000, TM.end - 60000); else TM.left = Math.max(10, TM.left - 60); TM.total = Math.max(10, TM.total - 60); tmDraw(); });
 $('#tmBig').addEventListener('click', () => {
@@ -781,6 +871,252 @@ function renderCds() {
 }
 $('#cdForm').addEventListener('submit', e => { e.preventDefault(); const d = $('#cdD').value; if (!d) return; cds.push({ id: Date.now(), label: $('#cdL').value.trim() || 'Countdown', date: d }); $('#cdL').value = ''; $('#cdD').value = ''; renderCds(); updateBadge(); });
 $('#cds').addEventListener('click', e => { if (!e.target.closest('[data-cdx]')) return; const id = +e.target.closest('[data-cd]').dataset.cd; cds = cds.filter(c => c.id !== id); renderCds(); updateBadge(); });
+
+/* =====================================================================
+   WETTER (Open-Meteo, ohne Schlüssel)
+   Der Ort gilt pro Gerät: iPad, iPhone und Browser nehmen den aktuellen
+   Standort, die Mac-App einen gewählten Ort (Standard: Wettenberg).
+   ===================================================================== */
+const WX_CODES = { 0: ['Klar', 'sun'], 1: ['Überwiegend klar', 'part'], 2: ['Teils bewölkt', 'part'], 3: ['Bedeckt', 'cloud'], 45: ['Nebel', 'fog'], 48: ['Reifnebel', 'fog'],
+  51: ['Leichter Niesel', 'drizzle'], 53: ['Niesel', 'drizzle'], 55: ['Starker Niesel', 'drizzle'], 56: ['Gefrierender Niesel', 'drizzle'], 57: ['Gefrierender Niesel', 'drizzle'],
+  61: ['Leichter Regen', 'rain'], 63: ['Regen', 'rain'], 65: ['Starker Regen', 'rain'], 66: ['Gefrierender Regen', 'rain'], 67: ['Gefrierender Regen', 'rain'],
+  71: ['Leichter Schneefall', 'snow'], 73: ['Schneefall', 'snow'], 75: ['Starker Schneefall', 'snow'], 77: ['Schneegriesel', 'snow'],
+  80: ['Regenschauer', 'rain'], 81: ['Regenschauer', 'rain'], 82: ['Heftige Schauer', 'rain'], 85: ['Schneeschauer', 'snow'], 86: ['Schneeschauer', 'snow'],
+  95: ['Gewitter', 'storm'], 96: ['Gewitter mit Hagel', 'storm'], 99: ['Gewitter mit Hagel', 'storm'] };
+const wxInfo = (code, day = 1) => { const [t, k] = WX_CODES[code] || ['–', 'cloud']; return { t, icon: !day && k === 'sun' ? 'moon' : !day && k === 'part' ? 'partn' : k }; };
+const wxIcon = (code, day, cls = '') => `<svg class="wxi ${cls}" aria-hidden="true"><use href="#i-w-${wxInfo(code, day).icon}"/></svg>`;
+const WX_DEFAULT = { name: 'Wettenberg', lat: 50.62, lon: 8.65 };
+const getWxLoc = () => store.get('weatherLoc', null) || { auto: true };
+const wxKey = l => l.auto ? 'auto' : `${l.lat},${l.lon}`;
+let wxData = store.get('weatherCache', null), wxBusy = false;
+const WD = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
+function wxPos() {
+  return new Promise(res => {
+    if (NATIVE || !navigator.geolocation) return res(null);      // Mac-App: kein Standortzugriff im Fenster
+    let done = false; const fin = v => { if (!done) { done = true; clearTimeout(t); res(v); } };
+    const t = setTimeout(() => fin(null), 9000);
+    try { navigator.geolocation.getCurrentPosition(p => fin({ lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3) }), () => fin(null), { maximumAge: 30 * 60e3, timeout: 8000 }); } catch (e) { fin(null); }
+  });
+}
+async function getJSON(url) {
+  try { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
+  catch (e) { if (NATIVE && NATIVE.fetch_text) { const r = await NATIVE.fetch_text(url); if (r && r.ok) return JSON.parse(r.text); } throw e; }
+}
+async function wxPlaceName(lat, lon) {
+  try { const j = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=de`); return j.city || j.locality || ''; } catch (e) { return ''; }
+}
+async function loadWeather(force) {
+  if (wxBusy || !widgetOn('weather') && !force) { renderWeather(); return; }
+  const loc = getWxLoc();
+  if (!force && wxData && wxData.cur && Date.now() - wxData.ts < 25 * 60e3 && wxData.key === wxKey(loc)) { renderWeather(); return; }
+  wxBusy = true;
+  try {
+    let place = loc.auto ? null : loc, note = '';
+    if (loc.auto) {
+      const p = await wxPos();
+      if (p) { const same = wxData && wxData.auto && Math.abs(wxData.lat - p.lat) < .05 && Math.abs(wxData.lon - p.lon) < .05 && wxData.name;
+        place = { lat: p.lat, lon: p.lon, name: same || await wxPlaceName(p.lat, p.lon) || 'Aktueller Ort', auto: true }; }
+      else { place = Object.assign({}, WX_DEFAULT); note = 'nopos'; }
+    }
+    const q = `latitude=${place.lat}&longitude=${place.lon}&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m,relative_humidity_2m,precipitation`
+      + '&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&forecast_days=7&timeformat=unixtime';
+    const j = await getJSON('https://api.open-meteo.com/v1/forecast?' + q);
+    if (!j || !j.current) throw new Error('Keine Wetterdaten');
+    wxData = { ts: Date.now(), key: wxKey(loc), name: place.name, lat: place.lat, lon: place.lon, auto: !!place.auto, note, cur: j.current, hourly: j.hourly, daily: j.daily };
+    rawSet('weatherCache', wxData);
+  } catch (e) { if (wxData && wxData.cur) wxData.err = 'offline'; else wxData = { err: String(e.message || e) }; }
+  finally { wxBusy = false; renderWeather(); }
+}
+function wxHours(n) {
+  const d = wxData, now = Date.now() / 1000, H = d.hourly; let i0 = H.time.findIndex(t => t > now - 3600); if (i0 < 0) i0 = 0;
+  return H.time.slice(i0, i0 + n).map((t, k) => ({ t, temp: H.temperature_2m[i0 + k], code: H.weather_code[i0 + k], pp: H.precipitation_probability[i0 + k], day: H.is_day[i0 + k] }));
+}
+function wxDays() {
+  const D = wxData.daily;
+  return D.time.map((t, i) => ({ t, code: D.weather_code[i], hi: D.temperature_2m_max[i], lo: D.temperature_2m_min[i], pp: D.precipitation_probability_max[i], rise: D.sunrise[i], set: D.sunset[i] }));
+}
+function wxDayRows(days) {
+  const lo = Math.min(...days.map(x => x.lo)), hi = Math.max(...days.map(x => x.hi)), span = Math.max(1, hi - lo);
+  return days.map((x, i) => `<div class="wx-day"><b>${i === 0 ? 'Heute' : WD.format(new Date(x.t * 1000))}</b>${wxIcon(x.code, 1)}<i class="num">${x.pp >= 20 ? x.pp + '%' : ''}</i><span class="num lo">${Math.round(x.lo)}°</span>
+    <span class="rng"><s style="left:${(x.lo - lo) / span * 100}%;right:${(hi - x.hi) / span * 100}%"></s></span><span class="num">${Math.round(x.hi)}°</span></div>`).join('');
+}
+function renderWeather() {
+  if (!$('#wxBox')) return;
+  const box = $('#wxBox'), d = wxData;
+  $('#wxLoc span').textContent = d && d.name ? d.name : 'Wetter';
+  if (!d || !d.cur) { box.innerHTML = d && d.err ? '<p class="empty">Wetter gerade nicht erreichbar. Tippe zum erneuten Laden.</p>' : '<p class="empty">Wird geladen …</p>'; return; }
+  const c = d.cur, days = wxDays(), t0 = days[0];
+  box.innerHTML = `<div class="wx-now">${wxIcon(c.weather_code, c.is_day, 'big')}<div class="wx-main"><span class="wx-t num">${Math.round(c.temperature_2m)}°</span><span class="wx-d">${wxInfo(c.weather_code, c.is_day).t}</span><span class="wx-hl num">H ${Math.round(t0.hi)}° · T ${Math.round(t0.lo)}°</span></div></div>
+    <div class="wx-hours">${wxHours(8).map((h, k) => `<span><small>${k === 0 ? 'Jetzt' : new Date(h.t * 1000).getHours() + ' Uhr'}</small>${wxIcon(h.code, h.day)}<b class="num">${Math.round(h.temp)}°</b><i class="num">${h.pp >= 30 ? h.pp + '%' : ''}</i></span>`).join('')}</div>
+    <div class="wx-days">${wxDayRows(days.slice(0, 5))}</div>
+    ${d.err ? `<p class="wx-off">Offline · Stand ${esc(agoText(d.ts))}</p>` : ''}`;
+}
+function wxDetail() {
+  const d = wxData; if (!d || !d.cur) { loadWeather(true); return; }
+  const c = d.cur, days = wxDays(), hm2 = t => new Date(t * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  modal(`<div class="glass modal wide wxm" role="dialog" aria-label="Wetter"><div class="mh"><h3>${ic('pin', 'i sm')} ${esc(d.name || 'Wetter')}</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
+    <div class="wx-now big">${wxIcon(c.weather_code, c.is_day, 'big')}<div class="wx-main"><span class="wx-t num">${Math.round(c.temperature_2m)}°</span><span class="wx-d">${wxInfo(c.weather_code, c.is_day).t} · gefühlt ${Math.round(c.apparent_temperature)}°</span></div>
+      <dl class="wx-facts"><div><dt>Wind</dt><dd class="num">${Math.round(c.wind_speed_10m)} km/h</dd></div><div><dt>Luftfeuchte</dt><dd class="num">${Math.round(c.relative_humidity_2m)} %</dd></div><div><dt>Sonne</dt><dd class="num">${hm2(days[0].rise)} – ${hm2(days[0].set)}</dd></div></dl></div>
+    <h4 class="zh">Die nächsten 24 Stunden</h4><div class="wx-hours scroll">${wxHours(24).map((h, k) => `<span><small>${k === 0 ? 'Jetzt' : new Date(h.t * 1000).getHours() + ' Uhr'}</small>${wxIcon(h.code, h.day)}<b class="num">${Math.round(h.temp)}°</b><i class="num">${h.pp >= 10 ? h.pp + '%' : ''}</i></span>`).join('')}</div>
+    <h4 class="zh">7 Tage</h4><div class="wx-days">${wxDayRows(days)}</div>
+    <p class="lead" style="margin-top:10px"><small>Daten: Open-Meteo · Stand ${esc(agoText(d.ts))}${d.note === 'nopos' ? ' · Standort nicht verfügbar – Ort unter „Ort ändern“ wählen' : ''}</small></p>
+    <div class="row"><button class="btn" id="wxmLoc">${ic('pin', 'i sm')} Ort ändern</button><button class="btn" id="wxmRe">${ic('refresh', 'i sm')} Aktualisieren</button><button class="btn pri" id="wxmApp">${ic('sun', 'i sm')} Wetter-App öffnen</button></div></div>`);
+  $('#wxmLoc').onclick = wxLocPicker; $('#wxmRe').onclick = async () => { await loadWeather(true); wxDetail(); }; $('#wxmApp').onclick = () => { close(); wxOpenApp(); };
+}
+function wxOpenApp() {
+  const a = apps.find(x => x.id === 'wetter') || DEFAULT_APPS.find(x => x.id === 'wetter');
+  if (!NATIVE && !IS_IOS && !IS_MAC_BROWSER) { openUrl('https://www.wetteronline.de/wetter/' + encodeURIComponent((wxData && wxData.name || 'Wettenberg').toLowerCase()), 'Wetter'); return; }
+  openApp(a);
+}
+function wxLocPicker() {
+  const cur = getWxLoc();
+  modal(`<div class="glass modal" role="dialog" aria-label="Ort für das Wetter"><div class="mh"><h3>Ort für das Wetter</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
+    <p class="lead">Gilt nur für dieses Gerät. ${NATIVE ? 'Die Mac-App kennt deinen Standort nicht – wähle deinen Ort.' : 'Mit „Aktueller Standort“ fragt das Gerät einmal nach der Erlaubnis.'}</p>
+    ${NATIVE ? '' : `<button class="wrow choice" id="wxAuto"${cur.auto ? ' aria-pressed="true"' : ''}><span class="tile sm" style="--c:#3B9BFF">${ic('pin', 'i sm')}</span><span class="t"><b>Aktueller Standort</b><span>Wechselt mit, wenn du unterwegs bist</span></span></button>`}
+    <form id="wxF" class="add" style="margin-top:10px"><input id="wxQ" placeholder="Ort suchen, z. B. Gießen" aria-label="Ort suchen" autocomplete="off" enterkeyhint="search"><button aria-label="Suchen">${ic('search', 'i sm')}</button></form>
+    <div class="wlist" id="wxRes" style="margin-top:8px">${!cur.auto ? `<p class="lead" style="margin:0">Aktuell: <b>${esc(cur.name)}</b></p>` : ''}</div></div>`);
+  $('#wxAuto')?.addEventListener('click', () => { store.set('weatherLoc', null); close(); loadWeather(true); toast('Wetter für deinen aktuellen Standort', 'pin'); });
+  const search = async () => {
+    const q = $('#wxQ').value.trim(); if (q.length < 2) return;
+    $('#wxRes').innerHTML = '<p class="empty">Suche …</p>';
+    try {
+      const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=de&format=json`);
+      const rs = (j && j.results) || [];
+      $('#wxRes').innerHTML = rs.length ? rs.map((r, i) => `<button class="wrow choice" data-wxr="${i}"><span class="tile sm" style="--c:#3B9BFF">${ic('pin', 'i sm')}</span><span class="t"><b>${esc(r.name)}</b><span>${esc([r.admin1, r.country].filter(Boolean).join(', '))}</span></span></button>`).join('') : '<p class="empty">Kein Ort gefunden.</p>';
+      $$('[data-wxr]').forEach(b => b.onclick = () => { const r = rs[+b.dataset.wxr]; store.set('weatherLoc', { name: r.name, lat: +r.latitude.toFixed(3), lon: +r.longitude.toFixed(3) }); close(); loadWeather(true); toast('Wetter für ' + r.name, 'pin'); });
+    } catch (e) { $('#wxRes').innerHTML = '<p class="empty">Suche gerade nicht möglich (offline?).</p>'; }
+  };
+  $('#wxF').addEventListener('submit', e => { e.preventDefault(); search(); });
+  setTimeout(() => $('#wxQ')?.focus(), 50);
+}
+$('#wxLoc').addEventListener('click', e => { e.stopPropagation(); if (!document.body.classList.contains('edit-on')) wxLocPicker(); });
+$('#wxOpen').addEventListener('click', e => { e.stopPropagation(); if (!document.body.classList.contains('edit-on')) wxOpenApp(); });
+$('#wxBox').addEventListener('click', () => { if (!document.body.classList.contains('edit-on')) wxDetail(); });
+$('#wxBox').addEventListener('keydown', e => { if (e.key === 'Enter') wxDetail(); });
+
+/* =====================================================================
+   ERINNERUNGEN
+   Mac-App: direkt über EventKit (lesen, abhaken, anlegen).
+   iPad, iPhone, Browser: die Mac-App legt die offenen Erinnerungen ins Konto;
+   Abhaken und Anlegen landen in einer Warteschlange, die der Mac abarbeitet.
+   ===================================================================== */
+const REM = { state: null, data: null, busy: false, checked: new Map() };
+const remShareOn = () => store.get('macRemShare', true) !== false;
+const remData = () => NATIVE ? REM.data : store.get('macRem', null);
+const remQueue = () => (store.get('remQueue', []) || []).filter(q => q && q.qid);
+const remDoneIds = () => new Set(store.get('remDone', []) || []);
+const remQid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+async function loadReminders() {
+  if (!NATIVE) { remPrune(); renderReminders(); return; }
+  if (REM.busy || !NATIVE.reminders) return; REM.busy = true;
+  try {
+    let r = await NATIVE.reminders().catch(() => ({ state: 'error' }));
+    REM.state = r.state;
+    if (r.state === 'ok') {
+      REM.data = { ts: Date.now(), lists: r.lists || [], items: r.items || [] };
+      if (await remApplyQueue()) { r = await NATIVE.reminders().catch(() => r); if (r.state === 'ok') REM.data = { ts: Date.now(), lists: r.lists || [], items: r.items || [] }; }
+      remShare();
+    }
+  } finally { REM.busy = false; renderReminders(); }
+}
+/* Mac: Aufträge von iPad/iPhone ausführen */
+async function remApplyQueue() {
+  const q = remQueue(), done = remDoneIds(); let n = 0;
+  for (const op of q) {
+    if (done.has(op.qid)) continue;
+    try {
+      if (op.op === 'done' || op.op === 'undo') await NATIVE.reminder_done(op.id, op.op === 'done');
+      else if (op.op === 'add' && op.title) await NATIVE.reminder_new(op.title, op.list || null, op.due || null);
+    } catch (e) { console.warn('Erinnerung', op, e); }
+    done.add(op.qid); n++;
+  }
+  if (n) { rawSet('remDone', [...done].slice(-300)); syncTouch('remDone'); toast(`${n} Änderung${n === 1 ? '' : 'en'} vom iPad/iPhone in „Erinnerungen“ übernommen`, 'list'); }
+  return n > 0;
+}
+function remShare() {
+  if (!SY.on || !remShareOn() || !REM.data) return;
+  const slim = { lists: REM.data.lists, items: REM.data.items.map(i => ({ id: i.id, t: i.t, due: i.due, ad: i.ad, pr: i.pr, l: i.l, c: i.c })) };
+  const sig = JSON.stringify(slim), old = store.get('macRemSig', null) || {};
+  if (old.sig === sig && Date.now() - (old.ts || 0) < 6 * 3600e3) return;
+  rawSet('macRem', Object.assign({ ts: Date.now() }, slim)); store.set('macRemSig', { sig, ts: Date.now() }); syncTouch('macRem');
+}
+/* iPad: erledigte Aufträge aus der Warteschlange nehmen */
+function remPrune() {
+  const q = remQueue(), done = remDoneIds(), keep = q.filter(x => !done.has(x.qid) && Date.now() - (x.t || 0) < 14 * 864e5);
+  if (keep.length !== q.length) { rawSet('remQueue', keep); syncTouch('remQueue'); }
+}
+function remDueText(i, now) {
+  if (!i.due) return '';
+  const d = new Date(i.due * 1000), day = isoDay(d), today = isoDay(new Date()), tom = isoDay(addDays(new Date(), 1));
+  const tm = i.ad ? '' : ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const over = i.ad ? day < today : i.due < now;
+  const lbl = day === today ? 'Heute' : day === tom ? 'Morgen' : new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(d);
+  return `<em class="${over ? 'over' : day === today ? 'today' : ''}">${over && day !== today ? 'Überfällig · ' : ''}${lbl}${tm}</em>`;
+}
+function renderReminders() {
+  const box = $('#remBox'); if (!box) return;
+  const form = $('#remForm'), sel = $('#remList'), d = remData();
+  if (NATIVE && REM.state && REM.state !== 'ok') {
+    sel.hidden = true; form.hidden = true;
+    box.innerHTML = REM.state === 'ask' ? `<p class="empty">Zeig hier deine Listen aus der App „Erinnerungen“ – abhaken und neue anlegen inklusive.</p><button class="btn sm pri" data-rem-connect>${ic('list', 'i xs')} Erinnerungen verbinden</button>`
+      : REM.state === 'denied' ? `<p class="empty">Cockpit darf die Erinnerungen noch nicht lesen.</p><button class="btn sm" data-rem-prefs>Freigeben</button>`
+      : '<p class="empty">Erinnerungen konnten nicht geladen werden. Installieren.command erneut ausführen hilft meist.</p>';
+    return;
+  }
+  if (!d) {
+    sel.hidden = true; form.hidden = true;
+    box.innerHTML = NATIVE ? '<p class="empty">Wird geladen …</p>'
+      : SY.on ? '<p class="empty">Noch keine Erinnerungen vom Mac. Öffne Cockpit einmal auf dem Mac – die Mac-App legt deine Listen dann ins Konto.</p>'
+      : '<p class="empty">Deine Erinnerungen kommen über die Mac-App: auf dem Mac und hier unter Einstellungen › Synchronisieren mit Google anmelden.</p>';
+    return;
+  }
+  sel.hidden = false; form.hidden = false;
+  const lists = d.lists || [], byId = Object.fromEntries(lists.map(l => [l.id, l]));
+  let cur = store.get('remList', '') || ''; if (cur && !byId[cur]) cur = '';
+  const opts = `<option value="">Alle Listen</option>` + lists.map(l => `<option value="${esc(l.id)}">${esc(l.title)}</option>`).join('');
+  if (sel.dataset.o !== opts) { sel.innerHTML = opts; sel.dataset.o = opts; }
+  sel.value = cur;
+  const q = NATIVE ? [] : remQueue().filter(x => !remDoneIds().has(x.qid));
+  const pendDone = new Map(); q.forEach(x => { if (x.op === 'done') pendDone.set(x.id, true); if (x.op === 'undo') pendDone.delete(x.id); });
+  const now = Date.now() / 1000;
+  let items = (d.items || []).filter(i => !cur || i.l === cur);
+  const adds = q.filter(x => x.op === 'add' && (!cur || x.list === cur || (!x.list && !cur))).map(x => ({ id: 'q:' + x.qid, t: x.title, l: x.list, pending: true, c: x.t / 1000 }));
+  const key = i => i.due ? i.due : 1e12 + (i.pr ? (10 - i.pr) * 1e9 : 9e10) - (i.c || 0) / 1e3;
+  items = adds.concat(items.slice().sort((a, b) => key(a) - key(b)));
+  const isDone = i => NATIVE ? REM.checked.has(i.id) : pendDone.has(i.id);
+  $('#remCount') && ($('#remCount').textContent = items.length);
+  box.innerHTML = items.length ? items.slice(0, 80).map(i => { const l = byId[i.l] || {}; const dn = isDone(i);
+    return `<div class="rem${dn ? ' done' : ''}${i.pending ? ' pend' : ''}" data-rid="${esc(i.id)}"><button type="button" class="rck" data-rck style="--c:${esc(l.color || '#E0B24A')}" aria-label="${esc(i.t)} ${dn ? 'wieder öffnen' : 'abhaken'}" ${i.pending ? 'disabled' : ''}>${ic('check', 'i xs')}</button>
+      <span class="t"><b>${i.pr && i.pr <= 4 ? '<i class="prio">!</i>' : ''}${esc(i.t || '(ohne Titel)')}</b><span>${remDueText(i, now)}${!cur && l.title ? `<span class="rl">${esc(l.title)}</span>` : ''}${i.pending || (!NATIVE && dn) ? '<span class="wait">wartet auf den Mac</span>' : ''}</span></span></div>`; }).join('')
+    : '<p class="empty">Alles erledigt 🎉</p>';
+}
+$('#remBox').addEventListener('click', async e => {
+  if (document.body.classList.contains('edit-on')) return;
+  if (e.target.closest('[data-rem-connect]')) { const ok = await NATIVE.reminders_request(); toast(ok ? 'Erinnerungen verbunden' : 'Nicht erlaubt – unter Systemeinstellungen › Datenschutz › Erinnerungen freigeben', ok ? 'check' : 'x'); loadReminders(); return; }
+  if (e.target.closest('[data-rem-prefs]')) { NATIVE.open_privacy('reminders'); return; }
+  const b = e.target.closest('[data-rck]'); if (!b) return;
+  const id = b.closest('[data-rid]').dataset.rid;
+  if (NATIVE) {
+    const was = REM.checked.has(id);
+    const r = await NATIVE.reminder_done(id, !was).catch(() => ({ ok: false }));
+    if (!r || !r.ok) { toast((r && r.error) || 'Abhaken hat nicht geklappt', 'x'); return; }
+    if (was) { clearTimeout(REM.checked.get(id)); REM.checked.delete(id); }
+    else REM.checked.set(id, setTimeout(() => { REM.checked.delete(id); loadReminders(); }, 3500));
+    renderReminders(); return;
+  }
+  const q = remQueue(), pend = q.findIndex(x => x.op === 'done' && x.id === id && !remDoneIds().has(x.qid));
+  if (pend >= 0) q.splice(pend, 1); else q.push({ qid: remQid(), op: 'done', id, t: Date.now() });
+  store.set('remQueue', q); renderReminders();
+  if (pend < 0) toast('Abgehakt – der Mac trägt es in „Erinnerungen“ ein, sobald Cockpit dort läuft', 'list');
+});
+$('#remList').addEventListener('change', () => { store.set('remList', $('#remList').value); renderReminders(); });
+$('#remForm').addEventListener('submit', async e => {
+  e.preventDefault(); const t = $('#remIn').value.trim(); if (!t) return;
+  const list = $('#remList').value || null;
+  if (NATIVE) { const r = await NATIVE.reminder_new(t, list, null).catch(() => ({ ok: false })); if (!r || !r.ok) { toast((r && r.error) || 'Anlegen hat nicht geklappt', 'x'); return; } $('#remIn').value = ''; toast('Erinnerung angelegt', 'list'); loadReminders(); return; }
+  const q = remQueue(); q.push({ qid: remQid(), op: 'add', title: t.slice(0, 500), list, t: Date.now() }); store.set('remQueue', q);
+  $('#remIn').value = ''; renderReminders(); toast('Gemerkt – der Mac legt sie in „Erinnerungen“ an, sobald Cockpit dort läuft', 'list');
+});
 
 /* ---------- Widget „Heute“ ---------- */
 function eventRow(e, now) {
@@ -1619,7 +1955,7 @@ const SYNC_RULE = `match /cockpit/{uid}/{document=**} {
   allow read, write: if request.auth != null && request.auth.uid == uid;
 }`;
 /* bleiben auf dem Gerät */
-const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig']);
+const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig', 'macRemShare', 'macRemSig', 'weatherLoc', 'weatherCache', 'widgetsKnown']);
 const PART = 700000;          // Zeichen pro Teil (Firestore erlaubt 1 MB je Dokument)
 const FILE_MAX = 40e6;
 const encKey = k => 'k_' + k.replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16).padStart(4, '0'));
@@ -1777,6 +2113,8 @@ const REFRESH = {
   events: () => { ownEvents = store.get('events', []); invalidateCal(); },
   icsFeeds: () => invalidateCal(),
   macCal: () => { if (!NATIVE) invalidateCal(); },
+  macRem: () => { if (!NATIVE) renderReminders(); }, remDone: () => { if (!NATIVE) { remPrune(); renderReminders(); } },
+  remQueue: () => { if (NATIVE) loadReminders(); else renderReminders(); }, remList: () => renderReminders(),
   boards: () => { if (document.querySelector('#wbBox canvas') && currentView === 'whiteboard') { boards = store.get('boards', boards); renderWhiteboard(); } else boards = store.get('boards', boards); },
   files: () => { files = store.get('files', []); if (currentView === 'dateien' && !openFileId) renderFiles(); },
   profile: () => applyProfile().then(renderRail), iconImage: () => applyProfile(),
@@ -1881,7 +2219,7 @@ async function syncBegin(fresh) {
     else { await syncPull(true); toast('Daten aus deinem Konto übernommen', 'check'); }
   } else await syncPull(true);
   clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
-  scheduleMacCal(4000);
+  scheduleMacCal(4000); if (NATIVE) setTimeout(loadReminders, 5000);
   return true;
 }
 function allLocalKeys() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('cockpit:')) o[k.slice(8)] = 1; } } catch (e) {} return o; }
@@ -2000,6 +2338,7 @@ const SHORTCUTS = [
   { n: 'Cockpit Erinnerungen', a: 'Aktion „App öffnen“ → Erinnerungen' },
   { n: 'Cockpit Mail', a: 'Aktion „App öffnen“ → Mail' },
   { n: 'Cockpit iDoceo', a: 'Aktion „App öffnen“ → iDoceo' },
+  { n: 'Cockpit Wetter', a: 'Aktion „App öffnen“ → Wetter' },
   { n: 'Cockpit Erinnerung neu', a: 'Aktion „Erinnerung hinzufügen“, als Titel die „Kurzbefehleingabe“ wählen. In den Details „Eingabe empfangen: Text“ einschalten.' }
 ];
 const TABS = [['personal', 'Persönlich'], ['sync', 'Synchronisieren'], ['look', 'Aussehen'], ['widgets', 'Widgets'], ['calendar', 'Kalender'], ['notify', 'Mitteilungen'], ['install', 'Installieren'], ['shortcuts', 'Kurzbefehle'], ['transfer', 'Übertragen'], ['diag', 'Diagnose']];
@@ -2051,7 +2390,8 @@ function setup(tab = 'personal') {
       <p class="lead" id="syncState" style="margin:12px 0">${syncStateHtml()}</p>
       ${/Regel/.test(SY.error) ? `<div class="box-warn"><b>Firestore-Regel fehlt</b><p class="lead" style="margin:4px 0 8px">In der Firebase-Konsole (Projekt <code>${FBC.projectId}</code> › Firestore › Regeln) diesen Block innerhalb von <code>match /databases/{database}/documents { … }</code> einfügen und veröffentlichen:</p><textarea class="code" readonly id="syRule">${esc(SYNC_RULE)}</textarea><div class="row" style="justify-content:flex-start"><button class="btn sm" id="syRuleCp">${ic('copy', 'i xs')} Regel kopieren</button><button class="btn sm" id="syFb">${ic('ext', 'i xs')} Firebase-Konsole</button></div></div>` : ''}
       <p class="lead">Abgeglichen werden Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Whiteboards, Name und Aussehen – und deine <b>Dateien</b> (PDFs und Bilder bis 40 MB) samt Eintragungen. Die WhatsApp-Anmeldung bleibt pro Gerät.</p>
-      ${NATIVE ? `<div class="wlist" style="margin-bottom:12px"><div class="wrow"><span class="tile sm" style="--c:#64748B">${ic('cal', 'i sm')}</span><span class="t"><b>Mac-Termine für iPad & iPhone</b><span>Legt die Termine aus Mac-Kalender und Abos (1 Woche zurück, 8 Wochen voraus) in dein Konto – Safari darf den Kalender selbst nicht lesen.</span></span><button type="button" class="sw" role="switch" id="syCal" aria-checked="${macCalShareOn()}" aria-label="Mac-Termine für iPad und iPhone"></button></div></div>`
+      ${NATIVE ? `<div class="wlist" style="margin-bottom:12px"><div class="wrow"><span class="tile sm" style="--c:#64748B">${ic('cal', 'i sm')}</span><span class="t"><b>Mac-Termine für iPad & iPhone</b><span>Legt die Termine aus Mac-Kalender und Abos (1 Woche zurück, 8 Wochen voraus) in dein Konto – Safari darf den Kalender selbst nicht lesen.</span></span><button type="button" class="sw" role="switch" id="syCal" aria-checked="${macCalShareOn()}" aria-label="Mac-Termine für iPad und iPhone"></button></div>
+        <div class="wrow"><span class="tile sm" style="--c:#E0B24A">${ic('list', 'i sm')}</span><span class="t"><b>Erinnerungen für iPad & iPhone</b><span>Legt deine offenen Erinnerungen ins Konto. Was du dort abhakst oder anlegst, trägt der Mac in „Erinnerungen“ ein.</span></span><button type="button" class="sw" role="switch" id="syRem" aria-checked="${remShareOn()}" aria-label="Erinnerungen für iPad und iPhone"></button></div></div>`
         : macCalGet() ? `<p class="lead">Termine vom Mac: ${macCalGet().events.length}, Stand ${esc(agoText(macCalGet().ts))}.</p>` : ''}
       <div class="row" style="justify-content:flex-start"><button class="btn pri" id="syNow">${ic('refresh', 'i sm')} Jetzt abgleichen</button><span class="spacer"></span><button class="btn danger" id="syDel">Daten im Konto löschen</button></div>`
       : `<p class="lead">Melde dich mit deinem Google-Konto an, dann hast du auf Mac, iPad und im Browser überall dasselbe Cockpit: Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Whiteboards, Aussehen – und deine <b>Dateien</b> (PDFs und Bilder) samt Eintragungen.</p>
@@ -2078,7 +2418,9 @@ function setup(tab = 'personal') {
 function moveOnBoard(key, dir) {
   const b = getBoard(), i = b.findIndex(it => itemKey(it) === key), j = i + dir;
   if (i < 0 || j < 0 || j >= b.length) return;
-  [b[i], b[j]] = [b[j], b[i]]; setBoard(b);
+  const A = b[i], B = b[j];
+  Object.keys(Object.assign({}, A.p, B.p)).forEach(ck => { if (A.p && B.p && A.p[ck] && B.p[ck]) [A.p[ck], B.p[ck]] = [B.p[ck], A.p[ck]]; });
+  [b[i], b[j]] = [b[j], b[i]]; setBoard(settleBoard(b, boardCols));
 }
 function widgetRow(w, it) {
   const on = w.id === 'clock' ? widgetOn('clock') : !!it;
@@ -2104,7 +2446,7 @@ function bindWidgetsTab() {
   $$('[data-wsw]').forEach(b => b.addEventListener('click', () => { const on = b.getAttribute('aria-checked') !== 'true'; setWidget(b.dataset.wsw, on); re(); }));
   $('#hkSw')?.addEventListener('click', () => { if (!widgetOn('dock')) return; const on = store.get('hotkeys', true) === false; store.set('hotkeys', on); renderApps(); re(); toast(on ? 'Kurzwahltasten 1–6 an' : 'Kurzwahltasten 1–6 aus', 'keyboard'); });
   $$('[data-smv]').forEach(b => b.addEventListener('click', () => { moveOnBoard('w:' + b.closest('[data-wrow]').dataset.wrow, +b.dataset.smv); re(); }));
-  $$('[data-ssize]').forEach(sl => sl.addEventListener('change', () => { const id = sl.closest('[data-wrow]').dataset.wrow, bd = getBoard(), it = bd.find(x => x.k === 'w' && x.id === id); if (it) { it.s = sl.value; setBoard(bd); refreshWidget(id); } }));
+  $$('[data-ssize]').forEach(sl => sl.addEventListener('change', () => { const id = sl.closest('[data-wrow]').dataset.wrow, bd = getBoard(), it = bd.find(x => x.k === 'w' && x.id === id); if (it) { it.s = sl.value; delete it.w; delete it.h; setBoard(settleBoard(bd, boardCols, 'w:' + id)); refreshWidget(id); } }));
   $('#lyReset').onclick = function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('homeBoard', null); renderBoard(); re(); toast('Startseite zurückgesetzt', 'layout'); };
   $('#lyArrange').onclick = () => { close(); go('start'); setTimeout(() => setEdit(true), 60); };
 }
@@ -2160,6 +2502,9 @@ function bindSettings(tab) {
     $('#syCal')?.addEventListener('click', () => { const on = !macCalShareOn(); store.set('macCalShare', on); $('#syCal').setAttribute('aria-checked', on);
       if (on) { shareMacCal(true); toast('Mac-Termine werden für iPad & iPhone bereitgestellt', 'cal'); }
       else { rawSet('macCal', null); store.set('macCalSig', null); syncTouch('macCal'); toast('Mac-Termine werden nicht mehr geteilt', 'cal'); } });
+    $('#syRem')?.addEventListener('click', () => { const on = !remShareOn(); store.set('macRemShare', on); $('#syRem').setAttribute('aria-checked', on);
+      if (on) { store.set('macRemSig', null); remShare(); toast('Erinnerungen werden für iPad & iPhone bereitgestellt', 'list'); }
+      else { rawSet('macRem', null); store.set('macRemSig', null); syncTouch('macRem'); toast('Erinnerungen werden nicht mehr geteilt', 'list'); } });
     $('#syDel')?.addEventListener('click', async function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich alle Daten im Konto löschen?'; return; } await syncDeleteCloud(); await syncSignOut(); setup('sync'); });
     $('#syRuleCp')?.addEventListener('click', async () => toast((await copy(SYNC_RULE)) ? 'Regel kopiert' : 'Bitte markieren und kopieren', 'copy'));
     $('#syFb')?.addEventListener('click', () => openUrl(`https://console.firebase.google.com/project/${FBC.projectId}/firestore/rules`, 'Firebase-Konsole'));
@@ -2226,6 +2571,9 @@ if (store.get('profile', null) === null) setTimeout(welcome, 400);
 setInterval(tick, 15000);
 setInterval(() => { if (currentView === 'start') renderToday(); notifyTick(); }, 60000);
 setInterval(() => { if (currentView === 'start') loadStats(); }, 10 * 60 * 1000);
+loadWeather(); setInterval(() => loadWeather(), 30 * 60 * 1000);
+loadReminders(); setInterval(() => { if (!document.hidden) loadReminders(); }, 3 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadWeather(); loadReminders(); } });
 setTimeout(notifyTick, 1500);
 window.addEventListener('resize', () => { if (currentView === 'whiteboard' && $('#wbBox').classList.contains('full')) { wbFit(); wb.resize(); wbPaintBg(); } });
 if (!NATIVE && location.protocol.startsWith('http') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
