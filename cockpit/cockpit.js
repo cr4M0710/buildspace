@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -1251,16 +1251,16 @@ async function toggleNotif() {
   p.addEventListener('click', e => { const b = e.target.closest('[data-ngo]'); if (b && b.dataset.ngo) { go(b.dataset.ngo); closeNotif(); } });
   items.forEach(i => seen.add(i.id)); store.set('seenN', [...seen].slice(-300)); setTimeout(updateBadge, 300);
 }
-function systemNotify(title, body) {
+function systemNotify(title, body, view) {
   if (!notifyPrefs().system) return;
-  if (NATIVE && NATIVE.notify) { NATIVE.notify(title, body || ''); return; }
+  if (NATIVE && NATIVE.notify) { NATIVE.notify(title, body || '', view || ''); return; }
   try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body, icon: iconCache && !iconCache.startsWith('data:') ? iconCache : 'icon-192.png' }); } catch (e) {}
 }
 async function notifyTick() {
   const items = await updateBadge();
-  items.filter(i => i.soon && !notified.has(i.id)).forEach(i => { notified.add(i.id); systemNotify(i.title, i.sub); });
+  items.filter(i => i.soon && !notified.has(i.id)).forEach(i => { notified.add(i.id); systemNotify(i.title, i.sub, i.go); });
   const dayKey = 'due:' + isoDay(new Date()), due = tasks.filter(t => t.col !== 'done' && t.due && daysUntil(t.due) <= 0);
-  if (due.length && !notified.has(dayKey) && new Date().getHours() >= 7) { notified.add(dayKey); systemNotify(`${due.length} Aufgabe${due.length > 1 ? 'n' : ''} fällig`, due.slice(0, 3).map(t => t.title).join(' · ')); }
+  if (due.length && !notified.has(dayKey) && new Date().getHours() >= 7) { notified.add(dayKey); systemNotify(`${due.length} Aufgabe${due.length > 1 ? 'n' : ''} fällig`, due.slice(0, 3).map(t => t.title).join(' · '), 'projekte'); }
   store.set('notifiedN', [...notified].slice(-300));
 }
 
@@ -1317,11 +1317,12 @@ async function waPoll() {
     const st = await NATIVE.wa_status(); if (!st) return;
     waState = { web: st.web, desktop: st.desktop || { running: false, count: null } };
     const c = waState.web;
-    if (c != null && waPrev != null && c > waPrev && !waState.desktop.running && currentView !== 'whatsapp' && notifyPrefs().whatsapp !== false) systemNotify('WhatsApp', `${c} ${c === 1 ? 'ungelesener Chat' : 'ungelesene Chats'}`);
     if (c != null) waPrev = c;
     renderWaWidget(); updateBadge();
   } catch (e) {}
 }
+window.__cockpitOpen = id => { if (VIEWS.some(v => v.id === id)) go(id); };
+if (NATIVE && NATIVE.wa_set_notify) NATIVE.wa_set_notify(notifyPrefs().whatsapp !== false);
 if (NATIVE && NATIVE.wa_status) {
   /* Wer WhatsApp im Cockpit schon einmal geöffnet hat: im Hintergrund laden, damit Widget und Zähler stimmen */
   if (store.get('waUsed', false) && NATIVE.wa_preload) setTimeout(() => NATIVE.wa_preload().then(() => setTimeout(waPoll, 6000)).catch(() => {}), 2500);
@@ -1430,7 +1431,8 @@ function setup(tab = 'personal') {
         <div class="row" style="justify-content:flex-start"><button class="btn pri">${ic('plus', 'i sm')} Abo hinzufügen</button></div></form>
       <ol class="steps" style="margin-top:14px"><li><b>WebUntis:</b> In der App unter Kalender › Menü › Kalender › „abo (alle)“ den Link kopieren.</li><li><b>IServ:</b> Kalender › Kalender abonnieren (oder Exportieren) › iCal-Adresse kopieren.</li></ol>`,
     notify: `<div class="wlist"><div class="wrow"><span class="tile sm" style="--c:#E0B24A">${ic('bell', 'i sm')}</span><span class="t"><b>System-Mitteilungen</b><span>${NATIVE ? 'macOS meldet sich 15 Minuten vor Terminen, bei fälligen Aufgaben und wenn der Timer abläuft.' : 'Der Browser meldet sich 15 Minuten vor Terminen und bei fälligen Aufgaben, solange Cockpit geöffnet ist.'}</span></span><button class="sw" role="switch" id="nSys" aria-checked="${notifyPrefs().system}" aria-label="System-Mitteilungen"></button></div>
-      ${NATIVE ? `<div class="wrow"><span class="tile sm" style="--c:#25D366">${ic('phonechat', 'i sm')}</span><span class="t"><b>WhatsApp-Hinweise</b><span>Meldet neue ungelesene Chats aus WhatsApp im Cockpit (nicht, wenn die WhatsApp-App läuft – die meldet sich selbst).</span></span><button class="sw" role="switch" id="nWa" aria-checked="${notifyPrefs().whatsapp !== false}" aria-label="WhatsApp-Hinweise"></button></div>` : ''}
+      ${NATIVE ? `<div class="wrow"><span class="tile sm" style="--c:#25D366">${ic('phonechat', 'i sm')}</span><span class="t"><b>WhatsApp-Mitteilungen</b><span>Neue Nachrichten aus WhatsApp im Cockpit als macOS-Mitteilung, mit Absender und Text. Ein Klick öffnet den Chat. Läuft die WhatsApp-App, meldet sie sich selbst.</span></span><button class="sw" role="switch" id="nWa" aria-checked="${notifyPrefs().whatsapp !== false}" aria-label="WhatsApp-Mitteilungen"></button></div>
+      <div class="wrow" id="nSysState"><span class="t"><b>macOS-Erlaubnis</b><span>Wird geprüft …</span></span><button class="btn sm" id="nSysPrefs">${ic('gear', 'i xs')} Systemeinstellungen</button></div>` : ''}
       ${!NATIVE && 'Notification' in window ? `<div class="wrow"><span class="t"><b>Browser-Erlaubnis</b><span>Status: ${Notification.permission === 'granted' ? 'erlaubt' : Notification.permission === 'denied' ? 'blockiert (in den Browser-Einstellungen ändern)' : 'noch nicht gefragt'}</span></span>${Notification.permission === 'default' ? '<button class="btn sm" id="nAsk">Erlauben</button>' : ''}</div>` : ''}</div>
       <h4 style="margin:18px 0 8px;font-size:13px">buildspace-Aufrufe</h4>
       <div class="wlist"><div class="wrow"><span class="t"><b>Eigene Aufrufe nicht zählen</b><span>${location.host === 'buildspaceos.de' ? 'Gilt für diesen Browser.' : 'Öffne dafür Cockpit unter buildspaceos.de/cockpit in dem Browser, mit dem du buildspace nutzt.'}</span></span>${location.host === 'buildspaceos.de' ? `<button class="sw" role="switch" id="nNoCount" aria-checked="${(() => { try { return localStorage.getItem('bs_nocount') === '1'; } catch (e) { return false; } })()}" aria-label="Eigene Aufrufe nicht zählen"></button>` : ''}</div></div>
@@ -1447,7 +1449,7 @@ function setup(tab = 'personal') {
     diag: `<dl class="diag"><dt>Version</dt><dd>Cockpit ${APP_VERSION}${NATIVE ? ' · Mac-App' : ' · Web-App'}</dd>
       <dt>Verbindung</dt><dd>${NATIVE ? '<span class="ok">Mac-App verbunden</span>' : location.protocol === 'file:' ? '<span class="bad">Keine Verbindung zur Mac-App</span>' : 'Browser'}</dd>
       <dt>Speicher</dt><dd>${NATIVE ? '~/Library/Application Support/Cockpit/state.json' : 'Browser-Speicher dieses Geräts'}</dd>
-      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download', 'wa_show', 'wa_status'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
+      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download', 'wa_show', 'wa_status', 'notify_status'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
       <div class="row" style="justify-content:flex-start"><button class="btn" id="dgUrl">${ic('ext', 'i sm')} Test: buildspace öffnen</button>${NATIVE ? `<button class="btn" id="dgApp">${ic('cal', 'i sm')} Test: Kalender-App öffnen</button><button class="btn" id="dgNote">${ic('bell', 'i sm')} Test: Mitteilung</button>` : ''}</div>`
   };
   modal(`<div class="glass modal wide" role="dialog" aria-label="Einstellungen"><div class="mh"><h3>Einstellungen</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
@@ -1517,7 +1519,10 @@ function bindSettings(tab) {
   }
   if (tab === 'notify') {
     $('#nSys').onclick = () => { const p = notifyPrefs(); p.system = !p.system; store.set('notify', p); $('#nSys').setAttribute('aria-checked', p.system); };
-    $('#nWa')?.addEventListener('click', () => { const p = notifyPrefs(); p.whatsapp = p.whatsapp === false; store.set('notify', p); $('#nWa').setAttribute('aria-checked', p.whatsapp); });
+    $('#nWa')?.addEventListener('click', () => { const p = notifyPrefs(); p.whatsapp = p.whatsapp === false; store.set('notify', p); $('#nWa').setAttribute('aria-checked', p.whatsapp); if (NATIVE.wa_set_notify) NATIVE.wa_set_notify(p.whatsapp); });
+    $('#nSysPrefs')?.addEventListener('click', () => NATIVE.open_privacy('notifications'));
+    if (NATIVE && NATIVE.notify_status) NATIVE.notify_status().then(st => { const el = $('#nSysState span span') || $('#nSysState .t span'); if (!el || !st) return;
+      el.textContent = st.mode === 'system' ? (st.granted === false ? 'Nicht erlaubt: Systemeinstellungen › Mitteilungen › Cockpit einschalten.' : st.granted ? 'Erlaubt. Stil und Ton stellst du in den Systemeinstellungen › Mitteilungen › Cockpit ein.' : 'macOS fragt beim nächsten Start nach.') : 'Mitteilungen laufen über den Skripteditor (Systemeinstellungen › Mitteilungen › Skripteditor).'; }).catch(() => {});
     $('#nAsk')?.addEventListener('click', async () => { await Notification.requestPermission(); setup('notify'); });
     $('#nNoCount')?.addEventListener('click', () => { try { const on = localStorage.getItem('bs_nocount') !== '1'; if (on) localStorage.setItem('bs_nocount', '1'); else localStorage.removeItem('bs_nocount'); $('#nNoCount').setAttribute('aria-checked', on); toast(on ? 'Deine Aufrufe werden nicht mehr gezählt' : 'Deine Aufrufe werden wieder gezählt'); } catch (e) {} });
   }
