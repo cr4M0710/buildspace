@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prozentflasche</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ──────────────────────────────────────────── */
+:root {
+  --j:   #F97316;
+  --jd:  #C2500A;
+  --jl:  #FFF3E8;
+  --bg:  #F8F7F4;
+  --card:#FFFFFF;
+  --bdr: #E5E3DF;
+  --sub: #78716C;
+  --txt: #1C1917;
+  --r:   14px;
+  --rs:  9px;
+  --blue:#2563EB; --bll:#EFF6FF; --blm:#BFDBFE;
+  --grn: #16A34A; --gll:#F0FDF4; --glm:#BBF7D0;
+  --amb: #D97706; --all:#FFFBEB; --alm:#FDE68A;
+  --pk:  #DB2777; --pkl:#FDF2F8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Nunito Sans',system-ui,sans-serif;-webkit-text-size-adjust:100%;}
+body{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+/* ── Layout ──────────────────────────────────────────── */
+.wrap{max-width:860px;margin:0 auto;padding:.8rem .9rem 3rem;}
+h1{font-family:'Nunito',sans-serif;font-size:1.35rem;font-weight:900;color:var(--jd);text-align:center;margin-bottom:.15rem;letter-spacing:-.4px;}
+.sub{font-size:.78rem;color:var(--sub);text-align:center;margin-bottom:.8rem;}
+
+/* two-col on wide, stack on narrow */
+.layout{display:grid;grid-template-columns:152px 1fr;gap:.85rem;align-items:start;}
+@media(max-width:640px){
+  .layout{grid-template-columns:1fr;}
+  .bcol{display:flex;flex-direction:row;flex-wrap:wrap;gap:.6rem 1.1rem;justify-content:center;align-items:flex-start;}
+  .bmeta{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:150px;}
+}
+
+/* ── Bottle column ───────────────────────────────────── */
+.bcol{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.ml-big{font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:800;color:var(--jd);text-align:center;}
+.ml-sm {font-size:.69rem;color:var(--sub);text-align:center;}
+
+.utog{display:flex;border:1.5px solid var(--bdr);border-radius:99px;overflow:hidden;width:fit-content;margin:0 auto;}
+.ubtn{padding:3px 13px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:800;cursor:pointer;color:var(--sub);background:transparent;border:none;user-select:none;-webkit-user-select:none;}
+.ubtn.on{color:#fff;}
+
+.sec-lbl{font-family:'Nunito',sans-serif;font-size:.63rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;text-align:center;}
+.sz-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:100%;}
+.szb{padding:5px 2px;border-radius:7px;border:1.5px solid var(--bdr);background:#F3F2EF;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.68rem;font-weight:800;color:#ccc;text-align:center;user-select:none;-webkit-user-select:none;}
+.jsel{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}
+.jbtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;border-radius:var(--rs);border:2px solid var(--bdr);background:#F3F2EF;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.66rem;font-weight:800;color:#ccc;user-select:none;-webkit-user-select:none;min-width:44px;}
+.jdot{width:13px;height:13px;border-radius:50%;}
+
+/* ── Right panel ─────────────────────────────────────── */
+.rpanel{display:flex;flex-direction:column;gap:.7rem;}
+
+/* card */
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:.8rem .95rem;}
+.clbl{font-family:'Nunito',sans-serif;font-size:.68rem;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.45rem;}
+
+/* collapsible */
+.ch{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;-webkit-user-select:none;}
+.ch:hover{opacity:.75;}.ch .clbl{margin-bottom:0;}
+.caret{font-size:.65rem;color:var(--sub);}
+.cbody{overflow:hidden;transition:max-height .22s ease,opacity .18s;}
+.cbody.closed{max-height:0 !important;opacity:0;pointer-events:none;}
+
+/* ── Slider ──────────────────────────────────────────── */
+.srow{display:flex;align-items:center;gap:8px;}
+.srow input[type=range]{flex:1;cursor:pointer;height:28px;accent-color:var(--j);}
+.slim{font-size:.69rem;color:var(--sub);}
+.sbadge{font-family:'Nunito',sans-serif;font-weight:800;font-size:.9rem;padding:3px 12px;border-radius:8px;text-align:center;min-width:70px;display:block;margin:.45rem auto 0;}
+
+/* ── Repr cards ──────────────────────────────────────── */
+.tog-row{display:flex;gap:6px;flex-wrap:wrap;}
+.tog{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:2px solid var(--bdr);background:#F3F2EF;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;color:var(--sub);user-select:none;-webkit-user-select:none;}
+.tog .dot{width:8px;height:8px;border-radius:50%;background:var(--bdr);flex-shrink:0;}
+.tog.ob{background:var(--bll);border-color:var(--blue);color:var(--blue);}.tog.ob .dot{background:var(--blue);}
+.tog.og{background:var(--gll);border-color:var(--grn); color:var(--grn);} .tog.og .dot{background:var(--grn);}
+.tog.oa{background:var(--all);border-color:var(--amb); color:var(--amb);} .tog.oa .dot{background:var(--amb);}
+.tog.op{background:var(--pkl);border-color:var(--pk);  color:var(--pk);}  .tog.op .dot{background:var(--pk);}
+
+.rcards{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:.55rem;}
+.rc{border-radius:var(--rs);padding:.7rem .55rem;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.rc.gone{display:none;}
+.rclbl{font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:1px;}
+.rcval{font-family:'Nunito',sans-serif;font-size:1.2rem;font-weight:900;line-height:1.1;text-align:center;}
+.rcsub{font-size:.62rem;color:var(--sub);text-align:center;margin-top:2px;}
+.rc.rb{background:var(--bll);border:1.5px solid var(--blm);color:var(--blue);}
+.rc.rg{background:var(--gll);border:1.5px solid var(--glm);color:var(--grn);}
+.rc.ra{background:var(--all);border:1.5px solid var(--alm);color:var(--amb);}
+.fdisp{display:flex;flex-direction:column;align-items:center;}
+.fdisp .fn,.fdisp .fd{font-family:'Nunito',sans-serif;font-size:1.05rem;font-weight:900;}
+.fdisp .fl{width:34px;height:2px;background:currentColor;margin:2px 0;}
+
+/* ── Eingabe ─────────────────────────────────────────── */
+.etogs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.55rem;}
+.etog{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;border:2px solid var(--bdr);background:#F3F2EF;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;color:var(--sub);user-select:none;-webkit-user-select:none;}
+.etog .dot{width:7px;height:7px;border-radius:50%;background:var(--bdr);flex-shrink:0;}
+.etog.ob{background:var(--bll);border-color:var(--blue);color:var(--blue);}.etog.ob .dot{background:var(--blue);}
+.etog.og{background:var(--gll);border-color:var(--grn); color:var(--grn);} .etog.og .dot{background:var(--grn);}
+.etog.oa{background:var(--all);border-color:var(--amb); color:var(--amb);} .etog.oa .dot{background:var(--amb);}
+
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.iblk{display:flex;flex-direction:column;gap:3px;}
+.iblk.gone{display:none;}
+.ilbl{font-size:.67rem;font-weight:700;color:var(--sub);}
+.iblk input{width:100%;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:800;border:1.5px solid var(--bdr);border-radius:var(--rs);padding:6px 7px;text-align:center;background:#F3F2EF;color:var(--txt);outline:none;-webkit-appearance:none;}
+.iblk input:focus{background:#fff;border-color:var(--j);}
+.fpair{display:flex;flex-direction:column;}
+.fpair input:first-child{border-radius:var(--rs) var(--rs) 0 0;}
+.fpair input:last-child {border-radius:0 0 var(--rs) var(--rs);border-top:none;}
+.fbar{height:2px;background:var(--j);}
+.prow{display:flex;align-items:center;gap:3px;}.prow input{flex:1;}
+.psym{font-size:.92rem;font-weight:800;color:var(--amb);}
+.errmsg{font-size:.68rem;color:#DC2626;min-height:14px;margin-top:3px;}
+.dtog-row{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.dtog{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;border:2px solid var(--bdr);background:#F3F2EF;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;color:var(--sub);user-select:none;-webkit-user-select:none;}
+.dtog .dot{width:7px;height:7px;border-radius:50%;background:var(--bdr);flex-shrink:0;}
+.dtog.on{background:var(--pkl);border-color:var(--pk);color:var(--pk);}.dtog.on .dot{background:var(--pk);}
+
+/* ── Zahlenstrahl ────────────────────────────────────── */
+.strack{position:relative;width:100%;height:20px;background:#F0EFEC;border-radius:99px;border:1px solid var(--bdr);overflow:hidden;}
+.sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;opacity:.85;transition:width .1s;}
+.smark{position:absolute;top:-2px;width:4px;height:24px;border-radius:2px;transform:translateX(-50%);z-index:2;transition:left .1s;}
+.sticks{display:flex;justify-content:space-between;margin-top:3px;}
+.stk{display:flex;flex-direction:column;align-items:center;gap:1px;}
+.stk .tl{width:1px;height:4px;background:var(--bdr);}
+.stk span{font-size:.58rem;color:var(--sub);}
+.smlbl{text-align:center;margin-top:3px;font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:800;}
+
+/* ── Hinweis ─────────────────────────────────────────── */
+.hint{border-radius:var(--rs);padding:8px 12px;font-size:.75rem;line-height:1.65;border-left:3px solid var(--j);margin-top:.65rem;}
+.hint b{font-weight:800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="ht">🍊 Prozentflasche</h1>
+  <p class="sub">Brüche · Dezimalbrüche · Prozentangaben — alles aus einer Flasche!</p>
+
+  <div class="layout">
+    <!-- ── Flasche ── -->
+    <div class="bcol">
+      <svg id="bsvg" width="126" height="280" viewBox="0 0 140 310" xmlns="http://www.w3.org/2000/svg">
+        <defs><clipPath id="bc"><rect x="20" y="42" width="88" height="248" rx="7"/></clipPath></defs>
+        <rect x="20" y="42" width="88" height="248" rx="7" fill="#FFF8F1" stroke="#D1D5DB" stroke-width="1.8"/>
+        <rect id="liq" x="21" y="166" width="86" height="124" rx="6" fill="#F97316" opacity=".88" clip-path="url(#bc)"/>
+        <g id="divs"></g>
+        <rect x="38" y="18" width="52" height="26" rx="6" id="cap" fill="#E55B04" stroke="#C2500A" stroke-width="1"/>
+        <rect x="30" y="148" width="68" height="44" rx="6" fill="white" opacity=".78"/>
+        <text x="64" y="167" text-anchor="middle" font-size="9" font-weight="700" id="ll1" fill="#C2500A" font-family="Nunito">ORANGEN-</text>
+        <text x="64" y="179" text-anchor="middle" font-size="9" font-weight="700" id="ll2" fill="#C2500A" font-family="Nunito">SAFT</text>
+      </svg>
+
+      <div class="bmeta">
+        <div class="utog" id="utog">
+          <button class="ubtn on" data-u="ml">ml</button>
+          <button class="ubtn" data-u="l">Liter</button>
+        </div>
+        <div class="ml-big" id="mlbig">500 ml</div>
+        <div class="ml-sm"  id="mlsm">von 1000 ml</div>
+
+        <div class="sec-lbl" style="margin-top:4px;">Flascheninhalt</div>
+        <div class="sz-grid" id="szg">
+          <div class="szb" data-s="5">5 L</div>
+          <div class="szb" data-s="3">3 L</div>
+          <div class="szb" data-s="2">2 L</div>
+          <div class="szb" data-s="1.5">1,5 L</div>
+          <div class="szb on" data-s="1">1 L</div>
+          <div class="szb" data-s="0.75">¾ L</div>
+          <div class="szb" data-s="0.5">½ L</div>
+          <div class="szb" data-s="0.4">0,4 L</div>
+          <div class="szb" data-s="0.33">⅓ L</div>
+          <div class="szb" data-s="0.25">¼ L</div>
+          <div class="szb" data-s="0.2">0,2 L</div>
+          <div class="szb" data-s="0.1">0,1 L</div>
+        </div>
+
+        <div class="sec-lbl" style="margin-top:4px;">Saftsorte</div>
+        <div class="jsel" id="jsel">
+          <div class="jbtn on" data-j="orange"><div class="jdot" style="background:#F97316"></div>Orange</div>
+          <div class="jbtn" data-j="apple"><div class="jdot" style="background:#84CC16"></div>Apfel</div>
+          <div class="jbtn" data-j="grape"><div class="jdot" style="background:#A855F7"></div>Traube</div>
+          <div class="jbtn" data-j="banana"><div class="jdot" style="background:#EAB308"></div>Banane</div>
+          <div class="jbtn" data-j="water"><div class="jdot" style="background:#60A5FA"></div>Wasser</div>
+          <div class="jbtn" data-j="cola"><div class="jdot" style="background:#292524"></div>Cola</div>
+        </div>
+      </div>
+    </div><!-- /bcol -->
+
+    <!-- ── Rechte Spalte ── -->
+    <div class="rpanel">
+
+      <!-- Slider -->
+      <div class="card">
+        <div class="clbl" id="scardlbl">Füllmenge einstellen</div>
+        <div class="srow">
+          <span class="slim" id="smin">0 ml</span>
+          <input type="range" id="slider" min="0" max="1000" value="500" step="1">
+          <span class="slim" id="smax">1000 ml</span>
+        </div>
+        <span class="sbadge" id="sbadge">500 ml</span>
+      </div>
+
+      <!-- Darstellungsformen -->
+      <div class="card">
+        <div class="clbl">Darstellungsformen</div>
+        <div class="tog-row" id="dtogs">
+          <div class="tog ob" data-t="b"><div class="dot"></div>Bruch</div>
+          <div class="tog og" data-t="g"><div class="dot"></div>Dezimalbruch</div>
+          <div class="tog oa" data-t="a"><div class="dot"></div>Prozent</div>
+        </div>
+        <div class="rcards">
+          <div class="rc rb" id="rc-b">
+            <span class="rclbl">Bruch</span>
+            <div class="fdisp"><span class="fn" id="rz">1</span><div class="fl"></div><span class="fd" id="rn">2</span></div>
+            <span class="rcsub" id="rsb-b">500 ml von 1000 ml</span>
+          </div>
+          <div class="rc rg" id="rc-g">
+            <span class="rclbl">Dezimalbruch</span>
+            <span class="rcval" id="rdez">0,500</span>
+            <span class="rcsub" id="rsb-g">= 500 ÷ 1000</span>
+          </div>
+          <div class="rc ra" id="rc-a">
+            <span class="rclbl">Prozent</span>
+            <span class="rcval" id="rproz">50 %</span>
+            <span class="rcsub" id="rsb-a">= 50 von 100 Teilen</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wert eingeben (collapsible) -->
+      <div class="card">
+        <div class="ch" id="eHead">
+          <div class="clbl">Wert direkt eingeben</div>
+          <span class="caret" id="eCaret">▼</span>
+        </div>
+        <div class="cbody" id="eBody" style="max-height:500px;">
+          <!-- which fields to show -->
+          <div class="etogs" style="margin-top:.45rem;">
+            <div class="etog ob" data-e="b"><div class="dot"></div>Bruch</div>
+            <div class="etog og" data-e="g"><div class="dot"></div>Dezimalbruch</div>
+            <div class="etog oa" data-e="a"><div class="dot"></div>Prozent</div>
+          </div>
+          <div class="igrid">
+            <div class="iblk" id="ib-b">
+              <span class="ilbl" style="color:var(--blue)">🔵 Bruch</span>
+              <div class="fpair">
+                <input type="number" id="zaehler" min="0" max="9999" value="1" inputmode="numeric">
+                <div class="fbar" id="fbar"></div>
+                <input type="number" id="nenner"  min="1" max="9999" value="2" inputmode="numeric">
+              </div>
+              <div class="dtog-row">
+                <div class="dtog on" id="dtog"><div class="dot"></div>Einteilung zeigen</div>
+              </div>
+            </div>
+            <div class="iblk" id="ib-g">
+              <span class="ilbl" style="color:var(--grn)">🟢 Dezimalbruch</span>
+              <input type="number" id="dezI" min="0" max="1" step="0.001" value="0.5" inputmode="decimal">
+            </div>
+            <div class="iblk" id="ib-a">
+              <span class="ilbl" style="color:var(--amb)">🟡 Prozent</span>
+              <div class="prow">
+                <input type="number" id="prozI" min="0" max="100" step="0.1" value="50" inputmode="decimal">
+                <span class="psym">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="errmsg" id="err"></div>
+        </div>
+      </div>
+
+      <!-- Zahlenstrahl (collapsible) -->
+      <div class="card">
+        <div class="ch" id="zHead">
+          <div class="clbl" id="zLbl">Zahlenstrahl (0 – 1000 ml)</div>
+          <span class="caret" id="zCaret">▼</span>
+        </div>
+        <div class="cbody" id="zBody" style="max-height:160px;">
+          <div class="strack">
+            <div class="sfill" id="sfill" style="width:50%;background:var(--j)"></div>
+            <div class="smark" id="smark" style="left:50%;background:var(--jd)"></div>
+          </div>
+          <div class="sticks">
+            <div class="stk"><div class="tl"></div><span>0</span></div>
+            <div class="stk"><div class="tl"></div><span id="t1">250 ml</span></div>
+            <div class="stk"><div class="tl"></div><span id="t2">500 ml</span></div>
+            <div class="stk"><div class="tl"></div><span id="t3">750 ml</span></div>
+            <div class="stk"><div class="tl"></div><span id="t4">1000 ml</span></div>
+          </div>
+          <div class="smlbl" id="smlbl" style="color:var(--jd)">500 ml</div>
+        </div>
+      </div>
+
+    </div><!-- /rpanel -->
+  </div><!-- /layout -->
+
+  <div class="hint" id="hint" style="background:var(--jl);color:var(--jd);border-color:var(--j);">
+    <b>💡</b> <span id="hinttxt">Die Flasche ist zur Hälfte gefüllt. Das ist der Bruch ½, als Dezimalzahl 0,5 und als Prozentangabe 50 %.</span>
+  </div>
+</div><!-- /wrap -->
+
+<script>
+(function(){
+"use strict";
+/* ── Saftsorten ── */
+const J={
+  orange:{name:"Orangensaft", e:"🍊",c:"#F97316",d:"#C2500A",l:"#FFF3E8",cap:"#E55B04",cst:"#C2500A",l1:"ORANGEN-",l2:"SAFT"},
+  apple: {name:"Apfelsaft",   e:"🍏",c:"#84CC16",d:"#3F6212",l:"#F7FEE7",cap:"#65A30D",cst:"#3F6212",l1:"APFEL-",  l2:"SAFT"},
+  grape: {name:"Traubensaft", e:"🍇",c:"#A855F7",d:"#6B21A8",l:"#FAF5FF",cap:"#9333EA",cst:"#6B21A8",l1:"TRAUBEN-",l2:"SAFT"},
+  banana:{name:"Bananensaft", e:"🍌",c:"#EAB308",d:"#713F12",l:"#FEFCE8",cap:"#CA8A04",cst:"#713F12",l1:"BANANEN-",l2:"SAFT"},
+  water: {name:"Wasser",      e:"💧",c:"#60A5FA",d:"#1D4ED8",l:"#EFF6FF",cap:"#3B82F6",cst:"#1D4ED8",l1:"MINERAL-",l2:"WASSER"},
+  cola:  {name:"Cola",        e:"🥤",c:"#292524",d:"#1C1917",l:"#F5F5F4",cap:"#1C1917",cst:"#0C0A09",l1:"COLA",    l2:""},
+};
+
+/* ── State ── */
+const S={v:.5,juice:"orange",size:1,unit:"ml",divider:true,rawN:2,
+         show:{b:true,g:true,a:true}, eshow:{b:true,g:true,a:true},
+         eopen:true, zopen:true};
+
+/* ── Helpers ── */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){let t=b;b=a%b;a=t;}return a||1;}
+function sf(r){
+  for(const d of [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,50,100,200,500,1000,1500,2000,3000,5000]){
+    const n=Math.round(r*d);if(Math.abs(n/d-r)<5e-4){const g=gcd(n,d);return[n/g,d/g];}
+  }
+  const sm=Math.round(S.size*1e3),fm=Math.round(r*sm),g=gcd(fm,sm);return[fm/g,sm/g];
+}
+function pctStr(r){const p=r*100;return Math.abs(p-Math.round(p))<.001?String(Math.round(p)):p.toFixed(1);}
+function sLbl(s){return s===Math.floor(s)?s+" L":s.toFixed(s<1?3:2).replace(".",",")+" L";}
+function fmt(r){
+  const vol=r*S.size,vm=Math.round(vol*1e3),sm=Math.round(S.size*1e3),ls=sLbl(S.size).replace(" L","");
+  if(S.unit==="l"){
+    const lv=vol.toFixed(3).replace(".",",");
+    return{fill:lv+" l",tot:ls+" l",badge:lv+" l",mn:"0 l",mx:ls+" l",
+           sv:lv+" l",sb:lv+" l von "+ls+" l",sd:"= "+vm+" ÷ "+sm};
+  }
+  return{fill:vm+" ml",tot:sm+" ml",badge:vm+" ml",mn:"0 ml",mx:sm+" ml",
+         sv:vm+" ml",sb:vm+" ml von "+sm+" ml",sd:"= "+vm+" ÷ "+sm};
+}
+function $id(id){return document.getElementById(id);}
+
+/* ── Bottle dividers ── */
+const BX1=20,BTY=42,BH=248,BX2=108;
+function drawDivs(n){
+  const g=$id("divs");g.innerHTML="";
+  if(!S.divider||n<2||n>20)return;
+  for(let i=1;i<n;i++){
+    const y=BTY+BH*(1-i/n);
+    const ln=document.createElementNS("http://www.w3.org/2000/svg","line");
+    ln.setAttribute("x1",BX1+1);ln.setAttribute("x2",BX2-1);
+    ln.setAttribute("y1",y);ln.setAttribute("y2",y);
+    ln.setAttribute("stroke","#D1D5DB");ln.setAttribute("stroke-width","1.8");
+    ln.setAttribute("stroke-dasharray","5,3");
+    g.appendChild(ln);
+    const tx=document.createElementNS("http://www.w3.org/2000/svg","text");
+    tx.setAttribute("x",BX2+4);tx.setAttribute("y",y+4);
+    tx.setAttribute("font-size","7");tx.setAttribute("font-weight","700");
+    tx.setAttribute("font-family","Nunito");tx.setAttribute("fill","#9CA3AF");
+    tx.textContent=i+"/"+n;g.appendChild(tx);
+  }
+}
+
+/* ── Apply juice ── */
+function applyJ(k){
+  const j=J[k];
+  document.documentElement.style.setProperty("--j",j.c);
+  document.documentElement.style.setProperty("--jd",j.d);
+  document.documentElement.style.setProperty("--jl",j.l);
+  $id("liq").setAttribute("fill",j.c);
+  $id("cap").setAttribute("fill",j.cap);$id("cap").setAttribute("stroke",j.cst);
+  $id("ll1").setAttribute("fill",j.d);$id("ll1").textContent=j.l1;
+  $id("ll2").setAttribute("fill",j.d);$id("ll2").textContent=j.l2;
+  $id("ht").textContent=j.e+" Prozentflasche";
+  $id("fbar").style.background=j.c;
+  $id("sfill").style.background=j.c;
+  $id("smark").style.background=j.d;
+  $id("smlbl").style.color=j.d;
+  const h=$id("hint");h.style.background=j.l;h.style.color=j.d;h.style.borderColor=j.c;
+  // unit toggle
+  document.querySelectorAll(".ubtn").forEach(b=>{
+    b.style.background=b.classList.contains("on")?j.c:"";b.style.color=b.classList.contains("on")?"#fff":"";
+  });
+  // size buttons
+  document.querySelectorAll(".szb").forEach(b=>{
+    const on=b.classList.contains("on");
+    b.style.background=on?j.c:"";b.style.color=on?j.l:"#ccc";b.style.borderColor=on?"transparent":"";
+  });
+  // juice buttons
+  document.querySelectorAll(".jbtn").forEach(b=>{
+    const on=b.dataset.j===k;
+    b.style.borderColor=on?j.c:"";b.style.background=on?j.l:"";
+    b.style.color=on?j.d:"#ccc";b.style.opacity=on?"1":".42";
+  });
+  // slider badge
+  $id("sbadge").style.background=j.l;$id("sbadge").style.color=j.d;
+}
+
+/* ── Draw bottle liquid ── */
+function drawLiq(r){
+  r=Math.max(0,Math.min(1,r));
+  const h=Math.round(r*248);
+  $id("liq").setAttribute("y",290-h);$id("liq").setAttribute("height",h);
+}
+
+/* ── Update ticks ── */
+function updTicks(){
+  const s=S.size,q=s/4;
+  function tf(v){const m=Math.round(v*1e3);return S.unit==="l"?(v>=1?v.toFixed(1):v.toFixed(2)).replace(".",",")+" l":m+" ml";}
+  ["t1","t2","t3","t4"].forEach((id,i)=>$id(id).textContent=tf(q*(i+1)));
+  const sm=Math.round(s*1e3);
+  $id("zLbl").textContent="Zahlenstrahl (0 – "+(S.unit==="l"?sLbl(s).replace(" "," "):sm+" ml")+")";
+}
+
+/* ── Hint ── */
+const HINTS={"1/2":"zur Hälfte","1/4":"zu einem Viertel","3/4":"zu drei Vierteln","1/1":"vollständig gefüllt","0/1":"leer","1/3":"zu einem Drittel","2/3":"zu zwei Dritteln","1/5":"zu einem Fünftel","4/5":"zu vier Fünfteln","1/10":"zu einem Zehntel"};
+function updHint(r){
+  const [z,n]=sf(r),p=pctStr(r),vol=r*S.size,vm=Math.round(vol*1e3),sm=Math.round(S.size*1e3);
+  const valStr=S.unit==="l"?vol.toFixed(3).replace(".",",")+" l":vm+" ml";
+  const key=z+"/"+n,h=HINTS[key];
+  $id("hinttxt").innerHTML=h
+    ?`Die Flasche ist <b>${h}</b> gefüllt (${valStr}). Bruch: <b>${z}/${n}</b> · Dezimal: <b>${vol.toFixed(3).replace(".",",")}</b> · Prozent: <b>${p} %</b>`
+    :`Es sind <b>${valStr}</b> ${J[S.juice].name} in der ${sm}-ml-Flasche. Bruch: <b>${z}/${n}</b> · Dezimal: <b>${vol.toFixed(3).replace(".",",")}</b> · Prozent: <b>${p} %</b>`;
+}
+
+/* ── Main update ── */
+function upd(r,src){
+  r=Math.max(0,Math.min(1,r));
+  const sm=Math.round(S.size*1e3);
+  const fm=Math.min(Math.round(r*sm),sm);
+  r=fm/sm; S.v=r;
+  const [z,n]=sf(r),p=pctStr(r),f=fmt(r),vol=r*S.size;
+  if(src!=="sl")$id("slider").value=fm;
+  $id("sbadge").textContent=f.badge;$id("smin").textContent=f.mn;$id("smax").textContent=f.mx;
+  if(src!=="fr"){$id("zaehler").value=z;$id("nenner").value=n;S.rawN=n;}
+  if(src!=="dz")$id("dezI").value=vol.toFixed(3);
+  if(src!=="pr")$id("prozI").value=p;
+  $id("rz").textContent=z;$id("rn").textContent=n;$id("rsb-b").textContent=f.sb;
+  $id("rdez").textContent=vol.toFixed(3).replace(".",",");$id("rsb-g").textContent=f.sd;
+  $id("rproz").textContent=p+" %";$id("rsb-a").textContent="= "+p+" von 100 Teilen";
+  const pct=(r*100).toFixed(4)+"%";
+  $id("sfill").style.width=pct;$id("smark").style.left=pct;$id("smlbl").textContent=f.sv;
+  $id("mlbig").textContent=f.fill;$id("mlsm").textContent="von "+f.tot;
+  drawLiq(r);
+  drawDivs(src==="fr"?S.rawN:n);
+  updTicks();updHint(r);$id("err").textContent="";
+}
+
+/* ── Events: size ── */
+$id("szg").addEventListener("click",e=>{
+  const b=e.target.closest(".szb");if(!b)return;
+  S.size=parseFloat(b.dataset.s);
+  const sm=Math.round(S.size*1e3),sl=$id("slider");sl.max=sm;sl.step=1;
+  const cm=Math.min(Math.round(S.v*sm),sm);sl.value=cm;
+  document.querySelectorAll(".szb").forEach(x=>x.classList.toggle("on",x===b));
+  applyJ(S.juice);upd(cm/sm,"sz");
+});
+
+/* ── Events: unit ── */
+$id("utog").addEventListener("click",e=>{
+  const b=e.target.closest(".ubtn");if(!b)return;
+  S.unit=b.dataset.u;
+  document.querySelectorAll(".ubtn").forEach(x=>x.classList.toggle("on",x===b));
+  applyJ(S.juice);upd(S.v,"ut");
+});
+
+/* ── Events: juice ── */
+$id("jsel").addEventListener("click",e=>{
+  const b=e.target.closest(".jbtn");if(!b)return;
+  S.juice=b.dataset.j;applyJ(S.juice);upd(S.v,"jc");
+});
+
+/* ── Events: slider ── */
+$id("slider").addEventListener("input",function(){
+  upd(parseInt(this.value)/Math.round(S.size*1e3),"sl");
+});
+
+/* ── Events: fraction ── */
+function readFrac(){
+  const z=parseFloat($id("zaehler").value),n=parseFloat($id("nenner").value);
+  if(isNaN(z)||isNaN(n)||n===0){$id("err").textContent="Nenner darf nicht 0 sein!";return;}
+  if(z<0||n<0){$id("err").textContent="Keine negativen Zahlen!";return;}
+  if(z/n>1){$id("err").textContent="Bruch darf nicht größer als 1 sein!";return;}
+  S.rawN=n;upd(z/n,"fr");
+}
+$id("zaehler").addEventListener("input",readFrac);
+$id("nenner").addEventListener("input",readFrac);
+
+/* ── Events: decimal ── */
+$id("dezI").addEventListener("input",function(){
+  const v=parseFloat(this.value);if(isNaN(v))return;
+  if(v<0||v>1){$id("err").textContent=v>1?"Max. 1,000!":"Keine negativen Zahlen!";return;}
+  upd(v,"dz");
+});
+
+/* ── Events: percent ── */
+$id("prozI").addEventListener("input",function(){
+  const v=parseFloat(this.value);if(isNaN(v))return;
+  if(v<0||v>100){$id("err").textContent=v>100?"Max. 100 %!":"Keine negativen Zahlen!";return;}
+  upd(v/100,"pr");
+});
+
+/* ── Events: display repr toggles ── */
+$id("dtogs").addEventListener("click",e=>{
+  const b=e.target.closest(".tog");if(!b)return;
+  const t=b.dataset.t,cls={"b":"ob","g":"og","a":"oa"}[t];
+  S.show[t]=!S.show[t];
+  b.classList.toggle(cls,S.show[t]);
+  $id("rc-"+t).classList.toggle("gone",!S.show[t]);
+});
+
+/* ── Events: eingabe field toggles ── */
+document.querySelectorAll(".etog").forEach(btn=>{
+  btn.addEventListener("click",function(){
+    const t=this.dataset.e,cls={"b":"ob","g":"og","a":"oa"}[t];
+    S.eshow[t]=!S.eshow[t];
+    this.classList.toggle(cls,S.eshow[t]);
+    $id("ib-"+t).classList.toggle("gone",!S.eshow[t]);
+  });
+});
+
+/* ── Events: collapsibles ── */
+$id("eHead").addEventListener("click",()=>{
+  S.eopen=!S.eopen;
+  $id("eBody").classList.toggle("closed",!S.eopen);
+  $id("eCaret").textContent=S.eopen?"▼":"▶";
+});
+$id("zHead").addEventListener("click",()=>{
+  S.zopen=!S.zopen;
+  $id("zBody").classList.toggle("closed",!S.zopen);
+  $id("zCaret").textContent=S.zopen?"▼":"▶";
+});
+
+/* ── Events: divider ── */
+$id("dtog").addEventListener("click",function(){
+  S.divider=!S.divider;this.classList.toggle("on",S.divider);drawDivs(S.rawN);
+});
+
+/* ── Init ── */
+const sl=$id("slider");sl.max=1000;sl.value=500;sl.step=1;
+applyJ("orange");upd(.5,"init");
+})();
+</script>
+
+<script>window.TOUR={steps:[
+  {title:"Willkommen bei der Prozentflasche!",text:"<p>Stelle ein, wie voll die Flasche sein soll — und sieh sofort den Bruch, den Dezimalbruch und den Prozentwert.</p>"},
+  {sel:"#slider",title:"Füllmenge einstellen",text:"<p>Schiebe den Regler, um die Füllmenge zu verändern.</p>"},
+  {sel:"#dtogs",title:"Darstellungen ein-/ausblenden",text:"<p>Blende einzelne Darstellungsformen aus, um die anderen als Aufgabe zu nutzen.</p>"},
+  {sel:"#eHead",title:"Wert direkt eingeben",text:"<p>Tippe hier Bruch, Dezimalbruch oder Prozent ein — alle anderen Werte passen sich sofort an.</p>"},
+  {sel:"#dtog",title:"Einteilung in der Flasche",text:"<p>Zeigt in der Flasche, wie viele gleiche Teile der Nenner des Bruchs ergeben würde.</p>"},
+  {sel:"#szg",title:"Flascheninhalt wählen",text:"<p>Wähle die Größe der Flasche — von 0,1 L bis 5 L.</p>"},
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

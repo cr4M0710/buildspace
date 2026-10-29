@@ -1225,4 +1225,16 @@ const posts = [
     titleEn: "Anpfiff – Live Sports",
     excerptEn: "Your own sports hub for football and handball: live tickers, scores, tables, team and player stats from the Bundesliga, HBL, European competitions and top leagues, with favourite teams, goal alerts and Anwurf built in for the HSG."
    },
+   {
+    title: "Prozentflasche",
+    excerpt: "Brüche, Dezimalbrüche und Prozentangaben visuell erkunden: Füllmenge per Schieberegler oder Direkteingabe einstellen, Darstellungen einzeln ein-/ausblenden und die Flaschenunterteilung nach Nenner anzeigen lassen.",
+    date: "2026-10-29",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "prozentflasche.html",
+    emoji: "🍊",
+    tags: ["tool", "bruchrechnung", "prozent", "einzelarbeit", "jg5", "jg6", "jg7"],
+    titleEn: "Percentage Bottle",
+    excerptEn: "Explore fractions, decimals and percentages visually: adjust the fill level via slider or direct input, toggle each representation on/off and show the bottle divided by denominator."
+   },
 ];
