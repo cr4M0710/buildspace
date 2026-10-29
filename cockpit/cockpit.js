@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.4';
+const APP_VERSION = '2.4.1';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -1340,6 +1340,7 @@ async function waPoll() {
   } catch (e) {}
 }
 window.__cockpitOpen = id => { if (VIEWS.some(v => v.id === id)) go(id); };
+if (NATIVE && NATIVE.safe_status) setTimeout(() => NATIVE.safe_status().then(st => { const off = [st && st.whatsapp && 'WhatsApp einbetten', st && st.mitteilungen && 'macOS-Mitteilungen'].filter(Boolean); if (off.length) toast(`Sicherheitshalber aus: ${off.join(' und ')} (beim letzten Start abgestürzt) – Details unter Einstellungen › Diagnose`, 'x'); }).catch(() => {}), 1800);
 if (NATIVE && NATIVE.wa_set_notify) NATIVE.wa_set_notify(notifyPrefs().whatsapp !== false);
 if (NATIVE && NATIVE.wa_status) {
   /* Wer WhatsApp im Cockpit schon einmal geöffnet hat: im Hintergrund laden, damit Widget und Zähler stimmen */
@@ -1540,7 +1541,7 @@ function bindSettings(tab) {
     $('#nWa')?.addEventListener('click', () => { const p = notifyPrefs(); p.whatsapp = p.whatsapp === false; store.set('notify', p); $('#nWa').setAttribute('aria-checked', p.whatsapp); if (NATIVE.wa_set_notify) NATIVE.wa_set_notify(p.whatsapp); });
     $('#nSysPrefs')?.addEventListener('click', () => NATIVE.open_privacy('notifications'));
     if (NATIVE && NATIVE.notify_status) NATIVE.notify_status().then(st => { const el = $('#nSysState span span') || $('#nSysState .t span'); if (!el || !st) return;
-      el.textContent = st.mode === 'system' ? (st.granted === false ? 'Nicht erlaubt: Systemeinstellungen › Mitteilungen › Cockpit einschalten.' : st.granted ? 'Erlaubt. Stil und Ton stellst du in den Systemeinstellungen › Mitteilungen › Cockpit ein.' : 'macOS fragt beim nächsten Start nach.') : 'Mitteilungen laufen über den Skripteditor (Systemeinstellungen › Mitteilungen › Skripteditor).'; }).catch(() => {});
+      el.textContent = st.safe ? 'Abgeschaltet, weil Cockpit beim letzten Start dabei abgestürzt ist (läuft ersatzweise über den Skripteditor). Wieder einschalten unter Diagnose.' : st.mode === 'system' ? (st.granted === false ? 'Nicht erlaubt: Systemeinstellungen › Mitteilungen › Cockpit einschalten.' : st.granted ? 'Erlaubt. Stil und Ton stellst du in den Systemeinstellungen › Mitteilungen › Cockpit ein.' : 'macOS fragt beim nächsten Start nach.') : 'Mitteilungen laufen über den Skripteditor (Systemeinstellungen › Mitteilungen › Skripteditor).'; }).catch(() => {});
     $('#nAsk')?.addEventListener('click', async () => { await Notification.requestPermission(); setup('notify'); });
     $('#nNoCount')?.addEventListener('click', () => { try { const on = localStorage.getItem('bs_nocount') !== '1'; if (on) localStorage.setItem('bs_nocount', '1'); else localStorage.removeItem('bs_nocount'); $('#nNoCount').setAttribute('aria-checked', on); toast(on ? 'Deine Aufrufe werden nicht mehr gezählt' : 'Deine Aufrufe werden wieder gezählt'); } catch (e) {} });
   }
@@ -1567,6 +1568,9 @@ function bindSettings(tab) {
   }
   if (tab === 'diag') {
     $('#dgUrl').onclick = () => openUrl(SITE, 'buildspace');
+    if (NATIVE && NATIVE.safe_status) NATIVE.safe_status().then(st => { const dl = $('.diag'); if (!dl || !st) return; const off = [st.whatsapp && 'WhatsApp einbetten', st.mitteilungen && 'macOS-Mitteilungen'].filter(Boolean);
+      dl.insertAdjacentHTML('beforeend', `<dt>Selbstschutz</dt><dd>${off.length ? `<span class="bad">Abgeschaltet: ${off.join(', ')}</span> – beim letzten Start abgestürzt. <button class="btn sm" id="dgSafe">Wieder einschalten</button>` : '<span class="ok">alles aktiv</span>'}</dd>`);
+      $('#dgSafe')?.addEventListener('click', async () => { await NATIVE.safe_reset(); toast('Wieder eingeschaltet – gilt ab dem nächsten Start', 'check'); setup('diag'); }); }).catch(() => {});
     if (NATIVE && NATIVE.wa_debug) NATIVE.wa_debug().then(d => { const dl = $('.diag'); if (!dl || !d) return; dl.insertAdjacentHTML('beforeend', `<dt>WhatsApp</dt><dd>${esc([d.embedded ? 'eingebettet' : 'nicht geladen', d.window ? 'eigenes Fenster offen' : '', d.url || '', d.progress != null ? Math.round(d.progress * 100) + ' %' : '', d.frame ? 'Rahmen ' + d.frame.join('·') : '', d.error ? 'Fehler: ' + d.error : ''].filter(Boolean).join(' · '))}</dd>`); }).catch(() => {});
     $('#dgApp')?.addEventListener('click', () => openApp(apps.find(a => a.id === 'kalender') || DEFAULT_APPS[4]));
     $('#dgNote')?.addEventListener('click', () => { NATIVE.notify('Cockpit', 'So sehen Mitteilungen aus.'); toast('Mitteilung gesendet', 'bell'); });
