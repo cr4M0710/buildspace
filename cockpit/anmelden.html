@@ -33,7 +33,39 @@ small{display:block;margin-top:18px;color:rgba(245,245,250,.45);font-size:11px}
   <small>Die Anmeldung wird nur an die Cockpit-App auf diesem Mac weitergegeben (127.0.0.1). Gespeichert wird in deinem buildspace-Firebase-Projekt.</small>
 </main>
 <script>
+/* ---- iPad & iPhone: Rückkehr von der Google-Anmeldung (#id_token=…) ---- */
+const FBC = { apiKey: 'AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus', authDomain: 'kanban-board-281da.firebaseapp.com', projectId: 'kanban-board-281da', appId: '1:210909884248:web:10ffacb3a74f7b3c887f2d' };
+const GOOGLE_CLIENT = '210909884248-hshj85p0d4me9rde25vs50mk1ms35cnj.apps.googleusercontent.com';
+const IOS_RETURN = /(^|[#&])(id_token|error)=/.test(location.hash);
+if (IOS_RETURN) (async function () {
+  const h = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, '', location.pathname);            // Schlüssel aus der Adresszeile nehmen
+  const msg = (t, c) => { const m = document.getElementById('msg'); m.textContent = t; m.className = 'msg ' + (c || ''); };
+  const btn = document.getElementById('go');
+  document.querySelector('h1').textContent = 'Anmeldung wird übernommen …';
+  document.getElementById('lead').textContent = 'Einen Moment, Cockpit wird mit deinem Google-Konto verbunden.';
+  document.querySelector('small').hidden = true;
+  btn.hidden = true;
+  const fail = t => { document.querySelector('h1').textContent = 'Anmeldung hat nicht geklappt'; document.getElementById('lead').textContent = t; btn.innerHTML = 'Zurück zu Cockpit'; btn.hidden = false; btn.onclick = () => location.replace('./'); };
+  try {
+    let saved = null; try { saved = JSON.parse(localStorage.getItem('cockpit-oauth') || 'null'); localStorage.removeItem('cockpit-oauth'); } catch (e) {}
+    if (h.get('error')) return fail(h.get('error') === 'access_denied' ? 'Du hast die Anmeldung abgebrochen.' : 'Google meldet: ' + h.get('error'));
+    const tok = h.get('id_token');
+    if (!saved || saved.st !== h.get('state') || Date.now() - saved.t > 15 * 60e3) return fail('Die Anmeldung ist abgelaufen oder wurde nicht in Cockpit gestartet. Tippe in Cockpit noch einmal auf „Mit Google anmelden“.');
+    let claims = {}; try { claims = JSON.parse(decodeURIComponent(escape(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {}
+    if (claims.nonce !== saved.nonce || claims.aud !== GOOGLE_CLIENT) return fail('Die Antwort von Google passt nicht zu dieser Anmeldung. Bitte noch einmal versuchen.');
+    const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Anmeldedienst nicht erreichbar (offline?)')); document.head.appendChild(s); });
+    await load('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
+    await load('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js');
+    const app = firebase.apps.find(a => a.name === 'cockpit') || firebase.initializeApp(FBC, 'cockpit');   // gleicher Name wie in Cockpit → gleicher Speicher
+    const r = await app.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(tok));
+    msg('Angemeldet als ' + (r.user.email || r.user.displayName || ''), 'ok');
+    try { localStorage.setItem('cockpit-signin', String(Date.now())); } catch (e) {}
+    setTimeout(() => location.replace('./'), 400);
+  } catch (e) { fail('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : e && e.message ? ': ' + e.message : '') + '.'); }
+})();
 (function () {
+  if (IOS_RETURN) return;
   const q = new URLSearchParams(location.search);
   const port = q.get('port'), nonce = q.get('nonce');
   const msg = (t, c) => { const m = document.getElementById('msg'); m.textContent = t; m.className = 'msg ' + (c || ''); };

@@ -1651,9 +1651,11 @@ async function fbLoad() {
   fbAuth.getRedirectResult().catch(e => { SY.error = 'Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : ''); });
   return fbAuth;
 }
+/* Firebase kennt den angemeldeten Nutzer erst, wenn es seinen Speicher gelesen hat */
+const fbReady = a => a.currentUser ? Promise.resolve(a.currentUser) : new Promise(r => { const t = setTimeout(() => r(a.currentUser), 6000); const un = a.onAuthStateChanged(u => { clearTimeout(t); un(); r(u); }); });
 async function syncToken() {
   if (NATIVE) { const r = await NATIVE.cloud_token(); return r && r.ok ? r : null; }
-  const a = await fbLoad(), u = a.currentUser; if (!u) return null;
+  const a = await fbLoad(), u = await fbReady(a); if (!u) return null;
   return { ok: true, uid: u.uid, email: u.email, name: u.displayName, token: await u.getIdToken() };
 }
 async function syncSignIn() {
@@ -1668,6 +1670,10 @@ async function syncSignIn() {
     }, 1500);
     return;
   }
+  /* iPad & iPhone: Safari blockiert die übliche Firebase-Anmeldung (Pop-up/Weiterleitung über
+     firebaseapp.com). Darum direkt bei Google anmelden und zurück auf buildspaceos.de/cockpit/anmelden.html –
+     das bleibt in der Home-Bildschirm-App und ihrem Speicher. */
+  if (IS_IOS) { googleRedirect(); return; }
   let a; try { a = await fbLoad(); } catch (e) { toast('Anmeldedienst nicht erreichbar (offline?)', 'x'); return; }
   const provider = new firebase.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
   const standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
@@ -1680,6 +1686,17 @@ async function syncSignIn() {
     toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''), 'x'); return;
   }
   await syncBegin(true);
+}
+const GOOGLE_CLIENT = '210909884248-hshj85p0d4me9rde25vs50mk1ms35cnj.apps.googleusercontent.com';
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+function googleRedirect() {
+  const rnd = () => [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const st = rnd(), nonce = rnd();
+  try { localStorage.setItem('cockpit-oauth', JSON.stringify({ st, nonce, t: Date.now() })); } catch (e) {}
+  const back = new URL('anmelden.html', location.href); back.search = ''; back.hash = '';
+  const q = new URLSearchParams({ client_id: GOOGLE_CLIENT, redirect_uri: back.href, response_type: 'id_token', scope: 'openid email profile', nonce, state: st, prompt: 'select_account' });
+  toast('Weiter zu Google …', 'user');
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q;
 }
 async function syncSignOut() {
   syncStop();
@@ -1910,7 +1927,13 @@ async function syncDeleteCloud() {
 document.addEventListener('visibilitychange', () => { if (!document.hidden && SY.on) syncPull(); });
 window.addEventListener('pagehide', () => { if (SY.on && SY.dirty.size) syncPush(); });
 /* angemeldet geblieben? dann still weitermachen */
-if ((store.get('syncInfo', null) || {}).uid) setTimeout(() => syncBegin(false).then(ok => { if (!ok) syncBadge(); }), 1200);
+let justSigned = 0; try { justSigned = +localStorage.getItem('cockpit-signin') || 0; localStorage.removeItem('cockpit-signin'); } catch (e) {}
+if (!NATIVE && Date.now() - justSigned < 10 * 60e3) setTimeout(async () => {
+  /* zurück von der Google-Anmeldung (iPad/iPhone) */
+  const ok = await syncBegin(true).catch(() => false);
+  if (ok) { if (!$('#chCloud')) setup('sync'); } else toast('Anmeldung nicht übernommen – bitte noch einmal versuchen', 'x');
+}, 600);
+else if ((store.get('syncInfo', null) || {}).uid) setTimeout(() => syncBegin(false).then(ok => { if (!ok) syncBadge(); }), 1200);
 
 /* =====================================================================
    SUCHE (⌘K)
