@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.5';
+const APP_VERSION = '2.5.1';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -25,6 +25,13 @@ const FMT_DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeri
    Mac-App: alles in ~/Library/Application Support/Cockpit/state.json (über NATIVE),
    Browser: localStorage. Große Dateien liegen getrennt (siehe Dateien). */
 const MEM = window.NATIVE_STATE || {};
+if (NATIVE && !Object.keys(MEM).length) {
+  try {
+    let n = 0;
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('cockpit:')) { try { MEM[k.slice(8)] = JSON.parse(localStorage.getItem(k)); n++; } catch (e) {} } }
+    if (n) { window.__cockpitMigrated = n; setTimeout(() => { try { NATIVE.save_state(MEM); } catch (e) {} }, 300); }
+  } catch (e) {}
+}
 let saveTimer = null, saveWarned = false;
 const saveFailed = () => { if (!saveWarned) { saveWarned = true; setTimeout(() => toast('Speichern hat nicht geklappt – Änderungen könnten verloren gehen'), 0); } };
 const flushNative = () => { clearTimeout(saveTimer); saveTimer = null; return NATIVE.save_state(MEM).then(ok => { if (ok === false) saveFailed(); return ok; }, () => { saveFailed(); return false; }); };
@@ -1828,7 +1835,12 @@ if (!NATIVE && location.protocol.startsWith('http') && 'serviceWorker' in naviga
 /* Start: im Browser sofort, in der Mac-App erst, wenn die Verbindung zur App steht
    (nie ohne sie – sonst wäre nach dem Beenden alles weg). */
 (function boot() {
-  if (location.protocol !== 'file:') return cockpitMain();
+  /* In der Mac-App läuft die Oberfläche je nach pywebview-Version als Datei (file:) oder über
+     pywebviews eigenen kleinen Server (http://127.0.0.1:…). Beides ist die Mac-App – dann immer
+     auf die Verbindung warten. Browser (Safari, Chrome …) tragen „Safari/“ in der Kennung. */
+  const inApp = location.protocol === 'file:' || !!window.pywebview
+    || (/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname) && !/Safari\//.test(navigator.userAgent));
+  if (!inApp) return cockpitMain();
   let started = false, tries = 0;
   const ready = () => window.pywebview && window.pywebview.api && typeof window.pywebview.api.load_state === 'function';
   const go = async () => {
