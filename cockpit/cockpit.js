@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -1278,7 +1278,7 @@ function waTick() {
   if (waBlocked() || document.hidden) { if (waShown) { waShown = false; NATIVE.wa_hide(); } return; }
   if (!waShown) {
     waShown = true; waRect = key;
-    NATIVE.wa_show(rect).then(res => { if (!res || !res.ok) { waShown = false; clearInterval(waLoop); $('#waPh').innerHTML = `${ic('phonechat', 'i')}<b>WhatsApp ließ sich nicht einbetten</b><span>${esc((res && res.error) || '')} Öffne es über „Im Browser“ oder die WhatsApp-App.</span>`; } }).catch(() => {});
+    NATIVE.wa_show(rect).then(res => { if (!res || !res.ok) { waShown = false; clearInterval(waLoop); $('#waPh').classList.add('err'); $('#waPh').innerHTML = `${ic('phonechat', 'i')}<b>WhatsApp ließ sich nicht einbetten</b><span>Nutze oben <b>Eigenes Fenster</b> – dort läuft WhatsApp mit derselben Anmeldung und denselben Mitteilungen.</span><small class="wa-diag" id="waDiag">${esc((res && res.error) || '')}</small>`; } }).catch(() => {});
   } else if (key !== waRect) { waRect = key; NATIVE.wa_move(rect); }
 }
 function renderWhatsApp() {
@@ -1288,13 +1288,31 @@ function renderWhatsApp() {
   /* erst einsetzen, wenn die Ansicht eingeblendet ist – sonst springt WhatsApp kurz */
   const start = () => { if (currentView === 'whatsapp' && !waLoop) { waLoop = setInterval(waTick, 120); waTick(); } };
   waLoop = null; setTimeout(start, 360);
+  clearInterval(waDiagT); waDiagT = setInterval(waDiag, 2000); setTimeout(waDiag, 1200);
   setTimeout(waPoll, 5000);
 }
-function waLeave() { clearInterval(waLoop); waLoop = null; if (waShown && NATIVE) NATIVE.wa_hide(); waShown = false; }
+let waDiagT = null;
+async function waDiag() {
+  if (currentView !== 'whatsapp' || !NATIVE || !NATIVE.wa_debug) { clearInterval(waDiagT); waDiagT = null; return; }
+  try {
+    const d = await NATIVE.wa_debug(); if (!d) return;
+    const parts = [];
+    if (d.error) parts.push('Fehler: ' + d.error);
+    parts.push(d.embedded ? 'eingebettet' : 'nicht eingebettet');
+    if (d.step) parts.push('Schritt: ' + d.step);
+    if (d.url) parts.push(d.url.replace(/^https?:\/\//, '').slice(0, 40));
+    if (d.progress != null) parts.push('geladen ' + Math.round(d.progress * 100) + ' %');
+    if (d.frame) parts.push('Rahmen ' + d.frame.join('·') + (d.host ? ' in ' + d.host.join('×') : '') + (d.hidden ? ' (versteckt)' : ''));
+    $('#waDiag').textContent = parts.join(' · ');
+    if (d.error && !$('#waPh').classList.contains('err')) { $('#waPh').classList.add('err'); }
+  } catch (e) { $('#waDiag').textContent = 'Diagnose nicht verfügbar'; }
+}
+function waLeave() { clearInterval(waDiagT); waDiagT = null; clearInterval(waLoop); waLoop = null; if (waShown && NATIVE) NATIVE.wa_hide(); waShown = false; }
 if (NATIVE) {
   $('#waReload').onclick = () => { NATIVE.wa_reload(); toast('WhatsApp wird neu geladen', 'refresh'); };
   $('#waDesk').onclick = async () => { const r = await NATIVE.open_app({ bundle: 'net.whatsapp.WhatsApp', name: 'WhatsApp' }).catch(() => null); toast(r && r.ok ? 'WhatsApp-App wird geöffnet' : 'Die WhatsApp-App ist auf diesem Mac nicht installiert', r && r.ok ? 'phonechat' : 'x'); };
   $('#waExt').onclick = () => openUrl('https://web.whatsapp.com/', 'WhatsApp Web');
+  $('#waWin').onclick = async () => { const r = NATIVE.wa_window ? await NATIVE.wa_window().catch(() => null) : null; toast(r && r.ok ? 'WhatsApp öffnet in einem eigenen Fenster' : 'Eigenes Fenster ging nicht' + (r && r.error ? ': ' + r.error : ''), r && r.ok ? 'phonechat' : 'x'); };
 }
 function renderWaWidget() {
   const box = $('#waBox'); if (!box || !NATIVE) return;
@@ -1449,7 +1467,7 @@ function setup(tab = 'personal') {
     diag: `<dl class="diag"><dt>Version</dt><dd>Cockpit ${APP_VERSION}${NATIVE ? ' · Mac-App' : ' · Web-App'}</dd>
       <dt>Verbindung</dt><dd>${NATIVE ? '<span class="ok">Mac-App verbunden</span>' : location.protocol === 'file:' ? '<span class="bad">Keine Verbindung zur Mac-App</span>' : 'Browser'}</dd>
       <dt>Speicher</dt><dd>${NATIVE ? '~/Library/Application Support/Cockpit/state.json' : 'Browser-Speicher dieses Geräts'}</dd>
-      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download', 'wa_show', 'wa_status', 'notify_status'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
+      <dt>Mac-Funktionen</dt><dd>${NATIVE ? ['open_url', 'open_app', 'events', 'fetch_text', 'notify', 'file_save', 'save_download', 'wa_show', 'wa_status', 'wa_debug', 'notify_status'].map(f => `${f} ${typeof NATIVE[f] === 'function' ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}`).join(' · ') : '–'}</dd></dl>
       <div class="row" style="justify-content:flex-start"><button class="btn" id="dgUrl">${ic('ext', 'i sm')} Test: buildspace öffnen</button>${NATIVE ? `<button class="btn" id="dgApp">${ic('cal', 'i sm')} Test: Kalender-App öffnen</button><button class="btn" id="dgNote">${ic('bell', 'i sm')} Test: Mitteilung</button>` : ''}</div>`
   };
   modal(`<div class="glass modal wide" role="dialog" aria-label="Einstellungen"><div class="mh"><h3>Einstellungen</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
@@ -1549,6 +1567,7 @@ function bindSettings(tab) {
   }
   if (tab === 'diag') {
     $('#dgUrl').onclick = () => openUrl(SITE, 'buildspace');
+    if (NATIVE && NATIVE.wa_debug) NATIVE.wa_debug().then(d => { const dl = $('.diag'); if (!dl || !d) return; dl.insertAdjacentHTML('beforeend', `<dt>WhatsApp</dt><dd>${esc([d.embedded ? 'eingebettet' : 'nicht geladen', d.window ? 'eigenes Fenster offen' : '', d.url || '', d.progress != null ? Math.round(d.progress * 100) + ' %' : '', d.frame ? 'Rahmen ' + d.frame.join('·') : '', d.error ? 'Fehler: ' + d.error : ''].filter(Boolean).join(' · '))}</dd>`); }).catch(() => {});
     $('#dgApp')?.addEventListener('click', () => openApp(apps.find(a => a.id === 'kalender') || DEFAULT_APPS[4]));
     $('#dgNote')?.addEventListener('click', () => { NATIVE.notify('Cockpit', 'So sehen Mitteilungen aus.'); toast('Mitteilung gesendet', 'bell'); });
   }
