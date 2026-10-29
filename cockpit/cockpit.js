@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.4.2';
+const APP_VERSION = '2.5';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -114,7 +114,19 @@ async function openUrl(u, label) {
   $('#fbLink').addEventListener('click', () => setTimeout(close, 100));
   return false;
 }
+const IS_MAC_BROWSER = !NATIVE && /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
+const MAC_APP_URL = 'https://buildspaceos.de/#/programme/cockpit';
+function macAppOnly(what, view) {
+  modal(`<div class="glass modal" role="dialog" aria-label="Nur in der Mac-App"><div class="mh"><h3>${esc(what)} gibt es in der Mac-App</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
+    <p class="lead">Du nutzt gerade Cockpit im Browser. ${view === 'whatsapp' ? 'Im Browser lässt WhatsApp sich nicht ins Cockpit einbetten – dort öffnet es nur in einem eigenen Fenster.' : 'Im Browser blockieren die Kalender-Server das Laden.'} In der <b>Mac-App</b> läuft es direkt im Cockpit.</p>
+    <ol class="steps"><li>Mac-App installiert? Dann <b>In der Mac-App öffnen</b>. Deine Einstellungen holst du mit <i>Einstellungen › Übertragen</i> rüber.</li><li>Noch nicht? <b>Mac-App laden</b>, ZIP entpacken, Installieren.command doppelklicken.</li></ol>
+    <div class="row"><button class="btn" id="maLoad">${ic('download', 'i sm')} Mac-App laden</button>${view === 'whatsapp' ? `<button class="btn" id="maWeb">${ic('ext', 'i sm')} WhatsApp Web im Browser</button>` : ''}<button class="btn pri" id="maOpen">${ic('rocket', 'i sm')} In der Mac-App öffnen</button></div></div>`);
+  $('#maLoad').onclick = () => { close(); openUrl(MAC_APP_URL, 'buildspace'); };
+  $('#maOpen').onclick = () => { close(); location.href = 'cockpit://' + (view || 'start'); setTimeout(() => toast('Öffnet sich nichts? Dann ist die Mac-App noch nicht installiert (ab Version 2.5).', 'x'), 2500); };
+  $('#maWeb')?.addEventListener('click', () => { close(); store.set('waWebOk', true); openUrl('https://web.whatsapp.com/', 'WhatsApp Web'); });
+}
 async function openApp(a, srcEl) {
+  if (IS_MAC_BROWSER && a && a.id === 'whatsapp' && !store.get('waWebOk', false)) { macAppOnly('WhatsApp im Cockpit', 'whatsapp'); return; }
   if (NATIVE && a && a.id === 'whatsapp') { usage[a.id] = (usage[a.id] || 0) + 1; store.set('usage', usage); go('whatsapp'); return; }
   if (!a) return;
   if (needsSetup(a)) { editor(a); toast(`Trag zuerst die Adresse für ${a.name} ein`, 'edit'); return; }
@@ -158,7 +170,7 @@ const WIDGETS = [
   { id: 'clock', name: 'Uhr', desc: 'Große Uhrzeit oben rechts', icon: 'clock', color: '#64748B', sel: '#clock' },
   { id: 'quick', name: 'KI-Schnellzeile', desc: 'Text an Claude, ChatGPT, DeepL, WhatsApp, als Projekt, Erinnerung oder Notiz', icon: 'sparkle', color: '#D97757', sel: '#w-quick' },
   { id: 'dock', name: 'Schnellstart', desc: 'Die sechs meistgenutzten Apps', icon: 'bolt', color: '#E0B24A', sel: '#w-dock' },
-  { id: 'groups', name: 'App-Bereiche', desc: 'Alle Kacheln nach Bereichen', icon: 'grid', color: '#4F7BFF', sel: '#w-groups' },
+  { id: 'groups', name: 'App-Bereiche', desc: 'Alle Kacheln nach Bereichen', icon: 'grid', color: '#4F7BFF', sel: '#w-groupsCard' },
   { id: 'today', name: 'Heute', desc: 'Deine Termine des Tages als Zeitleiste', icon: 'cal', color: '#EF4444', sel: '#w-today' },
   { id: 'projects', name: 'Projekte', desc: 'Überblick über In Planung · In Bearbeitung · Fertig', icon: 'kanban', color: '#4F7BFF', sel: '#w-projects' },
   { id: 'whatsapp', name: 'WhatsApp', desc: 'Ungelesene Chats (nur Mac-App)', icon: 'phonechat', color: '#25D366', sel: '#w-whatsapp', nativeOnly: true },
@@ -172,7 +184,6 @@ const WIDGETS = [
 const getLook = () => Object.assign({}, LOOK_DEFAULT, store.get('look', {}));
 const getProfile = () => { const p = Object.assign({}, PROFILE_DEFAULT, store.get('profile', {}) || {}); p.icon = Object.assign({}, PROFILE_DEFAULT.icon, p.icon || {}); return p; };
 const getWidgets = () => Object.assign({}, store.get('widgets', {}));
-const widgetOn = id => getWidgets()[id] !== false;
 
 function applyLook() {
   const L = getLook(), st = document.documentElement.style;
@@ -229,112 +240,282 @@ async function shrink(file, max, square) {
     return cv.toDataURL('image/jpeg', square ? .9 : .82);
   } finally { URL.revokeObjectURL(url); }
 }
-/* ---------- Anordnung der Widgets: drei Zonen ---------- */
-const ZONES = [['top', 'Oben · volle Breite', '#startTop'], ['main', 'Hauptspalte', '#startMain'], ['side', 'Seitenspalte', '#startSide']];
-const LAYOUT_DEFAULT = { top: ['quick'], main: ['dock', 'groups'], side: ['today', 'projects', 'whatsapp', 'stats', 'notes', 'saved', 'timer', 'countdown', 'tips'] };
-const MOVABLE = WIDGETS.filter(w => w.id !== 'clock').map(w => w.id);
-function getLayout() {
-  const raw = store.get('layout', null) || {}, L = { top: [], main: [], side: [] }, seen = new Set();
-  ZONES.forEach(([z]) => (Array.isArray(raw[z]) ? raw[z] : []).forEach(id => { if (MOVABLE.includes(id) && !seen.has(id)) { L[z].push(id); seen.add(id); } }));
-  /* neue oder fehlende Widgets an ihrer Standardstelle ergänzen */
-  ZONES.forEach(([z]) => LAYOUT_DEFAULT[z].forEach(id => { if (!seen.has(id)) { L[z].push(id); seen.add(id); } }));
-  return L;
+/* =====================================================================
+   STARTSEITE ALS RASTER (wie Apple-Widgets)
+   Jeder Baustein – Widget oder einzelne App/Link – liegt in einem Raster
+   aus quadratischen Zellen. Reihenfolge und Größe sind frei; das Raster
+   füllt Lücken automatisch (dichte Anordnung), damit es auf jeder
+   Fenstergröße aufgeht.
+   ===================================================================== */
+const SIZES = { S: [2, 2], M: [4, 2], L: [4, 4], XL: [8, 4], W: [99, 2], A1: [1, 1], A2: [2, 1], A4: [2, 2] };
+const SIZE_NAMES = { S: 'Klein', M: 'Mittel', L: 'Groß', XL: 'Sehr groß', W: 'Ganze Breite', A1: 'Symbol', A2: 'Breit', A4: 'Groß' };
+const WSIZES = { quick: ['W', 'XL', 'L'], dock: ['M', 'W', 'L'], groups: ['XL', 'W', 'L'], today: ['L', 'M', 'S', 'XL'], projects: ['M', 'S', 'L'], whatsapp: ['S', 'M'],
+  stats: ['M', 'S', 'L'], notes: ['L', 'M', 'S'], saved: ['M', 'S', 'L'], timer: ['S', 'M', 'L'], countdown: ['M', 'S', 'L'], tips: ['M', 'L'] };
+const APP_SIZES = ['A1', 'A2', 'A4'];
+const BOARD_DEFAULT_ORDER = ['quick', 'today', 'dock', 'projects', '@apps', 'whatsapp', 'timer', 'notes', 'saved', 'countdown', 'stats', 'tips'];
+const wDef = id => WIDGETS.find(w => w.id === id);
+const wEl = id => { const w = wDef(id); return w ? $(w.sel) : null; };
+const itemKey = it => it.k + ':' + it.id;
+const sizesFor = it => it.k === 'a' ? APP_SIZES : (WSIZES[it.id] || ['M']);
+const showable = it => it.k === 'a' ? apps.some(a => a.id === it.id) : !!wDef(it.id) && !(wDef(it.id).nativeOnly && !NATIVE);
+
+function defaultBoard() {
+  const W = store.get('widgets', {}) || {}, on = id => W[id] !== false;
+  const old = store.get('layout', null);
+  const appItems = () => GROUPS.flatMap(g => apps.filter(a => a.group === g.id)).map(a => ({ k: 'a', id: a.id, s: 'A1' }));
+  const items = [];
+  /* Wer die Widgets schon angeordnet hatte: diese Reihenfolge übernehmen (oben, Hauptspalte, Seitenspalte) */
+  const order = old ? [...(old.top || []), ...(old.main || []), ...(old.side || [])].map(id => id === 'groups' ? '@apps' : id) : BOARD_DEFAULT_ORDER;
+  const seen = new Set();
+  order.concat(BOARD_DEFAULT_ORDER).forEach(id => {
+    if (seen.has(id)) return; seen.add(id);
+    if (id === '@apps') { if (on('groups')) items.push(...appItems()); return; }
+    if (!wDef(id) || id === 'clock' || id === 'groups' || !on(id)) return;
+    items.push({ k: 'w', id, s: WSIZES[id][0] });
+  });
+  return items;
 }
-const setLayout = L => { store.set('layout', L); applyWidgets(); };
-const wEl = id => { const w = WIDGETS.find(x => x.id === id); return w ? $(w.sel) : null; };
+function getBoard() {
+  let b = store.get('board', null);
+  if (!Array.isArray(b)) { b = defaultBoard(); store.set('board', b); }
+  const off = new Set(store.get('boardOff', []));
+  const seen = new Set(), out = [];
+  b.forEach(it => { if (!it || !it.k || !it.id) return; const k = itemKey(it); if (seen.has(k)) return; seen.add(k);
+    if (it.k === 'a' && !apps.some(a => a.id === it.id)) return;
+    if (it.k === 'w' && (!wDef(it.id) || it.id === 'clock')) return;
+    if (!sizesFor(it).includes(it.s)) it.s = sizesFor(it)[0];
+    out.push(it); });
+  /* neu angelegte Apps landen automatisch auf der Startseite */
+  apps.forEach(a => { if (!seen.has('a:' + a.id) && !off.has(a.id)) out.push({ k: 'a', id: a.id, s: 'A1' }); });
+  return out;
+}
+const setBoard = b => { store.set('board', b); renderBoard(); };
+const onBoard = (k, id) => getBoard().some(it => it.k === k && it.id === id);
+const widgetOn = id => id === 'clock' ? (store.get('widgets', {}) || {}).clock !== false : onBoard('w', id);
 const hotkeysOn = () => widgetOn('dock') && store.get('hotkeys', true) !== false;
-function applyWidgets() {
-  const L = getLayout(), arranging = document.body.classList.contains('arrange-on');
-  ZONES.forEach(([z, , sel]) => {
-    const zone = $(sel), want = L[z].map(wEl).filter(Boolean), cur = [...zone.children].filter(k => k.dataset.w);
-    want.forEach(el => { el.dataset.w = WIDGETS.find(w => $(w.sel) === el).id; });
-    /* nur umhängen, wenn sich die Reihenfolge ändert (sonst verliert z. B. das Textfeld den Fokus) */
-    if (want.length !== cur.length || want.some((el, i) => cur[i] !== el)) want.forEach(el => zone.appendChild(el));
-  });
-  WIDGETS.forEach(w => { const el = $(w.sel); if (el) el.hidden = (w.nativeOnly && !NATIVE) || (!widgetOn(w.id) && !arranging); if (el) el.classList.toggle('w-off', !widgetOn(w.id)); });
-  const has = sel => $$(sel + ' > [data-w]').some(x => !x.hidden);
-  const top = has('#startTop'), main = has('#startMain'), side = has('#startSide');
-  $('#startTop').hidden = !top && !arranging; $('#startMain').hidden = !main && !arranging; $('#startSide').hidden = !side && !arranging;
-  $('#startGrid').hidden = !main && !side && !arranging;
-  $('#startGrid').classList.toggle('no-side', !arranging && (!side || !main));
-  $('#startGrid').classList.toggle('only-side', !arranging && side && !main);
-  if (arranging) decorateWidgets();
+function setWidget(id, on) {
+  if (id === 'clock') { const W = store.get('widgets', {}) || {}; W.clock = on; store.set('widgets', W); applyWidgets(); return; }
+  let b = getBoard().filter(it => !(it.k === 'w' && it.id === id));
+  if (on) { const at = b.findIndex(it => !(it.k === 'w' && it.id === 'quick')); b.splice(at < 0 ? b.length : at, 0, { k: 'w', id, s: WSIZES[id][0] }); }
+  setBoard(b); if (on) refreshWidget(id); if (id === 'dock') renderApps();
 }
-function readLayoutFromDom() { const L = { top: [], main: [], side: [] }; ZONES.forEach(([z, , sel]) => $$(sel + ' > [data-w]').forEach(el => L[z].push(el.dataset.w))); return L; }
-function moveWidget(id, dir) {
-  const L = getLayout(); const z = ZONES.map(x => x[0]).find(k => L[k].includes(id)); const arr = L[z], i = arr.indexOf(id), j = i + dir;
-  if (j >= 0 && j < arr.length) { [arr[i], arr[j]] = [arr[j], arr[i]]; }
-  else { /* am Rand: in die nächste Zone weiterwandern */ const zi = ZONES.findIndex(x => x[0] === z), nz = ZONES[zi + dir]; if (!nz) return; arr.splice(i, 1); dir < 0 ? L[nz[0]].push(id) : L[nz[0]].unshift(id); }
-  setLayout(L);
+function setAppOnBoard(id, on) {
+  const off = new Set(store.get('boardOff', []));
+  let b = getBoard().filter(it => !(it.k === 'a' && it.id === id));
+  if (on) { off.delete(id); b.push({ k: 'a', id, s: 'A1' }); } else off.add(id);
+  store.set('boardOff', [...off]); setBoard(b);
 }
-function zoneWidget(id, zone) { const L = getLayout(); ZONES.forEach(([z]) => { L[z] = L[z].filter(x => x !== id); }); L[zone].push(id); setLayout(L); }
-/* Anordnen-Modus auf der Startseite */
-function decorateWidgets() {
-  const L = getLayout();
-  ZONES.forEach(([z, , sel]) => { const zone = $(sel); zone.dataset.label = ZONES.find(x => x[0] === z)[1]; });
-  WIDGETS.filter(w => w.id !== 'clock' && !(w.nativeOnly && !NATIVE)).forEach(w => {
-    const el = $(w.sel); if (!el) return; el.querySelector(':scope > .wbar')?.remove();
-    const z = ZONES.map(x => x[0]).find(k => L[k].includes(w.id)), on = widgetOn(w.id);
-    const bar = document.createElement('div'); bar.className = 'wbar'; bar.dataset.for = w.id;
-    bar.innerHTML = `<button type="button" class="grip" data-wgrip aria-label="${w.name} verschieben (ziehen)">${ic('grip', 'i sm')}</button><b>${w.name}</b><span class="spacer"></span>
-      <button type="button" data-wmv="-1" aria-label="${w.name} nach oben">${ic('up', 'i sm')}</button><button type="button" data-wmv="1" aria-label="${w.name} nach unten">${ic('down', 'i sm')}</button>
-      <select data-wzone aria-label="Bereich für ${w.name}">${ZONES.map(([k, n]) => `<option value="${k}"${k === z ? ' selected' : ''}>${n.split(' ·')[0]}</option>`).join('')}</select>
-      <button type="button" data-wvis aria-pressed="${on}" aria-label="${w.name} ${on ? 'ausblenden' : 'einblenden'}" title="${on ? 'Ausblenden' : 'Einblenden'}">${ic(on ? 'eye' : 'eyeoff', 'i sm')}</button>`;
-    el.prepend(bar);
-  });
-  const off = WIDGETS.filter(w => !widgetOn(w.id) && !(w.nativeOnly && !NATIVE));
-  $('#arrangeBar').innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Widgets anordnen</b><span>Am Griff ziehen oder mit ↑ ↓ verschieben, Bereich wählen, mit dem Auge aus- und einblenden.${off.length ? ` Ausgeblendet: ${off.map(w => w.name).join(', ')}.` : ''}</span></div>
-    <button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
-  $('#arrReset').onclick = () => { store.set('layout', null); applyWidgets(); toast('Anordnung zurückgesetzt', 'layout'); };
-  $('#arrDone').onclick = () => setEdit(false);
+function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini, whatsapp: renderWaWidget, notes: renderNotes, countdown: renderCds })[id]?.(); }
+
+/* --- Zeichnen --- */
+const appEls = new Map();
+function appItemEl(a) {
+  let el = appEls.get(a.id);
+  if (!el) { el = document.createElement('button'); el.type = 'button'; el.className = 'bitem bapp'; el.dataset.app = a.id; appEls.set(a.id, el); }
+  el.title = a.name;
+  el.innerHTML = `${tileHtml(a)}<span class="txt"><span class="nm">${esc(a.name)}</span><span class="meta">${appMeta(a)}</span></span>${needsSetup(a) ? '<span class="setup" aria-label="Einrichtung nötig"></span>' : ''}`;
+  return el;
 }
-function setArrange(on) {
-  document.body.classList.toggle('arrange-on', on);
-  $('#arrangeBar').hidden = !on;
-  if (!on) $$('.wbar').forEach(b => b.remove());
-  applyWidgets();
-  if (on) { $('#arrangeBar').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-  const b = $('#arrangeBtn'); if (b) b.setAttribute('aria-pressed', on);
+let boardCols = 8;
+function boardMetrics() {
+  const bd = $('#board'), w = bd.clientWidth || 800, phone = innerWidth <= 760;
+  const gap = phone ? 12 : 16, min = phone ? 64 : 84;
+  let cols = Math.max(4, Math.floor((w + gap) / (min + gap)));
+  if (cols > 4 && cols % 2) cols -= 1;
+  const cell = (w - gap * (cols - 1)) / cols;
+  return { cols, cell, gap };
 }
+function applyBoardMetrics() {
+  const m = boardMetrics(), bd = $('#board'); boardCols = m.cols;
+  bd.style.setProperty('--cols', m.cols); bd.style.setProperty('--cell', m.cell.toFixed(1) + 'px'); bd.style.setProperty('--gap', m.gap + 'px');
+  return m;
+}
+function spanStyle(el, s) {
+  const [w, h] = SIZES[s];
+  el.style.gridColumn = w >= 99 ? '1 / -1' : `span ${Math.min(w, boardCols)}`;
+  el.style.gridRow = `span ${h}`;
+  Object.keys(SIZES).forEach(k => el.classList.toggle('sz-' + k, k === s));
+  /* schmale Fenster: zu breite Bausteine werden wie „Ganze Breite“ dargestellt */
+  el.classList.toggle('sz-full', w >= 99 || w >= boardCols);
+}
+function renderBoard() {
+  const bd = $('#board'), park = $('#parking'); if (!bd) return;
+  applyBoardMetrics();
+  const items = getBoard().filter(showable), editing = document.body.classList.contains('edit-on');
+  const want = items.map(it => {
+    const el = it.k === 'a' ? appItemEl(apps.find(a => a.id === it.id)) : wEl(it.id);
+    if (!el) return null;
+    el.classList.add('bitem'); el.dataset.key = itemKey(it); el.dataset.size = it.s; el.hidden = false;
+    spanStyle(el, it.s);
+    decorateItem(el, it, editing);
+    return el;
+  }).filter(Boolean);
+  /* nicht (mehr) platzierte Widgets parken */
+  WIDGETS.forEach(w => { const el = $(w.sel); if (el && w.id !== 'clock' && !want.includes(el) && el.parentElement !== park) { park.appendChild(el); el.querySelector(':scope > .bctl')?.remove(); } });
+  [...bd.children].forEach(ch => { if (!want.includes(ch) && !ch.classList.contains('bph')) ch.remove(); });
+  const cur = [...bd.children].filter(c => !c.classList.contains('bph'));
+  if (want.length !== cur.length || want.some((el, i) => cur[i] !== el)) want.forEach(el => bd.appendChild(el));
+  $('#clock').hidden = !widgetOn('clock');
+  bd.classList.toggle('empty', !want.length);
+}
+function applyWidgets() { renderBoard(); }
+function decorateItem(el, it, editing) {
+  let c = el.querySelector(':scope > .bctl');
+  if (!editing) { c?.remove(); return; }
+  const name = it.k === 'a' ? (apps.find(a => a.id === it.id) || {}).name : wDef(it.id).name;
+  const sizes = sizesFor(it);
+  if (!c) { c = document.createElement('span'); c.className = 'bctl'; el.appendChild(c); }
+  c.innerHTML = `<span role="button" tabindex="0" class="bdel" data-bdel aria-label="${esc(name)} von der Startseite nehmen">${ic('x', 'i xs')}</span>`
+    + (sizes.length > 1 ? `<span role="button" tabindex="0" class="bsize" data-bsize aria-label="Größe von ${esc(name)}: ${SIZE_NAMES[it.s]} – tippen zum Wechseln, Ecke ziehen zum Ändern" title="${SIZE_NAMES[it.s]}"><b>${SIZE_NAMES[it.s]}</b>${ic('expand', 'i xs')}</span>` : '');
+}
+new ResizeObserver(() => { if (currentView === 'start') { const before = boardCols; applyBoardMetrics(); if (boardCols !== before) renderBoard(); } }).observe(document.getElementById('board'));
+
+/* --- Bearbeiten: wackeln, ziehen, Größe, entfernen --- */
+function setEdit(on) {
+  document.body.classList.toggle('edit-on', on);
+  $('#editBtn').setAttribute('aria-pressed', on); $('#editBtn span').textContent = on ? 'Fertig' : 'Anpassen';
+  const bar = $('#arrangeBar'); bar.hidden = !on;
+  if (on) {
+    bar.innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Startseite anpassen</b><span>Bausteine ziehen zum Verschieben · Ecke ziehen oder Größe antippen · ✕ nimmt sie von der Startseite. Apps antippen zum Bearbeiten.</span></div>
+      <button class="btn sm" id="arrAdd">${ic('plus', 'i xs')} Hinzufügen</button><button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
+    $('#arrAdd').onclick = gallery;
+    $('#arrReset').onclick = () => { if (!$('#arrReset').dataset.sure) { $('#arrReset').dataset.sure = 1; $('#arrReset').textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('board', null); renderBoard(); setEdit(true); toast('Startseite zurückgesetzt', 'layout'); };
+    $('#arrDone').onclick = () => setEdit(false);
+  }
+  renderApps(); renderBoard();
+}
+$('#editBtn').addEventListener('click', () => setEdit(!document.body.classList.contains('edit-on')));
+
+function cycleSize(key, dir = 1) {
+  const b = getBoard(), it = b.find(x => itemKey(x) === key); if (!it) return;
+  const s = sizesFor(it), i = s.indexOf(it.s); it.s = s[(i + dir + s.length) % s.length];
+  setBoard(b); refreshWidget(it.id);
+  toast(`Größe: ${SIZE_NAMES[it.s]}`, 'expand');
+  requestAnimationFrame(() => document.querySelector(`[data-key="${key}"] [data-bsize]`)?.focus());
+}
+function removeItem(key) {
+  const [k, id] = key.split(':');
+  if (k === 'a') setAppOnBoard(id, false); else setWidget(id, false);
+  toast('Von der Startseite genommen – über „Hinzufügen“ holst du es zurück', 'x');
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const t = e.target.closest?.('[data-bdel],[data-bsize]'); if (!t) return;
+  e.preventDefault(); const key = t.closest('[data-key]').dataset.key;
+  if (t.matches('[data-bdel]')) removeItem(key); else cycleSize(key);
+});
+
+let swallowClick = false, swallowT = null;
+const swallow = (ms = 350) => { swallowClick = true; clearTimeout(swallowT); swallowT = setTimeout(() => { swallowClick = false; }, ms); };
 document.addEventListener('click', e => {
-  const bar = e.target.closest('.wbar'); if (!bar) return; const id = bar.dataset.for;
-  const mv = e.target.closest('[data-wmv]'); if (mv) { moveWidget(id, +mv.dataset.wmv); requestAnimationFrame(() => document.querySelector(`.wbar[data-for="${id}"] [data-wmv="${mv.dataset.wmv}"]`)?.focus()); return; }
-  if (e.target.closest('[data-wvis]')) { setWidget(id, !widgetOn(id)); }
-});
-document.addEventListener('change', e => { const sel = e.target.closest('[data-wzone]'); if (sel) zoneWidget(sel.closest('.wbar').dataset.for, sel.value); });
-/* Ziehen mit Maus, Finger oder Stift */
+  const del = e.target.closest && e.target.closest('#board [data-bdel]');
+  if (del && !swallowClick) { e.preventDefault(); e.stopPropagation(); removeItem(del.closest('[data-key]').dataset.key); return; }
+  if (swallowClick) { swallowClick = false; clearTimeout(swallowT); e.preventDefault(); e.stopPropagation(); } }, true);
+
+/* Langes Drücken auf einen Baustein startet das Anpassen (wie auf dem iPhone) */
+let lpTimer = null;
 document.addEventListener('pointerdown', e => {
-  const grip = e.target.closest('[data-wgrip]'); if (!grip || e.button > 0) return;
-  e.preventDefault();
-  const el = grip.closest('[data-w]'), r = el.getBoundingClientRect();
-  const ph = document.createElement('div'); ph.className = 'wph'; ph.style.height = Math.min(r.height, 220) + 'px';
-  el.after(ph);
-  document.body.classList.add('dragging-w');
-  const ghost = el; ghost.classList.add('wdrag'); Object.assign(ghost.style, { width: r.width + 'px', left: r.left + 'px', top: r.top + 'px' });
-  const dx = e.clientX - r.left, dy = e.clientY - r.top;
-  try { grip.setPointerCapture(e.pointerId); } catch (er) {}
-  const zones = ZONES.map(z => $(z[2]));
-  const onMove = ev => {
-    ghost.style.left = ev.clientX - dx + 'px'; ghost.style.top = ev.clientY - dy + 'px';
-    /* Zone unter dem Zeiger, sonst die nächstgelegene */
-    let best = null, bd = Infinity;
-    zones.forEach(z => { const b = z.getBoundingClientRect(); if (!b.width) return; const ddx = ev.clientX < b.left ? b.left - ev.clientX : ev.clientX > b.right ? ev.clientX - b.right : 0, ddy = ev.clientY < b.top ? b.top - ev.clientY : ev.clientY > b.bottom ? ev.clientY - b.bottom : 0, d = ddx + ddy; if (d < bd) { bd = d; best = z; } });
-    if (!best) return;
-    const kids = [...best.children].filter(k => k.dataset.w && k !== ghost && !k.hidden);
-    const before = kids.find(k => { const b = k.getBoundingClientRect(); return ev.clientY < b.top + b.height / 2; });
-    if (before) { if (ph.nextElementSibling !== before) best.insertBefore(ph, before); } else if (best.lastElementChild !== ph) best.appendChild(ph);
-    if (ev.clientY < 60) window.scrollBy(0, -14); else if (ev.clientY > innerHeight - 60) window.scrollBy(0, 14);
-  };
-  const onUp = () => {
-    grip.removeEventListener('pointermove', onMove); grip.removeEventListener('pointerup', onUp); grip.removeEventListener('pointercancel', onUp);
-    document.body.classList.remove('dragging-w');
-    ph.replaceWith(ghost); ghost.classList.remove('wdrag'); ghost.removeAttribute('style');
-    setLayout(readLayoutFromDom());
-  };
-  grip.addEventListener('pointermove', onMove); grip.addEventListener('pointerup', onUp); grip.addEventListener('pointercancel', onUp);
+  const it = e.target.closest('#board > .bitem'); if (!it || document.body.classList.contains('edit-on') || e.button > 0) return;
+  if (e.target.closest('input,textarea,select,[contenteditable]')) return;
+  const x0 = e.clientX, y0 = e.clientY;
+  const cancel = () => { clearTimeout(lpTimer); removeEventListener('pointermove', mv); removeEventListener('pointerup', cancel); removeEventListener('pointercancel', cancel); };
+  const mv = ev => { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 10) cancel(); };
+  lpTimer = setTimeout(() => { cancel(); swallow(900); if (navigator.vibrate) try { navigator.vibrate(10); } catch (er) {} setEdit(true); }, 550);
+  addEventListener('pointermove', mv); addEventListener('pointerup', cancel); addEventListener('pointercancel', cancel);
 });
-function setWidget(id, on) { const W = getWidgets(); W[id] = on; store.set('widgets', W); applyWidgets(); if (on) refreshWidget(id); if (id === 'dock') renderApps(); }
-function refreshWidget(id) { ({ today: renderToday, projects: renderProjMini, stats: loadStats, saved: renderSavedMini, whatsapp: renderWaWidget })[id]?.(); }
+
+/* Ziehen und Größe ändern im Anpassen-Modus */
+document.addEventListener('pointerdown', e => {
+  if (!document.body.classList.contains('edit-on') || e.button > 0) return;
+  const el = e.target.closest('#board > .bitem'); if (!el) return;
+  const key = el.dataset.key;
+  if (e.target.closest('[data-bdel]')) return;   /* entfernen übernimmt der Klick */
+  const handle = e.target.closest('[data-bsize]');
+  e.preventDefault();
+  const x0 = e.clientX, y0 = e.clientY, m = boardMetrics(), step = m.cell + m.gap;
+  let moved = false;
+  if (handle) {
+    /* Größe: Ecke ziehen → nächste erlaubte Größe; nur antippen → nächste Größe */
+    const b = getBoard(), it = b.find(x => itemKey(x) === key), allowed = sizesFor(it);
+    const [w0, h0] = SIZES[it.s].map((v, i) => i === 0 ? Math.min(v, m.cols) : v);
+    let cur = it.s;
+    const mv = ev => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 8) return; moved = true;
+      const tw = w0 + dx / step, th = h0 + dy / step;
+      let best = cur, bd = Infinity;
+      allowed.forEach(s => { const [w, h] = SIZES[s], ww = Math.min(w, m.cols), d = (ww - tw) ** 2 + (h - th) ** 2; if (d < bd) { bd = d; best = s; } });
+      if (best !== cur) { cur = best; el.dataset.size = cur; spanStyle(el, cur); el.querySelector('[data-bsize] b').textContent = SIZE_NAMES[cur]; }
+    };
+    const up = () => {
+      removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      swallow(60);
+      if (!moved) { cycleSize(key); return; }
+      if (cur !== it.s) { it.s = cur; setBoard(b); refreshWidget(it.id); toast(`Größe: ${SIZE_NAMES[cur]}`, 'expand'); }
+    };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    return;
+  }
+  /* Verschieben */
+  let ph = null, dx = 0, dy = 0;
+  const start = ev => {
+    const r = el.getBoundingClientRect(); dx = x0 - r.left; dy = y0 - r.top;
+    ph = document.createElement('div'); ph.className = 'bph'; ph.style.gridColumn = el.style.gridColumn; ph.style.gridRow = el.style.gridRow;
+    el.after(ph);
+    el.classList.add('bdrag'); Object.assign(el.style, { width: r.width + 'px', height: r.height + 'px', left: r.left + 'px', top: r.top + 'px' });
+    document.body.classList.add('dragging-w');
+  };
+  const mv = ev => {
+    if (!moved) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 8) return; moved = true; start(ev); }
+    el.style.left = ev.clientX - dx + 'px'; el.style.top = ev.clientY - dy + 'px';
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY), over = hit && hit.closest('#board > .bitem:not(.bdrag)');
+    const bd = $('#board');
+    if (over) {
+      const r = over.getBoundingClientRect(), after = (ev.clientX - r.left) / r.width + (ev.clientY - r.top) / r.height * 0.35 > 0.6;
+      if (after) { if (over.nextElementSibling !== ph) over.after(ph); } else if (over.previousElementSibling !== ph) over.before(ph);
+    } else if (hit && (hit === bd || bd.contains(hit)) && !hit.closest('.bph')) {
+      const last = [...bd.children].filter(c => c !== el && c !== ph).pop();
+      if (last && ev.clientY > last.getBoundingClientRect().bottom - 4 && bd.lastElementChild !== ph) bd.appendChild(ph);
+    }
+    if (ev.clientY < 70) scrollBy(0, -16); else if (ev.clientY > innerHeight - 70) scrollBy(0, 16);
+  };
+  const up = () => {
+    removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    if (!moved) return;           /* nur angetippt: der normale Klick übernimmt (App bearbeiten) */
+    swallow(60);
+    document.body.classList.remove('dragging-w');
+    ph.replaceWith(el); el.classList.remove('bdrag'); ['width', 'height', 'left', 'top'].forEach(p => el.style[p] = '');
+    const order = [...$('#board').children].map(c => c.dataset.key).filter(Boolean);
+    const b = getBoard(), byKey = new Map(b.map(it => [itemKey(it), it]));
+    const nb = order.map(k => byKey.get(k)).filter(Boolean); b.forEach(it => { if (!order.includes(itemKey(it))) nb.push(it); });
+    setBoard(nb);
+  };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+});
+
+/* Hinzufügen: Widgets und Apps zurückholen oder neu anlegen */
+function gallery() {
+  const b = getBoard(), has = new Set(b.map(itemKey));
+  const ws = WIDGETS.filter(w => w.id !== 'clock' && !has.has('w:' + w.id) && !(w.nativeOnly && !NATIVE));
+  const as = apps.filter(a => !has.has('a:' + a.id));
+  modal(`<div class="glass modal wide" role="dialog" aria-label="Zur Startseite hinzufügen"><div class="mh"><h3>Zur Startseite hinzufügen</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
+    <h4 class="zh" style="margin-top:4px">Widgets</h4>
+    <div class="gal">${ws.length ? ws.map(w => `<div class="galw"><span class="tile sm" style="--c:${w.color}">${ic(w.icon, 'i sm')}</span><span class="t"><b>${w.name}</b><span>${w.desc}</span></span>
+      <span class="sizes">${WSIZES[w.id].map(s => `<button type="button" class="chipbtn" data-gadd="w:${w.id}:${s}">${SIZE_NAMES[s]}</button>`).join('')}</span></div>`).join('') : '<p class="empty">Alle Widgets sind schon auf der Startseite.</p>'}</div>
+    <h4 class="zh">Apps und Links</h4>
+    <div class="gal">${as.map(a => `<div class="galw">${tileHtml(a, true)}<span class="t"><b>${esc(a.name)}</b><span>${appMeta(a)}</span></span><span class="sizes">${APP_SIZES.map(s => `<button type="button" class="chipbtn" data-gadd="a:${a.id}:${s}">${SIZE_NAMES[s]}</button>`).join('')}</span></div>`).join('') || '<p class="empty">Alle Apps sind schon auf der Startseite.</p>'}</div>
+    <div class="row" style="justify-content:flex-start;margin-top:14px"><button class="btn pri" id="galNew">${ic('plus', 'i sm')} Neue App oder neuen Link anlegen</button></div></div>`);
+  $('#ov').querySelectorAll('[data-gadd]').forEach(btn => btn.onclick = () => {
+    const [k, id, s] = btn.dataset.gadd.split(':');
+    const nb = getBoard().filter(it => !(it.k === k && it.id === id));
+    const at = nb.findIndex(it => !(it.k === 'w' && it.id === 'quick'));
+    nb.splice(at < 0 ? nb.length : at, 0, { k, id, s });
+    if (k === 'a') { const off = new Set(store.get('boardOff', [])); off.delete(id); store.set('boardOff', [...off]); }
+    setBoard(nb); if (k === 'w') refreshWidget(id); close(); toast(`${k === 'a' ? apps.find(a => a.id === id).name : wDef(id).name} hinzugefügt`, 'plus');
+    requestAnimationFrame(() => document.querySelector(`[data-key="${k}:${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  });
+  $('#galNew').onclick = () => { close(); editor(null, 'eigene'); };
+}
 
 /* =====================================================================
    SEITENREITER & ANSICHTEN
@@ -423,6 +604,7 @@ function renderApps() {
     return `<section class="glass group${list.length > 4 ? ' wide' : ''}"><div class="sec-h"><h2>${g.name}</h2><small>${list.length}</small></div>
       <div class="apps">${list.map(a => appHtml(a, false)).join('')}<button class="app addapp" data-add="${g.id}">${ic('plus', 'i sm')} App hinzufügen</button></div></section>`;
   }).join('');
+  renderBoard();
 }
 document.addEventListener('click', e => {
   const btn = e.target.closest('[data-app]'); if (!btn) { const add = e.target.closest('[data-add]'); if (add) editor(null, add.dataset.add); return; }
@@ -440,12 +622,6 @@ function move(a, dir) {
   const ai = apps.indexOf(a), bi = apps.indexOf(same[j]); [apps[ai], apps[bi]] = [apps[bi], apps[ai]];
   saveApps(); renderApps();
 }
-function setEdit(on) {
-  document.body.classList.toggle('edit-on', on);
-  $('#editBtn').setAttribute('aria-pressed', on); $('#editBtn span').textContent = on ? 'Fertig' : 'Anpassen'; renderApps();
-  setArrange(on);
-}
-$('#editBtn').addEventListener('click', () => setEdit(!document.body.classList.contains('edit-on')));
 function editor(a, group) {
   const isNew = !a;
   const d = a ? { ...a } : { id: 'app' + uid(), name: '', sub: '', group: group || 'eigene', icon: 'globe', color: COLORS[0], type: 'web', target: '' };
@@ -714,11 +890,26 @@ async function fetchText(url) {
   if (NATIVE && NATIVE.fetch_text) { const r = await NATIVE.fetch_text(url); if (r && r.ok) return r.text; throw new Error((r && r.error) || 'Laden fehlgeschlagen'); }
   const res = await fetch(url, { cache: 'no-store' }); if (!res.ok) throw new Error('HTTP ' + res.status); return res.text();
 }
+function feedErrorText(msg, url) {
+  if (/^HTTP 40[13]/.test(msg)) return 'Der Server verlangt eine Anmeldung oder der Link ist abgelaufen (' + msg + '). Kopiere den Abo-Link neu.';
+  if (/^HTTP 404/.test(msg)) return 'Unter diesem Link gibt es keinen Kalender (404). Kopiere den Abo-Link neu.';
+  if (/nicht erreichbar|timed out|Name or service|nodename/i.test(msg)) return 'Der Server ist nicht erreichbar. Internet prüfen oder später erneut versuchen.';
+  if (/kein Kalender/i.test(msg)) return msg;
+  return msg + (url && !/^(https?|webcal):/i.test(url) ? ' Der Link muss mit https:// oder webcal:// beginnen.' : '');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-feederr]'); if (!b) return;
+  const f = getFeeds().find(x => x.id === b.dataset.feederr), c = f && feedCache[f.id]; if (!f) return;
+  if (!NATIVE) { macAppOnly('Kalender-Abos', 'kalender'); return; }
+  modal(`<div class="glass modal"><div class="mh"><h3>${esc(f.name)}</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div><p class="lead">${esc((c && c.error) || '')}</p><p class="lead" style="overflow-wrap:anywhere"><small>${esc(f.url)}</small></p>
+    <div class="row"><button class="btn" data-open-setup="calendar">Abos verwalten</button><button class="btn pri" id="feRetry">${ic('refresh', 'i sm')} Erneut laden</button></div></div>`);
+  $('#feRetry').onclick = async () => { const r = await loadFeed(f, true); invalidateCal(); close(); toast(r.error ? 'Weiterhin: ' + r.error : `${f.name}: ${r.items.length} Einträge`, r.error ? 'x' : 'cal'); if (currentView === 'kalender') renderCalendar(); };
+});
 async function loadFeed(f, force) {
   const c = feedCache[f.id];
   if (!force && c && Date.now() - c.ts < 30 * 60 * 1000) return c;
-  try { const text = await fetchText(f.url); const items = parseICS(text); feedCache[f.id] = { ts: Date.now(), items }; }
-  catch (e) { feedCache[f.id] = { ts: Date.now(), items: [], error: NATIVE ? String(e.message || e) : 'Im Browser blockiert der Kalender-Server das Laden. In der Mac-App funktioniert das Abo.' }; }
+  try { const text = await fetchText(f.url); if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error(/<html/i.test(text) ? 'Unter dem Link liegt eine Webseite, kein Kalender. Nimm den Abo-Link (iCal/ICS), nicht die Seitenadresse.' : 'Unter dem Link liegt kein Kalender (kein iCal-Format).'); const items = parseICS(text); feedCache[f.id] = { ts: Date.now(), items }; }
+  catch (e) { feedCache[f.id] = { ts: Date.now(), items: [], error: NATIVE ? feedErrorText(String(e.message || e), f.url) : 'Im Browser blockiert der Kalender-Server das Laden. In der Mac-App funktioniert das Abo.' }; }
   return feedCache[f.id];
 }
 async function eventsFor(day) {
@@ -783,7 +974,7 @@ async function renderCalendar() {
   /* Quellen */
   const src = [];
   if (NATIVE) src.push(`<div class="src" style="--c:#64748B"><i></i><span style="flex:1">Mac-Kalender</span>${r.macState === 'ok' ? '<span class="ok">verbunden</span>' : r.macState === 'ask' ? '<button class="btn sm" data-cal-connect>Verbinden</button>' : '<button class="btn sm" data-cal-prefs>Freigeben</button>'}</div>`);
-  getFeeds().forEach(f => { const c = feedCache[f.id]; src.push(`<div class="src" style="--c:${esc(f.color)}"><i></i><span style="flex:1">${esc(f.name)}</span>${c && c.error ? `<span class="bad" title="${esc(c.error)}">Fehler</span>` : c ? `<span class="ok">${c.items.length} Einträge</span>` : ''}</div>`); });
+  getFeeds().forEach(f => { const c = feedCache[f.id]; src.push(`<div class="src" style="--c:${esc(f.color)}"><i></i><span style="flex:1">${esc(f.name)}</span>${c && c.error ? `<button class="bad srcerr" data-feederr="${esc(f.id)}" title="${esc(c.error)}">${NATIVE ? 'Fehler' : 'nur Mac-App'} ${ic('right', 'i xs')}</button>` : c ? `<span class="ok">${c.items.length} Einträge</span>` : ''}</div>`); });
   src.push(`<div class="src" style="--c:#4F7BFF"><i></i><span style="flex:1">Eigene Termine</span><span>${ownEvents.length}</span></div>`);
   if (!NATIVE && !getFeeds().length) src.push('<p class="empty" style="padding:4px 0 0">Kalender-Abos von IServ oder WebUntis lädt die Mac-App. Im Browser blockieren die Server das meist.</p>');
   $('#calSrcs').innerHTML = src.join('');
@@ -1340,6 +1531,18 @@ async function waPoll() {
   } catch (e) {}
 }
 window.__cockpitOpen = id => { if (VIEWS.some(v => v.id === id)) go(id); };
+function macBanner() {
+  const el = $('#macBanner'); if (!el) return;
+  let until = 0; try { until = +localStorage.getItem('cockpit:macBannerOff') || 0; } catch (e) {}
+  el.hidden = !IS_MAC_BROWSER || Date.now() < until;
+  if (el.hidden) return;
+  el.innerHTML = `${ic('bolt', 'i sm')}<div class="t"><b>Du nutzt die Browser-Version</b><span>WhatsApp im Cockpit, Kalender-Abos, deine Mac-Kalender und Mac-Apps gibt es nur in der Mac-App.</span></div>
+    <button class="btn sm" id="mbLoad">Mac-App laden</button><button class="btn sm pri" id="mbOpen">In der Mac-App öffnen</button><button class="orb sm" id="mbX" aria-label="Hinweis für eine Woche ausblenden">${ic('x', 'i xs')}</button>`;
+  $('#mbLoad').onclick = () => openUrl(MAC_APP_URL, 'buildspace');
+  $('#mbOpen').onclick = () => { location.href = 'cockpit://' + currentView; setTimeout(() => toast('Öffnet sich nichts? Dann ist die Mac-App noch nicht installiert (ab Version 2.5).', 'x'), 2500); };
+  $('#mbX').onclick = () => { try { localStorage.setItem('cockpit:macBannerOff', Date.now() + 7 * 864e5); } catch (e) {} el.hidden = true; };
+}
+macBanner();
 if (NATIVE && NATIVE.safe_status) setTimeout(() => NATIVE.safe_status().then(st => { const off = [st && st.whatsapp && 'WhatsApp einbetten', st && st.mitteilungen && 'macOS-Mitteilungen'].filter(Boolean); if (off.length) toast(`Sicherheitshalber aus: ${off.join(' und ')} (beim letzten Start abgestürzt) – Details unter Einstellungen › Diagnose`, 'x'); }).catch(() => {}), 1800);
 if (NATIVE && NATIVE.wa_set_notify) NATIVE.wa_set_notify(notifyPrefs().whatsapp !== false);
 if (NATIVE && NATIVE.wa_status) {
@@ -1460,8 +1663,8 @@ function setup(tab = 'personal') {
       : `<ol class="steps"><li><b>${isMac ? 'Mac' : 'iPad'} (dieses Gerät):</b> ${isMac ? 'In Safari oben auf <b>Ablage › Zum Dock hinzufügen</b>. Oder besser: die <b>Mac-App</b> von buildspace › Programme laden – sie kann zusätzlich deinen Kalender, Mac-Programme und Mitteilungen.' : 'In Safari auf <b>Teilen › Zum Home-Bildschirm</b>. Cockpit öffnet sich danach im Vollbild wie eine App.'}</li><li><b>Einstellungen übertragen:</b> Im Reiter „Übertragen“ den Code kopieren und auf dem anderen Gerät einfügen.</li></ol>`,
     shortcuts: `<p class="lead">${NATIVE ? 'In der Mac-App brauchst du keine Kurzbefehle: Kalender, Erinnerungen, Mail, iDoceo und WhatsApp öffnen direkt. Die Kurzbefehle brauchst du nur auf dem iPad:' : 'Kalender, Erinnerungen, Mail und iDoceo sind Apps auf dem Gerät. Eine Webseite darf sie nicht direkt starten, ein Kurzbefehl schon. Leg diese fünf Kurzbefehle in der App „Kurzbefehle“ an. Antippen kopiert den Namen.'}</p>
       <ol class="steps">${SHORTCUTS.map(s => `<li><code data-cp="${esc(s.n)}">${esc(s.n)}</code><br><span style="color:var(--ink-2);font-size:12px">${s.a}</span></li>`).join('')}</ol>`,
-    transfer: `<p class="lead">Apps, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Name, Aussehen, Widgets und ihre Anordnung liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät ein. Whiteboards, Dateien und eigene Bilder werden nicht mit übertragen.</p>
-      <label class="field">Code dieses Geräts<textarea class="code" id="exp" readonly>${esc(btoa(unescape(encodeURIComponent(JSON.stringify({ v: 3, apps, notes, countdowns: cds, tasks, saved, events: ownEvents, icsFeeds: getFeeds(), profile: getProfile(), look: getLook(), widgets: getWidgets(), layout: getLayout(), hotkeys: store.get('hotkeys', true) })))))}</textarea></label>
+    transfer: `<p class="lead">Apps, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Name, Aussehen und die Anordnung der Startseite liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät ein. Whiteboards, Dateien und eigene Bilder werden nicht mit übertragen.</p>
+      <label class="field">Code dieses Geräts<textarea class="code" id="exp" readonly>${esc(btoa(unescape(encodeURIComponent(JSON.stringify({ v: 3, apps, notes, countdowns: cds, tasks, saved, events: ownEvents, icsFeeds: getFeeds(), profile: getProfile(), look: getLook(), widgets: getWidgets(), board: getBoard(), boardOff: store.get('boardOff', []), hotkeys: store.get('hotkeys', true) })))))}</textarea></label>
       <div class="row" style="justify-content:flex-start;margin:-4px 0 14px"><button class="btn" id="cpExp">${ic('copy', 'i sm')} Code kopieren</button></div>
       <label class="field">Code vom anderen Gerät einfügen<textarea class="code" id="imp" placeholder="Code hier einfügen …"></textarea></label>
       <div class="row" style="justify-content:flex-start"><button class="btn pri" id="doImp">Übernehmen</button><span class="spacer"></span><button class="btn danger" id="reset">Apps auf Standard zurücksetzen</button></div>`,
@@ -1477,27 +1680,37 @@ function setup(tab = 'personal') {
   bindSettings(tab);
 }
 
-function widgetRow(w, z) {
+function moveOnBoard(key, dir) {
+  const b = getBoard(), i = b.findIndex(it => itemKey(it) === key), j = i + dir;
+  if (i < 0 || j < 0 || j >= b.length) return;
+  [b[i], b[j]] = [b[j], b[i]]; setBoard(b);
+}
+function widgetRow(w, it) {
+  const on = w.id === 'clock' ? widgetOn('clock') : !!it;
   return `<div class="wrow" data-wrow="${w.id}"><span class="tile sm" style="--c:${w.color}">${ic(w.icon, 'i sm')}</span><span class="t"><b>${w.name}</b><span>${w.desc}</span></span>
-    ${z ? `<span class="wpos"><button type="button" class="orb sm" data-smv="-1" aria-label="${w.name} nach oben">${ic('up', 'i xs')}</button><button type="button" class="orb sm" data-smv="1" aria-label="${w.name} nach unten">${ic('down', 'i xs')}</button>
-    <select data-szone aria-label="Bereich für ${w.name}">${ZONES.map(([k, n]) => `<option value="${k}"${k === z ? ' selected' : ''}>${n.split(' ·')[0]}</option>`).join('')}</select></span>` : ''}
-    <button type="button" class="sw" role="switch" data-wsw="${w.id}" aria-checked="${widgetOn(w.id)}" aria-label="${w.name} anzeigen"></button></div>`;
+    ${it ? `<span class="wpos"><button type="button" class="orb sm" data-smv="-1" aria-label="${w.name} weiter nach vorne">${ic('up', 'i xs')}</button><button type="button" class="orb sm" data-smv="1" aria-label="${w.name} weiter nach hinten">${ic('down', 'i xs')}</button>
+    <select data-ssize aria-label="Größe von ${w.name}">${WSIZES[w.id].map(s => `<option value="${s}"${s === it.s ? ' selected' : ''}>${SIZE_NAMES[s]}</option>`).join('')}</select></span>` : ''}
+    <button type="button" class="sw" role="switch" data-wsw="${w.id}" aria-checked="${on}" aria-label="${w.name} anzeigen"></button></div>`;
 }
 function widgetsTab() {
-  const L = getLayout(), dockOn = widgetOn('dock'), hk = store.get('hotkeys', true) !== false;
-  return `<p class="lead">Ein- und ausblenden, Reihenfolge und Bereich festlegen. Noch schneller geht es direkt auf der Startseite: <b>Anpassen</b> und die Widgets am Griff ziehen.</p>
-    <div class="wlist" style="margin-bottom:14px">${widgetRow(WIDGETS.find(w => w.id === 'clock'))}
+  const b = getBoard(), dockOn = widgetOn('dock'), hk = store.get('hotkeys', true) !== false;
+  const placed = b.filter(it => it.k === 'w' && showable(it)), off = WIDGETS.filter(w => w.id !== 'clock' && !(w.nativeOnly && !NATIVE) && !placed.some(it => it.id === w.id));
+  const nApps = b.filter(it => it.k === 'a' && showable(it)).length;
+  return `<p class="lead">Ein- und ausblenden, Größe und Reihenfolge festlegen. Am schnellsten geht es direkt auf der Startseite: <b>Anpassen</b> (oder lange auf einen Baustein drücken), dann ziehen und an der Ecke die Größe ändern.</p>
+    <div class="wlist" style="margin-bottom:14px">${widgetRow(wDef('clock'))}
       <div class="wrow${dockOn ? '' : ' dis'}"><span class="tile sm" style="--c:#64748B">${ic('keyboard', 'i sm')}</span><span class="t"><b>Kurzwahltasten 1–6</b><span>${dockOn ? 'Die Tasten 1 bis 6 öffnen die Apps im Schnellstart.' : 'Nur mit eingeblendetem Schnellstart verfügbar.'}</span></span><button type="button" class="sw" role="switch" id="hkSw" aria-checked="${dockOn && hk}" aria-label="Kurzwahltasten 1 bis 6" ${dockOn ? '' : 'aria-disabled="true" disabled'}></button></div></div>
-    ${ZONES.map(([z, n]) => `<h4 class="zh">${n}</h4><div class="wlist" data-szlist="${z}">${L[z].filter(id => NATIVE || !WIDGETS.find(w => w.id === id).nativeOnly).length ? L[z].filter(id => NATIVE || !WIDGETS.find(w => w.id === id).nativeOnly).map(id => widgetRow(WIDGETS.find(w => w.id === id), z)).join('') : '<p class="empty" style="margin:0">Leer – wähle bei einem Widget diesen Bereich.</p>'}</div>`).join('')}
-    <div class="row" style="justify-content:flex-start;margin-top:14px"><button type="button" class="btn" id="lyReset">Anordnung zurücksetzen</button><button type="button" class="btn" id="lyArrange">${ic('layout', 'i sm')} Auf der Startseite anordnen</button></div>`;
+    <h4 class="zh">Auf der Startseite</h4><div class="wlist">${placed.map(it => widgetRow(wDef(it.id), it)).join('') || '<p class="empty" style="margin:0">Noch keine Widgets.</p>'}</div>
+    ${off.length ? `<h4 class="zh">Ausgeblendet</h4><div class="wlist">${off.map(w => widgetRow(w, null)).join('')}</div>` : ''}
+    <p class="lead" style="margin-top:12px">Außerdem ${nApps} App${nApps === 1 ? '' : 's'} und Links als eigene Bausteine – verschieben, vergrößern oder entfernen im <b>Anpassen</b>-Modus.</p>
+    <div class="row" style="justify-content:flex-start;margin-top:6px"><button type="button" class="btn" id="lyReset">Startseite zurücksetzen</button><button type="button" class="btn" id="lyArrange">${ic('layout', 'i sm')} Auf der Startseite anpassen</button></div>`;
 }
 function bindWidgetsTab() {
   const re = () => { const y = $('#ov .modal')?.scrollTop || 0, f = document.activeElement?.closest('[data-wrow]')?.dataset.wrow, fa = document.activeElement?.dataset?.smv; setup('widgets'); const m = $('#ov .modal'); if (m) m.scrollTop = y; if (f && fa) $(`[data-wrow="${f}"] [data-smv="${fa}"]`)?.focus(); };
   $$('[data-wsw]').forEach(b => b.addEventListener('click', () => { const on = b.getAttribute('aria-checked') !== 'true'; setWidget(b.dataset.wsw, on); re(); }));
   $('#hkSw')?.addEventListener('click', () => { if (!widgetOn('dock')) return; const on = store.get('hotkeys', true) === false; store.set('hotkeys', on); renderApps(); re(); toast(on ? 'Kurzwahltasten 1–6 an' : 'Kurzwahltasten 1–6 aus', 'keyboard'); });
-  $$('[data-smv]').forEach(b => b.addEventListener('click', () => { moveWidget(b.closest('[data-wrow]').dataset.wrow, +b.dataset.smv); re(); }));
-  $$('[data-szone]').forEach(sl => sl.addEventListener('change', () => { zoneWidget(sl.closest('[data-wrow]').dataset.wrow, sl.value); re(); }));
-  $('#lyReset').onclick = () => { store.set('layout', null); applyWidgets(); re(); toast('Anordnung zurückgesetzt', 'layout'); };
+  $$('[data-smv]').forEach(b => b.addEventListener('click', () => { moveOnBoard('w:' + b.closest('[data-wrow]').dataset.wrow, +b.dataset.smv); re(); }));
+  $$('[data-ssize]').forEach(sl => sl.addEventListener('change', () => { const id = sl.closest('[data-wrow]').dataset.wrow, bd = getBoard(), it = bd.find(x => x.k === 'w' && x.id === id); if (it) { it.s = sl.value; setBoard(bd); refreshWidget(id); } }));
+  $('#lyReset').onclick = function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('board', null); renderBoard(); re(); toast('Startseite zurückgesetzt', 'layout'); };
   $('#lyArrange').onclick = () => { close(); go('start'); setTimeout(() => setEdit(true), 60); };
 }
 function bindSettings(tab) {
@@ -1559,7 +1772,7 @@ function bindSettings(tab) {
         if (d.profile) { const ic0 = d.profile.icon || {}; if (ic0.kind === 'custom' && !store.get('iconImage', '')) ic0.kind = 'logo'; store.set('profile', d.profile); applyProfile(); }
         if (d.look) { if (d.look.bg === 'custom' && !store.get('bgImage', '')) d.look.bg = 'horizont'; store.set('look', d.look); applyLook(); }
         if (d.widgets) store.set('widgets', d.widgets);
-        if (d.layout) store.set('layout', d.layout);
+        if (Array.isArray(d.board)) { store.set('board', d.board); store.set('boardOff', Array.isArray(d.boardOff) ? d.boardOff : []); } else if (d.layout) { store.set('layout', d.layout); store.set('board', null); }
         if (typeof d.hotkeys === 'boolean') store.set('hotkeys', d.hotkeys);
         close(); invalidateCal(); renderRail(); showView(currentView); toast('Einstellungen übernommen');
       } catch (e) { toast('Der Code ist ungültig. Bitte vollständig kopieren.', 'x'); }
