@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.6';
+const APP_VERSION = '2.7';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -932,7 +932,12 @@ async function eventsFor(day) {
       try { const r = NATIVE.events ? await NATIVE.events(day) : (day === isoDay(new Date()) ? await NATIVE.today_events() : { state: 'ok', events: [] }); macState = r.state; (r.events || []).forEach(e => push({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, location: e.location, calendar: e.calendar, color: e.color }, 'mac')); }
       catch (e) { macState = 'error'; }
     }
-    for (const f of getFeeds().filter(f => f.on !== false)) {
+    const mc = NATIVE ? null : macCalGet();
+    if (mc) {
+      const a = d0.getTime() / 1000, b = d1.getTime() / 1000;
+      mc.events.forEach((e, i) => { if (e.s < b && (e.e > a || (e.e === e.s && e.s >= a))) push({ title: e.ti || '(ohne Titel)', start: e.s, end: e.e, allDay: !!e.a, location: e.l, calendar: e.c, color: e.k || '#64748B', key: `mc:${i}:${e.s}` }, 'mac'); });
+    }
+    for (const f of getFeeds().filter(f => f.on !== false && !mc)) {
       const c = await loadFeed(f);
       c.items.forEach(ev => expandICS(ev, d0, d1).forEach(st => { const s = st.getTime() / 1000, en = s + (ev.end - ev.start) / 1000; push({ title: ev.title || '(ohne Titel)', start: ev.allDay ? d0.getTime() / 1000 : s, end: ev.allDay ? d1.getTime() / 1000 : en, allDay: ev.allDay, location: ev.location, calendar: f.name, color: f.color, key: `ics:${f.id}:${ev.uid}:${s}` }, 'ics'); }));
     }
@@ -947,7 +952,39 @@ async function eventsFor(day) {
   calCache.set(day, p);
   return p;
 }
-function invalidateCal() { calCache.clear(); renderToday(); if (currentView === 'kalender') renderCalendar(); updateBadge(); }
+function invalidateCal() { calCache.clear(); renderToday(); if (currentView === 'kalender') renderCalendar(); updateBadge(); if (NATIVE) scheduleMacCal(); }
+
+/* ---- Mac-Termine für iPad & iPhone (über die Synchronisation) ----
+   Safari darf weder den Gerätekalender lesen noch die meisten Abo-Server abrufen.
+   Darum legt die Mac-App die Termine (Mac-Kalender + Abos) der nächsten Wochen
+   in dein Konto; iPad, iPhone und Browser zeigen sie nur an. */
+const MACCAL_BACK = 7, MACCAL_DAYS = 63;
+const macCalShareOn = () => store.get('macCalShare', true) !== false;
+function macCalGet() { const m = store.get('macCal', null); return m && Array.isArray(m.events) ? m : null; }
+let macCalTimer = null, macCalRunning = false;
+function scheduleMacCal(delay) { if (!NATIVE) return; clearTimeout(macCalTimer); macCalTimer = setTimeout(shareMacCal, delay == null ? 10000 : delay); }
+async function shareMacCal(force) {
+  if (!NATIVE || !SY.on || !macCalShareOn() || macCalRunning) return;
+  macCalRunning = true;
+  try {
+    const from = addDays(parseDay(isoDay(new Date())), -MACCAL_BACK), events = [], seen = new Set(); let src = false;
+    for (let i = 0; i < MACCAL_DAYS; i++) {
+      const r = await eventsFor(isoDay(addDays(from, i)));
+      if (r.macState === 'ok') src = true;
+      r.events.forEach(e => { if (e.src === 'own' || seen.has(e.key)) return; seen.add(e.key); events.push({ ti: e.title, s: e.start, e: e.end, a: e.allDay ? 1 : 0, l: e.location || '', c: e.calendar || '', k: e.color || '' }); });
+    }
+    if (getFeeds().some(f => feedCache[f.id] && !feedCache[f.id].error)) src = true;
+    if (!src) return;                              // nichts verbunden → nichts überschreiben
+    const sig = JSON.stringify(events), old = store.get('macCalSig', null) || {};
+    if (!force && old.sig === sig && Date.now() - (old.ts || 0) < 6 * 3600e3) return;
+    rawSet('macCal', { ts: Date.now(), from: isoDay(from), days: MACCAL_DAYS, events });
+    store.set('macCalSig', { sig, ts: Date.now() });
+    syncTouch('macCal');
+  } catch (e) { console.warn('Mac-Termine freigeben', e); }
+  finally { macCalRunning = false; }
+}
+if (NATIVE) setInterval(() => scheduleMacCal(0), 30 * 60 * 1000);
+const agoText = ts => { const m = Math.round((Date.now() - ts) / 60000); return m < 2 ? 'gerade eben' : m < 60 ? `vor ${m} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : `vor ${Math.round(m / 1440)} Tagen`; };
 
 /* ---- Kalenderansicht ---- */
 let selDay = isoDay(new Date());
@@ -985,9 +1022,12 @@ async function renderCalendar() {
   /* Quellen */
   const src = [];
   if (NATIVE) src.push(`<div class="src" style="--c:#64748B"><i></i><span style="flex:1">Mac-Kalender</span>${r.macState === 'ok' ? '<span class="ok">verbunden</span>' : r.macState === 'ask' ? '<button class="btn sm" data-cal-connect>Verbinden</button>' : '<button class="btn sm" data-cal-prefs>Freigeben</button>'}</div>`);
-  getFeeds().forEach(f => { const c = feedCache[f.id]; src.push(`<div class="src" style="--c:${esc(f.color)}"><i></i><span style="flex:1">${esc(f.name)}</span>${c && c.error ? `<button class="bad srcerr" data-feederr="${esc(f.id)}" title="${esc(c.error)}">${NATIVE ? 'Fehler' : 'nur Mac-App'} ${ic('right', 'i xs')}</button>` : c ? `<span class="ok">${c.items.length} Einträge</span>` : ''}</div>`); });
+  const mcs = NATIVE ? null : macCalGet();
+  if (mcs) src.push(`<div class="src" style="--c:#64748B"><i></i><span style="flex:1">Mac-Kalender <small style="color:var(--ink-2)">· vom Mac, ${esc(agoText(mcs.ts))}</small></span><span class="ok">${mcs.events.length} Termine</span></div>`);
+  getFeeds().forEach(f => { const c = feedCache[f.id]; if (mcs) { src.push(`<div class="src" style="--c:${esc(f.color)}"><i></i><span style="flex:1">${esc(f.name)}</span><span class="ok">über den Mac</span></div>`); return; } src.push(`<div class="src" style="--c:${esc(f.color)}"><i></i><span style="flex:1">${esc(f.name)}</span>${c && c.error ? `<button class="bad srcerr" data-feederr="${esc(f.id)}" title="${esc(c.error)}">${NATIVE ? 'Fehler' : 'nur Mac-App'} ${ic('right', 'i xs')}</button>` : c ? `<span class="ok">${c.items.length} Einträge</span>` : ''}</div>`); });
   src.push(`<div class="src" style="--c:#4F7BFF"><i></i><span style="flex:1">Eigene Termine</span><span>${ownEvents.length}</span></div>`);
-  if (!NATIVE && !getFeeds().length) src.push('<p class="empty" style="padding:4px 0 0">Kalender-Abos von IServ oder WebUntis lädt die Mac-App. Im Browser blockieren die Server das meist.</p>');
+  if (!NATIVE && !mcs) src.push(`<p class="empty" style="padding:4px 0 0">Deine Mac-Termine und Abos erscheinen hier, wenn du dich auf Mac und ${/iPhone/.test(navigator.userAgent) ? 'iPhone' : 'diesem Gerät'} unter Einstellungen › Synchronisieren mit Google anmeldest. Die Mac-App legt sie dann für dich ins Konto.</p>`);
+  else if (mcs && Date.now() - mcs.ts > 2 * 864e5) src.push(`<p class="empty" style="padding:4px 0 0">Stand ${esc(agoText(mcs.ts))} – öffne Cockpit auf dem Mac, dann kommen die neuesten Termine.</p>`);
   $('#calSrcs').innerHTML = src.join('');
 }
 $('#calWeek').addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (b) { selDay = b.dataset.day; renderCalendar(); } });
@@ -1579,7 +1619,7 @@ const SYNC_RULE = `match /cockpit/{uid}/{document=**} {
   allow read, write: if request.auth != null && request.auth.uid == uid;
 }`;
 /* bleiben auf dem Gerät */
-const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff']);
+const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig']);
 const PART = 700000;          // Zeichen pro Teil (Firestore erlaubt 1 MB je Dokument)
 const FILE_MAX = 40e6;
 const encKey = k => 'k_' + k.replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16).padStart(4, '0'));
@@ -1596,6 +1636,9 @@ onStoreSet = k => {
   const m = syncMeta(); m.ts[k] = Date.now(); rawSet('syncMeta', m);
   if (SY.on) { SY.dirty.add(k); clearTimeout(SY.timer); SY.timer = setTimeout(syncPush, 2500); }
 };
+
+/* Für Werte, die Cockpit selbst erzeugt und trotzdem abgleichen soll (Mac-Termine) */
+function syncTouch(k) { const m = syncMeta(); m.ts[k] = Date.now(); rawSet('syncMeta', m); if (SY.on) { SY.dirty.add(k); clearTimeout(SY.timer); SY.timer = setTimeout(syncPush, 2500); } }
 
 /* ---------- Anmeldung ---------- */
 let fbAuth = null;
@@ -1716,6 +1759,7 @@ const REFRESH = {
   saved: () => { saved = store.get('saved', saved) || []; renderSavedMini(); if (currentView === 'gespeichert') renderSaved(); },
   events: () => { ownEvents = store.get('events', []); invalidateCal(); },
   icsFeeds: () => invalidateCal(),
+  macCal: () => { if (!NATIVE) invalidateCal(); },
   boards: () => { if (document.querySelector('#wbBox canvas') && currentView === 'whiteboard') { boards = store.get('boards', boards); renderWhiteboard(); } else boards = store.get('boards', boards); },
   files: () => { files = store.get('files', []); if (currentView === 'dateien' && !openFileId) renderFiles(); },
   profile: () => applyProfile().then(renderRail), iconImage: () => applyProfile(),
@@ -1820,6 +1864,7 @@ async function syncBegin(fresh) {
     else { await syncPull(true); toast('Daten aus deinem Konto übernommen', 'check'); }
   } else await syncPull(true);
   clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
+  scheduleMacCal(4000);
   return true;
 }
 function allLocalKeys() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('cockpit:')) o[k.slice(8)] = 1; } } catch (e) {} return o; }
@@ -1831,7 +1876,7 @@ function syncChoice(remoteN) {
     <div class="row"><button class="btn" id="chLater">Später</button></div></div>`);
   const go2 = async local => { close(); const m = syncMeta(), now = Date.now();
     Object.keys(NATIVE ? MEM : allLocalKeys()).forEach(k => { if (!SYNC_LOCAL.has(k) && rawGet(k) != null && (local || !m.ts[k])) m.ts[k] = local ? now : 0; });
-    rawSet('syncMeta', m); await syncPull(true); clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
+    rawSet('syncMeta', m); await syncPull(true); scheduleMacCal(4000); clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
     toast(local ? 'Dieses Gerät wurde hochgeladen' : 'Daten aus deinem Konto übernommen', 'check'); };
   $('#chCloud').onclick = () => go2(false); $('#chLocal').onclick = () => go2(true);
   $('#chLater').onclick = () => { close(); syncStop(); };
@@ -1982,7 +2027,9 @@ function setup(tab = 'personal') {
     sync: SY.on ? `<div class="wrow"><span class="tile sm" style="--c:#4F7BFF">${ic('user', 'i sm')}</span><span class="t"><b>${esc(SY.name || SY.email || 'Google-Konto')}</b><span>${esc(SY.email)}</span></span><button class="btn sm" id="syOut">Abmelden</button></div>
       <p class="lead" id="syncState" style="margin:12px 0">${syncStateHtml()}</p>
       ${/Regel/.test(SY.error) ? `<div class="box-warn"><b>Firestore-Regel fehlt</b><p class="lead" style="margin:4px 0 8px">In der Firebase-Konsole (Projekt <code>${FBC.projectId}</code> › Firestore › Regeln) diesen Block innerhalb von <code>match /databases/{database}/documents { … }</code> einfügen und veröffentlichen:</p><textarea class="code" readonly id="syRule">${esc(SYNC_RULE)}</textarea><div class="row" style="justify-content:flex-start"><button class="btn sm" id="syRuleCp">${ic('copy', 'i xs')} Regel kopieren</button><button class="btn sm" id="syFb">${ic('ext', 'i xs')} Firebase-Konsole</button></div></div>` : ''}
-      <p class="lead">Abgeglichen werden Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Whiteboards, Name und Aussehen – und deine <b>Dateien</b> (PDFs und Bilder bis 40 MB) samt Eintragungen. Mac-Kalender und WhatsApp-Anmeldung bleiben pro Gerät.</p>
+      <p class="lead">Abgeglichen werden Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Whiteboards, Name und Aussehen – und deine <b>Dateien</b> (PDFs und Bilder bis 40 MB) samt Eintragungen. Die WhatsApp-Anmeldung bleibt pro Gerät.</p>
+      ${NATIVE ? `<div class="wlist" style="margin-bottom:12px"><div class="wrow"><span class="tile sm" style="--c:#64748B">${ic('cal', 'i sm')}</span><span class="t"><b>Mac-Termine für iPad & iPhone</b><span>Legt die Termine aus Mac-Kalender und Abos (1 Woche zurück, 8 Wochen voraus) in dein Konto – Safari darf den Kalender selbst nicht lesen.</span></span><button type="button" class="sw" role="switch" id="syCal" aria-checked="${macCalShareOn()}" aria-label="Mac-Termine für iPad und iPhone"></button></div></div>`
+        : macCalGet() ? `<p class="lead">Termine vom Mac: ${macCalGet().events.length}, Stand ${esc(agoText(macCalGet().ts))}.</p>` : ''}
       <div class="row" style="justify-content:flex-start"><button class="btn pri" id="syNow">${ic('refresh', 'i sm')} Jetzt abgleichen</button><span class="spacer"></span><button class="btn danger" id="syDel">Daten im Konto löschen</button></div>`
       : `<p class="lead">Melde dich mit deinem Google-Konto an, dann hast du auf Mac, iPad und im Browser überall dasselbe Cockpit: Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Whiteboards, Aussehen – und deine <b>Dateien</b> (PDFs und Bilder) samt Eintragungen.</p>
       <div class="row" style="justify-content:flex-start;margin:4px 0 14px"><button class="btn pri" id="syIn">${ic('user', 'i sm')} Mit Google anmelden</button></div>
@@ -2087,6 +2134,9 @@ function bindSettings(tab) {
     $('#syIn')?.addEventListener('click', () => syncSignIn());
     $('#syOut')?.addEventListener('click', async () => { await syncSignOut(); setup('sync'); });
     $('#syNow')?.addEventListener('click', async () => { $('#syncState').innerHTML = 'Wird abgeglichen …'; await syncPull(true); if (SY.dirty.size) await syncPush(); syncBadge(); if (SY.error && /Regel/.test(SY.error)) setup('sync'); else toast(SY.error ? SY.error : 'Abgeglichen', SY.error ? 'x' : 'check'); });
+    $('#syCal')?.addEventListener('click', () => { const on = !macCalShareOn(); store.set('macCalShare', on); $('#syCal').setAttribute('aria-checked', on);
+      if (on) { shareMacCal(true); toast('Mac-Termine werden für iPad & iPhone bereitgestellt', 'cal'); }
+      else { rawSet('macCal', null); store.set('macCalSig', null); syncTouch('macCal'); toast('Mac-Termine werden nicht mehr geteilt', 'cal'); } });
     $('#syDel')?.addEventListener('click', async function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich alle Daten im Konto löschen?'; return; } await syncDeleteCloud(); await syncSignOut(); setup('sync'); });
     $('#syRuleCp')?.addEventListener('click', async () => toast((await copy(SYNC_RULE)) ? 'Regel kopiert' : 'Bitte markieren und kopieren', 'copy'));
     $('#syFb')?.addEventListener('click', () => openUrl(`https://console.firebase.google.com/project/${FBC.projectId}/firestore/rules`, 'Firebase-Konsole'));
