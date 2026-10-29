@@ -1143,15 +1143,15 @@ const posts = [
    },
    {
     title: "Prozent-Detektive",
-    excerpt: "Einstiegsspiel zur Prozentrechnung: In zehn Alltagsgeschichten Grundwert, Prozentwert und Prozentsatz erkennen und zuordnen. Allein oder in bis zu vier Teams, ganz ohne Rechnen.",
-    date: "2026-10-21",
+    excerpt: "Interaktives Prozent-Tool mit acht ein- und ausblendbaren Modulen: Grundbegriffe, Prozentwert, Grundwert, Prozentsatz, Zunahme, Abnahme, Sachaufgaben und Vermischtes. Dynamische Bilder (Streifen, Hunderterfeld, Kreis), Dreisatz und Formel, zufällige Aufgaben mit Lösungsweg und Detektiv-Spiel mit Teams.",
+    date: "2026-10-29",
     category: "schule",
     subcategory: "mathematik",
     url: "prozent-detektive.html",
     emoji: "🔎",
-    tags: ["spiel", "prozent", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg7", "jg8"],
+    tags: ["tool", "spiel", "prozent", "einzelarbeit", "partnerarbeit", "gruppenarbeit", "jg7", "jg8", "jg9"],
     titleEn: "Percentage Detectives",
-    excerptEn: "An introductory percentage game: spot the base value, percentage value and percentage rate in ten everyday stories. Solo or in up to four teams, no calculating needed."
+    excerptEn: "Interactive percentage tool with eight switchable modules: basic terms, percentage value, base value, rate, increase, decrease, word problems and mixed practice. Dynamic visuals, rule of three and formulas, generated tasks with worked solutions and a team detective game."
    },
    {
     title: "Rubbelwerk",
