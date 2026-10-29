@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Cockpit – Anmelden</title>
+<style>
+:root{--ink:#f5f5fa;--ink2:rgba(245,245,250,.68);--accent:#4F7BFF;--accent2:#A46BFF}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:var(--ink);
+  background:#06060d url("bg.jpg") center/cover fixed}
+.card{width:min(440px,100%);padding:30px 28px;border-radius:28px;text-align:center;background:rgba(18,16,30,.78);border:1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+img{width:72px;height:72px;border-radius:18px}
+h1{font-size:22px;margin:14px 0 6px}
+p{color:var(--ink2);margin:0 0 18px;font-size:14px}
+button{font:inherit;font-weight:600;height:50px;padding:0 22px;border:0;border-radius:999px;color:#fff;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 30px -12px var(--accent);display:inline-flex;align-items:center;gap:10px}
+button:disabled{opacity:.6}
+.g{width:20px;height:20px;background:#fff;border-radius:50%;display:grid;place-items:center;color:#4285F4;font-weight:700;font-size:13px}
+.msg{margin-top:16px;font-size:13px;min-height:20px}
+.bad{color:#FCA5A5}.ok{color:#86EFAC}
+small{display:block;margin-top:18px;color:rgba(245,245,250,.45);font-size:11px}
+</style>
+</head>
+<body>
+<main class="card">
+  <img src="icon-192.png" alt="">
+  <h1>Cockpit mit Google verbinden</h1>
+  <p id="lead">Melde dich an, damit Cockpit auf deinem Mac dieselben Daten hat wie auf iPad und im Browser.</p>
+  <button id="go"><span class="g">G</span> Mit Google anmelden</button>
+  <div class="msg" id="msg"></div>
+  <small>Die Anmeldung wird nur an die Cockpit-App auf diesem Mac weitergegeben (127.0.0.1). Gespeichert wird in deinem buildspace-Firebase-Projekt.</small>
+</main>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const port = q.get('port'), nonce = q.get('nonce');
+  const msg = (t, c) => { const m = document.getElementById('msg'); m.textContent = t; m.className = 'msg ' + (c || ''); };
+  const btn = document.getElementById('go');
+  if (!/^\d{2,5}$/.test(port || '') || !/^[A-Za-z0-9_-]{10,64}$/.test(nonce || '')) {
+    document.getElementById('lead').textContent = 'Diese Seite öffnet die Cockpit-App selbst, wenn du dort unter Einstellungen › Synchronisieren auf „Mit Google anmelden“ tippst.';
+    btn.hidden = true; return;
+  }
+  const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Anmeldedienst nicht erreichbar')); document.head.appendChild(s); });
+  let auth = null;
+  const ready = (async () => {
+    await load('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
+    await load('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js');
+    const app = firebase.initializeApp({ apiKey: 'AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus', authDomain: 'kanban-board-281da.firebaseapp.com', projectId: 'kanban-board-281da', appId: '1:210909884248:web:10ffacb3a74f7b3c887f2d' }, 'cockpit-mac');
+    auth = app.auth();
+    await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);   // im Browser nichts zurücklassen
+  })();
+  ready.catch(e => msg(e.message, 'bad'));
+  const handOver = u => {
+    msg('Angemeldet als ' + (u.email || u.displayName || '') + ' – Cockpit wird verbunden …', 'ok');
+    /* als Formular senden – so landet der Schlüssel nicht im Browserverlauf */
+    const f = document.createElement('form'); f.method = 'POST'; f.action = 'http://127.0.0.1:' + port + '/fertig';
+    Object.entries({ nonce, rt: u.refreshToken, uid: u.uid, email: u.email || '', name: u.displayName || '' }).forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+    document.body.appendChild(f); f.submit();
+  };
+  btn.onclick = async () => {
+    btn.disabled = true; msg('');
+    try {
+      await ready;
+      const provider = new firebase.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
+      const r = await auth.signInWithPopup(provider);
+      handOver(r.user);
+    } catch (err) {
+      btn.disabled = false;
+      const c = err && err.code;
+      if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return msg('');
+      if (c === 'auth/popup-blocked') return msg('Der Browser hat das Anmeldefenster blockiert – Pop-ups für buildspaceos.de erlauben und noch einmal tippen.', 'bad');
+      msg('Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''), 'bad');
+    }
+  };
+})();
+</script>
+</body>
+</html>

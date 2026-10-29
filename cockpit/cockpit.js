@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -42,6 +42,10 @@ const store = NATIVE ? {
   get(k, d) { try { const v = localStorage.getItem('cockpit:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('cockpit:' + k, JSON.stringify(v)); } catch (e) { saveFailed(); } }
 };
+/* Synchronisieren: jede Änderung meldet sich (siehe SYNCHRONISIEREN); rawSet schreibt ohne Meldung */
+let onStoreSet = null;
+const rawSet = store.set.bind(store), rawGet = k => store.get(k, undefined);
+store.set = (k, v) => { rawSet(k, v); if (onStoreSet) try { onStoreSet(k); } catch (e) {} };
 window.__cockpitFlush = () => (NATIVE && saveTimer ? flushNative() : true);
 window.__cockpitPending = () => !!(NATIVE && saveTimer);
 if (!NATIVE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -283,8 +287,8 @@ function defaultBoard() {
   return items;
 }
 function getBoard() {
-  let b = store.get('board', null);
-  if (!Array.isArray(b)) { b = defaultBoard(); store.set('board', b); }
+  let b = store.get('homeBoard', null);
+  if (!Array.isArray(b)) { const old = store.get('board', null); b = Array.isArray(old) ? old : defaultBoard(); store.set('homeBoard', b); }
   const off = new Set(store.get('boardOff', []));
   const seen = new Set(), out = [];
   b.forEach(it => { if (!it || !it.k || !it.id) return; const k = itemKey(it); if (seen.has(k)) return; seen.add(k);
@@ -296,7 +300,7 @@ function getBoard() {
   apps.forEach(a => { if (!seen.has('a:' + a.id) && !off.has(a.id)) out.push({ k: 'a', id: a.id, s: 'A1' }); });
   return out;
 }
-const setBoard = b => { store.set('board', b); renderBoard(); };
+const setBoard = b => { store.set('homeBoard', b); renderBoard(); };
 const onBoard = (k, id) => getBoard().some(it => it.k === k && it.id === id);
 const widgetOn = id => id === 'clock' ? (store.get('widgets', {}) || {}).clock !== false : onBoard('w', id);
 const hotkeysOn = () => widgetOn('dock') && store.get('hotkeys', true) !== false;
@@ -386,7 +390,7 @@ function setEdit(on) {
     bar.innerHTML = `${ic('layout', 'i sm')}<div class="t"><b>Startseite anpassen</b><span>Bausteine ziehen zum Verschieben · Ecke ziehen oder Größe antippen · ✕ nimmt sie von der Startseite. Apps antippen zum Bearbeiten.</span></div>
       <button class="btn sm" id="arrAdd">${ic('plus', 'i xs')} Hinzufügen</button><button class="btn sm" id="arrReset">Zurücksetzen</button><button class="btn sm pri" id="arrDone">${ic('check', 'i xs')} Fertig</button>`;
     $('#arrAdd').onclick = gallery;
-    $('#arrReset').onclick = () => { if (!$('#arrReset').dataset.sure) { $('#arrReset').dataset.sure = 1; $('#arrReset').textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('board', null); renderBoard(); setEdit(true); toast('Startseite zurückgesetzt', 'layout'); };
+    $('#arrReset').onclick = () => { if (!$('#arrReset').dataset.sure) { $('#arrReset').dataset.sure = 1; $('#arrReset').textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('homeBoard', null); renderBoard(); setEdit(true); toast('Startseite zurückgesetzt', 'layout'); };
     $('#arrDone').onclick = () => setEdit(false);
   }
   renderApps(); renderBoard();
@@ -1173,7 +1177,7 @@ function bindInkBar(bar, st, apply, acts) {
 const WB_W = 1600, WB_H = 1000;
 const WB_BGS = [['white', 'Weiß'], ['grid', 'Kästchen'], ['lines', 'Linien'], ['dark', 'Dunkel'], ['green', 'Tafel']];
 let boards = store.get('boards', null) || [{ id: uid(), name: 'Tafel 1', bg: 'white', data: { strokes: [], texts: [] } }];
-let wbActive = store.get('board', boards[0].id);
+let wbActive = store.get('board', boards[0].id); if (typeof wbActive !== 'string' || !boards.some(b => b.id === wbActive)) wbActive = boards[0].id;
 let wb = null, wbSaveT = null, wbRO = null;
 const wbState = Object.assign({ tool: 'pen', color: '#111111', size: 2 }, store.get('inkPrefs', {}));
 const wbBoard = () => boards.find(b => b.id === wbActive) || boards[0];
@@ -1559,6 +1563,311 @@ if (NATIVE && NATIVE.wa_status) {
 }
 
 /* =====================================================================
+   SYNCHRONISIEREN (Google-Konto, Firebase/Firestore)
+   Jeder Speicher-Schlüssel ist ein eigenes Dokument unter
+   cockpit/{uid}/keys/{schlüssel}; ein Inhaltsverzeichnis
+   cockpit/{uid}/meta/index hält pro Schlüssel den Zeitpunkt der letzten
+   Änderung. Neuere Änderung gewinnt – pro Schlüssel, nicht fürs Ganze.
+   Dateien (PDFs, Bilder) liegen in Teilen unter cockpit/{uid}/files/{id}.
+   Browser: Anmeldung per Firebase (Popup bzw. Weiterleitung).
+   Mac-App: Anmeldung im Browser, die Mac-App hält das Konto (NATIVE.cloud).
+   ===================================================================== */
+const FBC = { apiKey: 'AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus', authDomain: 'kanban-board-281da.firebaseapp.com', projectId: 'kanban-board-281da', appId: '1:210909884248:web:10ffacb3a74f7b3c887f2d' };
+const FS_ROOT = `projects/${FBC.projectId}/databases/(default)/documents`;
+const FS_URL = `https://firestore.googleapis.com/v1/${FS_ROOT}`;
+const SYNC_RULE = `match /cockpit/{uid}/{document=**} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+}`;
+/* bleiben auf dem Gerät */
+const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff']);
+const PART = 700000;          // Zeichen pro Teil (Firestore erlaubt 1 MB je Dokument)
+const FILE_MAX = 40e6;
+const encKey = k => 'k_' + k.replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const syncMeta = () => Object.assign({ ts: {}, last: 0 }, store.get('syncMeta', {}) || {});
+let SY = { on: false, uid: '', email: '', name: '', busy: false, error: '', lastPull: 0, lastPush: 0, timer: null, poll: null, dirty: new Set(), applying: false, needsChoice: false };
+
+/* Jede lokale Änderung bekommt einen Zeitstempel und wird (angemeldet) hochgeladen */
+/* Nur was du selbst änderst, zählt: automatische Schreibvorgänge beim Start (Standardwerte,
+   Aufräumen) bekommen keinen Zeitstempel – sonst würden sie Daten aus dem Konto überstimmen. */
+let userActed = false;
+['pointerdown', 'keydown', 'drop', 'paste'].forEach(ev => addEventListener(ev, () => { userActed = true; }, { capture: true, passive: true }));
+onStoreSet = k => {
+  if (SY.applying || SYNC_LOCAL.has(k) || !userActed) return;
+  const m = syncMeta(); m.ts[k] = Date.now(); rawSet('syncMeta', m);
+  if (SY.on) { SY.dirty.add(k); clearTimeout(SY.timer); SY.timer = setTimeout(syncPush, 2500); }
+};
+
+/* ---------- Anmeldung ---------- */
+let fbAuth = null;
+async function fbLoad() {
+  if (fbAuth) return fbAuth;
+  await loadScript('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js');
+  const app = firebase.apps.find(a => a.name === 'cockpit') || firebase.initializeApp(FBC, 'cockpit');
+  fbAuth = app.auth();
+  fbAuth.getRedirectResult().catch(e => { SY.error = 'Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : ''); });
+  return fbAuth;
+}
+async function syncToken() {
+  if (NATIVE) { const r = await NATIVE.cloud_token(); return r && r.ok ? r : null; }
+  const a = await fbLoad(), u = a.currentUser; if (!u) return null;
+  return { ok: true, uid: u.uid, email: u.email, name: u.displayName, token: await u.getIdToken() };
+}
+async function syncSignIn() {
+  if (NATIVE) {
+    const r = await NATIVE.cloud_login().catch(() => null);
+    if (!r || !r.ok) { toast((r && r.error) || 'Anmeldung konnte nicht gestartet werden', 'x'); return; }
+    toast('Melde dich im Browser mit Google an – Cockpit verbindet sich danach von selbst', 'user');
+    const t0 = Date.now(), iv = setInterval(async () => {
+      const st = await NATIVE.cloud_status().catch(() => null);
+      if (st && st.signed_in) { clearInterval(iv); await syncBegin(true); if ($('#ov [data-tab="sync"][aria-pressed="true"]')) setup('sync'); }
+      else if (Date.now() - t0 > 5 * 60e3) clearInterval(iv);
+    }, 1500);
+    return;
+  }
+  let a; try { a = await fbLoad(); } catch (e) { toast('Anmeldedienst nicht erreichbar (offline?)', 'x'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
+  const standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  try { if (standalone) { await a.signInWithRedirect(provider); return; } await a.signInWithPopup(provider); }
+  catch (err) {
+    const c = err && err.code;
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
+    if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { await a.signInWithRedirect(provider); return; }
+    if (c === 'auth/unauthorized-domain') { toast('Diese Adresse ist für die Google-Anmeldung nicht freigegeben – nutze buildspaceos.de/cockpit', 'x'); return; }
+    toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''), 'x'); return;
+  }
+  await syncBegin(true);
+}
+async function syncSignOut() {
+  syncStop();
+  if (NATIVE) await NATIVE.cloud_logout().catch(() => {}); else { try { (await fbLoad()).signOut(); } catch (e) {} }
+  store.set('syncInfo', null); SY.uid = SY.email = SY.name = ''; toast('Abgemeldet – die Daten bleiben auf diesem Gerät', 'user');
+}
+function syncStop() { SY.on = false; clearInterval(SY.poll); clearTimeout(SY.timer); }
+
+/* ---------- Firestore (REST) ---------- */
+async function cloud(method, path, body) {
+  if (NATIVE) {
+    const r = await NATIVE.cloud(method, path, body == null ? '' : JSON.stringify(body));
+    if (!r) throw new Error('Keine Antwort');
+    if (!r.ok) { const e = new Error(cloudErr(r.status, r.text)); e.status = r.status; throw e; }
+    return r.text ? JSON.parse(r.text) : {};
+  }
+  const t = await syncToken(); if (!t) throw new Error('Nicht angemeldet');
+  const res = await fetch(FS_URL + path, { method, headers: { Authorization: 'Bearer ' + t.token, 'Content-Type': 'application/json' }, body: body == null ? undefined : JSON.stringify(body), keepalive: method !== 'GET' && JSON.stringify(body || '').length < 60000 });
+  const txt = await res.text();
+  if (!res.ok) { const e = new Error(cloudErr(res.status, txt)); e.status = res.status; throw e; }
+  return txt ? JSON.parse(txt) : {};
+}
+function cloudErr(status, txt) {
+  if (status === 403 || /PERMISSION_DENIED/.test(txt || '')) return 'Firebase verweigert den Zugriff – die Regel für Cockpit fehlt noch (Einstellungen › Synchronisieren).';
+  if (status === 401) return 'Anmeldung abgelaufen – bitte neu anmelden.';
+  if (!status) return 'Keine Verbindung (offline?)';
+  try { const j = JSON.parse(txt); if (j.error && j.error.message) return j.error.message; } catch (e) {}
+  return 'Fehler ' + status;
+}
+const docName = p => `${FS_ROOT}/cockpit/${SY.uid}/${p}`;
+const sv = s => ({ stringValue: s }), iv = n => ({ integerValue: String(Math.round(n)) });
+const fget = (d, k) => { const f = d && d.fields && d.fields[k]; if (!f) return undefined; return f.stringValue !== undefined ? f.stringValue : f.integerValue !== undefined ? +f.integerValue : f.mapValue ? f.mapValue.fields || {} : undefined; };
+async function commit(writes) {
+  /* in Pakete teilen: höchstens ~8 MB bzw. 400 Schreibvorgänge je Anfrage */
+  let batch = [], size = 0;
+  const send = async () => { if (batch.length) await cloud('POST', ':commit', { writes: batch }); batch = []; size = 0; };
+  for (const w of writes) { const s = JSON.stringify(w).length; if (batch.length && (size + s > 8e6 || batch.length >= 400)) await send(); batch.push(w); size += s; }
+  await send();
+}
+async function batchGet(names) {
+  const out = [];
+  for (let i = 0; i < names.length; i += 20) {
+    const r = await cloud('POST', ':batchGet', { documents: names.slice(i, i + 20) });
+    (Array.isArray(r) ? r : [r]).forEach(x => { if (x.found) out.push(x.found); });
+  }
+  return out;
+}
+
+/* ---------- Hochladen ---------- */
+async function syncPush(keys) {
+  if (!SY.on || SY.busy && !keys) { if (SY.on) { clearTimeout(SY.timer); SY.timer = setTimeout(syncPush, 3000); } return; }
+  const list = keys || [...SY.dirty]; if (!list.length) return;
+  SY.dirty.clear(); SY.busy = true;
+  try {
+    const m = syncMeta(), writes = [], idx = { fields: {} }, mask = [];
+    for (const k of list) {
+      const raw = JSON.stringify(rawGet(k) === undefined ? null : rawGet(k)), t = m.ts[k] || Date.now(), id = encKey(k);
+      const parts = raw.length > PART ? Math.ceil(raw.length / PART) : 0;
+      for (let i = 0; i < parts; i++) writes.push({ update: { name: docName(`keys/${id}__p${i}`), fields: { v: sv(raw.slice(i * PART, (i + 1) * PART)) } } });
+      writes.push({ update: { name: docName(`keys/${id}`), fields: { k: sv(k), v: sv(parts ? '' : raw), n: iv(parts), t: iv(t) } } });
+      idx.fields[id] = iv(t); mask.push('keys.' + id);
+    }
+    writes.push({ update: { name: docName('meta/index'), fields: { keys: { mapValue: idx } } }, updateMask: { fieldPaths: mask } });
+    await commit(writes);
+    SY.lastPush = Date.now(); SY.error = ''; syncBadge();
+  } catch (e) { list.forEach(k => SY.dirty.add(k)); SY.error = e.message; syncBadge(); clearTimeout(SY.timer); SY.timer = setTimeout(syncPush, 20000); }
+  finally { SY.busy = false; }
+}
+
+/* ---------- Abholen ---------- */
+const REFRESH = {
+  apps: () => { apps = store.get('apps', apps); renderApps(); },
+  usage: () => { usage = store.get('usage', {}); renderApps(); },
+  notes: () => { notes = store.get('notes', notes) || []; renderNotes(); },
+  countdowns: () => { cds = store.get('countdowns', []); renderCds(); },
+  tasks: () => { tasks = store.get('tasks', []); renderProjMini(); if (currentView === 'projekte') renderKanban(); },
+  saved: () => { saved = store.get('saved', saved) || []; renderSavedMini(); if (currentView === 'gespeichert') renderSaved(); },
+  events: () => { ownEvents = store.get('events', []); invalidateCal(); },
+  icsFeeds: () => invalidateCal(),
+  boards: () => { if (document.querySelector('#wbBox canvas') && currentView === 'whiteboard') { boards = store.get('boards', boards); renderWhiteboard(); } else boards = store.get('boards', boards); },
+  files: () => { files = store.get('files', []); if (currentView === 'dateien' && !openFileId) renderFiles(); },
+  profile: () => applyProfile().then(renderRail), iconImage: () => applyProfile(),
+  look: () => applyLook(), bgImage: () => applyLook(),
+  widgets: () => renderBoard(), homeBoard: () => renderBoard(), boardOff: () => renderBoard(), hotkeys: () => renderApps()
+};
+async function syncPull(force) {
+  if (!SY.on || SY.busy) return;
+  SY.busy = true;
+  try {
+    let index;
+    try { index = await cloud('GET', `/cockpit/${SY.uid}/meta/index`); } catch (e) { if (e.status === 404) index = null; else throw e; }
+    const remote = index ? (fget(index, 'keys') || {}) : {};
+    const m = syncMeta(), want = [];
+    Object.entries(remote).forEach(([id, v]) => { const t = +(v.integerValue || 0); const k = Object.keys(m.ts).find(x => encKey(x) === id); if (!k || t > (m.ts[k] || 0)) want.push(id); });
+    let changed = new Set();
+    if (want.length) {
+      const docs = await batchGet(want.map(id => docName(`keys/${id}`)));
+      for (const d of docs) {
+        const k = fget(d, 'k'), t = fget(d, 't') || 0, n = fget(d, 'n') || 0; if (!k || SYNC_LOCAL.has(k)) continue;
+        if (t <= (m.ts[k] || 0) || SY.dirty.has(k)) continue;
+        let raw = fget(d, 'v') || '';
+        if (n) { const parts = await batchGet([...Array(n)].map((_, i) => docName(`keys/${encKey(k)}__p${i}`))); parts.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true })); raw = parts.map(p => fget(p, 'v') || '').join(''); }
+        let val; try { val = JSON.parse(raw); } catch (e) { continue; }
+        SY.applying = true; try { if (val === null) rawSet(k, null); else rawSet(k, val); } finally { SY.applying = false; }
+        m.ts[k] = t; changed.add(k);
+      }
+      rawSet('syncMeta', m);
+    }
+    /* lokal neuer oder noch nie hochgeladen → hoch */
+    const up = Object.keys(m.ts).filter(k => !SYNC_LOCAL.has(k) && (!remote[encKey(k)] || +(remote[encKey(k)].integerValue || 0) < m.ts[k]));
+    SY.lastPull = Date.now(); SY.error = '';
+    SY.busy = false;
+    if (up.length) await syncPush(up);
+    changed.forEach(k => { const f = REFRESH[k] || (k.startsWith('annot:') ? null : null); try { f && f(); } catch (e) { console.warn('Aktualisieren', k, e); } });
+    if (changed.size) { renderBoard(); updateBadge(); if (!force) toast(`Von deinem anderen Gerät übernommen (${changed.size})`, 'refresh'); }
+    syncFiles();
+    syncBadge();
+  } catch (e) { SY.error = e.message; syncBadge(); }
+  finally { SY.busy = false; }
+}
+
+/* ---------- Dateien ---------- */
+const FSlocal = { put: FS.put.bind(FS), get: FS.get.bind(FS), del: FS.del.bind(FS) };
+FS.put = async (id, name, blob) => { await FSlocal.put(id, name, blob); if (SY.on) fileUp(id, name, blob).catch(e => { SY.error = e.message; syncBadge(); }); };
+FS.get = async id => { try { return await FSlocal.get(id); } catch (e) { if (!SY.on) throw e; const b = await fileDown(id); if (!b) throw e; return b; } };
+FS.del = async id => { await FSlocal.del(id).catch(() => {}); if (SY.on) fileDel(id).catch(() => {}); };
+const sf = () => store.get('syncFiles', {}) || {};
+function b64ToBlob(b64, type) { const bin = atob(b64), n = bin.length, u8 = new Uint8Array(n); for (let i = 0; i < n; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], { type }); }
+async function fileUp(id, name, blob) {
+  if (blob.size > FILE_MAX) return;
+  const b64 = (await blobToDataUrl(blob)).split(',')[1], n = Math.ceil(b64.length / PART), writes = [];
+  for (let i = 0; i < n; i++) writes.push({ update: { name: docName(`files/${id}/p/p${String(i).padStart(4, '0')}`), fields: { d: sv(b64.slice(i * PART, (i + 1) * PART)) } } });
+  writes.push({ update: { name: docName(`files/${id}`), fields: { name: sv(name || ''), type: sv(blob.type || ''), size: iv(blob.size), n: iv(n), t: iv(Date.now()) } } });
+  await commit(writes);
+  const m = sf(); m[id] = Date.now(); rawSet('syncFiles', m);
+}
+async function fileDown(id) {
+  const meta = await cloud('GET', `/cockpit/${SY.uid}/files/${id}`).catch(() => null); if (!meta) return null;
+  const n = fget(meta, 'n') || 0, type = fget(meta, 'type') || 'application/octet-stream';
+  const parts = await batchGet([...Array(n)].map((_, i) => docName(`files/${id}/p/p${String(i).padStart(4, '0')}`)));
+  if (parts.length !== n) return null;
+  parts.sort((a, b) => a.name.localeCompare(b.name));
+  const blob = b64ToBlob(parts.map(p => fget(p, 'd') || '').join(''), type);
+  await FSlocal.put(id, fget(meta, 'name') || 'Datei', blob);
+  const m = sf(); m[id] = Date.now(); rawSet('syncFiles', m);
+  return blob;
+}
+async function fileDel(id) {
+  const meta = await cloud('GET', `/cockpit/${SY.uid}/files/${id}`).catch(() => null);
+  const n = meta ? fget(meta, 'n') || 0 : 0;
+  await commit([...[...Array(n)].map((_, i) => ({ delete: docName(`files/${id}/p/p${String(i).padStart(4, '0')}`) })), { delete: docName(`files/${id}`) }]);
+  const m = sf(); delete m[id]; rawSet('syncFiles', m);
+}
+let filesRunning = false;
+async function syncFiles() {
+  if (!SY.on || filesRunning) return; filesRunning = true;
+  try {
+    const r = await cloud('GET', `/cockpit/${SY.uid}/files?pageSize=300&mask.fieldPaths=t`).catch(() => ({}));
+    const remote = new Set((r.documents || []).map(d => d.name.split('/').pop()));
+    const m = sf();
+    for (const f of files) {
+      if (remote.has(f.id)) { if (!m[f.id]) { /* nur in der Cloud bekannt: vorladen, wenn klein */ if ((f.size || 0) < 8e6) { try { await FSlocal.get(f.id); m[f.id] = Date.now(); rawSet('syncFiles', m); } catch (e) { await fileDown(f.id).catch(() => {}); } } } continue; }
+      try { const b = await FSlocal.get(f.id); await fileUp(f.id, f.name, b); } catch (e) { /* liegt nur auf einem anderen Gerät und dort noch nicht hochgeladen */ }
+    }
+  } finally { filesRunning = false; syncBadge(); }
+}
+
+/* ---------- Start, erste Anmeldung, Abfragen ---------- */
+async function syncBegin(fresh) {
+  const t = await syncToken().catch(() => null); if (!t) return false;
+  SY.uid = t.uid; SY.email = t.email || ''; SY.name = t.name || '';
+  store.set('syncInfo', { uid: SY.uid, email: SY.email, name: SY.name });
+  SY.on = true;
+  if (fresh) {
+    /* erste Anmeldung auf diesem Gerät: gibt es schon Daten in der Cloud? */
+    let index = null; try { index = await cloud('GET', `/cockpit/${SY.uid}/meta/index`); } catch (e) { if (e.status !== 404) { SY.error = e.message; syncBadge(); toast(e.message, 'x'); return true; } }
+    const remoteN = index ? Object.keys(fget(index, 'keys') || {}).length : 0;
+    const localKeys = Object.keys(NATIVE ? MEM : allLocalKeys()).filter(k => !SYNC_LOCAL.has(k) && rawGet(k) != null);
+    if (!remoteN) { const m = syncMeta(); const now = Date.now(); localKeys.forEach(k => { if (!m.ts[k]) m.ts[k] = now; }); rawSet('syncMeta', m); await syncPull(true); toast('Synchronisierung eingerichtet – deine Daten sind jetzt in deinem Konto', 'check'); }
+    else if (localKeys.length) { syncChoice(remoteN); return true; }
+    else { await syncPull(true); toast('Daten aus deinem Konto übernommen', 'check'); }
+  } else await syncPull(true);
+  clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
+  return true;
+}
+function allLocalKeys() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('cockpit:')) o[k.slice(8)] = 1; } } catch (e) {} return o; }
+function syncChoice(remoteN) {
+  modal(`<div class="glass modal" role="dialog" aria-label="Daten zusammenführen"><h3>In deinem Konto liegen schon Cockpit-Daten</h3>
+    <p class="lead">Auf diesem Gerät gibt es ebenfalls Daten. Was soll gelten?</p>
+    <div class="wlist"><button class="wrow choice" id="chCloud"><span class="tile sm" style="--c:#4F7BFF">${ic('download', 'i sm')}</span><span class="t"><b>Daten aus dem Konto übernehmen</b><span>Empfohlen für ein weiteres Gerät. Was nur hier liegt und neuer ist, bleibt erhalten.</span></span></button>
+    <button class="wrow choice" id="chLocal"><span class="tile sm" style="--c:#F25FB0">${ic('upload', 'i sm')}</span><span class="t"><b>Dieses Gerät hochladen</b><span>Überschreibt die Daten im Konto mit dem Stand dieses Geräts.</span></span></button></div>
+    <div class="row"><button class="btn" id="chLater">Später</button></div></div>`);
+  const go2 = async local => { close(); const m = syncMeta(), now = Date.now();
+    Object.keys(NATIVE ? MEM : allLocalKeys()).forEach(k => { if (!SYNC_LOCAL.has(k) && rawGet(k) != null && (local || !m.ts[k])) m.ts[k] = local ? now : 0; });
+    rawSet('syncMeta', m); await syncPull(true); clearInterval(SY.poll); SY.poll = setInterval(() => { if (!document.hidden) syncPull(); }, NATIVE ? 30000 : 20000);
+    toast(local ? 'Dieses Gerät wurde hochgeladen' : 'Daten aus deinem Konto übernommen', 'check'); };
+  $('#chCloud').onclick = () => go2(false); $('#chLocal').onclick = () => go2(true);
+  $('#chLater').onclick = () => { close(); syncStop(); };
+}
+function syncBadge() {
+  const el = $('#syncState'); if (el) el.innerHTML = syncStateHtml();
+  const r = $('#railSet'); if (r) r.classList.toggle('sync-err', !!(SY.on && SY.error));
+}
+function syncStateHtml() {
+  if (!SY.on) return '<span>Nicht angemeldet – alles bleibt auf diesem Gerät.</span>';
+  const when = t => t ? new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '–';
+  return SY.error ? `<span class="bad">${esc(SY.error)}</span>` : `<span class="ok">Verbunden</span> · zuletzt abgeglichen ${when(Math.max(SY.lastPull, SY.lastPush))}`;
+}
+async function syncDeleteCloud() {
+  if (!SY.on) return;
+  toast('Daten im Konto werden gelöscht …', 'trash');
+  try {
+    const idx = await cloud('GET', `/cockpit/${SY.uid}/meta/index`).catch(() => null);
+    const ids = idx ? Object.keys(fget(idx, 'keys') || {}) : [];
+    const keyDocs = await batchGet(ids.map(id => docName(`keys/${id}`)));
+    const writes = [];
+    keyDocs.forEach(d => { const n = fget(d, 'n') || 0, id = d.name.split('/').pop(); for (let i = 0; i < n; i++) writes.push({ delete: docName(`keys/${id}__p${i}`) }); writes.push({ delete: d.name }); });
+    writes.push({ delete: docName('meta/index') });
+    await commit(writes);
+    const fl = await cloud('GET', `/cockpit/${SY.uid}/files?pageSize=300&mask.fieldPaths=n`).catch(() => ({}));
+    for (const d of fl.documents || []) await fileDel(d.name.split('/').pop()).catch(() => {});
+    rawSet('syncFiles', {});
+    toast('Deine Cockpit-Daten im Konto sind gelöscht', 'trash');
+  } catch (e) { toast('Löschen fehlgeschlagen: ' + e.message, 'x'); }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && SY.on) syncPull(); });
+window.addEventListener('pagehide', () => { if (SY.on && SY.dirty.size) syncPush(); });
+/* angemeldet geblieben? dann still weitermachen */
+if ((store.get('syncInfo', null) || {}).uid) setTimeout(() => syncBegin(false).then(ok => { if (!ok) syncBadge(); }), 1200);
+
+/* =====================================================================
    SUCHE (⌘K)
    ===================================================================== */
 async function palette() {
@@ -1625,7 +1934,7 @@ const SHORTCUTS = [
   { n: 'Cockpit iDoceo', a: 'Aktion „App öffnen“ → iDoceo' },
   { n: 'Cockpit Erinnerung neu', a: 'Aktion „Erinnerung hinzufügen“, als Titel die „Kurzbefehleingabe“ wählen. In den Details „Eingabe empfangen: Text“ einschalten.' }
 ];
-const TABS = [['personal', 'Persönlich'], ['look', 'Aussehen'], ['widgets', 'Widgets'], ['calendar', 'Kalender'], ['notify', 'Mitteilungen'], ['install', 'Installieren'], ['shortcuts', 'Kurzbefehle'], ['transfer', 'Übertragen'], ['diag', 'Diagnose']];
+const TABS = [['personal', 'Persönlich'], ['sync', 'Synchronisieren'], ['look', 'Aussehen'], ['widgets', 'Widgets'], ['calendar', 'Kalender'], ['notify', 'Mitteilungen'], ['install', 'Installieren'], ['shortcuts', 'Kurzbefehle'], ['transfer', 'Übertragen'], ['diag', 'Diagnose']];
 function bgTiles(cur, withUpload) {
   const custom = store.get('bgImage', '');
   return BG_PRESETS.map(b => `<button type="button" data-bg="${b.id}" aria-pressed="${cur === b.id}" style="background-image:${b.css.replace(/"/g, "'")}"><span>${b.name}</span></button>`).join('')
@@ -1670,6 +1979,15 @@ function setup(tab = 'personal') {
       : `<ol class="steps"><li><b>${isMac ? 'Mac' : 'iPad'} (dieses Gerät):</b> ${isMac ? 'In Safari oben auf <b>Ablage › Zum Dock hinzufügen</b>. Oder besser: die <b>Mac-App</b> von buildspace › Programme laden – sie kann zusätzlich deinen Kalender, Mac-Programme und Mitteilungen.' : 'In Safari auf <b>Teilen › Zum Home-Bildschirm</b>. Cockpit öffnet sich danach im Vollbild wie eine App.'}</li><li><b>Einstellungen übertragen:</b> Im Reiter „Übertragen“ den Code kopieren und auf dem anderen Gerät einfügen.</li></ol>`,
     shortcuts: `<p class="lead">${NATIVE ? 'In der Mac-App brauchst du keine Kurzbefehle: Kalender, Erinnerungen, Mail, iDoceo und WhatsApp öffnen direkt. Die Kurzbefehle brauchst du nur auf dem iPad:' : 'Kalender, Erinnerungen, Mail und iDoceo sind Apps auf dem Gerät. Eine Webseite darf sie nicht direkt starten, ein Kurzbefehl schon. Leg diese fünf Kurzbefehle in der App „Kurzbefehle“ an. Antippen kopiert den Namen.'}</p>
       <ol class="steps">${SHORTCUTS.map(s => `<li><code data-cp="${esc(s.n)}">${esc(s.n)}</code><br><span style="color:var(--ink-2);font-size:12px">${s.a}</span></li>`).join('')}</ol>`,
+    sync: SY.on ? `<div class="wrow"><span class="tile sm" style="--c:#4F7BFF">${ic('user', 'i sm')}</span><span class="t"><b>${esc(SY.name || SY.email || 'Google-Konto')}</b><span>${esc(SY.email)}</span></span><button class="btn sm" id="syOut">Abmelden</button></div>
+      <p class="lead" id="syncState" style="margin:12px 0">${syncStateHtml()}</p>
+      ${/Regel/.test(SY.error) ? `<div class="box-warn"><b>Firestore-Regel fehlt</b><p class="lead" style="margin:4px 0 8px">In der Firebase-Konsole (Projekt <code>${FBC.projectId}</code> › Firestore › Regeln) diesen Block innerhalb von <code>match /databases/{database}/documents { … }</code> einfügen und veröffentlichen:</p><textarea class="code" readonly id="syRule">${esc(SYNC_RULE)}</textarea><div class="row" style="justify-content:flex-start"><button class="btn sm" id="syRuleCp">${ic('copy', 'i xs')} Regel kopieren</button><button class="btn sm" id="syFb">${ic('ext', 'i xs')} Firebase-Konsole</button></div></div>` : ''}
+      <p class="lead">Abgeglichen werden Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Whiteboards, Name und Aussehen – und deine <b>Dateien</b> (PDFs und Bilder bis 40 MB) samt Eintragungen. Mac-Kalender und WhatsApp-Anmeldung bleiben pro Gerät.</p>
+      <div class="row" style="justify-content:flex-start"><button class="btn pri" id="syNow">${ic('refresh', 'i sm')} Jetzt abgleichen</button><span class="spacer"></span><button class="btn danger" id="syDel">Daten im Konto löschen</button></div>`
+      : `<p class="lead">Melde dich mit deinem Google-Konto an, dann hast du auf Mac, iPad und im Browser überall dasselbe Cockpit: Apps, Startseite, Notizen, Projekte, Lesezeichen, Termine, Whiteboards, Aussehen – und deine <b>Dateien</b> (PDFs und Bilder) samt Eintragungen.</p>
+      <div class="row" style="justify-content:flex-start;margin:4px 0 14px"><button class="btn pri" id="syIn">${ic('user', 'i sm')} Mit Google anmelden</button></div>
+      <ol class="steps"><li>${NATIVE ? 'Dein Browser öffnet sich, du meldest dich dort an. Cockpit verbindet sich danach von selbst.' : 'Ein Google-Fenster öffnet sich, du meldest dich an.'}</li><li>Auf dem nächsten Gerät genauso anmelden – dort fragt Cockpit, ob es die Daten aus deinem Konto übernehmen soll.</li></ol>
+      <p class="lead"><small>Die Daten liegen in deinem buildspace-Firebase-Projekt (Google), nur dein Konto kann sie lesen. Bitte für Schüler:innen weiterhin nur Pseudonyme verwenden. Ohne Anmeldung bleibt alles nur auf diesem Gerät.</small></p>`,
     transfer: `<p class="lead">Apps, Notizen, Projekte, Lesezeichen, Termine, Abos, Countdowns, Name, Aussehen und die Anordnung der Startseite liegen nur auf diesem Gerät. Kopier den Code und füg ihn auf dem anderen Gerät ein. Whiteboards, Dateien und eigene Bilder werden nicht mit übertragen.</p>
       <label class="field">Code dieses Geräts<textarea class="code" id="exp" readonly>${esc(btoa(unescape(encodeURIComponent(JSON.stringify({ v: 3, apps, notes, countdowns: cds, tasks, saved, events: ownEvents, icsFeeds: getFeeds(), profile: getProfile(), look: getLook(), widgets: getWidgets(), board: getBoard(), boardOff: store.get('boardOff', []), hotkeys: store.get('hotkeys', true) })))))}</textarea></label>
       <div class="row" style="justify-content:flex-start;margin:-4px 0 14px"><button class="btn" id="cpExp">${ic('copy', 'i sm')} Code kopieren</button></div>
@@ -1717,7 +2035,7 @@ function bindWidgetsTab() {
   $('#hkSw')?.addEventListener('click', () => { if (!widgetOn('dock')) return; const on = store.get('hotkeys', true) === false; store.set('hotkeys', on); renderApps(); re(); toast(on ? 'Kurzwahltasten 1–6 an' : 'Kurzwahltasten 1–6 aus', 'keyboard'); });
   $$('[data-smv]').forEach(b => b.addEventListener('click', () => { moveOnBoard('w:' + b.closest('[data-wrow]').dataset.wrow, +b.dataset.smv); re(); }));
   $$('[data-ssize]').forEach(sl => sl.addEventListener('change', () => { const id = sl.closest('[data-wrow]').dataset.wrow, bd = getBoard(), it = bd.find(x => x.k === 'w' && x.id === id); if (it) { it.s = sl.value; setBoard(bd); refreshWidget(id); } }));
-  $('#lyReset').onclick = function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('board', null); renderBoard(); re(); toast('Startseite zurückgesetzt', 'layout'); };
+  $('#lyReset').onclick = function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich zurücksetzen?'; return; } store.set('layout', null); store.set('boardOff', []); store.set('homeBoard', null); renderBoard(); re(); toast('Startseite zurückgesetzt', 'layout'); };
   $('#lyArrange').onclick = () => { close(); go('start'); setTimeout(() => setEdit(true), 60); };
 }
 function bindSettings(tab) {
@@ -1765,6 +2083,14 @@ function bindSettings(tab) {
     $('#nAsk')?.addEventListener('click', async () => { await Notification.requestPermission(); setup('notify'); });
     $('#nNoCount')?.addEventListener('click', () => { try { const on = localStorage.getItem('bs_nocount') !== '1'; if (on) localStorage.setItem('bs_nocount', '1'); else localStorage.removeItem('bs_nocount'); $('#nNoCount').setAttribute('aria-checked', on); toast(on ? 'Deine Aufrufe werden nicht mehr gezählt' : 'Deine Aufrufe werden wieder gezählt'); } catch (e) {} });
   }
+  if (tab === 'sync') {
+    $('#syIn')?.addEventListener('click', () => syncSignIn());
+    $('#syOut')?.addEventListener('click', async () => { await syncSignOut(); setup('sync'); });
+    $('#syNow')?.addEventListener('click', async () => { $('#syncState').innerHTML = 'Wird abgeglichen …'; await syncPull(true); if (SY.dirty.size) await syncPush(); syncBadge(); if (SY.error && /Regel/.test(SY.error)) setup('sync'); else toast(SY.error ? SY.error : 'Abgeglichen', SY.error ? 'x' : 'check'); });
+    $('#syDel')?.addEventListener('click', async function () { if (!this.dataset.sure) { this.dataset.sure = 1; this.textContent = 'Wirklich alle Daten im Konto löschen?'; return; } await syncDeleteCloud(); await syncSignOut(); setup('sync'); });
+    $('#syRuleCp')?.addEventListener('click', async () => toast((await copy(SYNC_RULE)) ? 'Regel kopiert' : 'Bitte markieren und kopieren', 'copy'));
+    $('#syFb')?.addEventListener('click', () => openUrl(`https://console.firebase.google.com/project/${FBC.projectId}/firestore/rules`, 'Firebase-Konsole'));
+  }
   if (tab === 'transfer') {
     $('#cpExp').onclick = async () => { if (await copy($('#exp').value)) toast('Code kopiert', 'copy'); else { $('#exp').select(); toast('Code markiert – jetzt kopieren'); } };
     $('#doImp').onclick = () => {
@@ -1779,7 +2105,7 @@ function bindSettings(tab) {
         if (d.profile) { const ic0 = d.profile.icon || {}; if (ic0.kind === 'custom' && !store.get('iconImage', '')) ic0.kind = 'logo'; store.set('profile', d.profile); applyProfile(); }
         if (d.look) { if (d.look.bg === 'custom' && !store.get('bgImage', '')) d.look.bg = 'horizont'; store.set('look', d.look); applyLook(); }
         if (d.widgets) store.set('widgets', d.widgets);
-        if (Array.isArray(d.board)) { store.set('board', d.board); store.set('boardOff', Array.isArray(d.boardOff) ? d.boardOff : []); } else if (d.layout) { store.set('layout', d.layout); store.set('board', null); }
+        if (Array.isArray(d.board)) { store.set('homeBoard', d.board); store.set('boardOff', Array.isArray(d.boardOff) ? d.boardOff : []); } else if (d.layout) { store.set('layout', d.layout); store.set('board', null); }
         if (typeof d.hotkeys === 'boolean') store.set('hotkeys', d.hotkeys);
         close(); invalidateCal(); renderRail(); showView(currentView); toast('Einstellungen übernommen');
       } catch (e) { toast('Der Code ist ungültig. Bitte vollständig kopieren.', 'x'); }
