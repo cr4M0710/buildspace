@@ -72,6 +72,10 @@ Ist Kategorie oder Jahrgang unklar, kurz nachfragen statt raten.
 
 Eigener Menüpunkt „Programme“ für Programme, die auf dem Computer laufen (nicht im Browser), z. B. Heft2PDF für den Mac. Diese stehen **nicht** in `posts-data.js`, sondern in der Liste `PROGRAMS` in `app.js` (Felder siehe Heft2PDF-Eintrag, jeweils mit `…En`-Übersetzung). Dateien: ZIP und Anleitung (PDF) in `downloads/` (Kleinbuchstaben, z. B. `heft2pdf-mac.zip`), Symbol und Vorschaubild in `assets/programme/`. Bei einer neuen Programmversion ZIP/PDF ersetzen und `version` sowie die Dateigrößen in `PROGRAMS` anpassen. Zum Teilen hat jedes Programm eine eigene Seite `programme/<id>.html` mit Vorschau-Tags (og:image `assets/og/<id>.jpg`, 1200×630), die Besucher per JS nach `#/programme/<id>` weiterleitet; der „Teilen“-Knopf der Karte nutzt sie (`share` in `PROGRAMS`).
 
+## Newsletter (`newsletter.html`)
+
+Wöchentlicher Newsletter (So 18 Uhr) mit allen Tools, die neu in `posts-data.js` stehen – automatisch, nichts zu tun beim Einstellen neuer Tools. Backend: Google Apps Script in Marcs Google-Konto (`tools/newsletter/Code.gs`, Einrichtung `tools/newsletter/ANLEITUNG.md`), Double-Opt-in, Abmeldelink in jeder Mail. Die Web-App-URL steht in `NEWSLETTER_API` in `newsletter.html`. Beiträge mit `gate` werden nicht verschickt. Nach Änderungen an `Code.gs`: `node tools/newsletter/test.js` und Marc an „Neue Version bereitstellen“ erinnern.
+
 ## Regeln für Tool-Seiten
 
 - **Eine eigenständige Datei**: CSS und JS inline, keine lokalen Abhängigkeiten. Externe Bibliotheken nur per CDN (bevorzugt cdnjs), mit fester Version.

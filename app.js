@@ -99,6 +99,7 @@ const I18N = {
     promptlabLabel: "Promptlabor",
     slashLabel: "Slash-Codes",
     programsLabel: "Programme",
+    newsletterLabel: "Newsletter",
     programsSub: "Programme zum Herunterladen und Web-Apps zum Installieren, die direkt auf deinem Computer oder iPad laufen.",
     programsDownload: "Herunterladen",
     programsOpen: "Öffnen",
@@ -190,6 +191,7 @@ const I18N = {
     promptlabLabel: "Prompt lab",
     slashLabel: "Slash codes",
     programsLabel: "Programs",
+    newsletterLabel: "Newsletter",
     programsSub: "Programs to download and web apps to install that run right on your computer or iPad.",
     programsDownload: "Download",
     programsOpen: "Open",
@@ -1575,6 +1577,7 @@ function renderRail() {
   });
   html += item("#/promptlabor", sideIcon("prompt"), t("promptlabLabel"), seg[0] === "promptlabor", " rail-opt");
   html += item("#/programme", sideIcon("programs"), t("programsLabel"), seg[0] === "programme", " rail-opt");
+  html += item("newsletter.html", sideIcon("newsletter"), t("newsletterLabel"), false, " rail-opt");
   html += '<span class="rail-sep" aria-hidden="true"></span>';
   html += `<button type="button" class="rail-btn${isSearchOpen() ? " is-active" : ""}" data-rail="search" aria-label="${escapeHtml(t("railSearch"))}">${SEARCH_GLYPH}<span class="rail-tip" aria-hidden="true">${escapeHtml(t("railSearch"))}</span></button>`;
   html += `<button type="button" class="rail-btn${isLookOpen() ? " is-active" : ""}" data-rail="look" aria-controls="look-panel" aria-expanded="${isLookOpen()}" aria-label="${escapeHtml(t("railLook"))}">${LOOK_GLYPH}<span class="rail-tip" aria-hidden="true">${escapeHtml(t("railLook"))}</span></button>`;
@@ -1602,6 +1605,7 @@ function initRail() {
 --------------------------------------------------------- */
 const PROMPT_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5L5.5 19v-3.5H4z"/><path d="m8.5 9.5 2 1.5-2 1.5M12.5 12.5h3"/></svg>';
 const PROGRAM_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20h7M12 16.5V20"/><path d="M12 7v5.5m-2.3-2.2L12 12.6l2.3-2.3"/></svg>';
+const NEWSLETTER_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.2"/><path d="m3.8 6.8 8.2 6.2 8.2-6.2"/></svg>';
 const HOME_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.5 10v9.5h4.6v-5.2h3.8v5.2h4.6V10"/></svg>';
 const ADMIN_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 const CHEVRON_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
@@ -1674,7 +1678,7 @@ function currentSegments() {
 }
 
 function sideIcon(id) {
-  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : id === "prompt" ? PROMPT_GLYPH : id === "programs" ? PROGRAM_GLYPH : MINI_ICONS[id] || "";
+  const glyph = id === "home" ? HOME_GLYPH : id === "admin" ? ADMIN_GLYPH : id === "prompt" ? PROMPT_GLYPH : id === "programs" ? PROGRAM_GLYPH : id === "newsletter" ? NEWSLETTER_GLYPH : MINI_ICONS[id] || "";
   return `<span class="side-ico side-ico--${id}" aria-hidden="true">${glyph}</span>`;
 }
 
@@ -1719,6 +1723,7 @@ function renderSidebarNav() {
 
   html += `<div class="side-label">${escapeHtml(t("programsLabel"))}</div>`;
   html += `<div class="side-row"><a class="${cls(seg[0] === "programme", false)}" href="#/programme"${cur(seg[0] === "programme")}>${sideIcon("programs")}<span class="side-text">${escapeHtml(t("programsLabel"))}</span><span class="side-count">${PROGRAMS.length}</span></a></div>`;
+  html += `<div class="side-row"><a class="${cls(false, false)}" href="newsletter.html">${sideIcon("newsletter")}<span class="side-text">${escapeHtml(t("newsletterLabel"))}</span></a></div>`;
 
   html += `<div class="side-label" id="side-admin-label" style="display:none">${escapeHtml(t("navAdmin"))}</div>`;
   html += `<div class="side-row"><a class="${cls(route === "kollegen" || route.startsWith("kollegen/"), false)}" href="#/kollegen" id="kollegen-nav-link" style="display:none">${sideIcon("admin")}<span class="side-text">${escapeHtml(t("kollegenLabel"))}</span></a></div>`;

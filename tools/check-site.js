@@ -34,7 +34,7 @@ const NO_PROTECT = ["lernbereich.html"];
 /* lernbereich.html läuft bewusst ohne Eintrag/Schutz, escape-room-baukasten.html
    (2D) wurde auf Wunsch aus der Übersicht genommen, bleibt aber erreichbar. */
 const API_KEY_OPT_IN = ["kompo7-formulierungshilfe.html"];
-const NOT_POSTS = ["index.html", "404.html", "impressum.html", "datenschutz.html", "lernbereich.html", "escape-room-baukasten.html"];
+const NOT_POSTS = ["index.html", "404.html", "impressum.html", "datenschutz.html", "lernbereich.html", "escape-room-baukasten.html", "newsletter.html"];
 
 const protectSrc = read("protect.js");
 const vf = /const VERTRETUNG_FILES = \[([\s\S]*?)\];/.exec(protectSrc);
