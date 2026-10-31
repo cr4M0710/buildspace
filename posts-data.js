@@ -1237,4 +1237,16 @@ const posts = [
     titleEn: "Percentage Bottle",
     excerptEn: "Explore fractions, decimals and percentages visually: adjust the fill level via slider or direct input, toggle each representation on/off and show the bottle divided by denominator."
    },
+   {
+    title: "Wandler",
+    excerpt: "Dateien per Drag & Drop umwandeln: Format-Ring am Mauszeiger, Bilder (auch HEIC), PDF, Word, Tabellen, Texte, Audio, Untertitel und ZIP. Ring und Voreinstellungen frei anpassbar, nichts wird hochgeladen.",
+    date: "2026-10-31",
+    category: "freizeit",
+    subcategory: null,
+    url: "wandler.html",
+    emoji: "🍩",
+    tags: ["tool"],
+    titleEn: "Wandler",
+    excerptEn: "Convert files by drag and drop: a format ring at your cursor for images (incl. HEIC), PDF, Word, spreadsheets, text, audio, subtitles and ZIP. Customisable ring and presets, nothing is uploaded."
+   },
 ];
