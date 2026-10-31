@@ -185,9 +185,13 @@ function sendWeeklyDigest() {
   });
 }
 
-/* Vorschau an die eigene Adresse: die neuesten Tools, ohne etwas zu verändern */
+/* Vorschau an die eigene Adresse: Tools der letzten 7 Tage (sonst die 4 neuesten),
+   ohne etwas zu verändern */
 function sendTestDigest() {
-  var posts = loadPosts_().slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).slice(0, 4);
+  var all = loadPosts_().slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  var since = Utilities.formatDate(new Date(Date.now() - 7 * 86400000), "Europe/Berlin", "yyyy-MM-dd");
+  var posts = all.filter(function (p) { return p.date >= since; });
+  if (!posts.length) posts = all.slice(0, 4);
   var mail = buildDigest_(posts, "0123456789abcdef0123456789abcdef", new Date());
   var me = Session.getEffectiveUser().getEmail();
   MailApp.sendEmail({ to: me, subject: "[Test] " + mail.subject, htmlBody: mail.html, body: mail.text, name: CONFIG.SENDER_NAME });
