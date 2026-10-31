@@ -117,6 +117,22 @@ const index = read("index.html");
   if (!fs.existsSync(path.join(root, f))) err(`${f} fehlt`);
 });
 
+/* ---------- Datenschutz & Sicherheit ---------- */
+(function scanSecurity() {
+  const walk = (dir) => fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((d) => {
+    const rel = path.join(dir, d.name);
+    if (d.isDirectory()) return /^(\.git|node_modules|lib|downloads|assets)$/.test(d.name) ? [] : walk(rel);
+    return /\.(html|js|css)$/.test(d.name) ? [rel] : [];
+  });
+  walk(".").forEach((f) => {
+    if (f.startsWith("tools" + path.sep + "check-site")) return;
+    const src = read(f);
+    if (/fonts\.(googleapis|gstatic)\.com/.test(src)) err(`${f}: lädt Google Fonts – bitte lokal aus assets/fonts/ einbinden (DSGVO)`);
+    if (/(ghp_|github_pat_)[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY/.test(src)) err(`${f}: enthält offenbar einen geheimen Schlüssel`);
+  });
+  if (/const PASSWORD\s*=\s*["']/.test(read("protect.js"))) err("protect.js: Kennwort steht im Klartext – nur als Hash (tools/passwort-setzen.js)");
+})();
+
 /* ---------- Ausgabe ---------- */
 const unique = new Set(posts.map((p) => p.url));
 console.log(`Geprüft: ${posts.length} Einträge, ${unique.size} verschiedene Seiten.`);

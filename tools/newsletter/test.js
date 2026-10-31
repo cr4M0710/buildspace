@@ -27,6 +27,7 @@ function makeEnv(opts = {}) {
     setFrozenRows() {}
     getRange(r, c, nr = 1, nc = 1) {
       const sh = this;
+      if (typeof r === "string") return { setNumberFormat: (f) => { sh.format = f; } };
       return {
         getValue: () => (sh.rows[r - 1] || [])[c - 1],
         setValue: (v) => { while (sh.rows.length < r) sh.rows.push([]); sh.rows[r - 1][c - 1] = v; },
@@ -124,7 +125,7 @@ test("Anmelden legt unbestätigten Eintrag an und schickt Bestätigungs-Mail", (
 
 test("Ungültige Adressen werden abgelehnt", () => {
   const e = makeEnv();
-  for (const bad of ["", "abc", "a@b", "a b@c.de", "<x>@y.de", "x".repeat(250) + "@y.de"])
+  for (const bad of ["", "abc", "a@b", "a b@c.de", "<x>@y.de", "x".repeat(250) + "@y.de", "=HYPERLINK@x.de", "+1@x.de", "-x@y.de", "a@-x.de", "a@x..de", "a@x.d"])
     eq(e.api({ action: "subscribe", email: bad }).code, "invalid_email", bad);
   eq(e.mails.length, 0);
 });
@@ -153,8 +154,8 @@ test("Bestätigen aktiviert das Abo, zweiter Klick schadet nicht", () => {
   eq(e.api({ action: "confirm", token: t }).code, "confirmed");
   eq(e.subs()[0][1], "active");
   eq(e.api({ action: "confirm", token: t }).code, "already_active");
-  eq(e.api({ action: "subscribe", email: "a@example.org" }).code, "already_active");
-  eq(e.mails.length, 1);
+  eq(e.api({ action: "subscribe", email: "a@example.org" }).code, "pending", "Status nicht verraten");
+  eq(e.mails.length, 1, "keine weitere Mail");
 });
 
 test("Falsche oder manipulierte Links werden abgelehnt", () => {
@@ -164,6 +165,13 @@ test("Falsche oder manipulierte Links werden abgelehnt", () => {
   eq(e.api({ action: "unsubscribe", token: "zz" }).code, "invalid_token");
   eq(e.api({ action: "foo" }).code, "unknown_action");
   eq(e.api({ action: "ping" }).code, "pong");
+});
+
+test("Gültige Adressen werden angenommen", () => {
+  const e = makeEnv();
+  for (const good of ["anna.mueller@schule.hessen.de", "a+news@gmail.com", "x_y@sub-domain.example.org", "1@x.io"])
+    eq(e.api({ action: "subscribe", email: good }).code, "pending", good);
+  eq(e.book.getSheetByName("Abonnenten").format, "@", "Spalten als Text formatiert");
 });
 
 test("Tokens sind 32 Hex-Zeichen und eindeutig", () => {

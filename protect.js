@@ -23,18 +23,25 @@
                                         iFrame z. B. im Schulportal)
 
    WICHTIG: Das ist eine Komfort-Sperre für eine statische
-   GitHub-Pages-Seite, keine echte Serversicherheit. Der
-   Quelltext (und damit die Kennwörter) ist für jeden einsehbar,
-   der sich die Dateien ansieht. Für wirklich sensible Inhalte
-   ist das nicht geeignet.
+   GitHub-Pages-Seite, keine echte Serversicherheit. Die
+   Kennwörter stehen nur noch als PBKDF2-Hash im Quelltext
+   (nicht im Klartext); wer sich auskennt, kann die Sperre im
+   Browser trotzdem umgehen. Für wirklich sensible Inhalte ist
+   das nicht geeignet. Neues Kennwort setzen:
+     node tools/passwort-setzen.js full "neues Kennwort"
 --------------------------------------------------------- */
 (function (global) {
   "use strict";
 
-  const PASSWORD = "mstroh_GGL#99";
+  /* Kennwörter nur als PBKDF2-SHA256-Hash (250 000 Runden, eigenes Salz).
+     Ändern mit: node tools/passwort-setzen.js full|kollegen "Kennwort" */
+  const PW_ITER = 250000;
+  const PW_HASHES = {
+    full: { salt: "7727e58ed196af6fae8e117da9a6ee90", hash: "354e2543e76ed990abc6bb8f27ba21725760b4f963bf0577230705276373d945" },
+    kollegen: { salt: "8bf191302b4a9d68ea5f21260c861806", hash: "292ff0d8ef35ca51c5228276f68c65deeb5d28585eee8e5023b3a65eea7aa7f3" }
+  };
   /* Kolleg:innen-Bereich vorübergehend deaktiviert (Kennwort wird nicht angenommen); siehe auch KOLLEGEN_AKTIV in app.js */
   const KOLLEGEN_AKTIV = false;
-  const KOLLEGEN_PASSWORD = "ggl-ipad-team-2026";
   const LABELS = {
     schule: "Schule",
     handball: "Handball",
@@ -469,10 +476,28 @@
     document.documentElement.classList.remove("protect-open");
   }
 
+  function hexToBytes_(hex) {
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+    return out;
+  }
+  function pbkdf2Hex_(value, saltHex) {
+    const subtle = global.crypto && global.crypto.subtle;
+    if (!subtle) return Promise.reject(new Error("no-crypto"));
+    return subtle
+      .importKey("raw", new TextEncoder().encode(value), "PBKDF2", false, ["deriveBits"])
+      .then((key) => subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: hexToBytes_(saltHex), iterations: PW_ITER }, key, 256))
+      .then((bits) => Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, "0")).join(""));
+  }
+  /* Gibt (asynchron) "full", "kollegen" oder null zurück. */
   function checkPasswordInput(value) {
-    if (value === PASSWORD) return "full";
-    if (KOLLEGEN_AKTIV && value === KOLLEGEN_PASSWORD) return "kollegen";
-    return null;
+    if (!value) return Promise.resolve(null);
+    const levels = KOLLEGEN_AKTIV ? ["full", "kollegen"] : ["full"];
+    return levels.reduce(
+      (prev, level) => prev.then((found) => found || pbkdf2Hex_(value, PW_HASHES[level].salt)
+        .then((hex) => (hex === PW_HASHES[level].hash ? level : null))),
+      Promise.resolve(null)
+    ).catch(() => null);
   }
 
   /* Einmalige Anmeldung: Passwort (voller Zugriff), Kolleg:innen-
@@ -509,16 +534,21 @@
     setTimeout(() => guestBtn.focus({ preventScroll: true, focusVisible: false }), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      const level = checkPasswordInput(input.value);
-      if (level) {
-        setAccess(level);
-        closeOverlay();
-        onResolved();
-      } else {
-        errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
-        input.value = "";
-        input.focus();
-      }
+      const btn = form.querySelector("button[type=submit]");
+      if (btn) btn.disabled = true;
+      errorEl.textContent = "";
+      checkPasswordInput(input.value).then((level) => {
+        if (btn) btn.disabled = false;
+        if (level) {
+          setAccess(level);
+          closeOverlay();
+          onResolved();
+        } else {
+          errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
+          input.value = "";
+          input.focus();
+        }
+      });
     });
     guestBtn.addEventListener("click", function () {
       setAccess("guest");
@@ -557,16 +587,21 @@
     setTimeout(() => input.focus(), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      const level = checkPasswordInput(input.value);
-      if (level) {
-        setAccess(level);
-        closeOverlay();
-        onUpgraded();
-      } else {
-        errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
-        input.value = "";
-        input.focus();
-      }
+      const btn = form.querySelector("button[type=submit]");
+      if (btn) btn.disabled = true;
+      errorEl.textContent = "";
+      checkPasswordInput(input.value).then((level) => {
+        if (btn) btn.disabled = false;
+        if (level) {
+          setAccess(level);
+          closeOverlay();
+          onUpgraded();
+        } else {
+          errorEl.textContent = "Falsches Passwort — bitte erneut versuchen.";
+          input.value = "";
+          input.focus();
+        }
+      });
     });
     homeBtn.addEventListener("click", function () {
       location.href = HOME_HREF + "#/";

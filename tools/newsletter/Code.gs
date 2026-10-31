@@ -72,7 +72,9 @@ function normEmail_(email) {
 }
 
 function validEmail_(email) {
-  return email.length <= 254 && /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[a-z]{2,}$/i.test(email);
+  // Streng: beginnt mit Buchstabe/Ziffer (verhindert u. a. Formeln wie "=…" in der Tabelle)
+  return email.length <= 254
+    && /^[a-z0-9_][a-z0-9._%+-]{0,63}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,24}$/i.test(email);
 }
 
 function subscribe_(rawEmail, honeypot) {
@@ -86,7 +88,8 @@ function subscribe_(rawEmail, honeypot) {
     var now = new Date();
     if (row) {
       var status = sh.getRange(row, 2).getValue();
-      if (status === "active") return { ok: true, code: "already_active" };
+      // Nicht verraten, ob eine Adresse schon angemeldet ist (Datenschutz)
+      if (status === "active") return { ok: true, code: "pending" };
       var last = new Date(sh.getRange(row, 4).getValue());
       if (now - last < CONFIG.CONFIRM_COOLDOWN_MIN * 60000) return { ok: true, code: "pending" };
       if (!confirmBudgetOk_()) return { ok: false, code: "busy" };
@@ -338,6 +341,7 @@ function subsSheet_() {
     sh.setName(SHEET_SUBS);
     sh.appendRow(HEAD);
     sh.setFrozenRows(1);
+    sh.getRange("A:C").setNumberFormat("@");  // als reiner Text speichern, nie als Formel
   }
   return sh;
 }

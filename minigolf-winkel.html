@@ -6,8 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Winkel-Minigolf & Poolbillard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/baloo-2.css"><link rel="stylesheet" href="assets/fonts/inter.css">
 <style>
 :root{
   --grass-dark:#1b4332;
@@ -615,12 +614,15 @@ function joinRoom(){
   peer.on('error', err=>{ showError('Der Raum wurde nicht gefunden.'); });
 }
 
+/* Spielernamen kommen von anderen Geräten – nie ungefiltert als HTML ausgeben */
+function escH(v){return String(v==null?'':v).replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c]));}
+function safeName(v){return String(v==null?'':v).replace(/[<>&"'`]/g,'').trim().slice(0,20)||'Spieler';}
 /* ================= NETWORK MESSAGE HANDLING ================= */
 function handleHostMessage(conn, data){
   if(data.type==='join'){
     if(state.players.length>=6){ conn.send({type:'full'}); return; }
     if(state.phase!=='lobby'){ conn.send({type:'full'}); return; }
-    state.players.push({id:data.id, name:data.name, isHost:false, connected:true,
+    state.players.push({id:String(data.id||'').replace(/[^\w-]/g,'').slice(0,40), name:safeName(data.name), isHost:false, connected:true,
       totalStrokes:0, sunkHoles:0, mathStats:{}});
     state.turnOrder.push(data.id);
     renderLobby();
@@ -674,7 +676,7 @@ function renderLobby(){
   ul.innerHTML = '';
   state.players.forEach(p=>{
     const li = document.createElement('li');
-    li.innerHTML = `<span class="dot" style="background:${p.connected? '#2f9e6b':'#c23f1c'}"></span>${p.name}${p.isHost?'<span class="host-badge">Host</span>':''}`;
+    li.innerHTML = `<span class="dot" style="background:${p.connected? '#2f9e6b':'#c23f1c'}"></span>${escH(p.name)}${p.isHost?'<span class="host-badge">Host</span>':''}`;
     ul.appendChild(li);
   });
 }
@@ -878,7 +880,7 @@ function render(){
     sb.innerHTML='';
     [...state.players].sort((a,b)=>a.totalStrokes-b.totalStrokes).forEach(p=>{
       const li=document.createElement('li');
-      li.innerHTML = `<span>${p.name}</span><span>${p.totalStrokes} Schläge</span>`;
+      li.innerHTML = `<span>${escH(p.name)}</span><span>${p.totalStrokes} Schläge</span>`;
       sb.appendChild(li);
     });
     document.getElementById('power-panel').style.display='none';
@@ -904,7 +906,7 @@ function renderHoleSummary(){
   const tbl = document.getElementById('holesum-table');
   let html = '<tr><th>Name</th><th>Schläge</th><th>Richtige Antworten</th></tr>';
   (state.holeSummary||[]).forEach(r=>{
-    html += `<tr><td>${r.name}</td><td>${r.strokes}</td><td>${r.correct}/${r.answered}</td></tr>`;
+    html += `<tr><td>${escH(r.name)}</td><td>${r.strokes}</td><td>${r.correct}/${r.answered}</td></tr>`;
   });
   tbl.innerHTML = html;
   const isLast = (state.currentHoleIndex+1)>=state.holeCount;
@@ -925,7 +927,7 @@ function renderResults(){
   let html = '<tr><th>Platz</th><th>Name</th><th>Schläge</th><th>Richtige Antworten</th><th>Punkte</th></tr>';
   rows.forEach((p,i)=>{
     const totalCorrect = Object.values(p.mathStats||{}).reduce((s,v)=>s+v.correct,0);
-    html += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.totalStrokes}</td><td>${totalCorrect}</td><td><b>${combinedScore(p)}</b></td></tr>`;
+    html += `<tr><td>${i+1}</td><td>${escH(p.name)}</td><td>${p.totalStrokes}</td><td>${totalCorrect}</td><td><b>${combinedScore(p)}</b></td></tr>`;
   });
   tbl.innerHTML = html;
 

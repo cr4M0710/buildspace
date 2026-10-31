@@ -83,7 +83,10 @@ Wöchentlicher Newsletter (So 18 Uhr) mit allen Tools, die neu in `posts-data.js
 - **Muss auf iPad und iPhone gut funktionieren** (Marcs Hauptgeräte, Schüler-iPads): Touch-Bedienung, keine Hover-Abhängigkeit, ausreichend große Bedienelemente, responsives Layout, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
 - Speichern nur per `localStorage` (mit try/catch). Keine `window.storage`- oder Claude-API-Aufrufe – die gibt es auf GitHub Pages nicht. Einzige Ausnahme: `kompo7-formulierungshilfe.html` (optionale KI-Prüfung mit eigenem API-Schlüssel der Nutzenden, steht in `API_KEY_OPT_IN` in `tools/check-site.js` und in der Datenschutzerklärung).
 - Unterricht: Differenzierung nach A/B/C-Kurs mitdenken, wenn es sich anbietet. Schülerdaten nur als Pseudonyme, keine echten Namen.
-- Keine API-Keys, Passwörter oder Tokens in Dateien schreiben.
+- Keine API-Keys, Passwörter oder Tokens in Dateien schreiben (die Firebase-Konfiguration ist öffentlich und okay). Kennwörter für `protect.js` nur als Hash: `node tools/passwort-setzen.js full "…"`.
+- **Schriften nur lokal** aus `assets/fonts/` (`<link rel="stylesheet" href="assets/fonts/inter.css">`), **nie** `fonts.googleapis.com` (DSGVO). Fehlt eine Schrift: siehe `assets/fonts/README.md`.
+- **Fremde Daten nie ungefiltert als HTML**: Namen und Texte von anderen Geräten (PeerJS), aus Firestore oder aus der Adresszeile immer escapen (`esc(…)`/`textContent`), bevor sie in `innerHTML` landen.
+- Neue Firestore-Sammlung? Regel in `firebase/firestore.rules` ergänzen und Marc ans Einspielen erinnern (Anleitung `firebase/ANLEITUNG.md`); ohne Regel ist die Sammlung gesperrt.
 
 ## Nicht ohne ausdrücklichen Auftrag ändern
 

@@ -564,6 +564,31 @@ function stopAll() {
   if (ctx.net && ctx.net.close) ctx.net.close();
   ctx.session = null; ctx.net = null; ctx.role = 'none'; ctx.me = null; ctx.V = null; ctx.key = '';
 }
+/* Daten vom Host-Gerät nie ungeprüft als HTML übernehmen: Skripte, Event-Attribute
+   und javascript:-Links entfernen, Farben/IDs auf harmlose Zeichen begrenzen. */
+var SAFE_ATTR_KEYS = { color: 1, id: 1, me: 1, active: 1, topic: 1 };
+function cleanHtml(s) {
+  var t = document.createElement('template'); t.innerHTML = s;
+  var all = t.content.querySelectorAll('*');
+  for (var i = all.length - 1; i >= 0; i--) {
+    var el = all[i], tag = el.tagName.toLowerCase();
+    if (/^(script|iframe|object|embed|link|meta|style|base|form|foreignobject|frame|frameset|noscript)$/.test(tag)) { el.remove(); continue; }
+    for (var j = el.attributes.length - 1; j >= 0; j--) {
+      var a = el.attributes[j], n = a.name.toLowerCase(), v = String(a.value).replace(/[\s\u0000-\u001f]/g, '').toLowerCase();
+      if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src' || n === 'xlink:href' || n === 'action' || n === 'formaction') && /^(javascript|vbscript|data:(?!image\/(png|gif|jpe?g|webp)))/.test(v))) el.removeAttribute(a.name);
+    }
+  }
+  return t.innerHTML;
+}
+function sanitizeView(o, key) {
+  if (typeof o === 'string') {
+    if (key && SAFE_ATTR_KEYS[key]) return o.replace(/[^#\w(),.% -]/g, '').slice(0, 60);
+    return /[<>]/.test(o) ? cleanHtml(o) : o.replace(/["'`]/g, function (c) { return c === '"' ? '\u201d' : '\u2019'; });
+  }
+  if (Array.isArray(o)) return o.map(function (x) { return sanitizeView(x, key); });
+  if (o && typeof o === 'object') { var r = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) r[k] = sanitizeView(o[k], k); return r; }
+  return o;
+}
 function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, 2600); }
 function avatar(p, s) { return '<span class="av" style="background:' + p.color + ';' + (s ? 'width:' + s + 'px;height:' + s + 'px;font-size:' + Math.round(s * 0.5) + 'px' : '') + '">' + esc((p.name || '?').trim().charAt(0).toUpperCase()) + '</span>'; }
 
@@ -674,7 +699,7 @@ function joinRoom(code) {
     if (!m) return;
     if (m.t === 'hello') { ctx.me = m.id; }
     else if (m.t === 'err') { toast(m.msg); showJoinError(m.msg); }
-    else if (m.t === 'st') { ctx.role = 'client'; ctx.V = m; onView(m); }
+    else if (m.t === 'st') { m = sanitizeView(m); ctx.role = 'client'; ctx.V = m; onView(m); }
   }, function () { if (ctx.role === 'client') { toast('Verbindung getrennt'); stopAll(); showStart(); } }).then(function (n) {
     ctx.net = n; ctx.role = 'client'; n.send({ t: 'join', name: name });
     setTimeout(function () { if (!ctx.V && $('#joinMsg')) $('#joinMsg').textContent = 'Warte auf Antwort vom Raum …'; }, 3000);

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Sicherheits-Check – buildspace</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:#0b0c12;color:#eef0f6;line-height:1.5;padding:24px 16px 60px}
+main{max-width:720px;margin:0 auto}
+h1{margin:0 0 6px;font-size:1.7rem}
+p{color:#c9ccd6}
+button{min-height:48px;padding:0 22px;border-radius:999px;border:0;background:#5b5ff0;color:#fff;font-weight:700;font-size:1rem;cursor:pointer}
+button[disabled]{opacity:.5}
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.95rem}
+td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+td:last-child{text-align:right;white-space:nowrap;font-weight:700}
+.ok{color:#7be0a6}.bad{color:#ff8f8f}.wait{color:#aeb0b8}
+.sum{margin-top:18px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.06)}
+small{color:#aeb0b8}
+</style>
+</head>
+<body>
+<main>
+<h1>🔒 Sicherheits-Check</h1>
+<p>Prüft, ob fremde Besucher:innen geschützte Daten aus der Datenbank (Firestore) abrufen können. Der Test meldet sich genauso an wie jede Besucherin (anonym) und versucht nur zu <b>lesen</b> – er verändert nichts.</p>
+<button id="run">Check starten</button>
+<table id="out"></table>
+<div class="sum" id="sum" hidden></div>
+<p><small>Erwartet: überall „geschützt ✓“. Steht irgendwo „OFFEN ✗“, sind die Regeln aus <code>firebase/firestore.rules</code> noch nicht eingespielt.</small></p>
+</main>
+<script>
+var CONFIG = {
+  apiKey: "AIzaSyAt35KpU63iGk8UAX5X4T5Vj18zPf_JUus",
+  authDomain: "kanban-board-281da.firebaseapp.com",
+  projectId: "kanban-board-281da"
+};
+/* [Beschreibung, Sammlung, darf öffentlich lesbar sein?] */
+var CHECKS = [
+  ["Lehrkräfte (E-Mail-Adressen)", "teachers", false],
+  ["Klassen", "classes", false],
+  ["Lernende (Pseudonyme + Codes)", "students", false],
+  ["Fortschritt & Abgaben der Lernenden", "taskProgress", false],
+  ["Kanban-Boards (Codes + Inhalte)", "boards", false],
+  ["Feedback-Kommentare", "tool_feedback", false],
+  ["Strafenkasse", "strafenkasse", false],
+  ["Strafenkasse – Spieler-Ansichten", "strafenkasse_ansicht", false],
+  ["LernWerk – geteilte Aktivitäten", "lernwerk_shared", false],
+  ["LernWerk – Live-Räume", "lernwerk_live", false],
+  ["Blockwerk – Vorlagen", "blockwerk_vorlagen", false],
+  ["Cockpit – persönliche Daten", "cockpit", false],
+  ["Projekte (alle, auch unveröffentlichte)", "projects", false],
+  ["Bestenlisten (öffentlich gewollt)", "highscores", true],
+  ["Aufrufzähler (öffentlich gewollt)", "page_views", true]
+];
+function load(src) {
+  return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+function row(label, cls, txt) {
+  var tr = document.createElement("tr");
+  var a = document.createElement("td"); a.textContent = label;
+  var b = document.createElement("td"); b.className = cls; b.textContent = txt;
+  tr.appendChild(a); tr.appendChild(b); document.getElementById("out").appendChild(tr); return b;
+}
+document.getElementById("run").onclick = function () {
+  var btn = this; btn.disabled = true; document.getElementById("out").innerHTML = "";
+  var base = "https://www.gstatic.com/firebasejs/10.13.2/";
+  load(base + "firebase-app-compat.js")
+    .then(function () { return Promise.all([load(base + "firebase-auth-compat.js"), load(base + "firebase-firestore-compat.js")]); })
+    .then(function () {
+      var app = firebase.initializeApp(CONFIG, "check");
+      return app.auth().signInAnonymously().then(function () { return app.firestore(); });
+    })
+    .then(function (db) {
+      var bad = 0;
+      return CHECKS.reduce(function (p, c) {
+        return p.then(function () {
+          var cell = row(c[0], "wait", "…");
+          return db.collection(c[1]).limit(1).get().then(function (snap) {
+            if (c[2]) { cell.className = "ok"; cell.textContent = "öffentlich (gewollt)"; }
+            else if (snap.empty) { cell.className = "wait"; cell.textContent = "lesbar, aber leer ⚠︎"; bad++; }
+            else { cell.className = "bad"; cell.textContent = "OFFEN ✗"; bad++; }
+          }).catch(function (e) {
+            if (c[2]) { cell.className = "bad"; cell.textContent = "gesperrt (" + (e.code || "Fehler") + ")"; }
+            else if (e && e.code === "permission-denied") { cell.className = "ok"; cell.textContent = "geschützt ✓"; }
+            else { cell.className = "wait"; cell.textContent = e.code || "Fehler"; }
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        var s = document.getElementById("sum"); s.hidden = false;
+        s.innerHTML = bad ? "<b class=bad>" + bad + " Bereich(e) für alle lesbar.</b> Bitte die Regeln aus firebase/firestore.rules einspielen." : "<b class=ok>Alles geschützt. 👍</b>";
+      });
+    })
+    .catch(function (e) { row("Firebase konnte nicht geladen werden", "bad", (e && e.code) || "Fehler"); })
+    .finally(function () { btn.disabled = false; });
+};
+</script>
+</body>
+</html>
