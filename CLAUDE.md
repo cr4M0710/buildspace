@@ -74,7 +74,7 @@ Eigener Menüpunkt „Programme“ für Programme, die auf dem Computer laufen (
 
 ## Newsletter (`newsletter.html`)
 
-Wöchentlicher Newsletter (So 18 Uhr) mit allen Tools, die neu in `posts-data.js` stehen – automatisch, nichts zu tun beim Einstellen neuer Tools. Backend: Google Apps Script in Marcs Google-Konto (`tools/newsletter/Code.gs`, Einrichtung `tools/newsletter/ANLEITUNG.md`), Double-Opt-in, Abmeldelink in jeder Mail. Die Web-App-URL steht in `NEWSLETTER_API` in `newsletter.html`. Beiträge mit `gate` werden nicht verschickt. Nach Änderungen an `Code.gs`: `node tools/newsletter/test.js` und Marc an „Neue Version bereitstellen“ erinnern.
+Wöchentlicher Newsletter (So 18 Uhr) mit allen Tools, die neu in `posts-data.js` stehen – automatisch, nichts zu tun beim Einstellen neuer Tools. Backend: Google Apps Script in Marcs Google-Konto (`tools/newsletter/Code.gs`, Einrichtung `tools/newsletter/ANLEITUNG.md`), Double-Opt-in, Abmeldelink in jeder Mail. Die Web-App-URL steht in `NEWSLETTER_API` in `newsletter.html` **und** im Anmelde-Kasten im Seitenfuß von `index.html` (`#nl-box`, Variable `API`) – beide gleich halten. Beiträge mit `gate` werden nicht verschickt. Nach Änderungen an `Code.gs`: `node tools/newsletter/test.js` und Marc an „Neue Version bereitstellen“ erinnern.
 
 ## Regeln für Tool-Seiten
 

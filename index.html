@@ -724,10 +724,58 @@ Rangliste mit letzten Plätzen am Beamer, keine englischen Begriffe in der Oberf
 
   <footer class="site-footer">
     <div class="wrap">
+      <form class="nl-box" id="nl-box" novalidate aria-labelledby="nl-title">
+        <div class="nl-head">
+          <span class="nl-ico" aria-hidden="true">📬</span>
+          <div>
+            <h2 id="nl-title">Newsletter</h2>
+            <p>Einmal pro Woche die neuen Tools, kurz erklärt. Jederzeit abbestellbar. <a href="newsletter.html">Mehr dazu</a></p>
+          </div>
+        </div>
+        <div class="nl-row">
+          <label class="nl-sr" for="nl-mail">E-Mail-Adresse</label>
+          <input type="email" id="nl-mail" name="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="deine@mail.de" required>
+          <button type="submit" class="glass-btn nl-go" id="nl-go">Abonnieren</button>
+        </div>
+        <div class="ct-hp" aria-hidden="true"><label>Website <input type="text" id="nl-web" tabindex="-1" autocomplete="off"></label></div>
+        <label class="nl-consent"><input type="checkbox" id="nl-ok"><span>Ich habe die <a href="datenschutz.html#newsletter">Datenschutzerklärung</a> gelesen und möchte den Newsletter bekommen.</span></label>
+        <p class="nl-msg" id="nl-msg" role="status" aria-live="polite"></p>
+      </form>
       <p id="site-footer-text">buildspace — gebaut mit HTML, CSS &amp; JavaScript, gehostet auf GitHub Pages.</p>
       <p class="legal-links"><a href="impressum.html">Impressum</a><span aria-hidden="true"> · </span><a href="datenschutz.html">Datenschutz</a></p>
     </div>
   </footer>
+
+  <script>
+  /* Newsletter-Anmeldung im Seitenfuß – gleiche Web-App wie newsletter.html
+     (NEWSLETTER_API dort und hier gleich halten). */
+  (function () {
+    var API = "https://script.google.com/macros/s/AKfycbzVJ9I7U_af1Nbh_ivsAkCZNM6BLgjNye1BQje69eW6TR1CEG8EQGj_4jGCe3TpwSyORw/exec";
+    var form = document.getElementById("nl-box");
+    if (!form) return;
+    var mail = document.getElementById("nl-mail"), ok = document.getElementById("nl-ok");
+    var msg = document.getElementById("nl-msg"), go = document.getElementById("nl-go");
+    function say(kind, text) { msg.className = "nl-msg " + kind; msg.textContent = text; }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var email = mail.value.trim();
+      if (!/^[a-z0-9_][a-z0-9._%+-]{0,63}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,24}$/i.test(email)) { say("bad", "Bitte eine gültige E-Mail-Adresse eingeben."); mail.focus(); return; }
+      if (!ok.checked) { say("bad", "Bitte noch das Häkchen zur Datenschutzerklärung setzen."); ok.focus(); return; }
+      go.disabled = true; say("", "Wird gesendet …");
+      fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow",
+        body: JSON.stringify({ action: "subscribe", email: email, website: document.getElementById("nl-web").value }) })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (res) {
+          if (res && res.ok) { say("ok", "Fast geschafft! Bitte bestätige die Mail, die wir dir gerade geschickt haben (auch im Spam-Ordner nachsehen)."); form.reset(); }
+          else if (res && res.code === "invalid_email") say("bad", "Diese E-Mail-Adresse sieht nicht richtig aus.");
+          else if (res && res.code === "busy") say("bad", "Gerade sind sehr viele Anmeldungen eingegangen. Bitte versuch es morgen noch einmal.");
+          else throw new Error();
+        })
+        .catch(function () { say("bad", "Das hat nicht geklappt. Bitte gleich noch einmal versuchen."); })
+        .then(function () { go.disabled = false; });
+    });
+  })();
+  </script>
 
   <script src="posts-data.js"></script>
   <script defer src="qrcode-generator.js"></script>
