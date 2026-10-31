@@ -71,7 +71,7 @@ service cloud.firestore {
     // Lernende (nur Pseudonyme). Lernende melden sich mit ihrem Code an
     // (= Dokument-ID) und dürfen genau dieses eine Dokument lesen.
     match /students/{code} {
-      allow get: if angemeldet();
+      allow get: if true;  // Lernbereich liest ohne Anmeldung
       allow list: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid;
       allow create: if freigeschalteteLehrkraft() && neu().ownerUid == request.auth.uid;
       allow update: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid
@@ -89,24 +89,28 @@ service cloud.firestore {
       allow delete: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid;
     }
 
-    // Fortschritt der Lernenden: ID = <Code>_<Aufgabe>. Schreiben nur mit
-    // gültigem Schüler-Code und passender Lehrkraft, Text begrenzt.
-    match /taskProgress/{id} {
-      function gueltigerFortschritt() {
-        return angemeldet()
-          && nurFelder(['code', 'ownerUid', 'taskId', 'status', 'submissionText', 'updatedAt'])
-          && neu().code is string && neu().taskId is string
-          && id == neu().code + '_' + neu().taskId
-          && exists(/databases/$(database)/documents/students/$(neu().code))
-          && neu().ownerUid == get(/databases/$(database)/documents/students/$(neu().code)).data.ownerUid
-          && (!('submissionText' in neu()) || istText(neu().submissionText, 20000))
-          && (!('status' in neu()) || istText(neu().status, 20));
+    // Fortschritt der Lernenden (lernbereich.html meldet Lernende NICHT bei Firebase an):
+    // ID = <Code>_<Aufgabe>. Schreiben nur für einen existierenden Schüler-Code, mit dessen
+    // Lehrkraft, nur bekannte Felder, Text begrenzt; Code/Lehrkraft nachträglich unveränderbar.
+    match /taskProgress/{progressId} {
+      function gueltig() {
+        let d = request.resource.data;
+        let schueler = /databases/$(database)/documents/students/$(d.code);
+        return d.keys().hasOnly(['code', 'ownerUid', 'taskId', 'status', 'submissionText', 'updatedAt'])
+          && d.code is string && d.taskId is string
+          && progressId == d.code + '_' + d.taskId
+          && exists(schueler)
+          && d.ownerUid == get(schueler).data.ownerUid
+          && (!('status' in d) || d.status in ['offen', 'in_arbeit', 'fertig'])
+          && (!('submissionText' in d) || (d.submissionText is string && d.submissionText.size() <= 20000))
+          && (!('updatedAt' in d) || d.updatedAt is number);
       }
-      allow get: if angemeldet();
-      allow list: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid;
-      allow create: if gueltigerFortschritt();
-      allow update: if gueltigerFortschritt() && neu().code == alt().code && neu().ownerUid == alt().ownerUid;
-      allow delete: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid;
+      allow get: if true;
+      allow create: if gueltig();
+      allow update: if gueltig()
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow list, delete: if freigeschalteteLehrkraft() && alt().ownerUid == request.auth.uid;
     }
 
     // Kanban-Boards: Gruppen öffnen ihr Board mit dem Code

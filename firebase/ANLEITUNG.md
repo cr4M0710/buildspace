@@ -1,6 +1,6 @@
 # Firestore-Regeln einspielen (ca. 5 Minuten)
 
-> **Stand 31.10.2026:** In der Konsole laufen Marcs bisherige Regeln. Nur die Blöcke `boards`, `tool_feedback` und `highscores` wurden durch die abgesicherten Fassungen aus `firestore.rules` ersetzt. Der Sicherheits-Check meldet danach alles geschützt. Die Vorversion vom 29.10. steht im Regelverlauf der Konsole und lässt sich mit einem Klick wiederherstellen. `firestore.rules` ist die vollständige Referenzfassung, falls die Regeln einmal komplett neu geschrieben werden.
+> **Stand 31.10.2026:** In der Konsole laufen Marcs bisherige Regeln. Nur die Blöcke `boards`, `tool_feedback`, `highscores` und (11:35 Uhr) `taskProgress` wurden durch die abgesicherten Fassungen aus `firestore.rules` ersetzt. Der Sicherheits-Check meldet danach alles geschützt. Die Vorversion vom 29.10. steht im Regelverlauf der Konsole und lässt sich mit einem Klick wiederherstellen. `firestore.rules` ist die vollständige Referenzfassung, falls die Regeln einmal komplett neu geschrieben werden.
 
 Die Datenbank (Firebase-Projekt `kanban-board-281da`) speichert u. a. Lehrkräfte-Adressen, Schüler-Pseudonyme, Abgaben, Kanban-Boards, Cockpit-Daten und die Strafenkasse. Wer die Daten lesen darf, entscheiden **allein die Firestore-Regeln** – der Programmcode auf der Website kann das nicht absichern, weil er öffentlich ist.
 
