@@ -62,6 +62,8 @@
      einzelnen Werkzeug-Seiten ohne posts-data.js läuft). */
   const VERTRETUNG_FILES = [
     "bruch-werkstatt.html",
+    "mission-erde.html",
+    "tueren-challenge.html",
     "trigonometrie-lernpfad.html",
     "zahlenstrahl-werkstatt.html",
     "minigolf-winkel.html",

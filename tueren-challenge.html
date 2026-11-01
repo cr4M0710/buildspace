@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Türen-Challenge: Around Town</title>
+<meta name="description" content="Vokabel-Challenge: Hinter jeder Tür steht eine Übersetzung – nur die richtige Tür führt weiter. Vier Stufen, eigene Wortlisten möglich.">
+<meta name="theme-color" content="#18233a">
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<link rel="stylesheet" href="assets/fonts/fredoka.css">
+<link rel="stylesheet" href="assets/fonts/nunito.css">
+<style>
+:root{
+  --bg:#141d31;--bg2:#1c2844;--card:#223154;--ink:#f3f6fc;--soft:#a8b5cf;--line:rgba(255,255,255,.14);
+  --sun:#ffc94a;--sunink:#2b1d00;--ok:#46d18a;--bad:#ff6b6b;
+  --l1:#bff3d6;--l2:#c9defe;--l3:#ffe6b0;--l4:#ffd0dc;
+  --door:#8a5a3b;--door2:#6d4229;--frame:#3a2a20;
+  --font:'Nunito',system-ui,sans-serif;--head:'Fredoka','Nunito',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 50% -10%,#2b3f6e 0%,var(--bg) 60%) fixed;color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.45}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:12px 14px 80px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0 12px}
+.brand{font-family:var(--head);font-weight:700;font-size:1.05rem;letter-spacing:.02em}
+.brand span{color:var(--sun)}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap}
+nav.tabs button{background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;color:var(--soft)}
+nav.tabs button.on{background:var(--sun);color:var(--sunink);border-color:var(--sun)}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:22px;padding:22px 18px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.hidden{display:none!important}
+h1,h2,h3{font-family:var(--head);margin:0;line-height:1.1}
+.hero h1{font-size:clamp(2.1rem,7vw,3.6rem);text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+.hero h1 em{font-style:normal;color:var(--sun)}
+.hero p.lead{max-width:640px;margin:12px auto 0;text-align:center;color:var(--soft)}
+.seg{display:flex;justify-content:center;gap:4px;margin:20px auto 0;background:rgba(0,0,0,.25);border-radius:999px;padding:4px;width:max-content;max-width:100%;flex-wrap:wrap}
+.seg button{border:0;background:transparent;border-radius:999px;padding:8px 14px;font-weight:700;color:var(--soft)}
+.seg button.on{background:var(--sun);color:var(--sunink)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+@media (max-width:720px){.levels{grid-template-columns:repeat(2,1fr)}}
+.lvl{border:0;border-radius:18px;padding:16px 10px;color:#1b2233;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.25);transition:transform .1s}
+.lvl:active{transform:translateY(4px);box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.lvl b{display:block;font-family:var(--head);font-size:2.4rem;line-height:1}
+.lvl small{display:block;font-size:.85rem;opacity:.8}
+.lvl strong{display:block;margin-top:6px;letter-spacing:.06em}
+.lvl .done{display:block;font-size:.8rem;margin-top:4px;font-weight:800;min-height:1.1em}
+.l1{background:var(--l1)}.l2{background:var(--l2)}.l3{background:var(--l3)}.l4{background:var(--l4)}
+.note{color:var(--soft);font-size:.9rem;text-align:center;margin-top:14px}
+.listsel{display:flex;justify-content:center;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap;font-size:.95rem}
+.listsel select{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+/* Spiel */
+.gamehead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{background:rgba(0,0,0,.3);border-radius:999px;padding:5px 12px;font-weight:700;font-size:.9rem}
+.timer{height:12px;background:rgba(0,0,0,.35);border-radius:99px;overflow:hidden;margin:12px 0 4px}
+.timer i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--ok),var(--sun));border-radius:99px;transform-origin:left;transition:background .2s}
+.timer.low i{background:var(--bad)}
+.prompt{text-align:center;margin:16px 0 6px}
+.prompt small{display:block;color:var(--soft);font-size:.85rem;text-transform:uppercase;letter-spacing:.1em}
+.prompt .word{font-family:var(--head);font-size:clamp(1.8rem,6vw,2.8rem);font-weight:600}
+.doors{display:grid;gap:14px;margin-top:16px;grid-template-columns:repeat(3,1fr)}
+.doors.four{grid-template-columns:repeat(4,1fr)}
+@media (max-width:640px){.doors.four{grid-template-columns:repeat(2,1fr)}}
+.door{position:relative;border:0;padding:0;background:var(--frame);border-radius:14px 14px 4px 4px;aspect-ratio:3/4.3;perspective:600px;box-shadow:inset 0 0 0 6px var(--frame),0 10px 24px rgba(0,0,0,.4);overflow:hidden}
+.door .behind{position:absolute;inset:6px;border-radius:10px 10px 2px 2px;background:#0d1322;display:flex;align-items:center;justify-content:center;font-size:2.2rem}
+.door .leaf{position:absolute;inset:6px;border-radius:10px 10px 2px 2px;background:linear-gradient(180deg,var(--door),var(--door2));transform-origin:left center;transition:transform .45s ease;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px}
+.door .leaf::before,.door .leaf::after{content:"";position:absolute;left:14%;right:14%;border:3px solid rgba(0,0,0,.18);border-radius:6px}
+.door .leaf::before{top:9%;height:30%}.door .leaf::after{bottom:9%;height:30%}
+.door .knob{position:absolute;right:12%;top:52%;width:12px;height:12px;border-radius:50%;background:var(--sun);box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.door .sign{position:relative;z-index:1;background:#fff8e6;color:#2a1c0d;border-radius:8px;padding:8px 8px;font-weight:800;text-align:center;font-size:clamp(.85rem,2.6vw,1.05rem);line-height:1.2;box-shadow:0 3px 0 rgba(0,0,0,.25);word-break:break-word;hyphens:auto;width:100%}
+.door .num{position:relative;z-index:1;font-family:var(--head);color:rgba(255,255,255,.55);font-size:.9rem}
+.door.open .leaf{transform:rotateY(-78deg)}
+.door.right .behind{background:radial-gradient(circle,#fff4c2,#ffc94a 60%,#e69a12)}
+.door.wrong .behind{background:radial-gradient(circle,#3d1420,#1a0a10)}
+.door:disabled{cursor:default}
+.feedback{text-align:center;min-height:1.6em;margin-top:12px;font-weight:700}
+.btn{border:0;border-radius:14px;padding:12px 20px;font-weight:800;background:var(--sun);color:var(--sunink);box-shadow:0 5px 0 rgba(0,0,0,.3)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);box-shadow:none}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+/* Ergebnis */
+.result{text-align:center}
+.result .big{font-size:4rem;line-height:1}
+.victory{background:linear-gradient(135deg,#ffe58a,#ffb84a);color:#2b1d00;border-radius:22px;padding:22px;margin-top:10px}
+.victory h2{font-size:clamp(1.8rem,6vw,2.6rem)}
+.victory .stamp{display:inline-block;margin-top:10px;border:3px dashed rgba(43,29,0,.5);border-radius:12px;padding:6px 14px;font-weight:800}
+.mistake{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.35);border-radius:14px;padding:12px;margin-top:14px;text-align:left}
+/* Material */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card h3{font-size:1.15rem;margin-bottom:6px}
+.card p{margin:.3em 0;color:var(--soft)}
+table.voc{width:100%;border-collapse:collapse;font-size:.95rem;margin-top:10px}
+table.voc td,table.voc th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+textarea{width:100%;min-height:220px;background:#0f1729;border:1px solid var(--line);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:.92rem}
+input[type=text]{width:100%;background:#0f1729;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+ol.steps li{margin:.4em 0}
+.warn{color:var(--sun);font-weight:700}
+/* Druck */
+#printArea{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .wrap,header{display:none!important}
+  #printArea{display:block;font-family:Arial,sans-serif;color:#000}
+  #printArea h1{font-size:18pt;margin:0 0 4mm}
+  #printArea table{width:100%;border-collapse:collapse;font-size:11pt}
+  #printArea th,#printArea td{border:1px solid #444;padding:2.2mm 2mm}
+  #printArea td.box{width:22mm;text-align:center}
+  .tour-help,.bs-bar{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){.door .leaf{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">TÜREN-<span>CHALLENGE</span> · <span id="topicName">Around Town</span></div>
+    <nav class="tabs" id="tabs">
+      <button data-v="start" class="on">Spiel</button>
+      <button data-v="material">Material</button>
+      <button data-v="eigene">Eigene Liste</button>
+      <button data-v="anleitung">Anleitung</button>
+    </nav>
+  </header>
+
+  <!-- START -->
+  <section id="v-start" class="panel hero">
+    <h1>Finde die <em>richtige</em> Tür</h1>
+    <p class="lead">Über den Türen steht ein Wort, hinter jeder Tür eine Übersetzung. Du hast pro Reihe <b>zehn Sekunden</b>. Nur die richtige Tür bringt dich weiter – eine falsche Tür oder abgelaufene Zeit beendet den Lauf. Jeder neue Lauf wird neu gemischt.</p>
+    <div class="seg" id="dirSeg" role="group" aria-label="Richtung">
+      <button data-d="en" class="on">Englisch → Deutsch</button>
+      <button data-d="de">Deutsch → Englisch</button>
+      <button data-d="mix">Gemischt</button>
+    </div>
+    <div class="levels" id="levels"></div>
+    <div class="listsel"><label for="listPick">Wortliste:</label><select id="listPick"></select></div>
+    <p class="note">Schaffst du eine Stufe, zeigst du den Siegerbildschirm deiner Lehrkraft. Sie hakt die Stufe auf der Klassenliste ab. <span id="poolInfo"></span></p>
+  </section>
+
+  <!-- SPIEL -->
+  <section id="v-game" class="panel hidden">
+    <div class="gamehead">
+      <span class="pill" id="gLevel">Leicht</span>
+      <span class="pill" id="gProg">Reihe 1 / 6</span>
+      <button class="btn ghost" id="quitBtn" style="padding:6px 12px">Abbrechen</button>
+    </div>
+    <div class="timer" id="timer"><i id="timerBar"></i></div>
+    <div class="prompt"><small id="gDir">Was heißt das auf Deutsch?</small><div class="word" id="gWord">–</div></div>
+    <div class="doors" id="doors"></div>
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+  </section>
+
+  <!-- ERGEBNIS -->
+  <section id="v-result" class="panel hidden result"></section>
+
+  <!-- MATERIAL -->
+  <section id="v-material" class="panel hidden">
+    <h2>Material für die Challenge</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>📋 Klassenliste</h3>
+        <p>Druckblatt mit 30 Zeilen und je einem Kästchen für die vier Stufen. Namen trägst du selbst ein (oder nur Kürzel).</p>
+        <div class="row" style="justify-content:flex-start"><button class="btn" id="printList">Klassenliste drucken</button></div>
+      </div>
+      <div class="card">
+        <h3>📖 Wortliste drucken</h3>
+        <p>Die aktuell gewählte Wortliste als Lernzettel – zum Üben vor der Challenge.</p>
+        <div class="row" style="justify-content:flex-start"><button class="btn" id="printWords">Wortliste drucken</button></div>
+      </div>
+      <div class="card">
+        <h3>📴 Offline spielen</h3>
+        <p>Die Seite ist eine einzelne Datei und wird nach dem ersten Öffnen zwischengespeichert. Auf dem iPad über „Teilen → Zum Home-Bildschirm“ als App ablegen.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:20px">Wörter in der aktuellen Liste</h3>
+    <table class="voc" id="vocTable"></table>
+  </section>
+
+  <!-- EIGENE LISTE -->
+  <section id="v-eigene" class="panel hidden">
+    <h2>Eigene Challenge erstellen</h2>
+    <p style="color:var(--soft)">Pro Zeile ein Paar: <b>fremdsprachiges Wort ; deutsches Wort</b>. Mehrere richtige Übersetzungen trennst du mit „/“ (z. B. <code>to get ; bekommen / erhalten</code>). Mindestens 8 Paare. Die Liste bleibt nur auf diesem Gerät gespeichert.</p>
+    <label style="display:block;margin-top:10px;font-weight:700">Titel der Liste</label>
+    <input type="text" id="ownTitle" placeholder="z. B. Unit 4 – Food and drink" maxlength="60">
+    <label style="display:block;margin-top:10px;font-weight:700">Sprache (für die Anzeige)</label>
+    <input type="text" id="ownLang" placeholder="Englisch" maxlength="20">
+    <label style="display:block;margin-top:10px;font-weight:700">Wortpaare</label>
+    <textarea id="ownText" spellcheck="false" placeholder="kitchen ; Küche&#10;fridge ; Kühlschrank&#10;…"></textarea>
+    <div class="feedback" id="ownMsg" style="text-align:left"></div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn" id="ownSave">Speichern &amp; auswählen</button>
+      <button class="btn ghost" id="ownLink">Link zum Teilen kopieren</button>
+      <button class="btn ghost" id="ownDelete">Eigene Liste löschen</button>
+    </div>
+    <p class="note" style="text-align:left">Der Teilen-Link enthält die ganze Wortliste in der Adresse. So bekommen die Lernenden deine Liste, ohne dass etwas hochgeladen wird.</p>
+  </section>
+
+  <!-- ANLEITUNG -->
+  <section id="v-anleitung" class="panel hidden">
+    <h2>So setzt du die Challenge ein</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Mit der Klasse spielen</h3>
+        <ol class="steps">
+          <li>Wortliste vorher als Lernzettel austeilen oder im Buch wiederholen.</li>
+          <li>Klassenliste drucken und auf das Pult legen.</li>
+          <li>Lernende spielen einzeln oder zu zweit auf dem iPad, zuerst <b>Leicht</b>.</li>
+          <li>Wer eine Stufe schafft, zeigt den Siegerbildschirm mit Datum und Uhrzeit vor – du hakst ab.</li>
+          <li>Die Fehleranzeige nach einem gescheiterten Lauf zeigt, welches Wort gefehlt hat: kurz merken, neu starten.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Die vier Stufen</h3>
+        <p><b>Leicht</b> – 6 Reihen, 3 Türen</p>
+        <p><b>Mittel</b> – 12 Reihen, 3 Türen</p>
+        <p><b>Schwer</b> – 18 Reihen, 3 Türen, 8 Sekunden</p>
+        <p><b>Extrem</b> – 30 Reihen, 4 Türen, 7 Sekunden</p>
+        <p>Differenzierung: C-Kurs startet mit Englisch → Deutsch, A-Kurs spielt „Gemischt“.</p>
+      </div>
+      <div class="card">
+        <h3>Gleiche Bedeutungen</h3>
+        <p>Haben zwei Wörter dieselbe Übersetzung (z. B. „to get“ und „to receive“ = „bekommen“), erscheinen sie nie gemeinsam in einer Reihe. So gibt es immer genau eine richtige Tür.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function(){
+"use strict";
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+const BASE={id:"town",title:"Around Town",lang:"Englisch",pairs:[
+["library","Bücherei"],["post office","Post"],["train station","Bahnhof"],["bus stop","Bushaltestelle"],
+["hospital","Krankenhaus"],["police station","Polizeiwache"],["town hall","Rathaus"],["church","Kirche"],
+["market","Markt"],["bakery","Bäckerei"],["butcher's","Metzgerei"],["supermarket","Supermarkt"],
+["chemist's","Drogerie"],["bank","Bank"],["cinema","Kino"],["museum","Museum"],["park","Park"],
+["playground","Spielplatz"],["swimming pool","Schwimmbad"],["sports centre","Sporthalle"],["car park","Parkplatz"],
+["traffic lights","Ampel"],["zebra crossing","Zebrastreifen"],["bridge","Brücke"],["corner","Ecke"],
+["street","Straße"],["square","Platz"],["turn left","links abbiegen"],["turn right","rechts abbiegen"],
+["go straight on","geradeaus gehen"],["opposite","gegenüber"],["next to","neben"],["between","zwischen"],["behind","hinter"]
+]};
+
+const LEVELS=[
+ {key:"leicht",name:"Leicht",rows:6,doors:3,sec:10,cls:"l1"},
+ {key:"mittel",name:"Mittel",rows:12,doors:3,sec:10,cls:"l2"},
+ {key:"schwer",name:"Schwer",rows:18,doors:3,sec:8,cls:"l3"},
+ {key:"extrem",name:"Extrem",rows:30,doors:4,sec:7,cls:"l4"}
+];
+
+let dir="en", listId="town", lists=[BASE];
+// pairs normalisiert: {fx:[..], de:[..]}
+function norm(p){return {fx:String(p[0]).split("/").map(s=>s.trim()).filter(Boolean),de:String(p[1]).split("/").map(s=>s.trim()).filter(Boolean)}}
+
+function loadOwn(){
+  const own=store.get("tueren_own",null);
+  lists=[BASE];
+  if(own&&own.pairs&&own.pairs.length>=8) lists.push(own);
+  // geteilter Link
+  try{
+    const h=location.hash;
+    if(h.startsWith("#liste=")){
+      const data=JSON.parse(decodeURIComponent(escape(atob(h.slice(7)))));
+      if(data&&Array.isArray(data.pairs)&&data.pairs.length>=8){
+        const shared={id:"shared",title:String(data.title||"Geteilte Liste").slice(0,60),lang:String(data.lang||"Fremdsprache").slice(0,20),pairs:data.pairs.slice(0,200).map(p=>[String(p[0]).slice(0,80),String(p[1]).slice(0,80)])};
+        lists.push(shared);listId="shared";
+      }
+    }
+  }catch(e){}
+}
+function cur(){return lists.find(l=>l.id===listId)||BASE}
+function pool(){return cur().pairs.map(norm)}
+
+function renderStart(){
+  const sel=$("listPick");
+  sel.innerHTML=lists.map(l=>`<option value="${esc(l.id)}"${l.id===listId?" selected":""}>${esc(l.title)}</option>`).join("");
+  $("topicName").textContent=cur().title;
+  const prog=store.get("tueren_done_"+listId,{});
+  $("levels").innerHTML=LEVELS.map((L,i)=>`<button class="lvl ${L.cls}" data-i="${i}"><b>${L.rows}</b><small>Reihen · ${L.doors} Türen</small><strong>${L.name.toUpperCase()}</strong><span class="done">${prog[L.key]?"✓ geschafft":""}</span></button>`).join("");
+  $("poolInfo").textContent=pool().length+" Wortpaare in der Liste.";
+  $("dirSeg").querySelectorAll("button").forEach(b=>{
+    const lang=cur().lang;
+    if(b.dataset.d==="en")b.textContent=lang+" → Deutsch";
+    if(b.dataset.d==="de")b.textContent="Deutsch → "+lang;
+    b.classList.toggle("on",b.dataset.d===dir)});
+}
+
+function show(v){
+  ["start","game","result","material","eigene","anleitung"].forEach(n=>$("v-"+n).classList.toggle("hidden",n!==v));
+  const tabV=v==="game"||v==="result"?"start":v;
+  $("tabs").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===tabV));
+  if(v==="material")renderMaterial();
+  if(v==="eigene")renderOwn();
+  if(v==="start")renderStart();
+  window.scrollTo(0,0);
+}
+
+// ===== Spiel =====
+let G=null, raf=0;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function overlaps(a,b){return a.some(x=>b.some(y=>x.toLowerCase()===y.toLowerCase()))}
+
+function buildRun(L){
+  const P=pool(); const rows=[];
+  let order=[];
+  while(order.length<L.rows) order=order.concat(shuffle(P.map((_,i)=>i)));
+  for(let r=0;r<L.rows;r++){
+    const qi=order[r]; const q=P[qi];
+    let d=dir; if(d==="mix") d=Math.random()<.5?"en":"de";
+    const ansKey=d==="en"?"de":"fx", askKey=d==="en"?"fx":"de";
+    const cands=shuffle(P.map((_,i)=>i).filter(i=>i!==qi && !overlaps(P[i].de,q.de) && !overlaps(P[i].fx,q.fx)));
+    const wrong=cands.slice(0,L.doors-1).map(i=>P[i][ansKey][0]);
+    const right=q[ansKey][0];
+    const opts=shuffle([right].concat(wrong));
+    rows.push({ask:q[askKey][0],right,opts,d,pair:q});
+  }
+  return rows;
+}
+
+function start(i){
+  const L=LEVELS[i];
+  if(pool().length<L.doors+2){alert("Die Liste braucht mehr Wortpaare.");return}
+  G={L,rows:buildRun(L),r:0,lock:false,t0:0,startedAt:Date.now()};
+  $("gLevel").textContent=L.name;
+  $("doors").classList.toggle("four",L.doors===4);
+  show("game"); nextRow();
+}
+function nextRow(){
+  const row=G.rows[G.r];
+  $("gProg").textContent=`Reihe ${G.r+1} / ${G.L.rows}`;
+  $("gDir").textContent=row.d==="en"?"Was heißt das auf Deutsch?":"Was heißt das auf "+cur().lang+"?";
+  $("gWord").textContent=row.ask;
+  $("feedback").textContent="";
+  $("doors").innerHTML=row.opts.map((o,k)=>`<button class="door" data-k="${k}" aria-label="Tür ${k+1}: ${esc(o)}"><div class="behind"></div><div class="leaf"><span class="num">${k+1}</span><span class="sign">${esc(o)}</span><span class="knob"></span></div></button>`).join("");
+  G.lock=false; G.t0=performance.now();
+  cancelAnimationFrame(raf); tick();
+}
+function tick(){
+  if(!G||G.lock)return;
+  const left=1-(performance.now()-G.t0)/(G.L.sec*1000);
+  $("timerBar").style.transform=`scaleX(${Math.max(0,left)})`;
+  $("timer").classList.toggle("low",left<.3);
+  if(left<=0){fail(null);return}
+  raf=requestAnimationFrame(tick);
+}
+function pick(k){
+  if(!G||G.lock)return;
+  G.lock=true; cancelAnimationFrame(raf);
+  const row=G.rows[G.r]; const ok=row.opts[k]===row.right;
+  const btns=[...$("doors").children];
+  const d=btns[k]; d.classList.add("open",ok?"right":"wrong");
+  d.querySelector(".behind").textContent=ok?"✨":"💥";
+  btns.forEach(b=>b.disabled=true);
+  if(ok){
+    $("feedback").innerHTML='<span style="color:var(--ok)">Richtig – weiter!</span>';
+    setTimeout(()=>{G.r++; if(G.r>=G.L.rows)win(); else nextRow()},650);
+  }else{
+    setTimeout(()=>fail(k),700);
+  }
+}
+function fail(k){
+  G.lock=true; cancelAnimationFrame(raf);
+  const row=G.rows[G.r];
+  const reason=k==null?"Die Zeit ist abgelaufen.":"Das war die falsche Tür.";
+  $("v-result").innerHTML=`<div class="big">🚪</div><h2 style="margin-top:8px">Lauf vorbei</h2><p style="color:var(--soft)">${reason} Du hast ${G.r} von ${G.L.rows} Reihen geschafft.</p>
+   <div class="mistake"><b>Merke dir:</b> „${esc(row.ask)}“ heißt <b>„${esc(row.right)}“</b>${k!=null?` – nicht „${esc(row.opts[k])}“`:""}.</div>
+   <div class="row"><button class="btn" id="again">Neuer Lauf</button><button class="btn ghost" id="toStart">Stufe wählen</button></div>`;
+  show("result");
+  $("again").onclick=()=>start(LEVELS.indexOf(G.L));
+  $("toStart").onclick=()=>show("start");
+}
+function win(){
+  const prog=store.get("tueren_done_"+listId,{}); prog[G.L.key]=true; store.set("tueren_done_"+listId,prog);
+  const now=new Date();
+  const ts=now.toLocaleDateString("de-DE")+" · "+now.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+  const secs=Math.round((Date.now()-G.startedAt)/1000);
+  const dirTxt={en:cur().lang+" → Deutsch",de:"Deutsch → "+cur().lang,mix:"Gemischt"}[dir];
+  $("v-result").innerHTML=`<div class="victory"><div class="big">🏆</div><h2>Stufe „${G.L.name}“ geschafft!</h2>
+   <p>${G.L.rows} Reihen fehlerfrei · ${esc(cur().title)} · ${esc(dirTxt)}</p>
+   <div class="stamp">${ts} · ${secs} s</div>
+   <p style="margin-bottom:0">Zeig diesen Bildschirm deiner Lehrkraft.</p></div>
+   <div class="row"><button class="btn" id="nextLvl">${G.L.key==="extrem"?"Nochmal Extrem":"Nächste Stufe"}</button><button class="btn ghost" id="toStart">Stufe wählen</button></div>`;
+  show("result");
+  const ni=Math.min(LEVELS.indexOf(G.L)+1,3);
+  $("nextLvl").onclick=()=>start(ni);
+  $("toStart").onclick=()=>show("start");
+}
+
+// ===== Material =====
+function renderMaterial(){
+  $("vocTable").innerHTML=`<tr><th>${esc(cur().lang)}</th><th>Deutsch</th></tr>`+cur().pairs.map(p=>`<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td></tr>`).join("");
+}
+function printClassList(){
+  let rows="";for(let i=1;i<=30;i++)rows+=`<tr><td style="width:10mm">${i}</td><td></td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>`;
+  $("printArea").innerHTML=`<h1>Türen-Challenge – ${esc(cur().title)}</h1><p>Klasse/Kurs: ______________ &nbsp; Datum: ______________</p>
+   <table><tr><th>Nr.</th><th>Name / Kürzel</th><th>Leicht</th><th>Mittel</th><th>Schwer</th><th>Extrem</th></tr>${rows}</table>`;
+  window.print();
+}
+function printWords(){
+  $("printArea").innerHTML=`<h1>Wortliste – ${esc(cur().title)}</h1><table><tr><th>${esc(cur().lang)}</th><th>Deutsch</th></tr>${cur().pairs.map(p=>`<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td></tr>`).join("")}</table>`;
+  window.print();
+}
+
+// ===== Eigene Liste =====
+function renderOwn(){
+  const own=store.get("tueren_own",null);
+  if(own){$("ownTitle").value=own.title;$("ownLang").value=own.lang;$("ownText").value=own.pairs.map(p=>p[0]+" ; "+p[1]).join("\n")}
+  $("ownMsg").textContent="";
+}
+function parseOwn(){
+  const lines=$("ownText").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const pairs=[],bad=[];
+  lines.forEach((l,i)=>{const m=l.split(/\s*[;\t]\s*/); if(m.length>=2&&m[0]&&m[1])pairs.push([m[0].slice(0,80),m[1].slice(0,80)]); else bad.push(i+1)});
+  return {pairs,bad};
+}
+function ownObj(){const {pairs,bad}=parseOwn();return {obj:{id:"own",title:($("ownTitle").value.trim()||"Eigene Liste").slice(0,60),lang:($("ownLang").value.trim()||"Englisch").slice(0,20),pairs},bad}}
+$("ownSave").onclick=()=>{
+  const {obj,bad}=ownObj();
+  if(obj.pairs.length<8){$("ownMsg").innerHTML=`<span class="warn">Mindestens 8 Paare nötig (gerade ${obj.pairs.length}).</span>`;return}
+  store.set("tueren_own",obj); loadOwn(); listId="own";
+  $("ownMsg").innerHTML=`<span style="color:var(--ok)">Gespeichert: ${obj.pairs.length} Paare.</span>`+(bad.length?` <span class="warn">Zeilen ohne „;“ übersprungen: ${bad.join(", ")}</span>`:"");
+  setTimeout(()=>show("start"),900);
+};
+$("ownLink").onclick=async()=>{
+  const {obj}=ownObj();
+  if(obj.pairs.length<8){$("ownMsg").innerHTML='<span class="warn">Erst mindestens 8 Paare eintragen.</span>';return}
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify({title:obj.title,lang:obj.lang,pairs:obj.pairs}))));
+  const url=location.href.split("#")[0]+"#liste="+code;
+  try{await navigator.clipboard.writeText(url);$("ownMsg").innerHTML='<span style="color:var(--ok)">Link kopiert.</span>'}
+  catch(e){$("ownMsg").innerHTML='Link: <input type="text" readonly value="'+esc(url)+'">'}
+};
+$("ownDelete").onclick=()=>{
+  if(!confirm("Eigene Liste auf diesem Gerät löschen?"))return;
+  try{localStorage.removeItem("tueren_own")}catch(e){}
+  $("ownTitle").value="";$("ownLang").value="";$("ownText").value="";
+  loadOwn(); if(listId==="own")listId="town"; $("ownMsg").textContent="Gelöscht.";
+};
+
+// ===== Events =====
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(G&&!G.lock){G.lock=true;cancelAnimationFrame(raf)}show(b.dataset.v)});
+$("dirSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;dir=b.dataset.d;store.set("tueren_dir",dir);renderStart()});
+$("levels").addEventListener("click",e=>{const b=e.target.closest(".lvl");if(b)start(+b.dataset.i)});
+$("listPick").addEventListener("change",e=>{listId=e.target.value;renderStart()});
+$("doors").addEventListener("click",e=>{const b=e.target.closest(".door");if(b)pick(+b.dataset.k)});
+$("quitBtn").onclick=()=>{if(G){G.lock=true;cancelAnimationFrame(raf)}show("start")};
+$("printList").onclick=printClassList;
+$("printWords").onclick=printWords;
+document.addEventListener("keydown",e=>{if($("v-game").classList.contains("hidden"))return;const n=parseInt(e.key,10);if(n>=1&&n<=4&&G&&n<=G.L.doors)pick(n-1)});
+
+dir=store.get("tueren_dir","en"); if(!["en","de","mix"].includes(dir))dir="en";
+loadOwn(); renderStart();
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Willkommen", text: "<p>Hinter jeder Tür steht eine Übersetzung. Nur die richtige Tür bringt dich in die nächste Reihe – du hast nur wenige Sekunden.</p>" },
+  { sel: "#dirSeg", title: "Richtung wählen", text: "<p>Von der Fremdsprache ins Deutsche, umgekehrt oder gemischt.</p>" },
+  { sel: "#levels", title: "Stufe wählen", text: "<p>Vier Stufen von 6 bis 30 Reihen. Geschaffte Stufen bekommen einen Haken.</p>" },
+  { sel: "#listPick", title: "Wortliste", text: "<p>Neben „Around Town“ kannst du eigene Listen anlegen und per Link teilen.</p>" },
+  { sel: "#tabs", title: "Material & eigene Liste", text: "<p>Klassenliste zum Abhaken, Wortliste zum Drucken und der Editor für eigene Challenges.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lern-RPG aus dem Lehrplan – Anleitung</title>
+<meta name="description" content="Anleitung: Mit Claude oder ChatGPT aus dem eigenen Lehrplan ein kleines Pixel-Rollenspiel plus Arbeitsblatt bauen – mit Prompt-Baukasten und Fehlerhilfe.">
+<meta name="theme-color" content="#1b1730">
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<link rel="stylesheet" href="assets/fonts/inter.css">
+<link rel="stylesheet" href="assets/fonts/pixelify-sans.css">
+<style>
+:root{
+  --bg:#f6f3ec;--ink:#1d1b2a;--soft:#5e5a70;--line:rgba(29,27,42,.14);--card:#fffdf8;--card2:#efeadf;
+  --acc:#5b3fd1;--accink:#fff;--accsoft:rgba(91,63,209,.1);--gold:#e2a41b;--ok:#2f9e5d;--bad:#c9443b;
+  --code:#1d1b2a;--codeink:#e9e6ff;
+  --font:'Inter',system-ui,sans-serif;--pix:'Pixelify Sans',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#15131f;--ink:#ece9f6;--soft:#a39fb8;--line:rgba(236,233,246,.14);--card:#1e1b2c;--card2:#272338;
+  --acc:#9a85ff;--accink:#14111f;--accsoft:rgba(154,133,255,.14);--code:#0d0b15;--codeink:#e3dfff}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.6}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+a{color:var(--acc)}
+.hero{background:#1b1730;color:#f2efff;padding:44px 18px 40px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:28px;background:repeating-linear-gradient(90deg,#3b2f7a 0 16px,#2a225a 16px 32px);opacity:.8}
+.hero .in{max-width:900px;margin:0 auto;position:relative;z-index:1}
+.kicker{font-family:var(--pix);color:var(--gold);letter-spacing:.08em;font-size:.95rem}
+.hero h1{font-family:var(--pix);font-size:clamp(2rem,6vw,3.2rem);line-height:1.05;margin:8px 0 12px}
+.hero p{max-width:640px;color:#c9c2ee;margin:0}
+.layout{max-width:1100px;margin:0 auto;padding:24px 16px 100px;display:grid;grid-template-columns:220px 1fr;gap:28px}
+@media (max-width:860px){.layout{grid-template-columns:1fr}.toc{position:static!important}}
+.toc{position:sticky;top:16px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.toc b{font-size:.78rem;letter-spacing:.1em;color:var(--soft)}
+.toc a{display:block;padding:5px 0;color:var(--ink);text-decoration:none;font-size:.93rem;border-bottom:1px dashed var(--line)}
+.toc a:last-child{border:0}
+main section{margin-bottom:38px;scroll-margin-top:16px}
+h2{font-size:1.55rem;margin:0 0 10px;line-height:1.2}
+h2 .n{font-family:var(--pix);color:var(--acc);margin-right:8px}
+h3{font-size:1.1rem;margin:18px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.pill{display:inline-block;background:var(--accsoft);color:var(--acc);border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:600}
+/* Demo */
+.demo{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+@media (max-width:700px){.demo{grid-template-columns:1fr}}
+canvas#mini{width:100%;image-rendering:pixelated;border-radius:12px;background:#2a225a;display:block;aspect-ratio:16/10}
+.dlg{font-family:var(--pix);background:#1b1730;color:#f2efff;border:3px solid #f2efff;border-radius:6px;padding:10px 12px;font-size:1rem;min-height:84px}
+.dlg .who{color:var(--gold)}
+.ctrl{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.ctrl button{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;min-width:44px}
+/* Code */
+.codebox{position:relative;background:var(--code);color:var(--codeink);border-radius:14px;padding:16px 16px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:520px;overflow:auto}
+.copy{position:absolute;top:10px;right:10px;background:var(--gold);color:#241a00;border:0;border-radius:10px;padding:6px 12px;font-weight:700;font-family:var(--font);font-size:.85rem}
+.ph{background:rgba(226,164,27,.25);color:#ffd66b;border-radius:4px;padding:0 3px}
+/* Baukasten */
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.form label{display:block;font-weight:600;font-size:.92rem;margin-bottom:4px}
+.form input,.form select,.form textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.form textarea{min-height:90px;resize:vertical}
+.full{grid-column:1/-1}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;background:var(--acc);color:var(--accink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0}
+.steps li{counter-increment:s;position:relative;padding:10px 12px 10px 52px;margin:8px 0;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:10px;width:28px;height:28px;border-radius:8px;background:var(--acc);color:var(--accink);font-family:var(--pix);display:flex;align-items:center;justify-content:center}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0}
+details summary{font-weight:700;cursor:pointer}
+details p{margin:.5em 0 .2em}
+.check label{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.check input{width:22px;height:22px;margin-top:2px;flex:none;accent-color:var(--acc)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-weight:600}
+.tabs button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.msg{font-weight:600;color:var(--ok);min-height:1.4em}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="in">
+    <div class="kicker">▸ ANLEITUNG FÜR LEHRKRÄFTE</div>
+    <h1>Vom Lehrplan zum Pixel-Rollenspiel</h1>
+    <p>Du gibst einer KI deinen Lehrplanauszug – sie baut daraus ein kleines Rollenspiel im Browser: Figuren ansprechen, Gegenstände untersuchen, Fragen lösen. Dazu ein passendes Arbeitsblatt für die Sicherung. Hier steht, wie das zuverlässig klappt.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="Inhalt">
+    <b>INHALT</b>
+    <a href="#ergebnis">So sieht das Ergebnis aus</a>
+    <a href="#brauchst">Was du brauchst</a>
+    <a href="#beispiel">Beispiel-Prompt</a>
+    <a href="#baukasten">Prompt-Baukasten</a>
+    <a href="#faecher">Ideen für andere Fächer</a>
+    <a href="#vorgehen">So gehst du vor</a>
+    <a href="#hakt">Wenn etwas hakt</a>
+    <a href="#check">Vor dem Einsatz</a>
+  </nav>
+
+  <main>
+    <section id="ergebnis">
+      <h2><span class="n">01</span>So sieht das Ergebnis aus</h2>
+      <p>Eine einzige HTML-Datei, die auf jedem iPad im Browser läuft. Die Lernenden steuern eine Figur durch wenige Räume, sprechen mit Figuren und sammeln Hinweise, die sie zum Ziel führen. Wer eine Aufgabe richtig löst, kommt weiter. Probier die Mini-Vorschau aus:</p>
+      <div class="demo">
+        <div>
+          <canvas id="mini" width="320" height="200" aria-label="Mini-Vorschau eines Pixel-Rollenspiels"></canvas>
+          <div class="ctrl" aria-label="Steuerung">
+            <button data-k="l" aria-label="links">◀</button><button data-k="u" aria-label="hoch">▲</button><button data-k="d" aria-label="runter">▼</button><button data-k="r" aria-label="rechts">▶</button><button data-k="e">Sprechen (E)</button>
+          </div>
+        </div>
+        <div>
+          <div class="dlg" id="dlg"><span class="who">Hinweis:</span> Lauf mit den Pfeilen zur Händlerin und drück „Sprechen“.</div>
+          <p style="font-size:.9rem;color:var(--soft)">Beispielthema aus Arbeitslehre (Jg. 7): Preise vergleichen auf dem Wochenmarkt. Ein ausgewachsenes Beispiel mit sechs Räumen ist <a href="akte-wahrheit-1938.html">Akte Wahrheit – 1938</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="brauchst">
+      <h2><span class="n">02</span>Was du brauchst</h2>
+      <div class="grid">
+        <div class="card"><span class="pill">Pflicht</span><h3>Ein KI-Konto</h3><p>Claude oder ChatGPT, am besten mit einem Modell, das längeren Code am Stück schreiben kann. Die kostenlosen Varianten reichen für kleine Spiele, brechen aber manchmal ab.</p></div>
+        <div class="card"><span class="pill">Pflicht</span><h3>Deinen Lehrplanauszug</h3><p>Zwei bis sechs Kompetenzen oder Inhalte aus dem Kerncurriculum bzw. Schulcurriculum – als Text kopiert, nicht als Foto.</p></div>
+        <div class="card"><span class="pill">Optional</span><h3>Einen Ort zum Teilen</h3><p>GitHub Pages, Netlify oder die Plattform deiner Schule. Ohne Hosting kannst du die Datei auch per AirDrop verteilen.</p></div>
+        <div class="card"><span class="pill">Zeit</span><h3>30–60 Minuten</h3><p>Erstes Ergebnis nach wenigen Minuten, danach zwei bis vier Runden Nachbessern und einmal selbst durchspielen.</p></div>
+      </div>
+    </section>
+
+    <section id="beispiel">
+      <h2><span class="n">03</span>Beispiel-Prompt</h2>
+      <p>So sieht ein vollständiger Prompt für das Wochenmarkt-Beispiel aus. Du kannst ihn direkt kopieren und ausprobieren.</p>
+      <div class="codebox" id="exPrompt"><button class="copy" data-copy="exPrompt">Kopieren</button>Du bist Spieleentwickler:in und Lehrkraft zugleich. Baue ein kleines Lern-Rollenspiel im Pixel-Stil als EINE eigenständige HTML-Datei (HTML, CSS und JavaScript inline, keine externen Dateien, keine Bilder – alles mit Canvas oder CSS zeichnen).
+
+FACH UND KLASSE: Arbeitslehre, Jahrgang 7, IGS (heterogene Lerngruppe)
+LEHRPLANBEZUG:
+- Verbraucherinnen und Verbraucher vergleichen Preise und Qualität
+- Grundpreis (Preis pro kg/l) berechnen und vergleichen
+- Werbeaussagen kritisch prüfen
+
+SITUATION: Die Spielfigur hilft auf dem Wochenmarkt beim Einkauf für das Schulfest. Budget: 25 €. Drei Stände, eine Bäckerei und ein Infostand.
+
+SPIELABLAUF:
+1. Startbildschirm mit Spielname, kurzer Story und „Los geht's“.
+2. 3 kleine Räume (Kachelkarte 12×8), Wechsel über Türen/Ränder.
+3. 4–6 Figuren mit kurzen Dialogen (2–4 Sätze), Antwortknöpfe zum Anklicken.
+4. 8 Hinweise/Aufgaben, jede an Figur oder Gegenstand gebunden. Richtige Antwort → Hinweis ins Notizbuch. Falsche Antwort → freundliche Rückmeldung mit Tipp, erneuter Versuch.
+5. Abschluss: 6 Fragen (Multiple Choice), Punktzahl, kurze Auswertung pro Frage.
+
+BEDIENUNG: Pfeiltasten/WASD und E; auf dem iPad große Richtungsknöpfe und Interaktionsknopf. Notizbuch jederzeit öffnen.
+SPRACHE: Deutsch, kurze Sätze, Sprachniveau für Klasse 7, Fachbegriffe einmal erklären.
+TECHNIK: Spielstand in localStorage speichern (mit try/catch). Keine Server, keine API-Aufrufe, keine Tracker.
+
+DAZU: Erstelle zusätzlich ein Arbeitsblatt (als druckbare HTML-Seite in einem zweiten Codeblock) mit 4 Aufgaben zur Sicherung und einer Lösung.
+
+Prüfe am Ende selbst: Ist jedes Rätsel lösbar? Gibt es genau eine richtige Antwort? Funktioniert die Steuerung per Touch?</div>
+    </section>
+
+    <section id="baukasten">
+      <h2><span class="n">04</span>Prompt-Baukasten für dein Fach</h2>
+      <p>Trag deine Angaben ein – der Prompt wird unten automatisch zusammengebaut. Nichts davon verlässt dieses Gerät.</p>
+      <div class="form card">
+        <div><label for="f-fach">Fach</label><input id="f-fach" value="Mathematik"></div>
+        <div><label for="f-jg">Jahrgang / Kurs</label><select id="f-jg"><option>5</option><option>6</option><option selected>7</option><option>8</option><option>9</option><option>10</option></select></div>
+        <div><label for="f-niveau">Niveau</label><select id="f-niveau"><option value="gemischt">gemischt (A/B/C)</option><option value="C">eher grundlegend (C-Kurs)</option><option value="A">eher erweitert (A-Kurs)</option></select></div>
+        <div><label for="f-dauer">Spielzeit</label><select id="f-dauer"><option>20–30 Minuten</option><option selected>30–45 Minuten</option><option>45–60 Minuten</option></select></div>
+        <div class="full"><label for="f-plan">Lehrplanauszug (ein Punkt pro Zeile)</label><textarea id="f-plan">Prozentsätze berechnen
+Rabatte und Preiserhöhungen beurteilen
+Grundwert, Prozentwert und Prozentsatz unterscheiden</textarea></div>
+        <div class="full"><label for="f-sit">Situation / Story</label><textarea id="f-sit">Die Spielfigur arbeitet einen Tag im Elektromarkt mit und muss Preisschilder nach einer Rabattaktion prüfen.</textarea></div>
+        <div><label for="f-raeume">Anzahl Räume</label><select id="f-raeume"><option>2</option><option selected>3</option><option>4</option><option>6</option></select></div>
+        <div><label for="f-hinw">Anzahl Hinweise/Aufgaben</label><select id="f-hinw"><option>6</option><option selected>8</option><option>12</option></select></div>
+        <div><label for="f-stil">Grafikstil</label><select id="f-stil"><option>Pixel-Stil, freundlich und hell</option><option>Pixel-Stil, nachts/geheimnisvoll</option><option>Pixel-Stil, Science-Fiction</option></select></div>
+        <div><label for="f-ab">Arbeitsblatt</label><select id="f-ab"><option value="ja" selected>ja, mit Lösung</option><option value="nein">nein</option></select></div>
+      </div>
+      <div class="codebox" id="ownPrompt" style="margin-top:12px"><button class="copy" data-copy="ownPrompt">Kopieren</button><span id="ownPromptText"></span></div>
+    </section>
+
+    <section id="faecher">
+      <h2><span class="n">05</span>Ideen für andere Fächer</h2>
+      <div class="grid">
+        <div class="card"><h3>🧮 Mathematik</h3><p>Baustelle: Flächen und Volumen ausrechnen, damit der Bauleiter die richtige Menge Beton bestellt.</p></div>
+        <div class="card"><h3>🏛️ Geschichte / Gesellschaftslehre</h3><p>Archiv-Ermittlung: Quellen prüfen, Perspektiven vergleichen, am Ende ein begründetes Urteil.</p></div>
+        <div class="card"><h3>🧪 Naturwissenschaften</h3><p>Forschungsstation: Messreihen auswerten und Hypothesen zu Licht, Wärme oder Pflanzen prüfen.</p></div>
+        <div class="card"><h3>🇬🇧 Englisch</h3><p>Stadtrundgang: Wegbeschreibungen verstehen und Figuren in der richtigen Zeitform antworten.</p></div>
+        <div class="card"><h3>🔧 Arbeitslehre / Technik</h3><p>Werkstatt-Check: Gefahren finden, Werkzeuge zuordnen, Sicherheitszeichen deuten.</p></div>
+        <div class="card"><h3>💼 Berufsorientierung</h3><p>Praktikumstag: In drei Betrieben Aufgaben lösen und am Ende ein passendes Berufsfeld begründen.</p></div>
+      </div>
+    </section>
+
+    <section id="vorgehen">
+      <h2><span class="n">06</span>So gehst du vor</h2>
+      <div class="tabs" id="kiTabs"><button class="on" data-t="claude">Claude</button><button data-t="chatgpt">ChatGPT</button></div>
+      <ol class="steps" id="steps-claude">
+        <li><b>Neuen Chat öffnen</b> und den Prompt aus dem Baukasten einfügen.</li>
+        <li>Claude erstellt das Spiel als <b>Artefakt</b> – rechts erscheint direkt eine spielbare Vorschau.</li>
+        <li><b>Selbst durchspielen</b>, Fehler notieren und gesammelt zurückmelden („Der zweite Raum hat keine Tür“, „Frage 3 hat zwei richtige Antworten“).</li>
+        <li>Nach jeder Änderung erneut testen – <b>immer nur 2–3 Änderungen pro Nachricht</b>.</li>
+        <li>Fertige Datei herunterladen oder das Artefakt veröffentlichen und den Link teilen.</li>
+        <li>Arbeitsblatt in einem zweiten Schritt anfordern: „Erstelle jetzt das Arbeitsblatt als Word-Datei.“</li>
+      </ol>
+      <ol class="steps" id="steps-chatgpt" hidden>
+        <li><b>Neuen Chat öffnen</b>, Prompt einfügen und um eine einzige HTML-Datei bitten.</li>
+        <li>Mit <b>Canvas</b> bekommst du eine Vorschau; sonst den Code kopieren, als <code>spiel.html</code> speichern und im Browser öffnen.</li>
+        <li>Durchspielen und Fehler sammeln. Bricht der Code ab: „Schreibe ab der Funktion … weiter, gib den Rest vollständig aus.“</li>
+        <li>Bei langen Spielen um die Datei als Download bitten, statt um einen Codeblock.</li>
+        <li>Datei auf GitHub Pages, Netlify oder der Schulplattform ablegen.</li>
+        <li>Arbeitsblatt anfordern und vor dem Druck fachlich prüfen.</li>
+      </ol>
+    </section>
+
+    <section id="hakt">
+      <h2><span class="n">07</span>Wenn etwas hakt</h2>
+      <details><summary>Der Code bricht mittendrin ab</summary><p>Schreibe: „Gib die komplette Datei erneut aus, ohne Kommentare und ohne Erklärtext.“ Oder verkleinere das Spiel (weniger Räume, kürzere Dialoge).</p></details>
+      <details><summary>Die Figur läuft durch Wände oder bleibt hängen</summary><p>„Prüfe die Kollisionsabfrage: Wände, Möbel und Figuren dürfen nicht betreten werden. Die Startposition muss frei sein.“</p></details>
+      <details><summary>Auf dem iPad lässt sich nichts steuern</summary><p>„Ergänze große Touch-Richtungsknöpfe (mind. 56 px) und einen Interaktionsknopf. Verhindere Doppeltipp-Zoom.“</p></details>
+      <details><summary>Fachliche Fehler in den Aufgaben</summary><p>KI irrt sich auch bei Fakten und Rechnungen. Lass dir eine Tabelle aller Fragen mit Lösung ausgeben und prüfe sie selbst, bevor du das Spiel einsetzt.</p></details>
+      <details><summary>Der Spielstand ist nach dem Neuladen weg</summary><p>„Speichere Fortschritt und Notizbuch in localStorage und stelle beides beim Start wieder her. Füge einen Knopf ‚Neu beginnen‘ hinzu.“</p></details>
+      <details><summary>Das Spiel ist zu schwer oder zu leicht</summary><p>„Erstelle eine zweite Schwierigkeitsstufe: kürzere Texte, Wortspeicher und ein Tipp-Knopf für Stufe 1; offene Eingaben für Stufe 2.“</p></details>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">08</span>Vor dem Einsatz im Unterricht</h2>
+      <div class="card check" id="checklist">
+        <label><input type="checkbox"> Einmal komplett selbst durchgespielt, auch auf einem iPad.</label>
+        <label><input type="checkbox"> Alle Aufgaben und Lösungen fachlich geprüft.</label>
+        <label><input type="checkbox"> Keine echten Namen, keine Anmeldung, keine Datenübertragung.</label>
+        <label><input type="checkbox"> Historische oder sensible Inhalte sind sachlich eingeordnet und als fiktiv gekennzeichnet.</label>
+        <label><input type="checkbox"> Arbeitsblatt bzw. Sicherungsphase ist geplant (ca. 10–15 Minuten).</label>
+        <label><input type="checkbox"> Plan B für Lernende ohne Gerät oder bei Technikproblemen.</label>
+      </div>
+      <p class="msg" id="checkMsg" aria-live="polite"></p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// --- Kopieren
+document.addEventListener("click",async e=>{
+  const b=e.target.closest(".copy"); if(!b)return;
+  const box=$(b.dataset.copy); const txt=[...box.childNodes].filter(n=>n!==b).map(n=>n.textContent).join("").trim();
+  try{await navigator.clipboard.writeText(txt);b.textContent="Kopiert ✓"}catch(err){
+    const ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");b.textContent="Kopiert ✓"}catch(x){b.textContent="Bitte markieren"}ta.remove()}
+  setTimeout(()=>b.textContent="Kopieren",1600);
+});
+
+// --- Baukasten
+const F=["fach","jg","niveau","dauer","plan","sit","raeume","hinw","stil","ab"];
+function save(){try{const o={};F.forEach(k=>o[k]=$("f-"+k).value);localStorage.setItem("lernrpg_form",JSON.stringify(o))}catch(e){}}
+function load(){try{const o=JSON.parse(localStorage.getItem("lernrpg_form")||"null");if(o)F.forEach(k=>{if(o[k]!=null)$("f-"+k).value=o[k]})}catch(e){}}
+function build(){
+  const v=k=>$("f-"+k).value.trim();
+  const plan=v("plan").split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>"- "+s).join("\n")||"- (Lehrplanpunkte eintragen)";
+  const niv={gemischt:"heterogene Lerngruppe (A-, B- und C-Kurs-Niveau) – baue zu jeder Aufgabe einen Tipp-Knopf ein",C:"grundlegendes Niveau (C-Kurs): kurze Sätze, Wortspeicher, Tipp-Knopf",A:"erweitertes Niveau (A-Kurs): offene Aufgaben, Begründungen einfordern"}[v("niveau")];
+  const h=+v("hinw"); const q=Math.max(4,Math.round(h*0.75));
+  const p=`Du bist Spieleentwickler:in und Lehrkraft zugleich. Baue ein kleines Lern-Rollenspiel (${v("stil")}) als EINE eigenständige HTML-Datei (HTML, CSS und JavaScript inline, keine externen Dateien, keine Bilder – alles mit Canvas oder CSS zeichnen).
+
+FACH UND KLASSE: ${v("fach")}, Jahrgang ${v("jg")}, Integrierte Gesamtschule
+NIVEAU: ${niv}
+SPIELZEIT: ${v("dauer")}
+LEHRPLANBEZUG:
+${plan}
+
+SITUATION: ${v("sit")||"(Story eintragen)"}
+
+SPIELABLAUF:
+1. Startbildschirm mit Spielname, kurzer Story (max. 4 Sätze) und „Los geht's“.
+2. ${v("raeume")} Räume als Kachelkarte (ca. 12×8 Felder), Wechsel über Türen.
+3. Figuren mit kurzen Dialogen (2–4 Sätze) und Antwortknöpfen; Gegenstände mit „Genauer ansehen“.
+4. ${h} Hinweise/Aufgaben, jeweils an eine Figur oder einen Gegenstand gebunden, passend zum Lehrplanbezug. Richtig → Hinweis landet im Notizbuch. Falsch → freundliche Rückmeldung mit Tipp, neuer Versuch.
+5. Abschluss ab ${Math.ceil(h*0.75)} Hinweisen: ${q} Abschlussfragen, Punktzahl und Auswertung jeder Frage mit kurzer Erklärung.
+
+BEDIENUNG: Pfeiltasten/WASD und E; auf iPad und Smartphone große Touch-Richtungsknöpfe und ein Interaktionsknopf. Notizbuch und Hilfe jederzeit erreichbar. Kleine Übersichtskarte.
+SPRACHE: Deutsch, altersgerecht für Jahrgang ${v("jg")}, Fachbegriffe beim ersten Auftreten erklären.
+TECHNIK: Spielstand in localStorage (mit try/catch), Knopf „Neu beginnen“. Keine Server, keine API-Aufrufe, keine Tracker, keine echten Namen.
+${v("ab")==="ja"?`
+DAZU: Erstelle zusätzlich ein druckbares Arbeitsblatt (zweiter Codeblock, A4) mit 4–5 Aufgaben zur Sicherung, steigender Schwierigkeit und einer Lösungsseite.
+`:""}
+Prüfe am Ende selbst und liste auf: Ist jede Aufgabe lösbar? Gibt es genau eine richtige Antwort? Sind alle Fakten korrekt? Funktioniert die Touch-Steuerung?`;
+  $("ownPromptText").textContent=p; save();
+}
+load();
+F.forEach(k=>{$("f-"+k).addEventListener("input",build);$("f-"+k).addEventListener("change",build)});
+build();
+
+// --- Tabs
+$("kiTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  $("kiTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  $("steps-claude").hidden=b.dataset.t!=="claude";$("steps-chatgpt").hidden=b.dataset.t!=="chatgpt"});
+
+// --- Checkliste
+const cbs=[...document.querySelectorAll("#checklist input")];
+try{const s=JSON.parse(localStorage.getItem("lernrpg_check")||"[]");cbs.forEach((c,i)=>c.checked=!!s[i])}catch(e){}
+function chk(){const n=cbs.filter(c=>c.checked).length;$("checkMsg").textContent=n===cbs.length?"Alles erledigt – viel Spaß beim Spielen!":n?`${n} von ${cbs.length} erledigt.`:"";
+  try{localStorage.setItem("lernrpg_check",JSON.stringify(cbs.map(c=>c.checked)))}catch(e){}}
+cbs.forEach(c=>c.addEventListener("change",chk));chk();
+
+// --- Mini-Vorschau
+const cv=$("mini"),ctx=cv.getContext("2d");const T=20,W=16,H=10;
+const map=[
+"################",
+"#..............#",
+"#..MMM....BBB..#",
+"#..............#",
+"#..............#",
+"#.....~~~~.....#",
+"#..............#",
+"#..SSS.........#",
+"#..............#",
+"########DD######"];
+const npcs=[{x:4,y:3,c:"#e2a41b",name:"Händlerin",lines:["1 kg Äpfel kostet bei mir 2,40 €.","Am Nachbarstand: 1,5 kg für 3,30 €. Wer ist günstiger?"],ask:{q:"Welcher Stand ist pro kg günstiger?",a:["Händlerin (2,40 €/kg)","Nachbarstand (2,20 €/kg)"],ok:1}},
+{x:11,y:3,c:"#4fb3e8",name:"Bäcker",lines:["Unsere Brötchen sind „jetzt noch billiger!“.","Vorher 0,45 €, jetzt 0,45 € – aber mit neuer Tüte."],ask:{q:"Ist die Werbung ehrlich?",a:["Ja, sie sind billiger","Nein, der Preis ist gleich"],ok:1}}];
+let pl={x:8,y:7},talk=null,found=0;
+function draw(){
+  ctx.fillStyle="#3a7d44";ctx.fillRect(0,0,cv.width,cv.height);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=map[y][x];
+    if(c==="#"){ctx.fillStyle="#2a225a";ctx.fillRect(x*T,y*T,T,T);ctx.fillStyle="#3b2f7a";ctx.fillRect(x*T+2,y*T+2,T-4,T-4)}
+    else{ctx.fillStyle=(x+y)%2?"#6a9b52":"#74a75a";ctx.fillRect(x*T,y*T,T,T)}
+    if(c==="M"||c==="B"||c==="S"){ctx.fillStyle="#8a5a3b";ctx.fillRect(x*T,y*T+6,T,T-6);ctx.fillStyle=c==="M"?"#d9443b":c==="B"?"#f2c14e":"#f2efff";ctx.fillRect(x*T+3,y*T+2,T-6,6)}
+    if(c==="~"){ctx.fillStyle="#4fb3e8";ctx.fillRect(x*T,y*T+4,T,T-8)}
+    if(c==="D"){ctx.fillStyle="#e2a41b";ctx.fillRect(x*T,y*T,T,T)}}
+  npcs.forEach(n=>{person(n.x,n.y,n.c)});
+  person(pl.x,pl.y,"#f2efff",true);
+  ctx.fillStyle="#1b1730";ctx.fillRect(4,4,92,16);ctx.fillStyle="#f2efff";ctx.font="11px monospace";ctx.fillText("Hinweise: "+found+"/2",8,15);
+}
+function person(x,y,c,me){ctx.fillStyle="#f3c9a0";ctx.fillRect(x*T+6,y*T+2,8,7);ctx.fillStyle=c;ctx.fillRect(x*T+4,y*T+9,12,8);ctx.fillStyle="#1d1b2a";ctx.fillRect(x*T+5,y*T+17,4,3);ctx.fillRect(x*T+11,y*T+17,4,3);if(me){ctx.fillStyle="#5b3fd1";ctx.fillRect(x*T+6,y*T,8,3)}}
+function free(x,y){if(x<0||y<0||x>=W||y>=H)return false;const c=map[y][x];if("#MBS~".includes(c))return false;return !npcs.some(n=>n.x===x&&n.y===y)}
+function move(dx,dy){if(talk)return;const nx=pl.x+dx,ny=pl.y+dy;if(free(nx,ny)){pl.x=nx;pl.y=ny}draw()}
+function near(){return npcs.find(n=>Math.abs(n.x-pl.x)+Math.abs(n.y-pl.y)===1)}
+function interact(){
+  const d=$("dlg");const n=near();
+  if(!n){d.innerHTML='<span class="who">Hinweis:</span> Stell dich direkt neben eine Figur.';return}
+  if(n.done){d.innerHTML=`<span class="who">${n.name}:</span> Danke für deine Hilfe!`;return}
+  talk=n;d.innerHTML=`<span class="who">${n.name}:</span> ${esc(n.lines.join(" "))}<br><br>${esc(n.ask.q)}<div class="ctrl">${n.ask.a.map((a,i)=>`<button data-a="${i}">${esc(a)}</button>`).join("")}</div>`;
+}
+$("dlg").addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b||!talk)return;
+  const ok=+b.dataset.a===talk.ask.ok;const d=$("dlg");
+  if(ok){talk.done=true;found++;d.innerHTML=`<span class="who">Richtig!</span> Hinweis notiert (${found}/2).`+(found===2?" Im echten Spiel öffnet sich jetzt der Abschlussbericht.":"")}
+  else d.innerHTML=`<span class="who">Fast …</span> Tipp: Rechne den Preis für genau 1 kg bzw. vergleiche vorher und nachher. Sprich die Figur noch einmal an.`;
+  talk=null;draw()});
+document.querySelector(".ctrl").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.k;
+  if(k==="l")move(-1,0);if(k==="r")move(1,0);if(k==="u")move(0,-1);if(k==="d")move(0,1);if(k==="e")interact()});
+cv.addEventListener("keydown",e=>{const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]}[e.key];if(m){e.preventDefault();move(m[0],m[1])}if(e.key==="e"||e.key===" "){e.preventDefault();interact()}});
+cv.tabIndex=0;draw();
+})();
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Willkommen", text: "<p>Diese Anleitung zeigt, wie du mit Claude oder ChatGPT aus deinem Lehrplan ein kleines Pixel-Rollenspiel bauen lässt.</p>" },
+  { sel: "#mini", title: "Mini-Vorschau", text: "<p>So fühlt sich das Ergebnis an: Figur bewegen, ansprechen, Aufgabe lösen.</p>" },
+  { sel: "#baukasten", title: "Prompt-Baukasten", text: "<p>Fach, Jahrgang und Lehrplanpunkte eintragen – der fertige Prompt entsteht automatisch und lässt sich kopieren.</p>" },
+  { sel: "#hakt", title: "Wenn etwas hakt", text: "<p>Fertige Sätze für typische Probleme, die du der KI einfach zurückschreibst.</p>" },
+  { sel: "#check", title: "Checkliste", text: "<p>Vor dem Einsatz kurz abhaken – die Haken bleiben auf diesem Gerät gespeichert.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

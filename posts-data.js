@@ -301,27 +301,27 @@ const posts = [
    },
    {
     title: "Akte Wahrheit – 1938",
-    excerpt: "Pixel-Adventure zur Propaganda-Analyse: Als verdeckter Bote untersuchst du 1938 eine fiktive NS-Propagandastelle. Geschichte, Jg. 10, 45–60 Minuten. (Externe Seite, von Sebastian Holle)",
+    excerpt: "Pixel-Adventure zur Propaganda-Analyse: Als verdeckter Bote untersuchst du im Herbst 1938 eine fiktive NS-Propagandastelle, sammelst Hinweise und trennst Belege von Vermutungen. Mit Quellenhandbuch, Abschlussbericht und Lehrkraft-Infos. Geschichte, Jg. 10, 45–60 Minuten.",
     date: "2026-09-20",
     category: "schule",
     subcategory: "weiterefaecher",
-    url: "https://akte-wahrheit-1938-holle.netlify.app/lehrkraft",
+    url: "akte-wahrheit-1938.html",
     emoji: "🗂️",
-    tags: ["spiel", "geschichte", "jg10"],
+    tags: ["spiel", "geschichte", "einzelarbeit", "jg9", "jg10"],
     titleEn: "Case File Truth – 1938",
-    excerptEn: "A pixel adventure on analysing propaganda: play a covert messenger investigating a fictional Nazi propaganda office in 1938. History, grade 10, 45–60 minutes. (External site, by Sebastian Holle)"
+    excerptEn: "A pixel adventure on analysing propaganda: as a covert messenger in autumn 1938 you investigate a fictional Nazi propaganda office, collect clues and separate evidence from suspicion. With source handbook, final report and teacher notes. History, grade 10, 45–60 minutes."
    },
    {
     title: "Mission Erde – Klasse 7",
-    excerpt: "Forschungsexpedition zur Erde im Sonnensystem: sechs Missionen zu Tag/Nacht, Jahreszeiten und mehr, mit drei Schwierigkeitsstufen. Jg. 7. (Externe Seite, von Sebastian Holle)",
+    excerpt: "Forschungsexpedition zur Erde im Sonnensystem: sechs Missionen zu Planeten, Entfernungen, Tag und Nacht, Jahreszeiten, Mondphasen und Lebensraum Erde – mit Simulationen, Spielen, Logbuch, Abzeichen und drei Flugrouten (Förderung, Basis, Erweitert).",
     date: "2026-09-20",
     category: "schule",
     subcategory: "weiterefaecher",
-    url: "https://mission-erde-klasse7-september.sebastianholle.chatgpt.site/",
+    url: "mission-erde.html",
     emoji: "🌍",
-    tags: ["tool", "naturwissenschaften", "jg7"],
+    tags: ["tool", "naturwissenschaften", "einzelarbeit", "vertretung", "jg6", "jg7", "jg8"],
     titleEn: "Mission Earth – Grade 7",
-    excerptEn: "A research expedition on Earth's place in the solar system: six missions on day/night, the seasons and more, with three difficulty levels. Grade 7. (External site, by Sebastian Holle)"
+    excerptEn: "A research expedition on Earth in the solar system: six missions on planets, distances, day and night, seasons, moon phases and Earth as a habitat – with simulations, games, logbook, badges and three difficulty routes."
    },
    {
     title: "Parabel-Werkstatt",
@@ -385,27 +385,27 @@ const posts = [
    },
    {
     title: "Märkte & Preise – Lernwerkstatt WAT 9",
-    excerpt: "Drei Lernwege zum Thema Märkte und Preise für den WAT-Unterricht in Jg. 9, mit fertigen Arbeitsblättern für 8 Doppelstunden. Unterrichtsfälle und Preise sind fiktiv. (Externe Seite, von Sebastian Holle)",
+    excerpt: "Lernwerkstatt zu Märkten und Preisen am Beispiel eines Waffelstands: acht Doppelstunden in drei Lernwegen mit Preislabor, Marktspiel, Grundpreis-Rechner und druckbarem Arbeitsheft. Fälle und Preise sind fiktiv.",
     date: "2026-09-26",
     category: "schule",
     subcategory: "arbeitslehre",
-    url: "https://maerkte-preise-lernwerkstatt.sebastianholle.chatgpt.site/#lernen",
+    url: "maerkte-preise.html",
     emoji: "🛒",
-    tags: ["tool", "wirtschaft", "jg9"],
+    tags: ["tool", "wirtschaft", "einzelarbeit", "jg8", "jg9", "jg10"],
     titleEn: "Markets & Prices – WAT 9 Learning Studio",
-    excerptEn: "Three learning pathways on markets and prices for Grade 9 Economics/Work/Technology classes, with ready-made worksheets for 8 double lessons. Teaching cases and prices are fictional. (External site, by Sebastian Holle)"
+    excerptEn: "A learning studio on markets and prices using a school-fair waffle stand: eight double lessons in three learning paths with price lab, market game, unit-price calculator and printable workbook. Cases and prices are fictional."
    },
    {
     title: "Lern-RPG aus dem Lehrplan – Anleitung",
-    excerpt: "Anleitung für Lehrkräfte: mit Claude oder ChatGPT aus dem eigenen Lehrplan ein kleines Pixel-Rollenspiel plus Arbeitsblatt erstellen lassen – inklusive Prompt-Vorlage und Tipps zur Fehlerbehebung. (Externe Seite, KILehrkraft.de)",
+    excerpt: "Anleitung für Lehrkräfte: mit Claude oder ChatGPT aus dem eigenen Lehrplan ein kleines Pixel-Rollenspiel plus Arbeitsblatt bauen lassen – mit spielbarer Mini-Vorschau, Prompt-Baukasten, Fehlerhilfe und Checkliste.",
     date: "2026-09-26",
     category: "schule",
     subcategory: "arbeitslehre",
-    url: "https://kilehrkraft.de/anleitungen/lern-rpg-aus-dem-lehrplan.html",
+    url: "lern-rpg-anleitung.html",
     emoji: "🎮",
     tags: ["ki"],
     titleEn: "Curriculum Learning RPG – Guide",
-    excerptEn: "A guide for teachers: use Claude or ChatGPT to turn your own curriculum into a small pixel role-playing game plus worksheet – including a prompt template and troubleshooting tips. (External site, KILehrkraft.de)"
+    excerptEn: "A guide for teachers: use Claude or ChatGPT to turn your own curriculum into a small pixel role-playing game plus worksheet – with a playable mini preview, prompt builder, troubleshooting and checklist."
    },
    {
     title: "Funktionsleiter",
@@ -457,15 +457,15 @@ const posts = [
    },
    {
     title: "Lichtlabor Klasse 7",
-    excerpt: "Interaktives Lichtlabor für Klasse 7 zum Ausprobieren und Entdecken. (Externe Seite)",
+    excerpt: "Physik-Abenteuer im dunklen Labor: An fünf Stationen Lichtausbreitung, Materialien, Schatten, Spiegel und Farben untersuchen und die Lichtmodule reparieren – mit Laborbuch, Arbeitsblättern, Vorlesefunktion und einfacher Sprache.",
     date: "2026-09-30",
     category: "schule",
     subcategory: "weiterefaecher",
-    url: "https://lichtlabor-klasse-7.sebastianholle.chatgpt.site/",
+    url: "lichtlabor.html",
     emoji: "💡",
-    tags: ["tool", "naturwissenschaften", "jg7"],
+    tags: ["spiel", "naturwissenschaften", "einzelarbeit", "jg6", "jg7"],
     titleEn: "Light Lab Grade 7",
-    excerptEn: "Interactive light lab for grade 7 to experiment and explore. (External site)"
+    excerptEn: "A physics adventure in a dark lab: investigate light propagation, materials, shadows, mirrors and colours at five stations to repair the light modules – with lab book, worksheets, read-aloud and plain language."
    },
    {
     title: "Prozentinsel",
@@ -675,15 +675,15 @@ const posts = [
    },
    {
     title: "Türen-Challenge: Around Town",
-    excerpt: "Interaktive Lern-Challenge „Around Town“ als eigenständige Webseite. (Externe Seite, kein buildspace-Inhalt)",
+    excerpt: "Vokabel-Challenge „Around Town“: Hinter jeder Tür steht eine Übersetzung, nur die richtige führt weiter. Vier Stufen, drei Richtungen, Klassenliste zum Abhaken – und eigene Wortlisten, die sich per Link teilen lassen.",
     date: "2026-10-05",
     category: "schule",
     subcategory: "weiterefaecher",
-    url: "https://tueren-challenge-around-town-holle.sebastianholle.chatgpt.site/",
+    url: "tueren-challenge.html",
     emoji: "🚪",
-    tags: ["sprachen", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    tags: ["spiel", "sprachen", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7"],
     titleEn: "Doors Challenge: Around Town",
-    excerptEn: "Interactive learning challenge \"Around Town\" as a standalone website. (External site, not buildspace content)"
+    excerptEn: "Vocabulary challenge \"Around Town\": behind every door is a translation, only the right one leads on. Four levels, three directions, a printable class list – and your own word lists, shareable via link."
    },
    {
     title: "Kart Krawall",
