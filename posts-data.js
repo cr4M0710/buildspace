@@ -1249,4 +1249,16 @@ const posts = [
     titleEn: "Wandler",
     excerptEn: "Convert files by drag and drop: a format ring at your cursor for images (incl. HEIC), PDF, Word, spreadsheets, text, audio, subtitles and ZIP. Customisable ring and presets, nothing is uploaded."
    },
+   {
+    title: "Hacker-Escape-Room (Phishing)",
+    excerpt: "Ein Hacker hat das Büro gesperrt: In zehn Minuten Phishing-Mails, eine verdächtige SMS und falsche Bank-Links entlarven und das Zahlenschloss öffnen – dazu Prompts, mit denen man den Escape Room mit Claude oder ChatGPT selbst nachbaut. (Externe Seite, KILehrkraft.de)",
+    date: "2026-11-01",
+    category: "schule",
+    subcategory: "arbeitslehre",
+    url: "https://kilehrkraft.de/anleitungen/hacker-escape-room.html",
+    emoji: "🔐",
+    tags: ["spiel", "ki", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
+    titleEn: "Hacker Escape Room (Phishing)",
+    excerptEn: "A hacker has locked the office: expose phishing emails, a suspicious text and fake bank links within ten minutes to open the lock, plus prompts to rebuild the escape room yourself with Claude or ChatGPT. (External site, KILehrkraft.de)"
+   },
 ];
