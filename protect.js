@@ -462,7 +462,13 @@
       "html.embed-mode #protect-share-btn, html.embed-mode .protect-update-banner,",
       "html.embed-mode .protect-install-banner,",
       "html.embed-mode .protect-feedback-widget, html.embed-mode .protect-highscore-btn { display: none !important; }",
+      "#protect-legal { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(4px, env(safe-area-inset-bottom)); z-index: 9989; display: flex; gap: 6px; align-items: center;",
+      "  padding: 2px 10px; border-radius: 999px; font: 11px/1.6 Arial, Helvetica, sans-serif; color: #F4F6FB; background: rgba(10,11,16,0.45); opacity: 0.65; transition: opacity 0.2s; white-space: nowrap; }",
+      "#protect-legal:hover, #protect-legal:focus-within { opacity: 1; }",
+      "#protect-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }",
+      "html.embed-mode #protect-legal { display: none !important; }",
       "@media print {",
+      "  #protect-legal,",
       "  #protect-share-btn, #protect-back-link, #protect-poster-btn, .protect-update-banner, .protect-install-banner,",
       "  .protect-feedback-widget, .protect-highscore-btn, .protect-banner, #protect-ui-handle { display: none !important; }",
       "}"
@@ -1307,6 +1313,19 @@
     document.body.appendChild(a);
   }
 
+  /* Impressum und Datenschutz müssen auf jeder Seite unmittelbar erreichbar sein (§ 5 DDG, Art. 13 DSGVO).
+     Darum dauerhaft sichtbar (wird nicht automatisch ausgeblendet), klein unten mittig. */
+  function addLegalLinks() {
+    if (isEmbedMode() || document.getElementById("protect-legal")) return;
+    ensureStyle();
+    const base = HOME_HREF.replace(/index\.html$/, "");
+    const nav = document.createElement("nav");
+    nav.id = "protect-legal";
+    nav.setAttribute("aria-label", "Rechtliches");
+    nav.innerHTML = '<a href="' + base + 'impressum.html">Impressum</a><span aria-hidden="true">·</span><a href="' + base + 'datenschutz.html">Datenschutz</a>';
+    document.body.appendChild(nav);
+  }
+
   function ensureQrLib(callback) {
     if (typeof global.qrcode === "function") { callback(); return; }
     const s = document.createElement("script");
@@ -1769,15 +1788,17 @@
      zählt pro Tag und Seite in Firestore page_views/{JJJJ-MM-TT} hoch.
      Keine Cookies, keine Kennung, keine IP-Speicherung. Nicht gezählt wird
      bei „Do Not Track“, mit localStorage bs_nocount = "1" (Cockpit ›
-     Einstellungen › Mitteilungen), lokal und mehrfach in derselben Sitzung. */
+     Einstellungen › Mitteilungen), bei Global Privacy Control und lokal. */
   function countView() {
     try {
       if (!/(^|\.)buildspaceos\.de$/.test(location.hostname)) return;
-      if (navigator.doNotTrack === "1" || global.doNotTrack === "1") return;
+      if (navigator.doNotTrack === "1" || global.doNotTrack === "1" || navigator.globalPrivacyControl === true) return;
       try { if (localStorage.getItem("bs_nocount") === "1") return; } catch (e) {}
       const file = (location.pathname.split("/").pop() || "index.html").replace(/\.html?$/i, "") || "index";
       const key = "p_" + (file === "index" ? "start" : file).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
-      try { if (sessionStorage.getItem("bs_counted_" + key)) return; sessionStorage.setItem("bs_counted_" + key, "1"); } catch (e) {}
+      /* Bewusst KEIN Merker in sessionStorage/localStorage: Für die Reichweitenmessung darf ohne
+         Einwilligung nichts auf dem Gerät gespeichert werden (§ 25 TDDDG). Gezählt wird einmal pro Seitenaufruf. */
+      if (global.__bsCounted) return; global.__bsCounted = true;
       const d = new Date(), day = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       const base = "projects/" + FIREBASE_CONFIG.projectId + "/databases/(default)/documents";
       fetch("https://firestore.googleapis.com/v1/" + base + ":commit?key=" + FIREBASE_CONFIG.apiKey, {
@@ -1803,7 +1824,7 @@
       document.documentElement.classList.remove("protect-open");
       if (cat) {
         addShareButton(cat);
-        if (!isHomeApp_()) { addBackLink(); addPosterButton(); }
+        if (!isHomeApp_()) { addBackLink(); addPosterButton(); addLegalLinks(); }
         initFeedbackWidget(cat);
         initHighscoreWidget();
         if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
