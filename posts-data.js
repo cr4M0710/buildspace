@@ -1261,4 +1261,16 @@ const posts = [
     titleEn: "Hacker Escape Room (Phishing)",
     excerptEn: "A hacker has locked the office: expose phishing emails, a suspicious text and fake bank links within ten minutes to open the lock, plus prompts to rebuild the escape room yourself with Claude or ChatGPT. (External site, KILehrkraft.de)"
    },
+   {
+    title: "Bruch-Werkstatt",
+    excerpt: "Bruchrechnung ikonisch und symbolisch nebeneinander: Brüche & Größen, Erweitern, Kürzen und alle vier Rechenarten mit gleichnamigen und ungleichnamigen Brüchen – je 3 animierte Beispiele, Übungsaufgaben in drei Niveaus mit Bild-Hilfe und eigene Brüche zum Ausprobieren.",
+    date: "2026-11-01",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "bruch-werkstatt.html",
+    emoji: "🧮",
+    tags: ["tool", "bruchrechnung", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7"],
+    titleEn: "Fraction Workshop",
+    excerptEn: "Fractions shown as pictures and as calculations side by side: fractions of quantities, expanding, simplifying and all four operations with like and unlike denominators – 3 animated examples each, practice tasks on three levels with picture hints, and your own fractions to explore."
+   },
 ];
