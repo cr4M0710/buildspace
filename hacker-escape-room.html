@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hacker-Escape-Room (Phishing)</title>
+<link rel="icon" href="assets/icon-v3-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-v3-180.png">
+<link rel="stylesheet" href="assets/fonts/space-grotesk.css">
+<link rel="stylesheet" href="assets/fonts/ibm-plex-mono.css">
+<style>
+:root{
+  --bg:#07090d; --bg2:#0d1219; --panel:#111823; --line:#24324a; --ink:#e6edf6; --muted:#8fa0b8;
+  --green:#3dff9a; --green-d:#0f3a27; --red:#ff4d5e; --red-d:#3d1219; --amber:#ffc24a; --cyan:#53d8ff;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --head:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--ink);font-family:var(--head);font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);overflow-x:hidden}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+h1,h2,h3{margin:0;line-height:1.15}
+p{margin:0}
+.mono{font-family:var(--mono)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 20px;border-radius:12px;
+  border:1px solid var(--line);background:var(--panel);font-weight:600;transition:transform .12s,background .2s,border-color .2s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--green);color:#03140b;border-color:var(--green);box-shadow:0 0 24px rgba(61,255,154,.35)}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+
+/* ---------- Intro ---------- */
+#intro{max-width:760px;margin:0 auto;padding:48px 16px 60px;display:flex;flex-direction:column;gap:22px}
+.glitch{font-size:clamp(34px,8vw,58px);font-weight:700;letter-spacing:-.02em;position:relative;display:inline-block}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;inset:0;pointer-events:none}
+.glitch::before{color:var(--red);transform:translate(2px,0);clip-path:inset(0 0 60% 0);animation:gl1 3.2s infinite steps(1)}
+.glitch::after{color:var(--cyan);transform:translate(-2px,0);clip-path:inset(55% 0 0 0);animation:gl2 2.7s infinite steps(1)}
+@keyframes gl1{0%,88%,100%{opacity:0}89%,93%{opacity:.85;transform:translate(4px,-1px)}94%{opacity:.6;transform:translate(-3px,1px)}}
+@keyframes gl2{0%,80%,100%{opacity:0}81%,85%{opacity:.8;transform:translate(-4px,1px)}86%{opacity:.5;transform:translate(3px,0)}}
+.kicker{font-family:var(--mono);color:var(--green);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.terminal{background:#020403;border:1px solid var(--green-d);border-radius:14px;padding:18px;min-height:150px;font-family:var(--mono);
+  color:var(--green);font-size:16px;box-shadow:inset 0 0 40px rgba(61,255,154,.06),0 0 0 1px rgba(61,255,154,.05);white-space:pre-wrap;
+  animation:flick 4s infinite}
+@keyframes flick{0%,97%,100%{opacity:1}98%{opacity:.75}}
+.cursor{display:inline-block;width:.6em;height:1.05em;background:var(--green);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.rules h2{font-size:18px;margin-bottom:8px}
+.rules ul{margin:0;padding-left:20px;display:grid;gap:4px;color:var(--muted)}
+.rules b{color:var(--ink)}
+
+/* ---------- Room ---------- */
+#room{max-width:1100px;margin:0 auto;padding:14px 12px 120px}
+.hud{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+  padding:10px 12px;margin:0 -12px 12px;background:rgba(7,9,13,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hud .tag{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.clockwrap{position:relative}
+#clock{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--green);letter-spacing:.04em;text-shadow:0 0 14px rgba(61,255,154,.45);min-width:5ch;text-align:center}
+#clock.low{color:var(--red);text-shadow:0 0 14px rgba(255,77,94,.6);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.pen{position:absolute;left:50%;top:100%;transform:translateX(-50%);font-family:var(--mono);font-weight:700;color:var(--red);font-size:20px;
+  animation:penf 1.3s ease-out forwards;pointer-events:none;white-space:nowrap}
+@keyframes penf{0%{opacity:0;transform:translate(-50%,-10px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,26px)}}
+.hudstats{display:flex;gap:14px;align-items:center;font-family:var(--mono);font-size:14px}
+.hudstats .digits span{display:inline-block;min-width:1.4em;text-align:center;padding:2px 4px;margin-left:3px;border-radius:6px;background:#151d2a;border:1px solid var(--line)}
+.hudstats .digits span.on{color:#03140b;background:var(--amber);border-color:var(--amber);box-shadow:0 0 10px rgba(255,194,74,.5)}
+.scene{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#06080c}
+.scene svg{display:block;width:100%;height:auto}
+.hs{cursor:pointer;outline:none}
+.hs .ring{fill:none;stroke:var(--cyan);stroke-width:3;opacity:.0;animation:ring 2.2s infinite}
+.hs.done .ring{display:none}
+@keyframes ring{0%{opacity:.0}40%{opacity:.85}100%{opacity:0}}
+.hs:hover .glow,.hs:focus-visible .glow{opacity:1}
+.hs .glow{opacity:0;transition:opacity .2s}
+.okmark{opacity:0;transition:opacity .4s}
+.hs.done .okmark{opacity:1}
+#doorLeaf{transform-box:fill-box;transform-origin:left center;transition:transform 1.6s cubic-bezier(.6,0,.2,1)}
+.scene.open #doorLeaf{transform:perspective(600px) rotateY(-80deg) scaleX(.25)}
+#doorLight{opacity:0;transition:opacity 1.4s .3s}
+.scene.open #doorLight{opacity:1}
+.objbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.objbar .btn{flex-direction:column;gap:2px;min-height:64px;padding:8px 6px;font-size:15px}
+.objbar .btn .st{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.objbar .btn.done{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green-d)}
+.objbar .btn.done .st{color:var(--green)}
+@media (max-width:560px){.objbar{grid-template-columns:repeat(2,1fr)}}
+
+/* Hacker chat */
+#chat{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 24px));z-index:30;
+  background:rgba(10,4,7,.94);border:1px solid #5a1d27;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 30px rgba(255,77,94,.12);overflow:hidden}
+#chat .ch{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #3a141b;font-family:var(--mono);font-size:13px;color:var(--red)}
+#chat .ch .dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 1.4s infinite}
+#chat .ch button{margin-left:auto;background:none;border:0;color:var(--muted);font-size:13px;padding:6px;min-height:32px}
+#chatLog{max-height:150px;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:14px}
+#chat.min #chatLog{display:none}
+.msg{color:#ffd4d9}
+.msg::before{content:"> ";color:var(--red)}
+.msg.nerv{color:var(--amber)}
+
+/* Flash */
+#flash{position:fixed;inset:0;pointer-events:none;z-index:60;background:radial-gradient(ellipse at center,rgba(255,40,60,.15),rgba(255,40,60,.45));opacity:0}
+#flash.go{animation:fl .55s ease-out}
+@keyframes fl{0%{opacity:0}15%{opacity:1}35%{opacity:.2}50%{opacity:.8}100%{opacity:0}}
+body.shake #room{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+/* ---------- Modal ---------- */
+#modal{position:fixed;inset:0;z-index:40;background:rgba(2,4,8,.78);display:flex;align-items:flex-start;justify-content:center;padding:max(14px,env(safe-area-inset-top)) 12px 14px;overflow-y:auto}
+.mbox{width:min(820px,100%);background:var(--bg2);border:1px solid var(--line);border-radius:18px;margin:auto 0;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:pop .25s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.mhead h2{font-size:20px}
+.mhead .sub{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.mhead .x{margin-left:auto;min-width:48px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:20px}
+.mbody{padding:16px}
+.fb{margin-top:12px;padding:12px 14px;border-radius:12px;font-size:16px}
+.fb.ok{background:var(--green-d);border:1px solid #1e6b47}
+.fb.bad{background:var(--red-d);border:1px solid #7a2531}
+.fb b{display:block;margin-bottom:2px}
+.progress{font-family:var(--mono);font-size:14px;color:var(--muted);margin-bottom:10px}
+
+/* Mail */
+.mail{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.mail{grid-template-columns:1fr}}
+.inbox{display:flex;flex-direction:column;gap:6px}
+.mrow{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;min-height:56px;display:grid;gap:1px}
+.mrow .f{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .s{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow.sel{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan)}
+.mrow.right{border-left:5px solid var(--green)}
+.mrow.wrong{border-left:5px solid var(--red)}
+.mview{background:#f4f6f9;color:#16202e;border-radius:14px;padding:16px;min-height:260px}
+.mview .meta{font-size:14px;color:#4a5668;border-bottom:1px solid #d7dde6;padding-bottom:10px;margin-bottom:12px;display:grid;gap:2px}
+.mview .meta .addr{font-family:var(--mono);font-size:13px;word-break:break-all}
+.mview h3{font-size:19px;margin-bottom:4px;color:#16202e}
+.mview .text{display:grid;gap:10px;font-size:16px}
+.fake-link{display:inline-block;background:#1d5ad6;color:#fff;border-radius:8px;padding:9px 14px;font-weight:600}
+.linkpeek{font-family:var(--mono);font-size:12.5px;color:#4a5668;word-break:break-all;margin-top:4px}
+.choice{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.choice .btn{flex:1 1 160px}
+.empty{display:grid;place-items:center;color:#5c677a;text-align:center;min-height:220px}
+
+/* Phone */
+.phone{width:min(360px,100%);margin:0 auto;background:#000;border:10px solid #1b1f27;border-radius:36px;padding:16px 12px 22px;box-shadow:0 0 0 2px #2c3240}
+.phone .notch{width:90px;height:20px;background:#1b1f27;border-radius:0 0 14px 14px;margin:-16px auto 10px}
+.seg{display:inline;border:0;background:none;padding:2px 2px;border-radius:6px;text-align:left;line-height:1.7;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.seg:not(:disabled){text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:4px}
+.seg.hit{background:rgba(61,255,154,.28);outline:1px solid var(--green)}
+.seg.miss{background:rgba(255,77,94,.25);text-decoration:line-through}
+.seg:disabled{cursor:default}
+.from{display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:14px;color:#cfd6e2;font-size:13px}
+.from .av{width:46px;height:46px;border-radius:50%;background:#3b4252;display:grid;place-items:center;font-size:22px}
+.bubble{background:#2a2d34;color:#f2f4f8;border-radius:18px 18px 18px 6px;padding:10px 12px;font-size:16.5px}
+.stamp{text-align:center;color:#8d95a3;font-size:12px;margin:8px 0}
+
+/* Laptop */
+.browser{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0b1018}
+.browser .bar{display:flex;gap:6px;padding:10px 12px;background:#141c28;border-bottom:1px solid var(--line)}
+.browser .bar i{width:11px;height:11px;border-radius:50%;background:#3a4558}
+.browser .inner{padding:16px;display:grid;gap:12px}
+.task{font-size:17px}
+.lnk{text-align:left;border:1px solid var(--line);background:#0f1622;border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:15px;word-break:break-all;min-height:56px}
+.lnk.right{border-color:var(--green);background:var(--green-d)}
+.lnk.wrong{border-color:var(--red);background:var(--red-d)}
+.lnk:disabled{cursor:default}
+.lnk .lock{margin-right:6px}
+
+/* Lock */
+.lockbox{display:grid;gap:16px;justify-items:center;text-align:center}
+.wheels{display:flex;gap:14px}
+.wheel{display:flex;flex-direction:column;align-items:center;gap:6px}
+.wheel .lbl{font-size:13px;color:var(--muted)}
+.wheel button{width:64px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:20px}
+.wheel .num{width:64px;height:78px;border-radius:12px;background:#020403;border:1px solid var(--amber);display:grid;place-items:center;
+  font-family:var(--mono);font-size:44px;font-weight:600;color:var(--amber);text-shadow:0 0 12px rgba(255,194,74,.5);overflow:hidden}
+.wheel .num.spin span{animation:spin .35s ease-out}
+@keyframes spin{from{transform:translateY(-60%);opacity:0}}
+.hint{font-family:var(--mono);font-size:14px;color:var(--muted)}
+
+/* Finale & End */
+#finale{position:fixed;inset:0;z-index:70;display:grid;place-items:center;text-align:center;padding:20px;
+  background:radial-gradient(circle at center,rgba(255,250,220,.95),rgba(255,214,120,.65) 35%,rgba(7,9,13,.96) 75%);color:#1b1408;animation:fin 2.8s ease-out forwards}
+#finale h2{font-size:clamp(28px,7vw,48px)}
+@keyframes fin{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+#end{max-width:780px;margin:0 auto;padding:40px 16px 80px;display:grid;gap:18px}
+.endcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+.endcard.win{border-color:var(--green);box-shadow:0 0 40px rgba(61,255,154,.12)}
+.endcard.lose{border-color:var(--red);box-shadow:0 0 40px rgba(255,77,94,.14)}
+.endcard h1{font-size:clamp(30px,7vw,46px);margin-bottom:6px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.stat{flex:1 1 140px;background:#0b1018;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.stat .v{font-family:var(--mono);font-size:28px;font-weight:600}
+.stat .k{font-size:13px;color:var(--muted)}
+.three{display:grid;gap:10px;counter-reset:r;margin:0;padding:0;list-style:none}
+.three li{counter-increment:r;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;background:#0b1018;border:1px solid var(--line);border-radius:12px;padding:12px}
+.three li::before{content:counter(r);display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:var(--green);color:#03140b;font-weight:700;font-family:var(--mono);font-size:20px}
+.fails{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.fails li{border-left:4px solid var(--red);background:#140b0e;border-radius:8px;padding:8px 12px;font-size:15.5px}
+.fails li b{display:block}
+.note{font-size:14px;color:var(--muted)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .glitch::before,.glitch::after{display:none}
+}
+</style>
+</head>
+<body>
+<div id="flash"></div>
+
+<!-- ============ INTRO ============ -->
+<section id="intro">
+  <div class="kicker">Arbeitslehre · Digitale Sicherheit</div>
+  <h1 class="glitch" data-t="Hacker-Escape-Room">Hacker-Escape-Room</h1>
+  <div class="terminal" id="term" aria-live="polite"></div>
+  <div class="rules" id="rulesBox">
+    <h2>So läuft das Spiel</h2>
+    <ul>
+      <li>Klicke im gesperrten Büro auf <b>Monitor, Diensthandy und Laptop</b>. Hinter jedem steckt ein Rätsel.</li>
+      <li>Jedes gelöste Rätsel lässt eine <b>Ziffer an der Tür</b> aufleuchten. Mit dem Code öffnest du das Schloss.</li>
+      <li>Du hast <b>10 Minuten</b>. Jeder Fehler kostet dich <b>eine Minute</b>.</li>
+      <li><b>Die erste Antwort zählt.</b> Durchprobieren geht nicht.</li>
+      <li>Du hast <b>einen Versuch</b> auf diesem Gerät. Neu laden bringt nichts, das Spiel läuft weiter.</li>
+    </ul>
+  </div>
+  <div><button class="btn primary" id="startBtn">▶ Ins System einsteigen</button></div>
+</section>
+
+<!-- ============ ROOM ============ -->
+<section id="room" hidden>
+  <div class="hud">
+    <div class="clockwrap"><div id="clock">10:00</div><div id="penSlot"></div></div>
+    <div class="hudstats">
+      <span class="digits" aria-label="Ziffern für das Türschloss">Code<span id="hd0">•</span><span id="hd1">•</span><span id="hd2">•</span></span>
+      <span class="tag" id="errTag">Fehler: 0</span>
+    </div>
+  </div>
+
+  <div class="scene" id="scene">
+  <svg viewBox="0 0 1000 560" role="img" aria-label="Dunkles Büro bei Nacht mit Monitor, Diensthandy, Laptop und verschlossener Tür">
+    <defs>
+      <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1220"/><stop offset="1" stop-color="#070a12"/></linearGradient>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1633"/><stop offset="1" stop-color="#1b1430"/></linearGradient>
+      <radialGradient id="screenGlow" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#53d8ff" stop-opacity=".35"/><stop offset="1" stop-color="#53d8ff" stop-opacity="0"/></radialGradient>
+      <radialGradient id="lampGlow" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#ffc24a" stop-opacity=".28"/><stop offset="1" stop-color="#ffc24a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="doorL" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="#fff8dc"/><stop offset=".6" stop-color="#ffd57a"/><stop offset="1" stop-color="#ffb347" stop-opacity=".2"/></radialGradient>
+    </defs>
+    <rect width="1000" height="560" fill="url(#wall)"/>
+    <!-- Fenster -->
+    <rect x="50" y="46" width="270" height="190" rx="6" fill="url(#sky)" stroke="#273349" stroke-width="6"/>
+    <circle cx="270" cy="88" r="16" fill="#e9e4c9" opacity=".85"/>
+    <g fill="#05070d">
+      <rect x="56" y="150" width="34" height="80"/><rect x="92" y="125" width="28" height="105"/><rect x="122" y="165" width="40" height="65"/>
+      <rect x="164" y="110" width="30" height="120"/><rect x="196" y="140" width="44" height="90"/><rect x="242" y="160" width="30" height="70"/><rect x="274" y="132" width="40" height="98"/>
+    </g>
+    <g fill="#ffc24a" opacity=".7">
+      <rect x="98" y="135" width="5" height="6"/><rect x="108" y="155" width="5" height="6"/><rect x="170" y="122" width="5" height="6"/><rect x="180" y="150" width="5" height="6"/>
+      <rect x="204" y="152" width="5" height="6"/><rect x="222" y="172" width="5" height="6"/><rect x="282" y="146" width="5" height="6"/><rect x="296" y="176" width="5" height="6"/><rect x="132" y="178" width="5" height="6"/>
+    </g>
+    <line x1="185" y1="46" x2="185" y2="236" stroke="#273349" stroke-width="5"/>
+    <!-- Boden -->
+    <rect x="0" y="448" width="1000" height="112" fill="#05070b"/>
+    <line x1="0" y1="448" x2="1000" y2="448" stroke="#1a2333" stroke-width="2"/>
+    <!-- Lampe -->
+    <path d="M 690 330 L 700 250 L 740 238" stroke="#2f3a4f" stroke-width="5" fill="none"/>
+    <path d="M 722 226 L 760 240 L 748 256 Z" fill="#2f3a4f"/>
+    <path d="M 742 250 L 640 330 L 780 330 Z" fill="url(#lampGlow)"/>
+    <!-- Schreibtisch -->
+    <rect x="130" y="330" width="580" height="22" rx="4" fill="#1e2636"/>
+    <rect x="150" y="352" width="16" height="96" fill="#161d2a"/><rect x="674" y="352" width="16" height="96" fill="#161d2a"/>
+    <rect x="540" y="352" width="140" height="70" fill="#141a26"/><rect x="590" y="380" width="40" height="5" rx="2" fill="#2a3448"/>
+    <!-- Tasse und Pflanze -->
+    <rect x="148" y="300" width="22" height="30" rx="3" fill="#2a3448"/><path d="M170 308 q12 0 12 10 q0 8 -12 8" stroke="#2a3448" stroke-width="4" fill="none"/>
+    <path d="M675 330 l6 -26 h22 l6 26 z" fill="#2a3448"/><path d="M692 304 q-14 -26 -4 -44 M692 304 q10 -30 22 -38 M692 304 q-2 -24 6 -50" stroke="#1f6b47" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- Monitor -->
+    <g class="hs" id="hsMonitor" data-obj="monitor" tabindex="0" role="button" aria-label="Monitor öffnen: Posteingang">
+      <rect x="168" y="150" width="270" height="200" fill="url(#screenGlow)" class="glow"/>
+      <rect x="278" y="300" width="50" height="30" fill="#232c3e"/><rect x="250" y="326" width="106" height="8" rx="3" fill="#2a3448"/>
+      <rect x="190" y="170" width="226" height="134" rx="8" fill="#141b29" stroke="#33405a" stroke-width="4"/>
+      <rect x="200" y="180" width="206" height="114" rx="3" fill="#0a1f2c"/>
+      <g fill="#53d8ff" opacity=".75"><rect x="210" y="190" width="60" height="7"/><rect x="210" y="206" width="180" height="5" opacity=".6"/><rect x="210" y="218" width="150" height="5" opacity=".6"/>
+      <rect x="210" y="234" width="180" height="5" opacity=".6"/><rect x="210" y="246" width="120" height="5" opacity=".6"/><rect x="210" y="262" width="170" height="5" opacity=".6"/></g>
+      <text x="303" y="286" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" fill="#ff4d5e">✉ 5 NEUE</text>
+      <rect class="ring" x="182" y="162" width="242" height="150" rx="12"/>
+      <g class="okmark"><circle cx="412" cy="172" r="18" fill="#3dff9a"/><path d="M403 172 l6 7 l12 -14" stroke="#03140b" stroke-width="4" fill="none"/></g>
+    </g>
+
+    <!-- Diensthandy -->
+    <g class="hs" id="hsPhone" data-obj="phone" tabindex="0" role="button" aria-label="Diensthandy öffnen: verdächtige SMS">
+      <rect x="420" y="250" width="70" height="100" fill="url(#screenGlow)" class="glow"/>
+      <rect x="438" y="320" width="36" height="10" rx="3" fill="#2a3448"/>
+      <rect x="440" y="270" width="32" height="56" rx="6" fill="#0b0e14" stroke="#3a4558" stroke-width="3"/>
+      <rect x="444" y="276" width="24" height="42" rx="2" fill="#1a2a1f"/>
+      <rect x="447" y="284" width="18" height="8" rx="3" fill="#3dff9a" opacity=".85"/>
+      <circle cx="466" cy="279" r="4" fill="#ff4d5e"/>
+      <rect class="ring" x="432" y="262" width="48" height="72" rx="10"/>
+      <g class="okmark"><circle cx="476" cy="266" r="14" fill="#3dff9a"/><path d="M469 266 l5 5 l9 -10" stroke="#03140b" stroke-width="3.5" fill="none"/></g>
+    </g>
+
+    <!-- Laptop -->
+    <g class="hs" id="hsLaptop" data-obj="laptop" tabindex="0" role="button" aria-label="Laptop öffnen: Links prüfen">
+      <rect x="490" y="220" width="190" height="125" fill="url(#screenGlow)" class="glow"/>
+      <rect x="510" y="236" width="150" height="88" rx="6" fill="#141b29" stroke="#33405a" stroke-width="4"/>
+      <rect x="518" y="244" width="134" height="72" rx="2" fill="#0d1a14"/>
+      <g fill="#3dff9a" opacity=".7"><rect x="526" y="252" width="90" height="5"/><rect x="526" y="264" width="110" height="4" opacity=".6"/><rect x="526" y="275" width="70" height="4" opacity=".6"/><rect x="526" y="288" width="100" height="4" opacity=".6"/></g>
+      <path d="M496 324 H 674 L 686 334 H 484 Z" fill="#2a3448"/>
+      <rect class="ring" x="502" y="228" width="166" height="112" rx="12"/>
+      <g class="okmark"><circle cx="654" cy="240" r="16" fill="#3dff9a"/><path d="M646 240 l6 6 l10 -12" stroke="#03140b" stroke-width="4" fill="none"/></g>
+    </g>
+
+    <!-- Tür -->
+    <g class="hs" id="hsDoor" data-obj="door" tabindex="0" role="button" aria-label="Tür mit Zahlenschloss">
+      <rect x="770" y="92" width="190" height="356" fill="#141b29" stroke="#2c3850" stroke-width="8"/>
+      <rect id="doorLight" x="774" y="96" width="182" height="352" fill="url(#doorL)"/>
+      <g id="doorLeaf">
+        <rect x="778" y="100" width="174" height="348" fill="#1b2433"/>
+        <rect x="796" y="120" width="138" height="90" rx="4" fill="none" stroke="#283349" stroke-width="3"/>
+        <rect x="796" y="330" width="138" height="96" rx="4" fill="none" stroke="#283349" stroke-width="3"/>
+        <rect x="806" y="226" width="118" height="88" rx="8" fill="#0a0e15" stroke="#3a4558" stroke-width="2"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="12" text-anchor="middle" fill="#8fa0b8">
+          <text x="831" y="246">🖥</text><text x="865" y="246">📱</text><text x="899" y="246">💻</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="20" font-weight="600" text-anchor="middle">
+          <circle id="lamp0" cx="831" cy="272" r="14" fill="#1a2232" stroke="#3a4558"/><text id="sd0" x="831" y="279" fill="#3a4558">•</text>
+          <circle id="lamp1" cx="865" cy="272" r="14" fill="#1a2232" stroke="#3a4558"/><text id="sd1" x="865" y="279" fill="#3a4558">•</text>
+          <circle id="lamp2" cx="899" cy="272" r="14" fill="#1a2232" stroke="#3a4558"/><text id="sd2" x="899" y="279" fill="#3a4558">•</text>
+        </g>
+        <text x="865" y="304" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#ff4d5e" id="doorState">GESPERRT</text>
+        <circle cx="936" cy="290" r="7" fill="#3a4558"/>
+      </g>
+      <rect class="ring" x="764" y="86" width="202" height="368" rx="8"/>
+    </g>
+  </svg>
+  </div>
+
+  <div class="objbar" id="objbar">
+    <button class="btn" data-obj="monitor">🖥️ Monitor<span class="st" id="st0">Posteingang</span></button>
+    <button class="btn" data-obj="phone">📱 Diensthandy<span class="st" id="st1">1 neue SMS</span></button>
+    <button class="btn" data-obj="laptop">💻 Laptop<span class="st" id="st2">Browser</span></button>
+    <button class="btn" data-obj="door">🚪 Tür<span class="st" id="st3">Zahlenschloss</span></button>
+  </div>
+</section>
+
+<!-- ============ END ============ -->
+<section id="end" hidden></section>
+
+<div id="chat" hidden>
+  <div class="ch"><span class="dot"></span><span>Unbekannt · verbunden</span><button id="chatMin" aria-label="Chat ein- oder ausklappen">▾</button></div>
+  <div id="chatLog" aria-live="polite"></div>
+</div>
+<div id="modal" hidden><div class="mbox" role="dialog" aria-modal="true" id="mbox"></div></div>
+<div id="finale" hidden><div><h2>Tür offen!</h2><p style="font-size:20px;margin-top:8px">Der Hacker wurde aus dem System geworfen.</p></div></div>
+
+<script>
+(function(){
+"use strict";
+var KEY = "bs-hacker-escape-v1";
+var DUR = 10 * 60 * 1000, PEN = 60 * 1000;
+var RM = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- Inhalte ---------- */
+var MAILS = [
+  { id:"m1", name:"PaketBlitz Zustellung", addr:"service@paketb1itz-zustellung.info", time:"02:11", subj:"Ihr Paket konnte nicht zugestellt werden",
+    body:["Sehr geehrter Kunde,","Ihre Sendung liegt in unserem Lager. Wegen offener Zollgebühren von <b>1,99 €</b> konnte sie nicht zugestellt werden.","Bezahlen Sie innerhalb von <b>12 Stunden</b>, sonst geht das Paket an den Absender zurück."],
+    link:{ t:"Gebühr jetzt bezahlen", to:"http://paketb1itz-zustellung.info/pay" }, phish:true,
+    why:"Phishing: Die Absender-Adresse ist falsch geschrieben (eine 1 statt l), die Anrede ist unpersönlich, und eine kleine Gebühr mit Zeitdruck soll dich zur Eingabe deiner Kartendaten bringen." },
+  { id:"m2", name:"Sekretariat IGS Musterstadt", addr:"sekretariat@igs-musterstadt.de", time:"Gestern", subj:"Elternbrief zum Wandertag",
+    body:["Liebe Kolleginnen und Kollegen,","im Anhang findet ihr den Elternbrief zum Wandertag am Freitag. Bitte teilt ihn bis Mittwoch in euren Klassen aus.","Viele Grüße<br>Frau Kaya, Sekretariat"],
+    attach:"Elternbrief_Wandertag.pdf", phish:false,
+    why:"Echt: Bekannter Absender mit der richtigen Schuladresse, persönliche Anrede, kein Druck, keine Aufforderung, Passwörter oder Zahlungsdaten einzugeben." },
+  { id:"m3", name:"Flimmerbox Support", addr:"support@flimmerbox-konto-check.com", time:"01:47", subj:"Letzte Warnung: Ihr Konto wird gesperrt",
+    body:["Hallo,","bei Ihrer letzten Zahlung ist ein Fehler aufgetreten. Ihr Konto wird <b>in 24 Stunden gesperrt</b>.","Bestätigen Sie jetzt Ihre Zahlungsdaten und Ihr Passwort, um die Sperrung zu verhindern."],
+    link:{ t:"Konto bestätigen", to:"https://flimmerbox-konto-check.com/login" }, phish:true,
+    why:"Phishing: Drohung mit Sperrung und Frist, fremde Domain (flimmerbox-konto-check.com statt der echten Seite), und ein seriöser Dienst fragt nie per Mail nach Passwort und Zahlungsdaten." },
+  { id:"m4", name:"Mega-Preis Gewinnspiel", addr:"gewinn@mega-preis-de.xyz", time:"00:58", subj:"🎉 Herzlichen Glückwunsch! Du hast gewonnen!",
+    body:["Du wurdest als <b>Gewinner eines neuen Smartphones</b> ausgewählt!","Um deinen Preis zu erhalten, gib einfach deine Adresse und deine Kontodaten für die Versandkosten an.","Nur noch <b>3 Preise</b> verfügbar!"],
+    link:{ t:"Preis abholen", to:"https://mega-preis-de.xyz/gewinn" }, phish:true,
+    why:"Phishing: Du hast an keinem Gewinnspiel teilgenommen. Ein Gewinn, für den du zuerst zahlen oder Kontodaten angeben sollst, ist ein klassischer Köder, dazu künstliche Knappheit." },
+  { id:"m5", name:"Hessenbank", addr:"service@hessenbank.de", time:"Mo", subj:"Neuer Kontoauszug verfügbar",
+    body:["Guten Tag Frau Schneider,","Ihr Kontoauszug für Oktober steht im Online-Banking bereit. Melden Sie sich wie gewohnt über unsere App oder die Ihnen bekannte Adresse an.","Hinweis: Wir fragen Sie niemals per E-Mail nach PIN, TAN oder Passwort.","Ihre Hessenbank"],
+    phish:false,
+    why:"Echt: Persönliche Anrede, richtige Bank-Domain, kein Link zum Anklicken, kein Druck. Die Mail schickt dich ausdrücklich über den gewohnten Weg ins Banking." }
+];
+
+var SMS_FROM = "+44 7700 900461";
+var SEGS = [
+  { id:"s0", t:"Hallo Mama,", warn:false, why:"Eine Anrede allein ist kein Warnzeichen, die echte Tochter würde dich auch so begrüßen." },
+  { id:"s1", t:"das ist meine neue Nummer.", warn:true, why:"Eine angeblich neue Nummer ist der Trick bei der „Hallo Mama“-Masche. Prüfe: Ruf die alte Nummer an." },
+  { id:"s2", t:"Mein Handy ist ins Wasser gefallen 😩", warn:false, why:"Die Ausrede gehört zur Geschichte, ist aber für sich kein eindeutiges Warnzeichen." },
+  { id:"s3", t:"Kannst du mir schnell 480 € überweisen?", warn:true, why:"Eine Geldbitte per SMS von einer unbekannten Nummer ist das wichtigste Warnzeichen." },
+  { id:"s4", t:"Ist super dringend, erkläre ich dir später.", warn:true, why:"Zeitdruck soll verhindern, dass du nachdenkst oder nachfragst." },
+  { id:"s5", t:"Bitte nicht anrufen, das Mikro geht nicht.", warn:true, why:"Wer einen Anruf verhindert, will nicht, dass du die Person an der Stimme erkennst." },
+  { id:"s6", t:"Hab dich lieb ❤️", warn:false, why:"Ein lieber Gruß ist kein Warnzeichen, auch wenn er hier Vertrauen aufbauen soll." }
+];
+var FROM_SEG = { id:"sf", warn:true, why:"Eine unbekannte, ausländische Nummer (+44 = Großbritannien) passt nicht zu deiner Tochter." };
+var WARN_IDS = SEGS.filter(function(s){return s.warn}).map(function(s){return s.id}).concat(["sf"]);
+
+var ROUNDS = [
+  { task:"Du willst dich im Online-Banking deiner <b>Hessenbank</b> anmelden. Welcher Link führt wirklich zur Bank?",
+    opts:["https://hessenbank.de.login-sicher.com/anmelden","https://www.hessenbank.de/online-banking","http://hessen-bank-online.de/login"], right:1,
+    why:"Entscheidend ist der Teil direkt vor dem ersten einzelnen „/“. Bei hessenbank.de<b>.login-sicher.com</b> gehört die Seite login-sicher.com. Der dritte Link hat eine andere Schreibweise und kein https." },
+  { task:"Du willst wissen, wo dein Paket von <b>PaketBlitz</b> gerade ist. Welcher Link ist echt?",
+    opts:["https://www.paketb1itz.de/sendung?nr=4711","https://paketblitz.de-sendung.net/verfolgen","https://www.paketblitz.de/sendung?nr=4711"], right:2,
+    why:"Beim ersten Link steht eine 1 statt eines l. Beim zweiten gehört die Seite zu de-sendung.net. Nur paketblitz.de ist die echte Adresse." },
+  { task:"Deine Schule schickt dir einen Link zum <b>Passwort ändern</b> im Schulportal schule-musterstadt.de. Welcher Link ist sicher?",
+    opts:["https://schule-musterstadt.de/konto/passwort","https://schule-musterstadt.de-passwort.com/reset","https://bit.ly/pw-schule-neu"], right:0,
+    why:"Der echte Link endet direkt nach .de mit einem „/“. Der zweite gehört zu de-passwort.com. Ein Kurzlink wie bit.ly versteckt, wohin er wirklich führt." }
+];
+
+var TAUNT = ["Fast hättest du's gemerkt. Fast.","Danke! Genau so falle ich gern rein … äh, du.","Hahaha. Eine Minute gehört jetzt mir.","Weiter so. Ich habe Zeit, du nicht.","Klick ruhig weiter. Ich liebe Leute, die nicht hinschauen."];
+var GRUMBLE = ["Hm. Glück gehabt.","Zufall. Reiner Zufall.","Na und? Das war die leichte.","…"];
+var NERV = ["Moment. Wie hast du die Mails durchschaut?!","Das Handy auch?! Wer hat dir das beigebracht?","Nein, nein, nein. Finger weg von der Tür!"];
+
+/* ---------- Zustand ---------- */
+function fresh(){ return { phase:"intro", start:0, pen:0, err:0, mails:{}, sms:{}, links:{}, round:0, code:[], chat:[], fails:[], end:0 }; }
+function load(){ try{ var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+try{
+  if (/[?&]reset=1(&|$)/.test(location.search)) {
+    localStorage.removeItem(KEY);
+    history.replaceState(null, "", location.pathname + location.hash);
+  }
+}catch(e){}
+var S = load() || fresh();
+
+var $ = function(s){ return document.querySelector(s); };
+var openObj = null, curMail = null, wheels = [0,0,0], spinIdx = -1, fxQueue = [], shownChat = 0, justWon = false;
+
+function remaining(){ if (S.phase !== "room") return 0; return Math.max(0, DUR - (Date.now() - S.start) - S.pen); }
+function fmt(ms){ var s = Math.ceil(ms/1000); return Math.floor(s/60) + ":" + ("0" + (s % 60)).slice(-2); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function say(s, t, cls){ s.chat.push({ t:t, c:cls||"" }); if (s.chat.length > 40) s.chat.splice(0, s.chat.length-40); }
+function monDone(s){ return MAILS.every(function(m){ return s.mails[m.id] != null; }); }
+function phoneDone(s){ return WARN_IDS.every(function(id){ return s.sms[id] === true; }); }
+function lapDone(s){ return ROUNDS.every(function(r, i){ return s.links[i] != null; }); }
+function doneArr(s){ return [monDone(s), phoneDone(s), lapDone(s)]; }
+
+/* Jede Aktion liest zuerst den gespeicherten Stand (zweiter Tab!) und schreibt danach. */
+function act(fn){
+  var f = load(); if (f) S = f;
+  var before = doneArr(S);
+  fn(S);
+  if (S.phase === "room"){
+    var after = doneArr(S);
+    for (var i=0;i<3;i++) if (!before[i] && after[i]) say(S, NERV[i], "nerv");
+    if (remaining() <= 0){ S.phase = "lost"; S.end = Date.now(); say(S, "Zeit vorbei. Das Büro gehört mir."); }
+  }
+  save(); render();
+}
+function wrong(s, label, why){
+  s.err++; s.pen += PEN; s.fails.push({ t:label, x:why }); say(s, pick(TAUNT)); fxQueue.push("err");
+}
+function maybeGrumble(s){ if (Math.random() < .35) say(s, pick(GRUMBLE)); }
+
+/* ---------- Effekte ---------- */
+function runFx(){
+  while (fxQueue.length){
+    var f = fxQueue.shift();
+    if (f === "err"){
+      var fl = $("#flash"); fl.classList.remove("go"); void fl.offsetWidth; fl.classList.add("go");
+      document.body.classList.add("shake"); setTimeout(function(){ document.body.classList.remove("shake"); }, 380);
+      var p = document.createElement("div"); p.className = "pen"; p.textContent = "−1:00"; $("#penSlot").appendChild(p);
+      setTimeout(function(){ p.remove(); }, 1400);
+      try{ if (navigator.vibrate) navigator.vibrate(120); }catch(e){}
+    }
+  }
+}
+
+/* ---------- Intro ---------- */
+var INTRO_TXT = "> Verbindung hergestellt …\n> Ich habe euer System übernommen.\n> Die Tür ist verriegelt. Ihr kommt hier nicht raus.\n> Ihr habt 10 Minuten. Jeder Fehler gehört mir.";
+var typed = false;
+function typeIntro(){
+  if (typed) return; typed = true;
+  var el = $("#term");
+  if (RM){ el.innerHTML = ""; el.appendChild(document.createTextNode(INTRO_TXT)); el.insertAdjacentHTML("beforeend",'<span class="cursor"></span>'); return; }
+  var i = 0;
+  (function step(){
+    el.textContent = INTRO_TXT.slice(0, i);
+    el.insertAdjacentHTML("beforeend",'<span class="cursor"></span>');
+    if (i < INTRO_TXT.length){ i++; setTimeout(step, INTRO_TXT[i-1] === "\n" ? 420 : 32); }
+  })();
+}
+$("#startBtn").addEventListener("click", function(){
+  act(function(s){
+    if (s.phase !== "intro") return;
+    s.phase = "room"; s.start = Date.now();
+    s.code = [0,0,0].map(function(){ return Math.floor(Math.random()*10); });
+    say(s, "Willkommen in meinem Büro. Die Uhr läuft.");
+    say(s, "Ein Fehler, eine Minute. Viel Spaß.");
+  });
+});
+
+/* ---------- Render ---------- */
+function render(){
+  $("#intro").hidden = S.phase !== "intro";
+  $("#room").hidden = S.phase !== "room";
+  $("#end").hidden = !(S.phase === "won" || S.phase === "lost");
+  $("#chat").hidden = S.phase !== "room";
+  if (S.phase === "intro") typeIntro();
+  if (S.phase === "room"){ renderRoom(); renderChat(); if (openObj) renderModal(); }
+  else { closeModal(true); }
+  if (S.phase === "won" || S.phase === "lost") renderEnd();
+  runFx(); tick();
+}
+
+function renderRoom(){
+  var d = doneArr(S), ids = ["hsMonitor","hsPhone","hsLaptop"], st = ["st0","st1","st2"];
+  var stTxt = [
+    Object.keys(S.mails).length + "/" + MAILS.length + " geprüft",
+    WARN_IDS.filter(function(id){ return S.sms[id] === true; }).length + "/" + WARN_IDS.length + " Warnzeichen",
+    Object.keys(S.links).length + "/" + ROUNDS.length + " Links"
+  ];
+  for (var i=0;i<3;i++){
+    $("#"+ids[i]).classList.toggle("done", d[i]);
+    var b = document.querySelector('.objbar [data-obj="'+["monitor","phone","laptop"][i]+'"]');
+    b.classList.toggle("done", d[i]);
+    $("#"+st[i]).textContent = d[i] ? "✓ Ziffer " + S.code[i] : stTxt[i];
+    var on = d[i];
+    $("#hd"+i).textContent = on ? S.code[i] : "•"; $("#hd"+i).classList.toggle("on", on);
+    $("#sd"+i).textContent = on ? S.code[i] : "•"; $("#sd"+i).setAttribute("fill", on ? "#03140b" : "#3a4558");
+    $("#lamp"+i).setAttribute("fill", on ? "#ffc24a" : "#1a2232"); $("#lamp"+i).setAttribute("stroke", on ? "#ffe2a0" : "#3a4558");
+  }
+  var all = d[0] && d[1] && d[2];
+  $("#st3").textContent = all ? "Code eingeben!" : "Gesperrt";
+  $("#hsDoor").classList.toggle("done", false);
+  $("#errTag").textContent = "Fehler: " + S.err;
+}
+
+function renderChat(){
+  var log = $("#chatLog");
+  if (shownChat > S.chat.length) { shownChat = 0; log.innerHTML = ""; }
+  for (var i = shownChat; i < S.chat.length; i++){
+    var m = document.createElement("div"); m.className = "msg " + (S.chat[i].c || ""); m.textContent = S.chat[i].t;
+    log.appendChild(m);
+  }
+  if (S.chat.length > shownChat && shownChat > 0) $("#chat").classList.remove("min");
+  shownChat = S.chat.length; log.scrollTop = log.scrollHeight;
+}
+$("#chatMin").addEventListener("click", function(){ $("#chat").classList.toggle("min"); this.textContent = $("#chat").classList.contains("min") ? "▴" : "▾"; });
+
+/* ---------- Modals ---------- */
+function openModal(obj){ if (S.phase !== "room") return; openObj = obj; $("#modal").hidden = false; renderModal(); setTimeout(function(){ var x = $("#mbox .x"); if (x) x.focus(); }, 30); }
+function closeModal(silent){ openObj = null; $("#modal").hidden = true; $("#mbox").innerHTML = ""; }
+$("#modal").addEventListener("click", function(e){ if (e.target === this) closeModal(); });
+document.addEventListener("keydown", function(e){ if (e.key === "Escape" && openObj) closeModal(); });
+
+function head(icon, title, sub){
+  return '<div class="mhead"><div><h2>'+icon+' '+title+'</h2><div class="sub">'+sub+'</div></div><button class="x" data-close aria-label="Schließen">✕</button></div>';
+}
+function renderModal(){
+  var box = $("#mbox"), h = "";
+  if (openObj === "monitor") h = modalMail();
+  else if (openObj === "phone") h = modalPhone();
+  else if (openObj === "laptop") h = modalLaptop();
+  else if (openObj === "door") h = modalDoor();
+  var sc = box.scrollTop; box.innerHTML = h; box.scrollTop = sc;
+}
+
+function modalMail(){
+  var n = Object.keys(S.mails).length;
+  var rows = MAILS.map(function(m){
+    var a = S.mails[m.id], cls = "mrow" + (curMail === m.id ? " sel" : "");
+    if (a != null) cls += ((a === "phish") === m.phish) ? " right" : " wrong";
+    return '<button class="'+cls+'" data-mail="'+m.id+'"><span class="f">'+(a==null?"● ":"")+m.name+'</span><span class="s">'+m.subj+'</span></button>';
+  }).join("");
+  var view = '<div class="mview"><div class="empty"><p>👈 Wähle eine Mail aus.<br>Entscheide bei jeder: echt oder Phishing?<br><b>Die erste Antwort zählt.</b></p></div></div>';
+  var m = MAILS.filter(function(x){ return x.id === curMail; })[0];
+  if (m){
+    var a = S.mails[m.id];
+    var body = m.body.map(function(p){ return "<p>"+p+"</p>"; }).join("");
+    if (m.link) body += '<div><span class="fake-link">'+m.link.t+' →</span><div class="linkpeek">Link führt zu: '+m.link.to+'</div></div>';
+    if (m.attach) body += '<p>📎 '+m.attach+'</p>';
+    var ch = "";
+    if (a == null) ch = '<div class="choice"><button class="btn" data-ans="real">✅ Echte Mail</button><button class="btn" data-ans="phish">🎣 Phishing</button></div>';
+    else {
+      var ok = (a === "phish") === m.phish;
+      ch = '<div class="fb '+(ok?"ok":"bad")+'"><b>'+(ok?"Richtig erkannt.":"Daneben, das kostet eine Minute.")+'</b>'+m.why+'</div>';
+    }
+    view = '<div class="mview"><div class="meta"><span><b>'+m.name+'</b> · '+m.time+'</span><span class="addr">&lt;'+m.addr+'&gt;</span></div><h3>'+m.subj+'</h3><div class="text">'+body+'</div></div>'+ch;
+  }
+  return head("🖥️","Posteingang",n+" von "+MAILS.length+" Mails entschieden") + '<div class="mbody"><div class="mail"><div class="inbox">'+rows+'</div><div>'+view+'</div></div></div>';
+}
+
+function segBtn(id, text, cls){
+  var st = S.sms[id], c = "seg" + (st === true ? " hit" : st === false ? " miss" : "") + (cls ? " "+cls : "");
+  return '<button class="'+c+'" data-seg="'+id+'"'+(st != null ? " disabled" : "")+'>'+text+'</button>';
+}
+var lastSeg = null;
+function modalPhone(){
+  var found = WARN_IDS.filter(function(id){ return S.sms[id] === true; }).length;
+  var bubble = SEGS.map(function(s){ return segBtn(s.id, s.t); }).join(" ");
+  var fb = "";
+  if (lastSeg){
+    var s = lastSeg === "sf" ? FROM_SEG : SEGS.filter(function(x){ return x.id === lastSeg; })[0];
+    var ok = S.sms[lastSeg] === true;
+    fb = '<div class="fb '+(ok?"ok":"bad")+'"><b>'+(ok?"Warnzeichen gefunden!":"Kein Warnzeichen, das kostet eine Minute.")+'</b>'+s.why+'</div>';
+  }
+  if (phoneDone(S)) fb += '<div class="fb ok"><b>Alle Warnzeichen entdeckt.</b>Bei so einer Nachricht nie Geld schicken. Ruf die Person unter der bekannten, alten Nummer an.</div>';
+  return head("📱","Diensthandy","Tippe alle Warnzeichen an · gefunden: "+found+" von "+WARN_IDS.length)+
+    '<div class="mbody"><p class="progress">Tippe nur, was dich misstrauisch machen sollte. Harmlose Stellen kosten eine Minute.</p>'+
+    '<div class="phone"><div class="notch"></div><div class="from"><span class="av">👤</span>'+segBtn("sf", SMS_FROM)+'</div>'+
+    '<div class="stamp">Heute 02:14</div><div class="bubble">'+bubble+'</div></div>'+fb+'</div>';
+}
+
+function modalLaptop(){
+  var r = Math.min(S.round || 0, ROUNDS.length - 1), R = ROUNDS[r], a = S.links[r];
+  var opts = R.opts.map(function(u, i){
+    var cls = "lnk";
+    if (a != null){ if (i === R.right) cls += " right"; else if (i === a) cls += " wrong"; }
+    var lock = u.indexOf("https") === 0 ? "🔒" : "⚠️";
+    return '<button class="'+cls+'" data-link="'+i+'"'+(a != null ? " disabled" : "")+'><span class="lock">'+lock+'</span>'+u+'</button>';
+  }).join("");
+  var fb = "";
+  if (a != null){
+    var ok = a === R.right;
+    fb = '<div class="fb '+(ok?"ok":"bad")+'"><b>'+(ok?"Richtig, das ist der echte Link.":"Falscher Link, das kostet eine Minute.")+'</b>'+R.why+'</div>';
+    if (r < ROUNDS.length - 1) fb += '<div style="margin-top:12px"><button class="btn primary" data-next>Nächster Link →</button></div>';
+    else fb += '<div class="fb ok"><b>Alle Links geprüft.</b>Tipp: Tippe Adressen von Bank und Shops lieber selbst ein oder nutze die App.</div>';
+  }
+  return head("💻","Laptop","Link "+(r+1)+" von "+ROUNDS.length+" · nur einer ist echt")+
+    '<div class="mbody"><div class="browser"><div class="bar"><i></i><i></i><i></i></div><div class="inner"><p class="task">'+R.task+'</p>'+opts+'</div></div>'+fb+'</div>';
+}
+
+function modalDoor(){
+  var d = doneArr(S), all = d[0] && d[1] && d[2];
+  var icons = ["🖥️ Monitor","📱 Handy","💻 Laptop"];
+  if (!all){
+    var miss = icons.filter(function(x, i){ return !d[i]; }).join(", ");
+    return head("🚪","Zahlenschloss","Gesperrt")+'<div class="mbody"><div class="lockbox"><p style="font-size:44px">🔒</p><p>Das Schloss braucht drei Ziffern.<br>Dir fehlen noch: <b>'+miss+'</b></p><p class="hint">Jedes gelöste Rätsel lässt eine Ziffer an der Tür leuchten.</p></div></div>';
+  }
+  var w = [0,1,2].map(function(i){
+    return '<div class="wheel"><span class="lbl">'+icons[i]+'</span><button data-wh="'+i+'" data-d="1" aria-label="Ziffer '+(i+1)+' erhöhen">▲</button><div class="num'+(spinIdx===i?" spin":"")+'"><span>'+wheels[i]+'</span></div><button data-wh="'+i+'" data-d="-1" aria-label="Ziffer '+(i+1)+' verringern">▼</button></div>';
+  }).join("");
+  spinIdx = -1;
+  return head("🚪","Zahlenschloss","Stelle den Code ein")+'<div class="mbody"><div class="lockbox"><p class="hint">Die Ziffern leuchten an der Tür: '+S.code.map(function(c, i){ return icons[i].split(" ")[0]+" "+c; }).join(" · ")+'</p><div class="wheels">'+w+'</div><button class="btn primary" data-open>🔓 Tür öffnen</button><p class="hint">Ein falscher Code kostet eine Minute.</p></div></div>';
+}
+
+$("#mbox").addEventListener("click", function(e){
+  var t = e.target.closest("button"); if (!t) return;
+  if (t.hasAttribute("data-close")) return closeModal();
+  if (t.dataset.mail){ curMail = t.dataset.mail; renderModal(); return; }
+  if (t.dataset.ans){
+    var id = curMail, choice = t.dataset.ans;
+    act(function(s){
+      if (s.phase !== "room" || s.mails[id] != null) return;
+      var m = MAILS.filter(function(x){ return x.id === id; })[0];
+      s.mails[id] = choice;
+      if ((choice === "phish") !== m.phish) wrong(s, "Mail: „"+m.subj+"“", m.why); else maybeGrumble(s);
+    });
+    return;
+  }
+  if (t.dataset.seg){
+    var sid = t.dataset.seg;
+    act(function(s){
+      if (s.phase !== "room" || s.sms[sid] != null) return;
+      var seg = sid === "sf" ? FROM_SEG : SEGS.filter(function(x){ return x.id === sid; })[0];
+      s.sms[sid] = seg.warn;
+      lastSeg = sid;
+      if (!seg.warn) wrong(s, "SMS: „"+seg.t+"“ angetippt", seg.why); else maybeGrumble(s);
+    });
+    return;
+  }
+  if (t.dataset.link){
+    var li = +t.dataset.link;
+    act(function(s){
+      var r = Math.min(s.round || 0, ROUNDS.length - 1);
+      if (s.phase !== "room" || s.links[r] != null) return;
+      s.links[r] = li;
+      if (li !== ROUNDS[r].right) wrong(s, "Link: "+ROUNDS[r].opts[li], ROUNDS[r].why); else maybeGrumble(s);
+    });
+    return;
+  }
+  if (t.hasAttribute("data-next")){
+    act(function(s){ var r = s.round || 0; if (s.links[r] != null && r < ROUNDS.length - 1) s.round = r + 1; });
+    return;
+  }
+  if (t.dataset.wh){
+    var wi = +t.dataset.wh; wheels[wi] = (wheels[wi] + (+t.dataset.d) + 10) % 10; spinIdx = wi; renderModal(); return;
+  }
+  if (t.hasAttribute("data-open")){
+    var code = wheels.slice();
+    act(function(s){
+      if (s.phase !== "room") return;
+      var d = doneArr(s); if (!(d[0] && d[1] && d[2])) return;
+      if (code.join("") === s.code.join("")){ s.phase = "won"; s.end = Date.now(); justWon = true; }
+      else wrong(s, "Falscher Code am Schloss ("+code.join("")+")", "Die drei Ziffern stehen an der Tür über Monitor, Handy und Laptop, in genau dieser Reihenfolge.");
+    });
+  }
+});
+
+function onObj(e){
+  var el = e.target.closest("[data-obj]"); if (!el) return;
+  if (el.dataset.obj === "phone") lastSeg = null;
+  openModal(el.dataset.obj);
+}
+$("#scene").addEventListener("click", onObj);
+$("#objbar").addEventListener("click", onObj);
+$("#scene").addEventListener("keydown", function(e){ if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-obj]")){ e.preventDefault(); onObj(e); } });
+
+/* ---------- Ende ---------- */
+var THREE = [
+  "<b>Absender und Adresse genau lesen.</b> Bei Links zählt der Teil direkt vor dem ersten einzelnen „/“. Kleine Tippfehler (1 statt l) und angehängte Wörter verraten Fälschungen.",
+  "<b>Bei Druck, Drohung oder Geldbitte: stopp.</b> Frag über einen Weg nach, den du selbst kennst: alte Nummer anrufen, App selbst öffnen, Adresse selbst eintippen.",
+  "<b>Nie Passwort, PIN, TAN oder Kartendaten über einen Link aus einer Nachricht eingeben.</b> Seriöse Firmen fragen so etwas nie per Mail oder SMS ab."
+];
+function renderEnd(){
+  var won = S.phase === "won";
+  if (justWon && !RM){
+    justWon = false;
+    closeModal(); $("#end").hidden = true; $("#room").hidden = false; $("#chat").hidden = true;
+    $("#scene").classList.add("open"); $("#doorState").textContent = "OFFEN";
+    setTimeout(function(){ $("#finale").hidden = false; }, 900);
+    setTimeout(function(){ $("#finale").hidden = true; $("#room").hidden = true; $("#end").hidden = false; window.scrollTo(0,0); }, 3600);
+  }
+  justWon = false;
+  var left = Math.max(0, DUR - (S.end - S.start) - S.pen);
+  var solved = 0;
+  if (S.code && S.code.length){ var d = doneArr(S); solved = d.filter(Boolean).length; }
+  var fails = S.fails.length
+    ? '<ul class="fails">'+S.fails.map(function(f){ return '<li><b>'+f.t+'</b>'+f.x+'</li>'; }).join("")+'</ul>'
+    : '<p style="margin-top:8px">Kein einziger Fehler. Respekt, der Hacker hatte keine Chance.</p>';
+  $("#end").innerHTML =
+    '<div class="endcard '+(won?"win":"lose")+'">'+
+      '<div class="kicker" style="color:'+(won?"var(--green)":"var(--red)")+'">'+(won?"Zugang wiederhergestellt":"Verbindung getrennt")+'</div>'+
+      '<h1>'+(won?"Entkommen! 🔓":"Game over 🔒")+'</h1>'+
+      '<p>'+(won?"Du hast alle Fallen durchschaut und den Hacker aus dem System geworfen.":"„Ich hab's doch gesagt: Ihr kommt hier nicht raus.“ Die Tür bleibt zu. Aber die Runde war trotzdem nicht umsonst.")+'</p>'+
+      '<div class="stats">'+
+        (won?'<div class="stat"><div class="v">'+fmt(left)+'</div><div class="k">Restzeit</div></div>':'<div class="stat"><div class="v">'+solved+'/3</div><div class="k">Rätsel gelöst</div></div>')+
+        '<div class="stat"><div class="v">'+S.err+'</div><div class="k">Fehler (je −1:00)</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="endcard"><h2 style="margin-bottom:12px">Die drei wichtigsten Regeln gegen Phishing</h2><ol class="three">'+THREE.map(function(r){ return "<li><span>"+r+"</span></li>"; }).join("")+'</ol></div>'+
+    '<div class="endcard"><h2>Hier bist du reingefallen</h2>'+fails+'<p class="note" style="margin-top:12px">Sprecht in der Klasse darüber: Welche Nachricht hat euch hereingelegt, und woran hättet ihr sie erkennen können?</p></div>'+
+    '<p class="note">Das Ergebnis ist auf diesem Gerät gespeichert. Ein neuer Versuch ist nur über die Lehrkraft möglich.</p>';
+}
+
+/* ---------- Uhr ---------- */
+function tick(){
+  if (S.phase !== "room") return;
+  var r = remaining(), c = $("#clock");
+  c.textContent = fmt(r); c.classList.toggle("low", r < 60000);
+  if (r <= 0) act(function(s){ if (s.phase === "room" && remaining() <= 0){ s.phase = "lost"; s.end = Date.now(); } });
+}
+setInterval(tick, 250);
+
+/* ---------- Zweiter Tab ---------- */
+window.addEventListener("storage", function(e){
+  if (e.key !== KEY) return;
+  var f = load(); S = f || fresh();
+  if (!f){ shownChat = 0; $("#chatLog").innerHTML = ""; typed = false; }
+  render();
+});
+
+render();
+})();
+</script>
+<script>window.TOUR = { btnStyle: "top:74px", steps: [
+  { title: "Hacker-Escape-Room", text: "<p>Ein Hacker hat das Büro gesperrt. In zehn Minuten musst du Phishing-Mails, eine Betrugs-SMS und gefälschte Links entlarven, um die Tür zu öffnen.</p>" },
+  { sel: "#term", title: "Die Nachricht des Hackers", text: "<p>Hier meldet sich der Hacker. Im Spiel spottet er in einem kleinen Chatfenster unten rechts.</p>" },
+  { sel: "#rulesBox", title: "Die Regeln", text: "<ul><li>Jeder Fehler kostet eine Minute.</li><li>Die erste Antwort zählt.</li><li>Neu laden bringt nichts, der Spielstand bleibt.</li></ul>" },
+  { sel: "#startBtn", title: "Los geht's", text: "<p>Mit dem Start läuft die Uhr. Klicke dann im Büro auf Monitor, Handy, Laptop und zuletzt auf die Tür.</p>" },
+  { title: "Für Lehrkräfte", text: "<p>Jedes Gerät hat einen Versuch. Zum Zurücksetzen <b>?reset=1</b> an die Adresse hängen. Danach lohnt sich die Nachbesprechung der Fehler, die am Ende aufgelistet sind.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

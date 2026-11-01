@@ -1251,15 +1251,15 @@ const posts = [
    },
    {
     title: "Hacker-Escape-Room (Phishing)",
-    excerpt: "Ein Hacker hat das Büro gesperrt: In zehn Minuten Phishing-Mails, eine verdächtige SMS und falsche Bank-Links entlarven und das Zahlenschloss öffnen – dazu Prompts, mit denen man den Escape Room mit Claude oder ChatGPT selbst nachbaut. (Externe Seite, KILehrkraft.de)",
+    excerpt: "Ein Hacker hat das Büro gesperrt: In zehn Minuten Phishing-Mails, eine Betrugs-SMS und gefälschte Links entlarven und das Zahlenschloss öffnen. Jeder Fehler kostet eine Minute, ein Versuch pro Gerät, am Ende Nachbesprechung der Fehler.",
     date: "2026-11-01",
     category: "schule",
     subcategory: "arbeitslehre",
-    url: "https://kilehrkraft.de/anleitungen/hacker-escape-room.html",
+    url: "hacker-escape-room.html",
     emoji: "🔐",
     tags: ["spiel", "ki", "einzelarbeit", "partnerarbeit", "jg8", "jg9", "jg10"],
     titleEn: "Hacker Escape Room (Phishing)",
-    excerptEn: "A hacker has locked the office: expose phishing emails, a suspicious text and fake bank links within ten minutes to open the lock, plus prompts to rebuild the escape room yourself with Claude or ChatGPT. (External site, KILehrkraft.de)"
+    excerptEn: "A hacker has locked the office: expose phishing emails, a scam text and fake links within ten minutes to open the lock. Every mistake costs a minute, one attempt per device, with a review of mistakes at the end."
    },
    {
     title: "Bruch-Werkstatt",
