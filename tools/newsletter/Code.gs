@@ -185,6 +185,29 @@ function sendWeeklyDigest() {
   });
 }
 
+/* Die zuletzt verschickte Ausgabe noch einmal an alle bestätigten Abos senden
+   (z. B. nach einer Design-Änderung). Nimmt die Tools des jüngsten Laufs. */
+function resendLastDigest() {
+  var sh = seenSheet_();
+  if (sh.getLastRow() < 2) { console.log("Noch keine Ausgabe verschickt."); return { sent: 0 }; }
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues();
+  var latest = 0;
+  rows.forEach(function (r) { var t = new Date(r[1]).getTime(); if (t > latest) latest = t; });
+  var urls = {};
+  rows.forEach(function (r) { if (new Date(r[1]).getTime() === latest) urls[r[0]] = true; });
+  var tools = loadPosts_().filter(function (p) { return urls[p.url]; });
+  if (!tools.length || tools.length > 30) { console.log("Keine passende letzte Ausgabe gefunden (" + tools.length + ")."); return { sent: 0 }; }
+  var subs = activeSubs_(), sent = 0, date = new Date(latest);
+  subs.forEach(function (s) {
+    if (MailApp.getRemainingDailyQuota() <= CONFIG.KEEP_MAIL_QUOTA) return;
+    var mail = buildDigest_(tools, s.token, date);
+    MailApp.sendEmail({ to: s.email, subject: mail.subject, htmlBody: mail.html, body: mail.text, name: CONFIG.SENDER_NAME });
+    sent++;
+  });
+  console.log("Ausgabe vom " + Utilities.formatDate(date, "Europe/Berlin", "dd.MM.yyyy HH:mm") + " mit " + tools.length + " Tools erneut an " + sent + " Abonnent:innen verschickt.");
+  return { sent: sent, tools: tools.length };
+}
+
 /* Vorschau an die eigene Adresse: Tools der letzten 7 Tage (sonst die 4 neuesten),
    ohne etwas zu verändern */
 function sendTestDigest() {
@@ -206,7 +229,7 @@ function loadPosts_() {
   list.forEach(function (p) {
     if (!p || !p.url || p.gate) return;            // geschützte Unterrichtsmaterialien nicht verlinken
     if (byUrl[p.url]) { byUrl[p.url].areas.push(area_(p)); return; }
-    var item = { url: p.url, title: p.title, excerpt: short_(p.excerpt), emoji: p.emoji || "", date: p.date || "", areas: [area_(p)] };
+    var item = { url: p.url, title: p.title, excerpt: short_(p.excerpt), icon: icon_(p), date: p.date || "", areas: [area_(p)] };
     byUrl[p.url] = item;
     out.push(item);
   });
@@ -222,6 +245,14 @@ var AREAS = {
 function area_(p) {
   var a = AREAS[p.category] || p.category || "";
   return p.subcategory ? a + " · " + (AREAS[p.subcategory] || p.subcategory) : a;
+}
+
+/* Piktogramm je Bereich (SVG-Vorlage + PNG in assets/newsletter/; Mail-Programme
+   zeigen SVG nicht an, deshalb wird das PNG in doppelter Auflösung eingebunden) */
+var ICONS = { mathematik: 1, arbeitslehre: 1, faecheruebergreifend: 1, weiterefaecher: 1, sonstiges: 1, handball: 1, freizeit: 1 };
+function icon_(p) {
+  var id = p.category === "schule" && ICONS[p.subcategory] ? p.subcategory : (ICONS[p.category] ? p.category : "sonstiges");
+  return CONFIG.SITE_URL + "/assets/newsletter/" + id + ".png";
 }
 
 function toolLink_(url) {
@@ -258,12 +289,16 @@ function buildDigest_(tools, token, date) {
   var cards = tools.map(function (t) {
     var link = toolLink_(t.url);
     return '<tr><td style="padding:0 0 12px">' +
-      '<a href="' + esc_(link) + '" style="display:block;text-decoration:none;color:#111827;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px">' +
-      '<div style="font-size:12px;color:#6b7280;letter-spacing:.02em;margin-bottom:4px">' + esc_(t.areas.join(" | ")) + '</div>' +
-      '<div style="font-size:17px;font-weight:700;margin-bottom:4px">' + (t.emoji ? esc_(t.emoji) + " " : "") + esc_(t.title) + '</div>' +
+      '<a href="' + esc_(link) + '" style="display:block;text-decoration:none;color:#111827;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:16px">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+      '<td width="48" valign="top" style="width:48px;padding:2px 14px 0 0">' +
+      '<img src="' + esc_(t.icon) + '" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border:0;border-radius:12px"></td>' +
+      '<td valign="top">' +
+      '<div style="font-size:12px;color:#6b7280;letter-spacing:.02em;margin-bottom:3px">' + esc_(t.areas.join(" | ")) + '</div>' +
+      '<div style="font-size:17px;font-weight:700;line-height:1.3;margin-bottom:4px;color:#111827">' + esc_(t.title) + '</div>' +
       '<div style="font-size:15px;line-height:1.45;color:#374151">' + esc_(t.excerpt) + '</div>' +
       '<div style="font-size:14px;color:#4f46e5;font-weight:600;margin-top:8px">Öffnen →</div>' +
-      '</a></td></tr>';
+      '</td></tr></table></a></td></tr>';
   }).join("");
 
   var html = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -273,7 +308,9 @@ function buildDigest_(tools, token, date) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">' +
     '<tr><td style="background:linear-gradient(135deg,#1e1b4b,#4338ca);background-color:#312e81;border-radius:18px;padding:24px 22px;color:#ffffff">' +
     '<div style="font-size:13px;opacity:.8">Wochen-Newsletter · ' + dateStr + '</div>' +
-    '<div style="font-size:26px;font-weight:800;margin-top:4px">buildspace</div>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>' +
+    '<td valign="middle" style="padding-right:12px"><img src="' + CONFIG.SITE_URL + '/assets/app-icon-v3-96.png" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:10px"></td>' +
+    '<td valign="middle" style="font-size:26px;font-weight:800;color:#ffffff">buildspace</td></tr></table>' +
     '<div style="font-size:15px;margin-top:6px;opacity:.9">' + esc_(intro) + '</div></td></tr>' +
     '<tr><td style="height:16px"></td></tr>' + cards +
     '<tr><td align="center" style="padding:8px 0 4px"><a href="' + CONFIG.SITE_URL + '" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">Alle Tools ansehen</a></td></tr>' +
@@ -286,7 +323,7 @@ function buildDigest_(tools, token, date) {
 
   var text = "buildspace – Wochen-Newsletter vom " + dateStr + "\n\n" + intro + "\n\n" +
     tools.map(function (t) {
-      return (t.emoji ? t.emoji + " " : "") + t.title + " (" + t.areas.join(" | ") + ")\n" + t.excerpt + "\n" + toolLink_(t.url);
+      return t.title + " (" + t.areas.join(" | ") + ")\n" + t.excerpt + "\n" + toolLink_(t.url);
     }).join("\n\n") +
     "\n\nAlle Tools: " + CONFIG.SITE_URL + "\n\nNewsletter abbestellen: " + unsub + "\n";
   return { subject: subject, html: html, text: text };

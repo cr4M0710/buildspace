@@ -343,6 +343,23 @@ test("Lange Beschreibungen werden gekürzt", () => {
   ok(e.ctx.short_("wort ".repeat(60)).endsWith(" …"));
 });
 
+test("Piktogramme statt Emojis, Ausgabe erneut senden", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org"); confirmed(e, "b@example.org");
+  postsSrc = addPost(addPost(original, "p1.html", "P1"), "p2.html", "P2");
+  e.advance(60000);
+  e.ctx.sendWeeklyDigest();
+  const first = e.mails[e.mails.length - 1];
+  ok(first.htmlBody.includes("https://buildspaceos.de/assets/newsletter/mathematik.png"), "Piktogramm fehlt");
+  ok(!first.htmlBody.includes("🧪") && !first.body.includes("🧪"), "Emoji noch drin");
+  const n = e.mails.length;
+  const r = e.ctx.resendLastDigest();
+  eq([r.sent, r.tools], [2, 2]);
+  eq(e.mails.slice(n).map(m => m.subject), ["2 neue Tools auf buildspace", "2 neue Tools auf buildspace"]);
+  postsSrc = original;
+});
+
 test("Test-Newsletter geht nur an die eigene Adresse", () => {
   const e = makeEnv();
   e.ctx.sendTestDigest();
