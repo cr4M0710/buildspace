@@ -1273,4 +1273,16 @@ const posts = [
     titleEn: "Fraction Workshop",
     excerptEn: "Fractions shown as pictures and as calculations side by side: fractions of quantities, expanding, simplifying and all four operations with like and unlike denominators – 3 animated examples each, practice tasks on three levels with picture hints, and your own fractions to explore."
    },
+   {
+    title: "Scanwerk",
+    excerpt: "Dokumentenscanner wie Adobe Scan: Blätter mit der Kamera aufnehmen, Ränder automatisch erkennen und entzerren, Ecken mit Lupe korrigieren, Filter (Auto-Farbe, Schwarzweiß, Whiteboard), Seiten sortieren und als PDF mit eigenem Namen speichern – optional mit Texterkennung. Alles bleibt auf dem Gerät.",
+    date: "2026-11-03",
+    category: "freizeit",
+    subcategory: null,
+    url: "scanwerk.html",
+    emoji: "📄",
+    tags: ["tool"],
+    titleEn: "Scanwerk",
+    excerptEn: "Document scanner like Adobe Scan: capture pages with the camera, detect and straighten edges automatically, fine-tune corners with a magnifier, apply filters (auto colour, black and white, whiteboard), reorder pages and save as a PDF with your own file name – optionally with text recognition. Everything stays on your device."
+   },
 ];
