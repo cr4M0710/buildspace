@@ -112,8 +112,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #camVideo{object-fit:cover}
 .cam-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:calc(var(--st) + 8px) var(--gutr) 8px var(--gut);background:linear-gradient(rgba(0,0,0,.55),transparent);z-index:2}
 .cam-top .grow{flex:1}
-.toggle-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:20px;background:rgba(255,255,255,.14);font-size:13px;font-weight:700}
+.toggle-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;white-space:nowrap;flex:none;border-radius:20px;background:rgba(255,255,255,.14);font-size:13px;font-weight:700}
 .toggle-chip[aria-pressed="true"]{background:#fff;color:#000}
+.toggle-chip[data-mode="torch"]{background:#FFD25E;color:#000}
+.cam-res{font-size:11px;opacity:.7;margin-right:auto;padding-left:4px;white-space:nowrap}
+@media (max-width:420px){.cam-res{display:none}.toggle-chip{padding:0 10px;font-size:12px}}
 #camHint{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:7px 14px;border-radius:20px;font-size:13px;white-space:nowrap;z-index:2}
 .cam-bottom{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:16px var(--gutr) calc(var(--sb) + 18px) var(--gut);background:#000}
 .shutter{width:76px;height:76px;border-radius:50%;border:4px solid #fff;display:grid;place-items:center;position:relative}
@@ -307,7 +310,7 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
     </section>
     <div class="tips">
       <div><strong>Kontrast hilft</strong>Helles Blatt auf dunklem Tisch wird am sichersten erkannt.</div>
-      <div><strong>Ruhig halten</strong>Mit „Auto“ löst die Kamera aus, sobald der Rahmen stillsteht.</div>
+      <div><strong>Auto-Scan</strong>Erkennt die Kamera ein Blatt und steht das Bild ruhig, scannt sie von selbst.</div>
       <div><strong>Alles bleibt lokal</strong>Scans werden nur auf diesem Gerät gespeichert.</div>
     </div>
   </main>
@@ -318,12 +321,13 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
   <div class="cam-wrap">
     <video id="camVideo" playsinline muted autoplay></video>
     <canvas id="camOverlay"></canvas>
-    <div class="cam-flash" id="camFlash"></div>
+    <div class="cam-flash" id="camBlink"></div>
     <div class="cam-top">
       <button id="camClose" class="icon-btn" aria-label="Kamera schließen"><svg class="ic"><use href="#i-close"/></svg></button>
       <div class="grow"></div>
-      <button id="camTorch" class="toggle-chip" aria-pressed="false" hidden><svg class="ic" style="width:16px;height:16px"><use href="#i-flash"/></svg>Licht</button>
-      <button id="camAuto" class="toggle-chip" aria-pressed="true">Auto</button>
+      <span id="camRes" class="mono cam-res"></span>
+      <button id="camFlashBtn" class="toggle-chip" aria-pressed="false" aria-label="Blitz umschalten"><svg class="ic" style="width:16px;height:16px"><use href="#i-flash"/></svg><span>Blitz auto</span></button>
+      <button id="camAuto" class="toggle-chip" aria-pressed="true" aria-label="Auto-Scan ein- oder ausschalten"><svg class="ic" style="width:16px;height:16px"><use href="#i-scan"/></svg><span>Auto-Scan an</span></button>
     </div>
     <div id="camHint">Dokument ins Bild halten</div>
     <div id="camFallback" hidden>
@@ -336,7 +340,7 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
     </div>
   </div>
   <div class="cam-bottom">
-    <button id="camGallery" class="icon-btn" aria-label="Fotos importieren" style="justify-self:start"><svg class="ic" style="width:28px;height:28px"><use href="#i-image"/></svg></button>
+    <div style="justify-self:start;display:flex;gap:4px"><button id="camNativeBtn" class="icon-btn" aria-label="Kamera-App mit Blitz verwenden"><svg class="ic" style="width:28px;height:28px"><use href="#i-camera"/></svg></button><button id="camGallery" class="icon-btn" aria-label="Fotos importieren"><svg class="ic" style="width:28px;height:28px"><use href="#i-image"/></svg></button></div>
     <button id="camShutter" class="shutter" aria-label="Auslösen"><svg viewBox="0 0 76 76"><circle cx="38" cy="38" r="36" id="camRing"/></svg></button>
     <button id="camDone" class="cam-done" aria-label="Fertig"><span class="mono" style="font-weight:700">Fertig</span><span class="cam-stack" id="camStack"><span id="camCount">0</span></span></button>
   </div>
@@ -465,7 +469,7 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="sheet-grab"></div>
     <div class="sheet-head"><h3 id="setTitle">Einstellungen</h3><button class="icon-btn" data-close aria-label="Schließen"><svg class="ic"><use href="#i-close"/></svg></button></div>
-    <div class="switch-row"><div><strong>Automatisch auslösen</strong><span class="hint">Live-Kamera fotografiert, sobald der Rahmen ruhig ist</span></div><input id="setAuto" class="switch" type="checkbox" aria-label="Automatisch auslösen"></div>
+    <div class="switch-row"><div><strong>Auto-Scan</strong><span class="hint">Scannt automatisch, sobald ein Dokument erkannt und ruhig im Bild ist</span></div><input id="setAuto" class="switch" type="checkbox" aria-label="Auto-Scan"></div>
     <div class="switch-row"><div><strong>Zuschnitt nach Aufnahme prüfen</strong><span class="hint">Ecken bei einzelnen Fotos direkt kontrollieren</span></div><input id="setCropReview" class="switch" type="checkbox" aria-label="Zuschnitt prüfen"></div>
     <div class="field"><label for="setFilter">Standardfilter für neue Seiten</label><select id="setFilter" class="sel"><option value="auto">Auto-Farbe</option><option value="original">Original</option><option value="gray">Graustufen</option><option value="bw">Schwarzweiß</option><option value="whiteboard">Whiteboard</option></select></div>
     <div class="field"><label for="setLang">Sprache der Texterkennung</label><select id="setLang" class="sel"><option value="deu+eng">Deutsch + Englisch</option><option value="deu">Deutsch</option><option value="eng">Englisch</option></select></div>
@@ -781,7 +785,8 @@ const Engine = (() => {
     if (best) { const rq = refine(best, G, thr); if (rq && scoreQuad(rq, G, thr) >= bestS - 0.02) best = rq; }
     const found = !!best && bestS > 0.45;
     const quad = found ? best.map(p => ({ x: Math.max(0, Math.min(W, (p.x + 0.5) / s)), y: Math.max(0, Math.min(H, (p.y + 0.5) / s)) })) : fullQuad(W, H);
-    return { quad, found, score: bestS };
+    let lum = 0; for (let i = 0; i < g.length; i += 7) lum += g[i]; lum /= Math.ceil(g.length / 7);
+    return { quad, found, score: bestS, lum };
   }
   function fullQuad(W, H, inset = 0) { const i = inset * Math.min(W, H); return [{ x: i, y: i }, { x: W - i, y: i }, { x: W - i, y: H - i }, { x: i, y: H - i }]; }
 
@@ -863,64 +868,79 @@ const Engine = (() => {
   }
 
   /* ---------- Filter ---------- */
-  function backgroundMap(id) { // Papierhelligkeit je Kanal, grob gerastert und geglättet
+  /* Papierhelligkeit je Kanal (90. Perzentil) und Tintenhelligkeit (8. Perzentil der Luminanz) als grobes Raster */
+  function backgroundMap(id) {
     const { data, width: w, height: h } = id, B = Math.max(8, Math.round(Math.max(w, h) / 48));
-    const gw = Math.ceil(w / B), gh = Math.ceil(h / B), grid = [new Float32Array(gw * gh), new Float32Array(gw * gh), new Float32Array(gw * gh)];
+    const gw = Math.ceil(w / B), gh = Math.ceil(h / B), N = gw * gh;
+    const grid = [new Float32Array(N), new Float32Array(N), new Float32Array(N), new Float32Array(N)];
     const st = Math.max(1, Math.round(B / 6));
     for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
-      const hist = [[], [], []];
+      const r = [], g = [], b = [], l = [];
       for (let y = gy * B; y < Math.min(h, gy * B + B); y += st) for (let x = gx * B; x < Math.min(w, gx * B + B); x += st) {
-        const i = (y * w + x) * 4; hist[0].push(data[i]); hist[1].push(data[i + 1]); hist[2].push(data[i + 2]);
+        const i = (y * w + x) * 4; r.push(data[i]); g.push(data[i + 1]); b.push(data[i + 2]); l.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
       }
-      for (let c = 0; c < 3; c++) { const a = hist[c].sort((p, q) => p - q); grid[c][gy * gw + gx] = a.length ? a[Math.floor(a.length * 0.9)] : 255; }
+      const k = gy * gw + gx, pc = (a, p) => { a.sort((u, v) => u - v); return a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : 255; };
+      grid[0][k] = pc(r, 0.9); grid[1][k] = pc(g, 0.9); grid[2][k] = pc(b, 0.9); grid[3][k] = pc(l, 0.05);
     }
-    for (let c = 0; c < 3; c++) {
-      let g = grid[c];
-      const dil = new Float32Array(g.length); // 3x3-Maximum gegen große dunkle Flächen
-      for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { let m = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = Math.min(gh - 1, Math.max(0, y + dy)), xx = Math.min(gw - 1, Math.max(0, x + dx)); m = Math.max(m, g[yy * gw + xx]); } dil[y * gw + x] = m; }
-      g = dil;
-      for (let it = 0; it < 2; it++) { const o = new Float32Array(g.length); for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy < 0 || yy >= gh || xx < 0 || xx >= gw) continue; s += g[yy * gw + xx]; n++; } o[y * gw + x] = s / n; } g = o; }
-      grid[c] = g;
-    }
+    const nb = (g, op) => { const o = new Float32Array(N); for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { let m = op === 'max' ? 0 : 1e9; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = Math.min(gh - 1, Math.max(0, y + dy)), xx = Math.min(gw - 1, Math.max(0, x + dx)), v = g[yy * gw + xx]; m = op === 'max' ? Math.max(m, v) : Math.min(m, v); } o[y * gw + x] = m; } return o; };
+    const smooth = g => { for (let it = 0; it < 2; it++) { const o = new Float32Array(N); for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy < 0 || yy >= gh || xx < 0 || xx >= gw) continue; s += g[yy * gw + xx]; n++; } o[y * gw + x] = s / n; } g = o; } return g; };
+    for (let c = 0; c < 3; c++) grid[c] = smooth(nb(grid[c], 'max')); // große dunkle Flächen nicht als Papier werten
+    grid[3] = smooth(grid[3]);
     return { grid, gw, gh, B };
   }
   const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  /* 3×3-Gauß (1-2-1), RGB */
+  function gauss3(src, w, h) {
+    const tmp = new Uint8ClampedArray(src.length), out = new Uint8ClampedArray(src.length), row = w * 4;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const o = y * row + x * 4, l = x > 0 ? o - 4 : o, r = x < w - 1 ? o + 4 : o;
+      for (let c = 0; c < 3; c++) tmp[o + c] = (src[l + c] + 2 * src[o + c] + src[r + c] + 2) >> 2;
+      tmp[o + 3] = 255;
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const o = y * row + x * 4, u = y > 0 ? o - row : o, d = y < h - 1 ? o + row : o;
+      for (let c = 0; c < 3; c++) out[o + c] = (tmp[u + c] + 2 * tmp[o + c] + tmp[d + c] + 2) >> 2;
+      out[o + 3] = 255;
+    }
+    return out;
+  }
   function applyFilter(id, filter, brightness = 0, contrast = 0) {
     const { data, width: w, height: h } = id;
     if (filter && filter !== 'original') {
-      const bg = backgroundMap(id), { grid, gw, gh, B } = bg;
-      const bgRow = [new Float32Array(w), new Float32Array(w), new Float32Array(w)];
+      const sm = gauss3(data, w, h);
+      if (filter === 'bw') data.set(sm); // Rauschen vor der Schwelle entfernen
+      else for (let o = 0; o < data.length; o += 4) { // Unscharfmaskierung für klarere Schrift
+        data[o] = clamp255(data[o] + 0.7 * (data[o] - sm[o])); data[o + 1] = clamp255(data[o + 1] + 0.7 * (data[o + 1] - sm[o + 1])); data[o + 2] = clamp255(data[o + 2] + 0.7 * (data[o + 2] - sm[o + 2]));
+      }
+      const { grid, gw, gh, B } = backgroundMap({ data: sm, width: w, height: h });
+      const rows = [new Float32Array(w), new Float32Array(w), new Float32Array(w), new Float32Array(w)];
+      const curve = v => { v = (v - 0.08) / 0.86; return 255 * (v < 0 ? 0 : v > 1 ? 1 : Math.pow(v, 1.15)); };
       for (let y = 0; y < h; y++) {
         const fy = Math.min(gh - 1.001, Math.max(0, (y + 0.5) / B - 0.5)), y0 = fy | 0, dy = fy - y0;
-        for (let c = 0; c < 3; c++) {
-          const G = grid[c];
+        for (let c = 0; c < 4; c++) {
+          const G = grid[c], L = G.length - 1;
           for (let x = 0; x < w; x++) {
             const fx = Math.min(gw - 1.001, Math.max(0, (x + 0.5) / B - 0.5)), x0 = fx | 0, dx = fx - x0, i = y0 * gw + x0;
-            const v = (G[i] * (1 - dx) + G[Math.min(i + 1, G.length - 1)] * dx) * (1 - dy) + (G[Math.min(i + gw, G.length - 1)] * (1 - dx) + G[Math.min(i + gw + 1, G.length - 1)] * dx) * dy;
-            bgRow[c][x] = v < 40 ? 40 : v;
+            rows[c][x] = (G[i] * (1 - dx) + G[Math.min(i + 1, L)] * dx) * (1 - dy) + (G[Math.min(i + gw, L)] * (1 - dx) + G[Math.min(i + gw + 1, L)] * dx) * dy;
           }
         }
         let o = y * w * 4;
         for (let x = 0; x < w; x++, o += 4) {
-          let r = data[o], g = data[o + 1], b = data[o + 2];
-          const br = bgRow[0][x], bgc = bgRow[1][x], bb = bgRow[2][x];
+          const br = Math.max(40, rows[0][x]), bgc = Math.max(40, rows[1][x]), bb = Math.max(40, rows[2][x]);
+          const bl = 0.299 * br + 0.587 * bgc + 0.114 * bb;
+          // Lokaler Kontrast: wo Schrift blass ist (Blendung, Blitz-Reflex, schwache Bleistiftlinien), stärker spreizen
+          const inkN = Math.min(0.95, Math.max(0, rows[3][x] / bl)), wInk = Math.min(1, Math.max(0, (0.93 - inkN) / 0.1)), k = 1 + (Math.min(4, Math.max(1, 0.8 / (1 - inkN))) - 1) * wInk;
+          let r = 1 - (1 - data[o] / br) * k, g = 1 - (1 - data[o + 1] / bgc) * k, b = 1 - (1 - data[o + 2] / bb) * k;
           if (filter === 'auto') {
-            r = r / br; g = g / bgc; b = b / bb; // Schattierung & Weißabgleich
-            const l = 0.299 * r + 0.587 * g + 0.114 * b;
-            const k = 1.25; r = l + (r - l) * k; g = l + (g - l) * k; b = l + (b - l) * k;
-            const curve = v => { v = (v - 0.08) / 0.86; return 255 * (v < 0 ? 0 : v > 1 ? 1 : Math.pow(v, 1.15)); };
-            r = curve(r); g = curve(g); b = curve(b);
+            const l = 0.299 * r + 0.587 * g + 0.114 * b, sat = 1.25;
+            r = curve(l + (r - l) * sat); g = curve(l + (g - l) * sat); b = curve(l + (b - l) * sat);
           } else if (filter === 'gray') {
-            const n = (0.299 * r + 0.587 * g + 0.114 * b) / (0.299 * br + 0.587 * bgc + 0.114 * bb);
-            let v = (n - 0.06) / 0.88; v = 255 * (v < 0 ? 0 : v > 1 ? 1 : Math.pow(v, 1.2)); r = g = b = v;
+            let v = ((0.299 * r + 0.587 * g + 0.114 * b) - 0.06) / 0.88; v = 255 * (v < 0 ? 0 : v > 1 ? 1 : Math.pow(v, 1.2)); r = g = b = v;
           } else if (filter === 'bw') {
-            const n = (0.299 * r + 0.587 * g + 0.114 * b) / (0.299 * br + 0.587 * bgc + 0.114 * bb);
-            let v = (n - 0.52) / 0.3; v = v < 0 ? 0 : v > 1 ? 1 : v; v = v * v * (3 - 2 * v); r = g = b = 255 * v;
+            let v = ((0.299 * r + 0.587 * g + 0.114 * b) - 0.42) / 0.32; v = v < 0 ? 0 : v > 1 ? 1 : v; v = v * v * (3 - 2 * v); r = g = b = 255 * v;
           } else if (filter === 'whiteboard') {
-            const f = c => { const n = c; let v = 1 - (1 - n) * 2.2; return v < 0 ? 0 : v > 1 ? 1 : v; };
-            r = r / br; g = g / bgc; b = b / bb;
-            const l = 0.299 * r + 0.587 * g + 0.114 * b, k = 1.6;
-            r = 255 * f(l + (r - l) * k); g = 255 * f(l + (g - l) * k); b = 255 * f(l + (b - l) * k);
+            const l = 0.299 * r + 0.587 * g + 0.114 * b, f = c => { const v = 1 - (1 - c) * 1.8; return 255 * (v < 0 ? 0 : v > 1 ? 1 : v); };
+            r = f(l + (r - l) * 1.6); g = f(l + (g - l) * 1.6); b = f(l + (b - l) * 1.6);
           }
           data[o] = clamp255(r); data[o + 1] = clamp255(g); data[o + 2] = clamp255(b);
         }
@@ -932,6 +952,23 @@ const Engine = (() => {
       for (let o = 0; o < data.length; o += 4) { data[o] = lut[data[o]]; data[o + 1] = lut[data[o + 1]]; data[o + 2] = lut[data[o + 2]]; }
     }
     return id;
+  }
+  /* Viereck leicht nach innen versetzen (entfernt Untergrund-Reste am Blattrand), perspektivisch korrekt */
+  function insetQuad(q, m) {
+    const M = homography([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }], q);
+    const ap = (u, v) => { const z = M[6] * u + M[7] * v + M[8]; return { x: (M[0] * u + M[1] * v + M[2]) / z, y: (M[3] * u + M[4] * v + M[5]) / z }; };
+    return [ap(m, m), ap(1 - m, m), ap(1 - m, 1 - m), ap(m, 1 - m)];
+  }
+  /* Schärfemaß: Varianz des Laplace-Filters (höher = schärfer) */
+  function sharpness(src, W, H, side = 480) {
+    const s = Math.min(1, side / Math.max(W, H)), w = Math.max(8, Math.round(W * s)), h = Math.max(8, Math.round(H * s));
+    const c = canvas(w, h), x = ctx2d(c); x.drawImage(src, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data; let sum = 0, sq = 0, n = 0;
+    const g = i => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    for (let y = Math.round(h * 0.15); y < h * 0.85; y++) for (let xx = Math.round(w * 0.15); xx < w * 0.85; xx++) {
+      const i = (y * w + xx) * 4, v = 4 * g(i) - g(i - 4) - g(i + 4) - g(i - w * 4) - g(i + w * 4); sum += v; sq += v * v; n++;
+    }
+    const m = sum / n; return sq / n - m * m;
   }
   function rotateCanvas(c, deg) {
     deg = ((deg % 360) + 360) % 360; if (!deg) return c;
@@ -1008,7 +1045,7 @@ const Engine = (() => {
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
-  return { canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
+  return { canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, insetQuad, sharpness, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
 })();
 
 </script>
@@ -1022,7 +1059,7 @@ const Engine = (() => {
     get(k, d) { try { const v = localStorage.getItem('scanwerk:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('scanwerk:' + k, JSON.stringify(v)); } catch (e) { } }
   };
-  const settings = Object.assign({ auto: true, cropReview: true, filter: 'auto', format: 'auto', quality: 'high', lang: 'deu+eng', ocr: false }, store.get('settings', {}));
+  const settings = Object.assign({ auto: true, flash: 'auto', cropReview: true, filter: 'auto', format: 'auto', quality: 'high', lang: 'deu+eng', ocr: false }, store.get('settings', {}));
   const saveSettings = () => store.set('settings', settings);
   const QUAL = {
     max: { side: 0, q: 0.92, label: 'volle Auflösung' },
@@ -1083,7 +1120,8 @@ const Engine = (() => {
     if (full) { const c = await Engine.decodeToCanvas(page.srcBlob); src = { canvas: c, data: Engine.ctx2d(c).getImageData(0, 0, c.width, c.height) }; c.width = c.height = 1; }
     else src = await previewSrc(page);
     const s = src.data.width / page.srcW;
-    const q = page.quad.map(p => ({ x: p.x * s, y: p.y * s }));
+    let q = page.quad.map(p => ({ x: p.x * s, y: p.y * s }));
+    if (page.detected) q = Engine.insetQuad(q, 0.004); // Untergrundreste am Blattrand abschneiden
     let w = page.outW * s, h = page.outH * s;
     if (!full && maxSide) { const f = Math.min(1, maxSide / Math.max(w, h)); w *= f; h *= f; }
     w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
@@ -1254,8 +1292,13 @@ const Engine = (() => {
   };
 
   /* ---------- Kamera ---------- */
-  const Cam = { stream: null, track: null, timer: 0, raf: 0, quad: null, disp: null, stable: 0, last: null, armed: true, busy: false, count: 0, pending: Promise.resolve(), lastFound: false };
+  const Cam = { stream: null, track: null, caps: {}, photoCaps: null, ic: null, timer: 0, raf: 0, quad: null, disp: null, stable: 0, last: null, armed: true, busy: false, count: 0, pending: Promise.resolve(), lum: 128, torchOn: false, focusAt: 0, flashWarned: false };
+  const STABLE_NEEDED = 5; // × 200 ms ≈ 1 s ruhiges Bild bis zum Auto-Scan
+  const FLASH_MODES = ['off', 'auto', 'on', 'torch'];
+  const FLASH_LABEL = { off: 'Blitz aus', auto: 'Blitz auto', on: 'Blitz an', torch: 'Dauerlicht' };
   const liveCameraPossible = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.isSecureContext !== false);
+  const hasFlash = () => !!(Cam.photoCaps && (Cam.photoCaps.fillLightMode || []).includes('flash'));
+  const hasTorch = () => !!Cam.caps.torch;
   function startCapture() {
     S.addFromCamera = true;
     if (liveCameraPossible()) openCamera(); else pickFiles($('#inCapture'), { replace: S.replaceIdx != null });
@@ -1263,46 +1306,75 @@ const Engine = (() => {
   function camFallback(msg) {
     $('#camFallback').hidden = false; $('#camFallbackText').textContent = msg; $('#camHint').hidden = true; $('#camShutter').disabled = true;
   }
+  function syncCamUi() {
+    const a = $('#camAuto'); a.setAttribute('aria-pressed', settings.auto); a.querySelector('span').textContent = settings.auto ? 'Auto-Scan an' : 'Auto-Scan aus';
+    const f = $('#camFlashBtn'); f.setAttribute('aria-pressed', settings.flash !== 'off'); f.querySelector('span').textContent = FLASH_LABEL[settings.flash];
+    f.dataset.mode = settings.flash;
+  }
+  async function setTorch(on) {
+    if (!hasTorch() || !Cam.track || Cam.torchOn === on) return false;
+    try { await Cam.track.applyConstraints({ advanced: [{ torch: on }] }); Cam.torchOn = on; return true; } catch (e) { return false; }
+  }
   async function openCamera() {
     showView('camera'); Cam.count = 0; updateCamStack(); $('#camFallback').hidden = true; $('#camHint').hidden = false; $('#camShutter').disabled = false;
-    $('#camAuto').setAttribute('aria-pressed', settings.auto); Cam.armed = true; Cam.stable = 0; Cam.quad = null; Cam.disp = null;
+    Cam.armed = true; Cam.stable = 0; Cam.quad = null; Cam.disp = null; Cam.torchOn = false; Cam.flashWarned = false; syncCamUi();
     try {
-      Cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false });
+      // 4:3 in höchster Auflösung anfordern (entspricht dem Fotoformat der Handykamera)
+      Cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 3072 }, aspectRatio: { ideal: 4 / 3 } }, audio: false });
     } catch (e) {
-      camFallback(e && e.name === 'NotAllowedError' ? 'Der Kamerazugriff wurde nicht erlaubt. Mit der Kamera-App deines Geräts geht es trotzdem – in voller Auflösung.' : 'Die Live-Kamera ist hier nicht verfügbar. Mit der Kamera-App deines Geräts erhältst du die volle Auflösung.');
+      camFallback(e && e.name === 'NotAllowedError' ? 'Der Kamerazugriff wurde nicht erlaubt. Mit der Kamera-App deines Geräts geht es trotzdem – in voller Auflösung und mit Blitz.' : 'Die Live-Kamera ist hier nicht verfügbar. Mit der Kamera-App deines Geräts erhältst du die volle Auflösung und den Blitz.');
       return;
     }
     if (S.view !== 'camera') { stopCamera(); return; }
     const v = $('#camVideo'); v.srcObject = Cam.stream; Cam.track = Cam.stream.getVideoTracks()[0];
     try { await v.play(); } catch (e) { }
-    let caps = {}; try { caps = Cam.track.getCapabilities ? Cam.track.getCapabilities() : {}; } catch (e) { }
-    $('#camTorch').hidden = !caps.torch; $('#camTorch').setAttribute('aria-pressed', 'false');
+    try { Cam.caps = Cam.track.getCapabilities ? Cam.track.getCapabilities() : {}; } catch (e) { Cam.caps = {}; }
+    // Dauerfokus, automatische Belichtung und Weißabgleich, wo einstellbar
+    const adv = [];
+    if ((Cam.caps.focusMode || []).includes('continuous')) adv.push({ focusMode: 'continuous' });
+    if ((Cam.caps.exposureMode || []).includes('continuous')) adv.push({ exposureMode: 'continuous' });
+    if ((Cam.caps.whiteBalanceMode || []).includes('continuous')) adv.push({ whiteBalanceMode: 'continuous' });
+    if (adv.length) try { await Cam.track.applyConstraints({ advanced: adv }); } catch (e) { }
+    Cam.ic = null; Cam.photoCaps = null;
+    if ('ImageCapture' in window) { try { Cam.ic = new ImageCapture(Cam.track); Cam.photoCaps = await Promise.race([Cam.ic.getPhotoCapabilities(), sleep(1500).then(() => null)]); } catch (e) { Cam.photoCaps = null; } }
+    $('#camRes').textContent = `${v.videoWidth} × ${v.videoHeight}`;
+    if (settings.flash === 'torch') setTorch(true);
     Cam.timer = setInterval(camDetect, 200); Cam.raf = requestAnimationFrame(camDraw);
   }
   function stopCamera() {
     clearInterval(Cam.timer); cancelAnimationFrame(Cam.raf); Cam.timer = 0;
     if (Cam.stream) Cam.stream.getTracks().forEach(t => t.stop());
-    Cam.stream = null; Cam.track = null; const v = $('#camVideo'); if (v) v.srcObject = null;
+    Cam.stream = null; Cam.track = null; Cam.ic = null; Cam.torchOn = false; const v = $('#camVideo'); if (v) v.srcObject = null;
+  }
+  function focusOn(px, py) { // Fokus/Belichtung auf einen Punkt legen (Chrome/Android)
+    if (!Cam.track || !Cam.caps.pointsOfInterest && !('pointsOfInterest' in (Cam.track.getSettings?.() || {}))) return;
+    Cam.track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x: px, y: py }] }] }).catch(() => { });
   }
   function camDetect() {
     const v = $('#camVideo'); if (!v.videoWidth || Cam.busy) return;
     const r = Engine.detect(v, v.videoWidth, v.videoHeight, 320);
-    const hint = $('#camHint');
+    Cam.lum = Cam.lum * 0.6 + r.lum * 0.4;
+    const hint = $('#camHint'), dark = Cam.lum < 70;
     if (r.found) {
       if (Cam.last) {
         const diag = Math.hypot(v.videoWidth, v.videoHeight);
         const mv = Math.max(...r.quad.map((p, i) => Math.hypot(p.x - Cam.last[i].x, p.y - Cam.last[i].y))) / diag;
-        if (mv < 0.02) Cam.stable++; else Cam.stable = 0;
+        if (mv < 0.015) Cam.stable++; else Cam.stable = 0;
         if (mv > 0.08) Cam.armed = true;
       }
       Cam.last = r.quad; Cam.quad = r.quad;
-      hint.textContent = !Cam.armed ? 'Nächste Seite ins Bild legen' : settings.auto ? (Cam.stable > 1 ? 'Ruhig halten…' : 'Dokument erkannt') : 'Dokument erkannt – auslösen';
-      if (settings.auto && Cam.armed && Cam.stable >= 6) camCapture(true);
+      const area = Engine.polyArea(r.quad) / (v.videoWidth * v.videoHeight);
+      if (performance.now() - Cam.focusAt > 1500) { Cam.focusAt = performance.now(); const c = r.quad.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 }); focusOn(c.x / v.videoWidth, c.y / v.videoHeight); }
+      hint.textContent = !Cam.armed ? 'Erfasst – nächste Seite ins Bild legen'
+        : area < 0.2 ? 'Näher heran'
+        : dark && settings.flash === 'off' ? 'Zu dunkel – Blitz einschalten'
+        : settings.auto ? (Cam.stable > 1 ? 'Ruhig halten – scannt automatisch' : 'Dokument erkannt') : 'Dokument erkannt – jetzt auslösen';
+      if (settings.auto && Cam.armed && Cam.stable >= STABLE_NEEDED && area >= 0.12) camCapture(true);
     } else {
       Cam.stable = 0; Cam.quad = null; Cam.last = null; Cam.armed = true;
-      hint.textContent = 'Dokument ins Bild halten';
+      hint.textContent = dark ? 'Zu dunkel – Blitz einschalten oder mehr Licht' : 'Dokument ins Bild halten';
     }
-    const ring = $('#camRing'); ring.style.strokeDashoffset = settings.auto && Cam.armed && r.found ? 226 - 226 * Math.min(1, Cam.stable / 6) : 226;
+    $('#camRing').style.strokeDashoffset = settings.auto && Cam.armed && r.found ? 226 - 226 * Math.min(1, Cam.stable / STABLE_NEEDED) : 226;
   }
   function camDraw() {
     Cam.raf = requestAnimationFrame(camDraw);
@@ -1316,30 +1388,60 @@ const Engine = (() => {
       Cam.disp = Cam.disp ? Cam.disp.map((p, i) => ({ x: p.x + (tgt[i].x - p.x) * 0.35, y: p.y + (tgt[i].y - p.y) * 0.35 })) : tgt;
     } else Cam.disp = null;
     if (Cam.disp) {
+      const prog = settings.auto && Cam.armed ? Math.min(1, Cam.stable / STABLE_NEEDED) : 0, done = !Cam.armed;
       x.beginPath(); Cam.disp.forEach((p, i) => i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y)); x.closePath();
-      x.fillStyle = 'rgba(94,136,255,.22)'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#5E88FF'; x.stroke();
+      x.fillStyle = done ? 'rgba(79,197,138,.22)' : `rgba(94,136,255,${0.16 + 0.2 * prog})`; x.fill();
+      x.lineWidth = 3 + 2 * prog; x.strokeStyle = done ? '#4FC58A' : '#5E88FF'; x.stroke();
       x.fillStyle = '#fff'; for (const p of Cam.disp) { x.beginPath(); x.arc(p.x, p.y, 5, 0, 7); x.fill(); }
     }
+  }
+  async function grabFrame(v) { const c = Engine.canvas(v.videoWidth, v.videoHeight); c.getContext('2d').drawImage(v, 0, 0); return c; }
+  /* Mehrere Videobilder aufnehmen und das schärfste behalten (gegen Verwackeln) */
+  async function bestFrame(v, n = 4) {
+    let best = null, bs = -1;
+    for (let i = 0; i < n; i++) {
+      if (i) await sleep(70);
+      const c = await grabFrame(v), sh = Engine.sharpness(c, c.width, c.height);
+      if (sh > bs) { bs = sh; best = c; }
+    }
+    return best;
   }
   async function camCapture(auto) {
     const v = $('#camVideo'); if (Cam.busy || !v.videoWidth) return;
     Cam.busy = true; Cam.armed = false; Cam.stable = 0;
-    const fl = $('#camFlash'); fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
-    let blob = null;
+    const wantFlash = settings.flash === 'on' || (settings.flash === 'auto' && Cam.lum < 85);
+    let blob = null, usedTorch = false;
     try {
-      if ('ImageCapture' in window && Cam.track) {
-        const ic = new ImageCapture(Cam.track);
-        blob = await Promise.race([ic.takePhoto(), sleep(2500).then(() => null)]);
-        if (blob && blob.size < 2000) blob = null;
+      if (wantFlash && !hasFlash() && !hasTorch() && !Cam.flashWarned) { Cam.flashWarned = true; toast('Der Browser gibt den Blitz nicht frei. Für Blitzfotos die Kamera-App nutzen (Symbol unten links).'); }
+      if (Cam.ic && Cam.photoCaps) { // echtes Foto in voller Sensorauflösung (Chrome/Android)
+        const opt = {}, pc = Cam.photoCaps;
+        if (pc.imageWidth && pc.imageWidth.max) opt.imageWidth = pc.imageWidth.max;
+        if (pc.imageHeight && pc.imageHeight.max) opt.imageHeight = pc.imageHeight.max;
+        const modes = pc.fillLightMode || [];
+        if (wantFlash && modes.includes('flash')) opt.fillLightMode = 'flash';
+        else if (modes.includes('off') && settings.flash !== 'torch') opt.fillLightMode = 'off';
+        if (!(wantFlash && !modes.includes('flash') && hasTorch())) {
+          blink();
+          blob = await Promise.race([Cam.ic.takePhoto(opt).catch(() => Cam.ic.takePhoto()), sleep(3000).then(() => null)]);
+          if (blob && blob.size < 2000) blob = null;
+        }
       }
-    } catch (e) { blob = null; }
-    if (!blob) { const c = Engine.canvas(v.videoWidth, v.videoHeight); c.getContext('2d').drawImage(v, 0, 0); blob = await Engine.toBlob(c, 'image/jpeg', 0.95); }
+      if (!blob) {
+        if (wantFlash && hasTorch() && !Cam.torchOn) { usedTorch = await setTorch(true); if (usedTorch) await sleep(650); } // Belichtung nachregeln lassen
+        blink();
+        const c = await bestFrame(v, Cam.lum < 85 ? 5 : 3);
+        blob = await Engine.toBlob(c, 'image/jpeg', 0.95); c.width = c.height = 1;
+      }
+    } catch (e) { console.error(e); }
+    finally { if (usedTorch && settings.flash !== 'torch') await setTorch(false); }
+    if (!blob) { Cam.busy = false; Cam.armed = true; toast('Aufnahme fehlgeschlagen – bitte erneut versuchen.'); return; }
     Cam.count++; updateCamStack(blob);
     const replace = S.replaceIdx; S.replaceIdx = null;
     Cam.pending = Cam.pending.then(() => addFiles([new File([blob], `aufnahme-${Date.now()}.jpg`, { type: 'image/jpeg' })], { replaceIdx: replace, quiet: true })).catch(console.error);
     Cam.busy = false;
     if (replace != null) camFinish();
   }
+  function blink() { const fl = $('#camBlink'); fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go'); }
   let stackUrl = null;
   function updateCamStack(blob) {
     $('#camCount').textContent = Cam.count;
@@ -1358,12 +1460,16 @@ const Engine = (() => {
   $('#camShutter').onclick = () => camCapture(false);
   $('#camDone').onclick = camFinish;
   $('#camClose').onclick = camFinish;
-  $('#camAuto').onclick = () => { settings.auto = !settings.auto; saveSettings(); $('#camAuto').setAttribute('aria-pressed', settings.auto); };
-  $('#camTorch').onclick = async () => {
-    const on = $('#camTorch').getAttribute('aria-pressed') !== 'true';
-    try { await Cam.track.applyConstraints({ advanced: [{ torch: on }] }); $('#camTorch').setAttribute('aria-pressed', on); } catch (e) { toast('Licht lässt sich hier nicht schalten.'); }
+  $('#camAuto').onclick = () => { settings.auto = !settings.auto; saveSettings(); syncCamUi(); Cam.stable = 0; toast(settings.auto ? 'Auto-Scan an – scannt, sobald ein Dokument ruhig im Bild ist' : 'Auto-Scan aus – mit dem Auslöser fotografieren'); };
+  $('#camFlashBtn').onclick = async () => {
+    settings.flash = FLASH_MODES[(FLASH_MODES.indexOf(settings.flash) + 1) % FLASH_MODES.length]; saveSettings(); syncCamUi();
+    if (settings.flash === 'torch') { if (!(await setTorch(true))) toast('Dauerlicht wird hier nicht unterstützt.'); }
+    else await setTorch(false);
+    if (settings.flash !== 'off' && !hasFlash() && !hasTorch() && !Cam.flashWarned) { Cam.flashWarned = true; toast('Der Browser gibt den Blitz nicht frei. Für Blitzfotos die Kamera-App nutzen (Symbol unten links).'); }
   };
+  $('#camVideo').addEventListener('pointerdown', e => { const r = e.currentTarget.getBoundingClientRect(); focusOn((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
   $('#camGallery').onclick = () => pickFiles($('#inImport'), { replace: S.replaceIdx != null });
+  $('#camNativeBtn').onclick = () => { stopCamera(); pickFiles($('#inCapture'), { replace: S.replaceIdx != null }); };
   $('#camNative').onclick = () => pickFiles($('#inCapture'), { replace: S.replaceIdx != null });
   $('#camNativeImport').onclick = () => pickFiles($('#inImport'), { replace: S.replaceIdx != null });
 
@@ -1455,12 +1561,12 @@ const Engine = (() => {
     if (r.found) { C.quad = r.quad; C.detected = true; toast('Dokument erkannt'); } else toast('Kein Dokumentrand gefunden. Bitte Ecken ziehen.');
     cropStatus(); cropDraw();
   };
-  $('#cropFull').onclick = () => { const p = S.doc.pages[C.idx]; C.quad = Engine.fullQuad(p.srcW, p.srcH); cropStatus(); cropDraw(); };
+  $('#cropFull').onclick = () => { const p = S.doc.pages[C.idx]; C.quad = Engine.fullQuad(p.srcW, p.srcH); C.detected = false; cropStatus(); cropDraw(); };
   $('#cropReset').onclick = () => { C.quad = C.orig.map(p => ({ ...p })); cropStatus(); cropDraw(); };
   $('#cropCancel').onclick = () => showView('review');
   $('#cropApply').onclick = () => {
     if (!Engine.isConvex(C.quad)) return;
-    const page = S.doc.pages[C.idx]; setQuad(page, Engine.orderQuad(C.quad)); page.detected = C.detected || page.detected;
+    const page = S.doc.pages[C.idx]; setQuad(page, Engine.orderQuad(C.quad)); page.detected = C.detected;
     S.idx = C.idx; refreshView(page); scheduleSave(); showView('review');
   };
 
