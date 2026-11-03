@@ -296,6 +296,31 @@
   .hist-row .e{overflow-x:auto;min-width:0;}
   .hist-row .r{font-weight:700;white-space:nowrap;}
 
+  /* ---------- Formel-Editor ---------- */
+  .mf{position:relative;display:flex;align-items:center;min-height:46px;width:100%;min-width:0;padding:5px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:20px/1.5 var(--sans);color:var(--ink);overflow-x:auto;overflow-y:hidden;cursor:text;-webkit-tap-highlight-color:transparent;font-variant-numeric:lining-nums;font-feature-settings:"zero" 0;}
+  .mf.focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+  .mf.bad{border-color:var(--danger);}
+  .mf.all .mfv{background:#dbeafe;border-radius:4px;}
+  .mf.big{font-size:30px;min-height:76px;}
+  .mfv{display:block;white-space:pre;min-height:1.5em;line-height:1.5;}
+  .mf-cap{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;margin:0;font-size:16px;pointer-events:none;}
+  .mf-ph{color:#9ca3af;font-size:16px;}
+  .mf .ch.op{margin:0 .2em;}
+  .mf sup.ms{font-size:.72em;line-height:0;vertical-align:.6em;margin-left:.04em;}
+  .mf .slot{display:inline-block;min-width:.55em;height:1em;border:1.5px dashed #9ca3af;border-radius:3px;vertical-align:middle;margin:0 1px;position:relative;}
+  .mf .slot:has(.caret){border-color:var(--accent);}
+  .mf .absb{display:inline-flex;align-items:center;}
+  .mf .absb .bar{font-weight:300;transform:scaleY(1.25);padding:0 .1em;}
+  .caret{display:inline-block;width:0;height:1.15em;border-left:2px solid var(--accent);margin:0 -1px;vertical-align:middle;animation:mfblink 1s steps(1) infinite;}
+  .slot .caret{position:absolute;left:2px;top:0;height:100%;margin:0;}
+  @keyframes mfblink{50%{opacity:0;}}
+  .keypad button.nav{background:var(--soft);min-width:48px;}
+  .calc-field{margin-bottom:6px;}
+  .calc-pad button.nav{background:var(--soft);color:var(--ink);font-size:20px;}
+  .calc-pad button.zero{grid-column:span 2;}
+  .calc-pad button.eq{grid-column:span 3;background:var(--accent);border-color:var(--accent);color:#fff;font-size:26px;font-weight:700;}
+  .calc-pad button.eq:active{background:var(--accent-d);}
+
   /* ---------- Schmale Bildschirme ---------- */
   @media (max-width:1000px){
     .layout{grid-template-columns:minmax(0,1fr);gap:12px;}
@@ -337,7 +362,7 @@
   {
    "sel": "#fnList .expr-input",
    "title": "Funktion eintippen",
-   "text": "<p>Schreibe den Term einfach hin, z. B. <b>x^2 - 2x - 3<\/b> oder <b>sin(x)<\/b>. Unter dem Feld erscheint bei Parabeln die <b>Normal-, Scheitelpunkt- und Nullstellenform<\/b>.<\/p><p>Die Tasten über der Liste helfen dir beim Tippen (x², Wurzel, Klammern …).<\/p><p>Mit den Knöpfen unter dem Feld zeigst du Scheitelpunkt, Nullstellen und Eigenschaften im Graphen und in der Wertetabelle.<\/p>"
+   "text": "<p>Tippe den Term wie auf dem Taschenrechner, z. B. <b>x² − 2x − 3<\/b> oder <b>sin(x)<\/b>. Hochzahl (<b>x²<\/b>, <b>xⁿ<\/b>), Wurzel (<b>√<\/b>) und Bruch (<b>a/b<\/b>) erscheinen sofort in Schulbuch-Schreibweise.<\/p><p>Mit der Taste <b>▶<\/b> (oder dem Pfeil auf der Tastatur) springst du aus Hochzahl, Wurzel oder Bruch zurück in die normale Zeile.<\/p>"
   },
   {
    "sel": "#fnList .param-row",
@@ -359,7 +384,7 @@
    "sel": "[data-tab=calc]",
    "click": "[data-tab=calc]",
    "title": "Taschenrechner",
-   "text": "<p>Tippe Rechnungen mit dem Tastenfeld oder der Tastatur. Brüche, Hochzahlen und Wurzeln erscheinen <b>in Schulbuch-Schreibweise<\/b>; das Ergebnis siehst du als Dezimalzahl und, wenn möglich, als Bruch.<\/p>"
+   "text": "<p>Tippe Rechnungen mit dem Tastenfeld oder der Tastatur. Brüche, Hochzahlen und Wurzeln erscheinen direkt <b>in Schulbuch-Schreibweise<\/b>; mit <b>▶<\/b> verlässt du sie wieder. Das Ergebnis siehst du als Dezimalzahl und, wenn möglich, als Bruch.<\/p>"
   }
  ]
 };</script>
@@ -415,28 +440,25 @@
       <section id="tabCalc" class="hide">
         <div class="card calc">
           <h3>Taschenrechner</h3>
-          <div class="calc-disp" id="calcDisp" aria-live="polite"></div>
           <div class="calc-res" id="calcRes"></div>
-          <input class="txt calc-in" id="calcIn" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Eingabe, z. B. 3/4 + 1/6" aria-label="Rechnung eingeben">
+          <div id="calcIn" class="calc-field"></div>
           <div class="calc-pad" id="calcPad"></div>
           <div class="calc-actions">
-            <button class="btn primary" id="calcEq" type="button">＝ Berechnen</button>
             <button class="btn small hide" id="calcPlot" type="button">Als Funktion zeichnen</button>
           </div>
         </div>
         <details class="sec" id="calcHist" open><summary>Verlauf</summary><div class="body" id="calcHistBody"></div></details>
-        <div class="note calc-tip">Brüche: Taste <b>a⁄b</b> oder einfach <b>3/4</b> tippen. Potenz: <b>x²</b> oder <b>xⁿ</b>. Wurzel: <b>√</b>. Mit <b>Ans</b> rechnest du mit dem letzten Ergebnis weiter.</div>
+        <div class="note calc-tip">Bruch, Hochzahl und Wurzel erscheinen sofort so, wie du sie im Heft schreibst. Mit <b>▶</b> springst du aus dem Bruch, der Hochzahl oder der Wurzel zurück in die normale Zeile. Mit <b>Ans</b> rechnest du mit dem letzten Ergebnis weiter.</div>
       </section>
 
       <section id="tabEq" class="hide">
         <div class="card">
           <h3>Gleichung</h3>
           <div class="eq-fields" id="eqFields">
-            <div class="eq-col"><div class="eq-label">linke Seite</div><input class="expr-input" id="eqLeft" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="x^2 - 2x"></div>
+            <div class="eq-col"><div class="eq-label">linke Seite</div><div id="eqLeft"></div></div>
             <div class="eqs">=</div>
-            <div class="eq-col"><div class="eq-label">rechte Seite</div><input class="expr-input" id="eqRight" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="3"></div>
+            <div class="eq-col"><div class="eq-label">rechte Seite</div><div id="eqRight"></div></div>
           </div>
-          <div class="eq-preview" id="eqPreview"></div>
           <div id="eqErr"></div>
           <div class="param-wrap" id="eqParams"></div>
           <details class="more" id="eqMore"><summary>Beispiele</summary><div class="chips" id="eqExamples"></div></details>
@@ -1080,6 +1102,7 @@ function mh(src) {
     const L = /[A-Za-zäöüß]{2}$/.test(str.slice(0, off)), R = /^[A-Za-zäöüß]{3}/.test(str.slice(off + 1));
     return (L && R) ? '-' : MINUS;
   });
+  if (s.indexOf(' ') < 0) s = s.replace(/([0-9A-Za-zπ)²³ˣ₀-₉])([+−])(?=[0-9A-Za-zπ(√−])/g, '$1 $2 ');
   const n = s.length;
   let i = 0;
   const isL = function (c) { return c !== undefined && /[A-Za-zÄÖÜäöüßπ]/.test(c); };
@@ -1198,6 +1221,439 @@ function calcEval(src, ans) {
 }
 
 /* =====================================================================
+   FORMEL-EDITOR (wie ein Schulrechner im „Natural Display“)
+   Hochzahl, Wurzel, Bruch und Betrag erscheinen direkt beim Tippen.
+   Pfeil nach rechts springt aus Hochzahl / Wurzel / Bruch zurück in die
+   normale Zeile. getValue() liefert den Term als Text für den Parser.
+   ===================================================================== */
+function mfRow(owner) { const r = []; r.owner = owner || null; return r; }
+function mfNode(t, rows) {
+  const n = { t: t, rows: rows, parentRow: null };
+  rows.forEach(function (r) { r.owner = n; });
+  return n;
+}
+function mfChar(v) { return { t: 'c', v: v }; }
+function mfIsChar(n, re) { return n && n.t === 'c' && re.test(n.v); }
+function mfPut(row, i, node) { row.splice(i, 0, node); if (node.t !== 'c') node.parentRow = row; }
+function mfEmpty(n) { return n.rows.every(function (r) { return r.length === 0; }); }
+
+/* Anfang des „Faktors“ links von end (Zahl, Buchstabe mit Beiwert, Klammer, Wurzel …) */
+function mfFactorStart(row, end) {
+  let j = end;
+  if (j === 0) return 0;
+  while (j > 0 && row[j - 1].t === 'sup') j--;
+  if (j === 0) return 0;
+  const n = row[j - 1];
+  if (n.t !== 'c') return j - 1;
+  if (n.v === ')') {
+    let d = 0;
+    for (let k = j - 1; k >= 0; k--) {
+      const m = row[k]; if (m.t !== 'c') continue;
+      if (m.v === ')') d++;
+      else if (m.v === '(') {
+        d--;
+        if (d === 0) { let s = k; while (s > 0 && mfIsChar(row[s - 1], /^[A-Za-z]$/)) s--; return s; }
+      }
+    }
+    return j - 1;
+  }
+  if (/^[0-9,]$/.test(n.v)) { let k = j - 1; while (k > 0 && mfIsChar(row[k - 1], /^[0-9,]$/)) k--; return k; }
+  if (/^[A-Za-zπ]|^Ans$/.test(n.v)) { let k = j - 1; while (k > 0 && mfIsChar(row[k - 1], /^[0-9,]$/)) k--; return k; }
+  return j;
+}
+function mfMakeFrac(row, end) {
+  let s = mfFactorStart(row, end);
+  const moved = row.splice(s, end - s);
+  if (moved.length > 2 && mfIsChar(moved[0], /^\($/) && mfIsChar(moved[moved.length - 1], /^\)$/)) {
+    /* nur umschließende Klammer entfernen, wenn sie zusammengehören */
+    let d = 0, ok = true;
+    for (let k = 0; k < moved.length; k++) {
+      const m = moved[k]; if (m.t !== 'c') continue;
+      if (m.v === '(') d++; else if (m.v === ')') { d--; if (d === 0 && k < moved.length - 1) { ok = false; break; } }
+    }
+    if (ok) { moved.shift(); moved.pop(); }
+  }
+  const num = mfRow(), den = mfRow(), frac = mfNode('frac', [num, den]);
+  moved.forEach(function (n) { num.push(n); if (n.t !== 'c') n.parentRow = num; });
+  mfPut(row, s, frac);
+  return { frac: frac, num: num, den: den, index: s };
+}
+
+/* ---------- Text → Modell ---------- */
+function mfParse(str, pos, stop) {
+  const row = mfRow();
+  let i = pos;
+  const s = str;
+  function adopt(from, to) { from.forEach(function (n) { to.push(n); if (n.t !== 'c') n.parentRow = to; }); }
+  function group() { /* s[i] === '(' → Inhalt als Zeile */
+    i++;
+    const inner = mfParse(s, i, true); i = inner.pos;
+    if (s[i] === ')') i++;
+    return inner.row;
+  }
+  function atomRow() {
+    const r = mfRow();
+    if (s[i] === '(') { adopt(group(), r); return r; }
+    let m = /^[+\-−]?\d+(?:[.,]\d+)?/.exec(s.slice(i));
+    if (m) { i += m[0].length; m[0].split('').forEach(function (c) { r.push(mfChar(c === '-' ? '−' : c === '.' ? ',' : c)); }); return r; }
+    m = /^(sqrt|wurzel)\(/i.exec(s.slice(i));
+    if (m) {
+      i += m[0].length - 1;
+      const inner = mfRow(); adopt(group(), inner);
+      const n = mfNode('sqrt', [inner]); r.push(n); n.parentRow = r; return r;
+    }
+    if (s[i] === '√') {
+      i++;
+      const a = atomRow(), n = mfNode('sqrt', [a]); r.push(n); n.parentRow = r; return r;
+    }
+    m = /^[A-Za-zπ]/.exec(s.slice(i));
+    if (m) { i++; r.push(mfChar(m[0])); }
+    return r;
+  }
+  while (i < s.length) {
+    const c = s[i];
+    if (c === ')' && stop) break;
+    if (c === ' ' || c === '\n') { i++; continue; }
+    if (c === '^') {
+      i++;
+      mfPut(row, row.length, mfNode('sup', [atomRow()])); continue;
+    }
+    if (SUPCH[c]) {
+      const r = mfRow(); r.push(mfChar(SUPCH[c])); i++;
+      mfPut(row, row.length, mfNode('sup', [r])); continue;
+    }
+    const m = /^(sqrt|wurzel|abs|betrag)\(/i.exec(s.slice(i));
+    if (m) {
+      i += m[0].length - 1;
+      const inner = mfRow(); adopt(group(), inner);
+      mfPut(row, row.length, mfNode(/^(sqrt|wurzel)/i.test(m[0]) ? 'sqrt' : 'abs', [inner])); continue;
+    }
+    if (c === '√') {
+      i++;
+      mfPut(row, row.length, mfNode('sqrt', [atomRow()])); continue;
+    }
+    if (c === '/' || c === '÷') {
+      i++;
+      while (s[i] === ' ') i++;
+      const f = mfMakeFrac(row, row.length);
+      adopt(atomRow(), f.den);
+      continue;
+    }
+    if (/^ans/i.test(s.slice(i, i + 3)) && !/[A-Za-z]/.test(s[i + 3] || '')) { row.push(mfChar('Ans')); i += 3; continue; }
+    if (/^pi/i.test(s.slice(i, i + 2)) && !/[A-Za-z]/.test(s[i + 2] || '') && !/[A-Za-z]/.test(s[i - 1] || '')) { row.push(mfChar('π')); i += 2; continue; }
+    row.push(mfChar(c === '*' || c === '×' ? '·' : c === '-' ? '−' : c === '.' ? ',' : c));
+    i++;
+  }
+  return { row: row, pos: i };
+}
+
+/* ---------- Modell → Text ---------- */
+function mfToStr(row) {
+  let s = '';
+  row.forEach(function (n, k) {
+    if (n.t === 'c') { s += n.v === 'Ans' ? 'Ans' : n.v; return; }
+    if (n.t === 'sup') {
+      const t = mfToStr(n.rows[0]);
+      s += '^' + (/^[0-9]+$|^[A-Za-z]$/.test(t) ? t : '(' + t + ')');
+    } else if (n.t === 'sqrt') s += 'sqrt(' + mfToStr(n.rows[0]) + ')';
+    else if (n.t === 'abs') s += 'abs(' + mfToStr(n.rows[0]) + ')';
+    else if (n.t === 'frac') {
+      if (/[0-9A-Za-zπ)]$/.test(s)) s += '·';
+      s += '(' + mfToStr(n.rows[0]) + ')/(' + mfToStr(n.rows[1]) + ')';
+      const nx = row[k + 1];
+      if (nx && (nx.t !== 'c' || /^[0-9A-Za-zπ(]/.test(nx.v))) s += '·';
+    }
+  });
+  return s;
+}
+
+/* ---------- Eingabefeld ---------- */
+function MathField(opts) {
+  const self = this;
+  this.opts = opts || {};
+  this.top = mfRow();
+  this.cur = { row: this.top, i: 0 };
+  this.focused = false;
+  this.selAll = false;
+  this.reg = [];
+  const root = document.createElement('div');
+  root.className = 'mf expr-input' + (this.opts.big ? ' big' : '');
+  root.setAttribute('role', 'textbox');
+  root.setAttribute('aria-label', this.opts.label || 'Formel eingeben');
+  const view = document.createElement('div'); view.className = 'mfv';
+  const cap = document.createElement('input');
+  cap.type = 'text'; cap.className = 'mf-cap'; cap.autocomplete = 'off';
+  cap.setAttribute('autocapitalize', 'off'); cap.setAttribute('autocorrect', 'off'); cap.spellcheck = false;
+  cap.setAttribute('aria-label', this.opts.label || 'Formel eingeben');
+  if (this.opts.noKeyboard) cap.setAttribute('inputmode', 'none');
+  root.appendChild(view); root.appendChild(cap);
+  this.root = root; this.view = view; this.cap = cap;
+  root._mf = this;
+
+  cap.addEventListener('focus', function () { self.focused = true; root.classList.add('focus'); self.render(); if (self.opts.onFocus) self.opts.onFocus(self); });
+  cap.addEventListener('blur', function () { self.focused = false; self.selAll = false; root.classList.remove('focus'); self.render(); if (self.opts.onBlur) self.opts.onBlur(self); });
+  cap.addEventListener('input', function () {
+    const t = cap.value; cap.value = '';
+    if (!t) return;
+    const chars = Array.from(t);
+    chars.forEach(function (ch) { self.typeChar(ch); });
+    self.changed();
+  });
+  cap.addEventListener('paste', function (e) {
+    const t = (e.clipboardData || window.clipboardData).getData('text');
+    e.preventDefault();
+    if (t) { self.insertString(t); self.changed(); }
+  });
+  cap.addEventListener('keydown', function (e) {
+    const k = e.key;
+    if ((e.ctrlKey || e.metaKey) && (k === 'a' || k === 'A')) { e.preventDefault(); self.selAll = true; self.render(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    let handled = true;
+    if (k === 'ArrowLeft') { self.selAll = false; self.left(); }
+    else if (k === 'ArrowRight') { self.selAll = false; self.right(); }
+    else if (k === 'ArrowUp') { self.selAll = false; self.up(); }
+    else if (k === 'ArrowDown') { self.selAll = false; self.down(); }
+    else if (k === 'Home') { self.selAll = false; self.cur = { row: self.cur.row, i: 0 }; }
+    else if (k === 'End') { self.selAll = false; self.cur = { row: self.cur.row, i: self.cur.row.length }; }
+    else if (k === 'Backspace') { self.backspace(); self.changed(); return e.preventDefault(); }
+    else if (k === 'Delete') { self.del(); self.changed(); return e.preventDefault(); }
+    else if (k === 'Enter') { if (self.opts.onEnter) { e.preventDefault(); self.opts.onEnter(self); } return; }
+    else handled = false;
+    if (handled) { e.preventDefault(); self.render(); }
+  });
+  root.addEventListener('mousedown', function (e) { if (e.target !== cap) e.preventDefault(); });
+  root.addEventListener('click', function (e) { self.placeFromClick(e); });
+  this.render();
+}
+MathField.prototype.focus = function () { try { this.cap.focus({ preventScroll: true }); } catch (e) { this.cap.focus(); } };
+MathField.prototype.changed = function () { this.render(); if (this.opts.onChange) this.opts.onChange(this); };
+MathField.prototype.getValue = function () { return mfToStr(this.top); };
+MathField.prototype.setValue = function (str, silent) {
+  const p = mfParse(String(str || ''), 0, false);
+  this.top = p.row; this.top.owner = null;
+  this.cur = { row: this.top, i: this.top.length }; this.selAll = false;
+  this.render();
+  if (!silent && this.opts.onChange) this.opts.onChange(this);
+};
+MathField.prototype.clear = function () { this.top = mfRow(); this.cur = { row: this.top, i: 0 }; this.selAll = false; this.changed(); };
+MathField.prototype.clearIfAll = function () { if (this.selAll) { this.top = mfRow(); this.cur = { row: this.top, i: 0 }; this.selAll = false; } };
+MathField.prototype.insertString = function (str) {
+  this.clearIfAll();
+  const p = mfParse(str, 0, false), c = this.cur;
+  p.row.forEach(function (n, k) { mfPut(c.row, c.i + k, n); });
+  c.i += p.row.length;
+};
+MathField.prototype.typeChar = function (ch) {
+  this.clearIfAll();
+  if (ch === ' ' || ch === '\n') return;
+  if (ch === 'ˆ') ch = '^';
+  if (ch === '^') return this.insertSup();
+  if (ch === '/' || ch === '÷') return this.insertFrac();
+  if (ch === '√') return this.insertSqrt();
+  if (ch === '²' || ch === '³') { const c = this.cur, r = mfRow(); r.push(mfChar(ch === '²' ? '2' : '3')); const n = mfNode('sup', [r]); mfPut(c.row, c.i, n); c.i++; return; }
+  if (ch === '*' || ch === '×') ch = '·';
+  else if (ch === '-' || ch === '–') ch = '−';
+  else if (ch === '.') ch = ',';
+  const c = this.cur, row = c.row;
+  if (ch === '(') {
+    let k = c.i; while (k > 0 && mfIsChar(row[k - 1], /^[A-Za-z]$/)) k--;
+    const w = row.slice(k, c.i).map(function (n) { return n.v; }).join('').toLowerCase();
+    const m = /(sqrt|wurzel|abs|betrag)$/.exec(w);
+    if (m) {
+      row.splice(c.i - m[0].length, m[0].length); c.i -= m[0].length;
+      return /^(sqrt|wurzel)$/.test(m[1]) ? this.insertSqrt() : this.insertAbs();
+    }
+  }
+  if (ch === 'i' && mfIsChar(row[c.i - 1], /^p$/) && !mfIsChar(row[c.i - 2], /^[A-Za-z]$/)) { row[c.i - 1] = mfChar('π'); return; }
+  mfPut(row, c.i, mfChar(ch)); c.i++;
+};
+MathField.prototype.insertSup = function () {
+  this.clearIfAll();
+  const c = this.cur, r = mfRow(), n = mfNode('sup', [r]);
+  mfPut(c.row, c.i, n); this.cur = { row: r, i: 0 };
+};
+MathField.prototype.insertPow2 = function () {
+  this.clearIfAll();
+  const c = this.cur, r = mfRow(); r.push(mfChar('2'));
+  const n = mfNode('sup', [r]); mfPut(c.row, c.i, n); c.i++;
+};
+MathField.prototype.insertSqrt = function () {
+  this.clearIfAll();
+  const c = this.cur, r = mfRow(), n = mfNode('sqrt', [r]);
+  mfPut(c.row, c.i, n); this.cur = { row: r, i: 0 };
+};
+MathField.prototype.insertAbs = function () {
+  this.clearIfAll();
+  const c = this.cur, r = mfRow(), n = mfNode('abs', [r]);
+  mfPut(c.row, c.i, n); this.cur = { row: r, i: 0 };
+};
+MathField.prototype.insertParens = function () {
+  this.clearIfAll();
+  const c = this.cur;
+  mfPut(c.row, c.i, mfChar('(')); mfPut(c.row, c.i + 1, mfChar(')')); c.i++;
+};
+MathField.prototype.insertFrac = function () {
+  this.clearIfAll();
+  const c = this.cur, f = mfMakeFrac(c.row, c.i);
+  this.cur = { row: f.num.length ? f.den : f.num, i: 0 };
+};
+MathField.prototype.left = function () {
+  const c = this.cur, row = c.row, i = c.i;
+  if (i > 0) {
+    const n = row[i - 1];
+    if (n.t === 'c') c.i = i - 1;
+    else { const r = n.rows[n.rows.length - 1]; this.cur = { row: r, i: r.length }; }
+    return;
+  }
+  const own = row.owner; if (!own) return;
+  const k = own.rows.indexOf(row);
+  if (k > 0) { const r = own.rows[k - 1]; this.cur = { row: r, i: r.length }; }
+  else this.cur = { row: own.parentRow, i: own.parentRow.indexOf(own) };
+};
+MathField.prototype.right = function () {
+  const c = this.cur, row = c.row, i = c.i;
+  if (i < row.length) {
+    const n = row[i];
+    if (n.t === 'c') c.i = i + 1; else this.cur = { row: n.rows[0], i: 0 };
+    return;
+  }
+  const own = row.owner; if (!own) return;
+  const k = own.rows.indexOf(row);
+  if (k < own.rows.length - 1) this.cur = { row: own.rows[k + 1], i: 0 };
+  else this.cur = { row: own.parentRow, i: own.parentRow.indexOf(own) + 1 };
+};
+MathField.prototype.up = function () {
+  let r = this.cur.row;
+  while (r.owner) {
+    const own = r.owner;
+    if (own.t === 'frac' && own.rows.indexOf(r) === 1) { this.cur = { row: own.rows[0], i: Math.min(this.cur.i, own.rows[0].length) }; return; }
+    r = own.parentRow;
+  }
+};
+MathField.prototype.down = function () {
+  let r = this.cur.row;
+  while (r.owner) {
+    const own = r.owner;
+    if (own.t === 'frac' && own.rows.indexOf(r) === 0) { this.cur = { row: own.rows[1], i: Math.min(this.cur.i, own.rows[1].length) }; return; }
+    r = own.parentRow;
+  }
+};
+MathField.prototype.backspace = function () {
+  if (this.selAll) { this.clearIfAll(); return; }
+  const c = this.cur, row = c.row;
+  if (c.i > 0) {
+    const n = row[c.i - 1];
+    if (n.t === 'c') { row.splice(c.i - 1, 1); c.i--; return; }
+    if (mfEmpty(n)) { const idx = c.i - 1; row.splice(idx, 1); c.i = idx; return; }
+    const r = n.rows[n.rows.length - 1]; this.cur = { row: r, i: r.length };
+    return;
+  }
+  const own = row.owner; if (!own) return;
+  if (mfEmpty(own)) { const pr = own.parentRow, idx = pr.indexOf(own); pr.splice(idx, 1); this.cur = { row: pr, i: idx }; return; }
+  this.left();
+};
+MathField.prototype.del = function () {
+  if (this.selAll) { this.clearIfAll(); return; }
+  const c = this.cur, row = c.row;
+  if (c.i < row.length) {
+    const n = row[c.i];
+    if (n.t === 'c') row.splice(c.i, 1); else if (mfEmpty(n)) row.splice(c.i, 1); else this.right();
+  }
+};
+/* Tastenfeld */
+MathField.prototype.press = function (name) {
+  let changed = true;
+  switch (name) {
+    case 'left': this.left(); changed = false; break;
+    case 'right': this.right(); changed = false; break;
+    case 'up': this.up(); changed = false; break;
+    case 'down': this.down(); changed = false; break;
+    case 'back': this.backspace(); break;
+    case 'clear': this.top = mfRow(); this.cur = { row: this.top, i: 0 }; this.selAll = false; break;
+    case 'pow2': this.insertPow2(); break;
+    case 'sup': this.insertSup(); break;
+    case 'sqrt': this.insertSqrt(); break;
+    case 'abs': this.insertAbs(); break;
+    case 'frac': this.insertFrac(); break;
+    case 'parens': this.insertParens(); break;
+    case 'ans': this.clearIfAll(); mfPut(this.cur.row, this.cur.i, mfChar('Ans')); this.cur.i++; break;
+    default: this.typeChar(name);
+  }
+  if (changed) this.changed(); else this.render();
+};
+MathField.prototype.placeFromClick = function (e) {
+  this.focus();
+  if (e.target === this.cap) return;
+  const el = e.target.closest ? e.target.closest('[data-k]') : null;
+  if (el && this.view.contains(el)) {
+    const ref = this.reg[+el.dataset.k];
+    if (ref) {
+      if (ref.slot) this.cur = { row: ref.row, i: ref.row.length };
+      else {
+        const r = el.getBoundingClientRect();
+        this.cur = { row: ref.row, i: ref.i + (e.clientX > r.left + r.width / 2 ? 1 : 0) };
+      }
+      this.selAll = false; this.render(); return;
+    }
+  }
+  this.cur = { row: this.top, i: this.top.length }; this.selAll = false; this.render();
+};
+MathField.prototype.render = function () {
+  const self = this, reg = this.reg = [], cur = this.cur;
+  const hasCaret = function (row, i) { return self.focused && !self.selAll && cur.row === row && cur.i === i; };
+  const CARET = '<span class="caret"></span>';
+  function matchClose(row, k) {
+    let d = 0;
+    for (let j = k; j < row.length; j++) {
+      const m = row[j]; if (m.t !== 'c') continue;
+      if (m.v === '(') d++; else if (m.v === ')') { d--; if (d === 0) return j; }
+    }
+    return -1;
+  }
+  function slotRow(row) {
+    const id = reg.push({ row: row, slot: true }) - 1;
+    return '<span class="slot" data-k="' + id + '">' + (hasCaret(row, 0) ? CARET : '') + '</span>';
+  }
+  function sub(row) { return row.length ? nodes(row, 0, row.length, true) : slotRow(row); }
+  function nodes(row, from, to, endCaret) {
+    let out = '';
+    for (let k = from; k < to; k++) {
+      if (hasCaret(row, k)) out += CARET;
+      const n = row[k];
+      const id = reg.push({ row: row, i: k }) - 1;
+      if (n.t === 'c') {
+        if (n.v === '(') {
+          const m = matchClose(row, k);
+          if (m > k) {
+            const inner = nodes(row, k + 1, m, true);
+            const tall = inner.indexOf('class="frac"') >= 0 || inner.indexOf('class="rad"') >= 0;
+            out += tall ? '<span class="par" data-k="' + id + '"><span class="pl"></span><span class="pc">' + inner + '</span><span class="pr"></span></span>'
+              : '<span class="ch" data-k="' + id + '">(</span>' + inner + '<span class="ch" data-k="' + reg.push({ row: row, i: m }) + '">)</span>';
+            k = m; continue;
+          }
+        }
+        const prev = k > 0 ? row[k - 1] : null;
+        const bin = /^[+−·]$/.test(n.v) && prev && !(prev.t === 'c' && /^[+−·(]$/.test(prev.v));
+        out += '<span class="ch' + (bin ? ' op' : '') + '" data-k="' + id + '">' + esc(n.v) + '</span>';
+      } else if (n.t === 'sup') out += '<sup class="ms" data-k="' + id + '">' + sub(n.rows[0]) + '</sup>';
+      else if (n.t === 'sqrt') out += '<span class="rad" data-k="' + id + '">' + RAD_SVG + '<span class="rb">' + sub(n.rows[0]) + '</span></span>';
+      else if (n.t === 'abs') out += '<span class="absb" data-k="' + id + '"><span class="bar">|</span>' + sub(n.rows[0]) + '<span class="bar">|</span></span>';
+      else if (n.t === 'frac') out += '<span class="frac" data-k="' + id + '"><span class="num">' + sub(n.rows[0]) + '</span><span class="den">' + sub(n.rows[1]) + '</span></span>';
+    }
+    if (endCaret && hasCaret(row, to)) out += CARET;
+    return out;
+  }
+  let h;
+  if (!this.top.length) {
+    h = (hasCaret(this.top, 0) ? CARET : '') + (!this.focused && this.opts.placeholder ? '<span class="mf-ph">' + esc(this.opts.placeholder) + '</span>' : '');
+  } else h = nodes(this.top, 0, this.top.length, true);
+  this.view.innerHTML = h;
+  this.root.classList.toggle('all', this.selAll && this.focused);
+  const car = this.view.querySelector('.caret');
+  if (car && this.root.scrollWidth > this.root.clientWidth) { try { car.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* ignorieren */ } }
+};
+
+/* =====================================================================
    OBERFLÄCHE
    ===================================================================== */
 const STORE_KEY = 'bs-parabel-werkstatt-v2';
@@ -1231,8 +1687,9 @@ const EQ_EXAMPLES = [
   { l: '2^x', r: 'x + 2', t: '2ˣ = x + 2' }
 ];
 const KEYS = [
-  ['x', 'x'], ['x²', 'x^2', 'pow2'], ['xⁿ', '^'], ['√', 'sqrt(¦)'], ['( )', '(¦)'], ['|x|', 'abs(¦)'], ['π', 'pi'],
-  ['+', '+'], ['−', '-'], ['·', '*'], ['÷', '/'],
+  ['◀', 'left', 'nav'], ['▶', 'right', 'nav'], ['⌫', 'back', 'nav'],
+  ['x', 'x'], ['x²', 'pow2'], ['xⁿ', 'sup'], ['√', 'sqrt'], ['a/b', 'frac'], ['( )', 'parens'], ['|x|', 'abs'], ['π', 'π'],
+  ['+', '+'], ['−', '−'], ['·', '·'],
   ['a', 'a'], ['b', 'b'], ['c', 'c'], ['d', 'd'], ['e', 'e']
 ];
 
@@ -1826,14 +2283,15 @@ function buildCard(fn) {
   const head = el('div', 'fn-head');
   const pill = el('button', 'ibtn', ''); pill.type = 'button'; pill.style.cssText = 'width:auto;min-width:46px;padding:0 10px;background:' + fn.color + ';color:#fff;font-weight:800;border-color:transparent';
   pill.title = 'Farbe ändern';
-  const input = document.createElement('input');
-  input.type = 'text'; input.className = 'expr-input'; input.value = fn.term; input.placeholder = 'z. B. x^2 - 2x - 3';
-  input.setAttribute('autocomplete', 'off'); input.setAttribute('autocapitalize', 'off'); input.setAttribute('autocorrect', 'off'); input.spellcheck = false;
-  input.setAttribute('aria-label', 'Funktionsterm');
+  const mf = new MathField({
+    placeholder: 'Term eintippen, z. B. x² − 2x − 3', label: 'Funktionsterm', onFocus: mfFocus, onBlur: mfBlur,
+    onChange: function (m) { fn.term = m.getValue(); recompile(fn); updateCard(fn); requestRedraw(); scheduleSave(); }
+  });
+  mf.setValue(fn.term, true);
+  const input = mf.root;
   const vis = el('button', 'ibtn'); vis.type = 'button';
   const del = el('button', 'ibtn', '✕'); del.type = 'button'; del.title = 'Funktion löschen'; del.setAttribute('aria-label', 'Funktion löschen');
   head.appendChild(pill); head.appendChild(input); head.appendChild(vis); head.appendChild(del);
-  const pre = el('div', 'fn-pre');
   const msg = el('div', 'fn-msg');
   const params = el('div', 'param-wrap');
   const chips = el('div', 'chip-grp');
@@ -1853,7 +2311,7 @@ function buildCard(fn) {
   });
   const scroll = el('div', 'vt-scroll');
   vt.appendChild(ctrl); vt.appendChild(scroll);
-  card.appendChild(head); card.appendChild(pre); card.appendChild(msg); card.appendChild(params); card.appendChild(chips); card.appendChild(props); card.appendChild(vt);
+  card.appendChild(head); card.appendChild(msg); card.appendChild(params); card.appendChild(chips); card.appendChild(props); card.appendChild(vt);
 
   const chipDefs = [
     ['vertex', 'Scheitelpunkt', 0], ['roots', 'Nullstellen', 0], ['yint', 'y-Achsenabschnitt', 0], ['props', 'Eigenschaften', 1], ['table', 'Wertetabelle', 1]
@@ -1878,16 +2336,13 @@ function buildCard(fn) {
   });
   row2.appendChild(solve);
 
-  input.addEventListener('input', function () {
-    fn.term = input.value; recompile(fn); updateCard(fn); requestRedraw(); scheduleSave();
-  });
   pill.addEventListener('click', function () { openPalette(fn, pill); });
   vis.addEventListener('click', function () { fn.visible = !fn.visible; updateCard(fn); requestRedraw(); scheduleSave(); });
   del.addEventListener('click', function () {
     state.fns = state.fns.filter(function (f) { return f !== fn; });
     rebuildFnList(); requestRedraw(); scheduleSave();
   });
-  fn.dom = { card: card, pill: pill, input: input, vis: vis, pre: pre, msg: msg, params: params, chips: chips, chipEls: chipEls, props: props, vt: vt, scroll: scroll, ins: ins };
+  fn.dom = { card: card, pill: pill, input: input, mf: mf, vis: vis, msg: msg, params: params, chips: chips, chipEls: chipEls, props: props, vt: vt, scroll: scroll, ins: ins };
   return card;
 }
 function updateCard(fn) {
@@ -1898,9 +2353,8 @@ function updateCard(fn) {
   d.card.classList.toggle('hidden-fn', !fn.visible);
   const c = fn._c;
   d.input.classList.toggle('bad', !c.ok && !c.empty);
-  d.pre.innerHTML = (c.ok && fn.term.trim()) ? mh(fnName(idx) + '(x) = ' + prettyTerm(fn.term)) : '';
   if (!c.ok && !c.empty) { d.msg.className = 'fn-msg err'; d.msg.textContent = c.error; }
-  else if (c.empty) { d.msg.className = 'fn-msg info'; d.msg.textContent = 'Term eintippen, z. B. x^2 - 2x - 3 oder sin(x).'; }
+  else if (c.empty) { d.msg.className = 'fn-msg info'; d.msg.textContent = 'Tippe den Term wie auf dem Taschenrechner, z. B. x² − 2x − 3 oder sin(x).'; }
   else { d.msg.className = 'fn-msg'; d.msg.textContent = ''; }
   const names = fn._ok ? fn._ok.params : [];
   buildParamRows(d.params, names, function () { return fn.params; }, function () { updateProps(fn); requestRedraw(); scheduleSave(); });
@@ -1937,64 +2391,42 @@ function addFunction(term, params, o) {
   state.fns.push(fn);
   rebuildFnList();
   requestRedraw(); scheduleSave();
-  if (!term) { fn.dom.input.focus(); }
+  if (!term) { fn.dom.mf.focus(); }
   fn.dom.card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   return fn;
 }
 
 /* ---------- Eingabehilfe (Tastenleiste) ---------- */
-let lastInput = null;
-function insertAtCaret(input, spec) {
-  let s = spec[1];
-  const st = input.selectionStart == null ? input.value.length : input.selectionStart;
-  const en = input.selectionEnd == null ? st : input.selectionEnd;
-  if (spec[2] === 'pow2') {
-    const prev = input.value.slice(0, st).slice(-1);
-    s = /[xa-z0-9)]/.test(prev) ? '^2' : 'x^2';
-  }
-  const caret = s.indexOf('¦');
-  let ins = s.replace('¦', ''), pos = st + ins.length;
-  if (caret >= 0) {
-    const selTxt = input.value.slice(st, en);
-    ins = s.slice(0, caret) + selTxt + s.slice(caret + 1);
-    pos = st + caret + selTxt.length + (selTxt ? 1 : 0);
-    if (!selTxt) pos = st + caret;
-  }
-  input.value = input.value.slice(0, st) + ins + input.value.slice(en);
-  input.setSelectionRange(pos, pos);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
+let lastMF = null, focusedMF = null;
+function mfFocus(m) { lastMF = m; focusedMF = m; if (m.opts.keypad !== false) $('keypad').classList.add('show'); }
+function mfBlur(m) {
+  setTimeout(function () { if (focusedMF === m && !m.focused) { focusedMF = null; $('keypad').classList.remove('show'); } }, 150);
 }
 function buildKeypad() {
   const kp = $('keypad');
   KEYS.forEach(function (k) {
-    const b = el('button', '', k[0]); b.type = 'button'; b.setAttribute('aria-label', 'Einfügen: ' + k[0]);
+    const b = el('button', k[2] || '');
+    if (k[1] === 'frac') b.innerHTML = mh('a/b'); else b.textContent = k[0];
+    b.type = 'button'; b.setAttribute('aria-label', k[0] === 'a/b' ? 'Bruch' : (k[0] === '◀' ? 'Cursor nach links' : (k[0] === '▶' ? 'Cursor nach rechts' : 'Einfügen: ' + k[0])));
     b.addEventListener('mousedown', function (e) { e.preventDefault(); });
     b.addEventListener('click', function () {
-      const inp = (document.activeElement && document.activeElement.classList.contains('expr-input')) ? document.activeElement : lastInput;
-      if (!inp) return;
-      inp.focus(); insertAtCaret(inp, k);
+      const m = lastMF; if (!m) return;
+      m.focus(); m.press(k[1]);
     });
     kp.appendChild(b);
-  });
-  document.addEventListener('focusin', function (e) {
-    if (e.target && e.target.classList && e.target.classList.contains('expr-input')) { lastInput = e.target; kp.classList.add('show'); }
-  });
-  document.addEventListener('focusout', function () {
-    setTimeout(function () {
-      const a = document.activeElement;
-      if (!(a && a.classList && a.classList.contains('expr-input'))) kp.classList.remove('show');
-    }, 120);
   });
 }
 
 /* ---------- Taschenrechner ---------- */
 const CALC_KEYS = [
-  ['AC', '', 'clr'], ['⌫', '', 'clr'], ['(', '(', 'fn'], [')', ')', 'fn'], ['÷', '/', 'op'],
-  ['x²', '^2', 'fn'], ['xⁿ', '^', 'fn'], ['√', 'sqrt(¦)', 'fn'], ['a/b', '(¦)/()', 'fn', 'frac'], ['·', '*', 'op'],
-  ['7', '7'], ['8', '8'], ['9', '9'], ['π', 'pi', 'fn'], ['−', '-', 'op'],
-  ['4', '4'], ['5', '5'], ['6', '6'], ['Ans', 'ans', 'fn'], ['+', '+', 'op'],
-  ['1', '1'], ['2', '2'], ['3', '3'], ['0', '0'], [',', ',']
+  ['AC', 'clear', 'clr'], ['⌫', 'back', 'clr'], ['◀', 'left', 'nav'], ['▶', 'right', 'nav'], ['a/b', 'frac', 'fn'],
+  ['x²', 'pow2', 'fn'], ['xⁿ', 'sup', 'fn'], ['√', 'sqrt', 'fn'], ['(', '(', 'fn'], [')', ')', 'fn'],
+  ['7', '7'], ['8', '8'], ['9', '9'], ['·', '·', 'op'], ['π', 'π', 'fn'],
+  ['4', '4'], ['5', '5'], ['6', '6'], ['−', '−', 'op'], ['Ans', 'ans', 'fn'],
+  ['1', '1'], ['2', '2'], ['3', '3'], ['+', '+', 'op'], [',', ','],
+  ['0', '0', 'zero'], ['＝', 'eq', 'eq']
 ];
+let calcMF = null;
 let calcErr = false;
 function calcResHtml(r) {
   const sign = eqSign(r.value, 10);
@@ -2008,9 +2440,8 @@ function calcResHtml(r) {
   return h;
 }
 function calcUpdate() {
-  const v = $('calcIn').value;
+  const v = calcMF.getValue();
   state.calc.input = v;
-  $('calcDisp').innerHTML = v.trim() ? mh(v) : '<span class="ph">Rechnung eintippen …</span>';
   const r = calcEval(v, state.calc.ans);
   const res = $('calcRes');
   $('calcPlot').classList.toggle('hide', !(calcErr && r.letters));
@@ -2027,7 +2458,7 @@ function renderHist() {
   }).join('');
 }
 function calcCommit() {
-  const v = $('calcIn').value;
+  const v = calcMF.getValue();
   const r = calcEval(v, state.calc.ans);
   calcErr = true; calcUpdate();
   if (r.empty || r.error) return;
@@ -2037,39 +2468,35 @@ function calcCommit() {
   state.calc.ans = r.value;
   renderHist(); scheduleSave();
 }
-function calcKey(k) {
-  const inp = $('calcIn');
-  inp.focus();
-  if (k[0] === 'AC') { inp.value = ''; }
-  else if (k[0] === '⌫') {
-    const st = inp.selectionStart == null ? inp.value.length : inp.selectionStart, en = inp.selectionEnd == null ? st : inp.selectionEnd;
-    if (en > st) { inp.value = inp.value.slice(0, st) + inp.value.slice(en); inp.setSelectionRange(st, st); }
-    else if (st > 0) { inp.value = inp.value.slice(0, st - 1) + inp.value.slice(st); inp.setSelectionRange(st - 1, st - 1); }
-  } else { insertAtCaret(inp, k); calcErr = false; return; }
-  calcErr = false; calcUpdate();
-}
 function buildCalc() {
+  calcMF = new MathField({
+    big: true, noKeyboard: true, keypad: false, placeholder: 'Rechnung eintippen …', label: 'Rechnung',
+    onChange: function () { calcErr = false; calcUpdate(); },
+    onEnter: function () { calcCommit(); }
+  });
+  calcMF.setValue(state.calc.input, true);
+  $('calcIn').appendChild(calcMF.root);
   const pad = $('calcPad');
   CALC_KEYS.forEach(function (k) {
     const b = document.createElement('button'); b.type = 'button';
-    if (k[2]) b.className = k[2];
-    if (k[3] === 'frac') b.innerHTML = mh('a/b'); else b.textContent = k[0];
-    b.setAttribute('aria-label', k[0] === 'a/b' ? 'Bruch' : k[0]);
+    b.className = k[2] || '';
+    if (k[1] === 'frac') b.innerHTML = mh('a/b'); else b.textContent = k[0];
+    b.setAttribute('aria-label', k[0] === 'a/b' ? 'Bruch' : (k[0] === '◀' ? 'Cursor nach links' : (k[0] === '▶' ? 'Cursor nach rechts' : k[0])));
     b.addEventListener('mousedown', function (e) { e.preventDefault(); });
-    b.addEventListener('click', function () { calcKey(k); });
+    b.addEventListener('click', function () {
+      if (k[1] === 'eq') { calcCommit(); return; }
+      calcMF.focus(); calcMF.press(k[1]);
+    });
     pad.appendChild(b);
   });
-  $('calcIn').addEventListener('input', function () { calcErr = false; calcUpdate(); });
-  $('calcIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); calcCommit(); } });
-  $('calcEq').addEventListener('click', calcCommit);
   $('calcPlot').addEventListener('click', function () {
-    const t = $('calcIn').value.trim(); if (!t) return;
+    const t = calcMF.getValue().trim(); if (!t) return;
     addFunction(t, {}); switchTab('fn');
   });
   $('calcHistBody').addEventListener('click', function (e) {
     const row = e.target.closest('.hist-row'); if (!row) return;
     const h = state.calc.hist[+row.dataset.i]; if (!h) return;
-    $('calcIn').value = h.e; calcErr = false; calcUpdate();
+    calcMF.setValue(h.e, true); calcErr = false; calcUpdate(); calcMF.focus();
   });
 }
 
@@ -2174,9 +2601,8 @@ function renderEqPanel() {
   if (EQ.L && !EQ.L.ok && !EQ.L.empty) errs += '<div class="err-line">Linke Seite: ' + esc(EQ.L.error) + '</div>';
   if (EQ.R && !EQ.R.ok && !EQ.R.empty) errs += '<div class="err-line">Rechte Seite: ' + esc(EQ.R.error) + '</div>';
   errBox.innerHTML = errs;
-  $('eqPreview').innerHTML = (EQ.L && EQ.R && EQ.L.ok && EQ.R.ok && e.left.trim() && e.right.trim()) ? mh(prettyTerm(e.left) + ' = ' + prettyTerm(e.right)) : '';
-  $('eqLeft').classList.toggle('bad', !!(EQ.L && !EQ.L.ok && !EQ.L.empty));
-  $('eqRight').classList.toggle('bad', !!(EQ.R && !EQ.R.ok && !EQ.R.empty));
+  eqLeftMF.root.classList.toggle('bad', !!(EQ.L && !EQ.L.ok && !EQ.L.empty));
+  eqRightMF.root.classList.toggle('bad', !!(EQ.R && !EQ.R.ok && !EQ.R.empty));
   const pw = $('eqParams');
   buildParamRows(pw, EQ.params, function () { return state.eq.params; }, function () { recomputeEq(); renderEqResults(); requestRedraw(); scheduleSave(); });
   pw.classList.toggle('hide', !EQ.params.length);
@@ -2202,12 +2628,13 @@ function renderEqResults() {
   }
   box.innerHTML = h;
 }
+let eqLeftMF = null, eqRightMF = null;
 function syncEqInputs() {
-  $('eqLeft').value = state.eq.left; $('eqRight').value = state.eq.right;
+  eqLeftMF.setValue(state.eq.left, true); eqRightMF.setValue(state.eq.right, true);
   recomputeEq();
 }
 function onEqInput() {
-  state.eq.left = $('eqLeft').value; state.eq.right = $('eqRight').value;
+  state.eq.left = eqLeftMF.getValue(); state.eq.right = eqRightMF.getValue();
   if (state.eq.task) { state.eq.task = null; state.eq.hide = false; }
   recomputeEq(); renderEqPanel(); requestRedraw(); scheduleSave();
 }
@@ -2254,7 +2681,7 @@ function switchTab(t) {
   });
   $('keypad').classList.remove('show');
   if (t === 'eq') { recomputeEq(); renderEqPanel(); }
-  if (t === 'calc') { $('calcIn').value = state.calc.input; calcUpdate(); renderHist(); }
+  if (t === 'calc') { if (calcMF.getValue() !== state.calc.input) calcMF.setValue(state.calc.input, true); calcUpdate(); renderHist(); }
   else sizeSvg();
   requestRedraw(); scheduleSave();
 }
@@ -2367,6 +2794,9 @@ function setupPointer() {
 /* ---------- Start ---------- */
 function init() {
   buildKeypad();
+  eqLeftMF = new MathField({ placeholder: 'z. B. x² − 2x', label: 'Linke Seite', onFocus: mfFocus, onBlur: mfBlur, onChange: function () { onEqInput(); } });
+  eqRightMF = new MathField({ placeholder: 'z. B. 3', label: 'Rechte Seite', onFocus: mfFocus, onBlur: mfBlur, onChange: function () { onEqInput(); } });
+  $('eqLeft').appendChild(eqLeftMF.root); $('eqRight').appendChild(eqRightMF.root);
   buildCalc();
   const tpl = $('templates');
   TEMPLATES.forEach(function (t) {
@@ -2395,8 +2825,6 @@ function init() {
   $('addFn').addEventListener('click', function () { addFunction('', {}); });
   $('loadEx').addEventListener('click', function () { defaultFns(); rebuildFnList(); requestRedraw(); scheduleSave(); });
   $('clearAll').addEventListener('click', function () { state.fns = []; rebuildFnList(); requestRedraw(); scheduleSave(); });
-  $('eqLeft').addEventListener('input', onEqInput);
-  $('eqRight').addEventListener('input', onEqInput);
   $('lvlRow').addEventListener('click', function (e) {
     const b = e.target.closest('[data-lvl]'); if (!b) return;
     state.eq.level = b.dataset.lvl; renderEqPanel(); scheduleSave();
