@@ -724,15 +724,20 @@ const Engine = (() => {
     const bx = l2.px - l1.px, by = l2.py - l1.py, t = (bx * (-l2.dy) - by * (-l2.dx)) / det;
     return { x: l1.px + l1.dx * t, y: l1.py + l1.dy * t };
   }
-  function refine(q, G, thr) {
-    const R = Math.max(3, 0.02 * Math.max(G.w, G.h)), lines = [];
+  function refine(q, G, thr, rf = 0.015) {
+    const R = Math.max(2, rf * Math.max(G.w, G.h)), lines = [];
     for (let i = 0; i < 4; i++) {
       const A = q[i], B = q[(i + 1) % 4], L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
       const nx = -(B.y - A.y) / L, ny = (B.x - A.x) / L; let pts = [];
+      // Kantenrichtung (hell→dunkel) dieser Seite bestimmen, damit z. B. ein gedruckter Rahmen nicht „gewinnt“
+      let sg = 0; for (let k = 0; k < 24; k++) { const t = 0.1 + 0.8 * k / 23, px = A.x + (B.x - A.x) * t, py = A.y + (B.y - A.y) * t; sg += bil(G.g, G.w, G.h, px + nx * R, py + ny * R) - bil(G.g, G.w, G.h, px - nx * R, py - ny * R); }
+      sg = sg >= 0 ? 1 : -1; // +1: innen (Blatt) heller als außen
       for (let k = 0; k < 48; k++) {
         const t = 0.08 + 0.84 * k / 47, px = A.x + (B.x - A.x) * t, py = A.y + (B.y - A.y) * t;
         let bd = 0, bv = 0, vals = [];
-        for (let d = -R; d <= R; d += 0.5) { const v = dirGrad(G, px + nx * d, py + ny * d, nx, ny); vals.push(v); if (v > bv) { bv = v; bd = d; } }
+        for (let d = -R; d <= R; d += 0.5) { const v = Math.max(0, sg * sGrad(G, px + nx * d, py + ny * d, nx, ny)); vals.push(v); }
+        const mx = Math.max(...vals);
+        { const j = vals.indexOf(mx); bv = mx; bd = j * 0.5 - R; }
         if (bv > thr) {
           const j = Math.round((bd + R) / 0.5);
           if (j > 0 && j < vals.length - 1) { const a = vals[j - 1], b = vals[j], c = vals[j + 1], den = a - 2 * b + c; if (den < 0) bd += 0.5 * 0.5 * (a - c) / den; }
@@ -747,8 +752,74 @@ const Engine = (() => {
     }
     const out = [];
     for (let i = 0; i < 4; i++) { const p = intersect(lines[(i + 3) % 4], lines[i]); if (!p) return null; out.push(p); }
-    for (let i = 0; i < 4; i++) if (Math.hypot(out[i].x - q[i].x, out[i].y - q[i].y) > 3 * R) return null;
+    for (let i = 0; i < 4; i++) if (Math.hypot(out[i].x - q[i].x, out[i].y - q[i].y) > 3 * Math.max(R, 3)) return null;
     return isConvex(out) ? out : null;
+  }
+
+
+  /* Linienbasierte Kandidaten (Hough): findet auch schwache, aber gerade Blattkanten auf hellem Untergrund */
+  function houghQuads(S, gb, w, h, tLow, stepT) {
+    const { gx, gy, mag } = S, pts = [];
+    for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++) { // Kantenverdünnung (Non-Maximum-Suppression)
+      const i = y * w + x, m = mag[i]; if (m < tLow) continue;
+      const ax = Math.abs(gx[i]), ay = Math.abs(gy[i]); let a, b;
+      if (ax > 2.414 * ay) { a = mag[i - 1]; b = mag[i + 1]; }
+      else if (ay > 2.414 * ax) { a = mag[i - w]; b = mag[i + w]; }
+      else if (gx[i] * gy[i] > 0) { a = mag[i - w - 1]; b = mag[i + w + 1]; }
+      else { a = mag[i - w + 1]; b = mag[i + w - 1]; }
+      if (m >= a && m > b) pts.push(i);
+    }
+    const NT = 180, diag = Math.ceil(Math.hypot(w, h)), NR = 2 * diag + 1, acc = new Int32Array(NT * NR);
+    const cs = new Float32Array(NT), sn = new Float32Array(NT); for (let t = 0; t < NT; t++) { cs[t] = Math.cos(t * Math.PI / NT); sn[t] = Math.sin(t * Math.PI / NT); }
+    for (const i of pts) {
+      const x = i % w, y = (i / w) | 0; let t0 = Math.round(Math.atan2(gy[i], gx[i]) * NT / Math.PI); t0 = ((t0 % NT) + NT) % NT;
+      for (let d = -2; d <= 2; d++) { const t = (t0 + d + NT) % NT, r = Math.round(x * cs[t] + y * sn[t]) + diag; acc[t * NR + r]++; }
+    }
+    const minV = Math.max(12, Math.round(0.07 * Math.min(w, h))), peaks = [], RW = Math.max(2, Math.round(0.008 * Math.max(w, h)));
+    for (let t = 0; t < NT; t++) for (let r = 0; r < NR; r++) {
+      const v = acc[t * NR + r]; if (v < minV) continue; let isMax = true;
+      for (let dt = -3; dt <= 3 && isMax; dt++) for (let dr = -RW; dr <= RW; dr++) {
+        if (!dt && !dr) continue; let tt = t + dt, rr = r + dr;
+        if (tt < 0) { tt += NT; rr = NR - 1 - rr; } else if (tt >= NT) { tt -= NT; rr = NR - 1 - rr; }
+        if (rr < 0 || rr >= NR) continue; const u = acc[tt * NR + rr]; if (u > v || (u === v && (dt < 0 || (dt === 0 && dr < 0)))) { isMax = false; break; }
+      }
+      if (isMax) peaks.push({ t, rho: r - diag, v, th: t * Math.PI / NT });
+    }
+    peaks.sort((a, b) => b.v - a.v);
+    // Linien nach „Stufe“ bewerten: eine Blattkante trennt hell und dunkel; Karo-, Text- und Tabellenlinien haben beidseitig Papier
+    const cand = peaks.slice(0, 90).map(p => ({ ...p, c: Math.cos(p.th), s: Math.sin(p.th) }));
+    for (const l of cand) {
+      let pos = 0, neg = 0; const tx = -l.s, ty = l.c, x0 = l.c * l.rho, y0 = l.s * l.rho, T = Math.hypot(w, h);
+      for (let t = -T; t <= T; t += 2) {
+        const px = x0 + tx * t, py = y0 + ty * t; if (px < 4 || py < 4 || px > w - 5 || py > h - 5) continue;
+        const d = bil(gb, w, h, px + l.c * 3, py + l.s * 3) - bil(gb, w, h, px - l.c * 3, py - l.s * 3);
+        if (d > stepT) pos++; else if (d < -stepT) neg++;
+      }
+      l.step = Math.max(pos, neg) * 2;
+    }
+    const L = cand.filter(l => l.step >= 0.06 * Math.min(w, h)).sort((a, b) => b.step - a.step).slice(0, 26);
+    houghQuads.last = { acc, NR, diag, minV, tLow, pts: pts.length, peaks: peaks.length, L: L.map(l => [l.t, Math.round(l.rho), l.v, l.step]) };
+    const inter = (a, b) => { const det = a.c * b.s - a.s * b.c; if (Math.abs(det) < 1e-6) return null; return { x: (a.rho * b.s - b.rho * a.s) / det, y: (a.c * b.rho - b.c * a.rho) / det }; };
+    const angDiff = (a, b) => { let d = Math.abs(a.th - b.th) % Math.PI; return Math.min(d, Math.PI - d); };
+    const minSep = 0.12 * Math.min(w, h), pairs = [];
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+      if (angDiff(L[i], L[j]) > 0.6) continue; // ungefähr gegenüberliegende Seiten
+      const mx = w / 2, my = h / 2, di = L[i].c * mx + L[i].s * my - L[i].rho, dj = L[j].c * mx + L[j].s * my - L[j].rho;
+      const sep = Math.abs(L[i].rho - (Math.abs(L[i].th - L[j].th) > Math.PI / 2 ? -L[j].rho : L[j].rho));
+      if (sep < minSep) continue;
+      pairs.push([L[i], L[j]]);
+    }
+    const out = [], lim = 0.03 * Math.max(w, h);
+    for (let a = 0; a < pairs.length; a++) for (let b = a + 1; b < pairs.length; b++) {
+      const [p, q] = pairs[a], [u, v] = pairs[b];
+      if (p === u || p === v || q === u || q === v) continue;
+      const ad = angDiff(p, u); if (ad < 0.75 || ad > Math.PI - 0.75) continue; // Seiten etwa senkrecht zueinander (±43°)
+      const cs4 = [inter(p, u), inter(u, q), inter(q, v), inter(v, p)];
+      if (cs4.some(c => !c || c.x < -lim || c.y < -lim || c.x > w + lim || c.y > h + lim)) continue;
+      const qd = orderQuad(cs4); if (!isConvex(qd)) continue;
+      out.push(qd);
+    }
+    return out;
   }
 
   /* Dokumentrand finden. src: Canvas/Bild/Video; gibt Viereck in Koordinaten von (W,H) zurück */
@@ -757,9 +828,10 @@ const Engine = (() => {
     const c = canvas(w, h), x = ctx2d(c); x.drawImage(src, 0, 0, w, h);
     const id = x.getImageData(0, 0, w, h);
     const { g, s: sat } = grayAndSat(id);
-    const gb = blur5(blur5(g, w, h), w, h);
-    const S = sobel(gb, w, h); const G = { gx: S.gx, gy: S.gy, w, h };
-    const p98 = percentile(S.mag, 0.98), thr = Math.max(6, 0.3 * p98);
+    const gb = Math.max(w, h) > 560 ? blur5(blur5(g, w, h), w, h) : blur5(g, w, h); // bei kleiner Arbeitsgröße weniger glätten, sonst verschwinden schwache Kanten
+    const S = sobel(gb, w, h); const G = { gx: S.gx, gy: S.gy, g: gb, w, h };
+    const p98 = percentile(S.mag, 0.98), noise = percentile(S.mag, 0.3);
+    const thr = Math.max(2.5, Math.min(0.3 * p98, 4 * noise + 1.5)); // passt sich an schwache Kanten (heller Untergrund) an
     const cands = [];
     const r = Math.max(1, Math.round(Math.max(w, h) / 220));
     const fromMask = (m, keep, byBox) => { for (const pts of components(m, w, h, keep, byBox)) { const hp = hull(pts); if (hp.length >= 4) { const q = reduceTo4(hp); if (q) cands.push(orderQuad(q)); } } };
@@ -777,12 +849,41 @@ const Engine = (() => {
     // Kanten
     { const m = new Uint8Array(w * h), te = Math.max(thr, percentile(S.mag, 0.9)); for (let i = 0; i < w * h; i++) m[i] = S.mag[i] > te ? 1 : 0; fromMask(morph(m, w, h, 1, true), 3, true); }
 
+    // Linien (Hough) – wichtig, wenn Blatt und Untergrund fast gleich hell sind
+    const hq = houghQuads(S, gb, w, h, Math.max(1.2, 1.8 * noise + 0.5), Math.max(2, 1.5 * noise + 1));
     let best = null, bestS = 0;
+    const scored = hq.map(q => ({ q, s: scoreQuad(q, G, thr) })).sort((a, b) => b.s - a.s).slice(0, 16);
+    for (const c of scored) cands.push(c.q);
     for (const q of cands) {
       const s0 = scoreQuad(q, G, thr); if (s0 > bestS) { bestS = s0; best = q; }
       const rq = refine(q, G, thr); if (rq) { const s1 = scoreQuad(rq, G, thr) + 0.01; if (s1 > bestS) { bestS = s1; best = rq; } }
     }
     if (best) { const rq = refine(best, G, thr); if (rq && scoreQuad(rq, G, thr) >= bestS - 0.02) best = rq; }
+    // Gedruckter Rahmen o. Ä. statt Blattrand? Dann das umschließende Viereck nehmen, wenn dazwischen nur gleichmäßiges Papier liegt
+    if (best && bestS > 0.45 && !detect.noOuter) {
+      const all = cands.map(q => ({ q, s: scoreQuad(q, G, thr) })).filter(c => c.s > 0.5);
+      const inside = (q, p) => { for (let i = 0; i < 4; i++) { const a = q[i], b = q[(i + 1) % 4]; if (((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) / (Math.hypot(b.x - a.x, b.y - a.y) || 1) < -2.5) return false; } return true; };
+      const bA = polyArea(best); let pick = null, pickA = bA;
+      for (const c of all) {
+        const A = polyArea(c.q); if (A < bA * 1.04 || A < pickA || !best.every(p => inside(c.q, p))) continue;
+        const ring = [], outs = [], cx = c.q.reduce((t, p) => t + p.x / 4, 0), cy = c.q.reduce((t, p) => t + p.y / 4, 0);
+        for (let i = 0; i < 4; i++) for (let k = 1; k < 10; k++) {
+          const t = k / 10, b0 = best[i], b1 = best[(i + 1) % 4], o0 = c.q[i], o1 = c.q[(i + 1) % 4];
+          const bx = b0.x + (b1.x - b0.x) * t, by = b0.y + (b1.y - b0.y) * t, ox = o0.x + (o1.x - o0.x) * t, oy = o0.y + (o1.y - o0.y) * t;
+          if (Math.hypot(ox - bx, oy - by) < 4) continue; // Seite fällt zusammen – kein Zwischenraum
+          ring.push(bil(gb, w, h, (bx + ox) / 2, (by + oy) / 2));
+          const dx = ox - cx, dy = oy - cy, L = Math.hypot(dx, dy) || 1, off = 0.025 * Math.max(w, h);
+          outs.push(bil(gb, w, h, ox + dx / L * off, oy + dy / L * off));
+        }
+        if (ring.length < 6) continue;
+        const mean = a => a.reduce((t, v) => t + v, 0) / a.length, rm = mean(ring), rs = Math.sqrt(mean(ring.map(v => (v - rm) ** 2)));
+        const om = mean(outs.sort((a, b) => a - b).slice(4, -4));
+        if (detect.trace) detect.trace.push({ s: c.s, A: A / bA, n: ring.length, rm, rs, om });
+        if (rs < 4.5 && c.s >= 0.85 * bestS && Math.abs(rm - om) > 3) { pick = c; pickA = A; }
+      }
+      if (pick) { best = pick.q; bestS = pick.s; const rq = refine(best, G, thr, 0.005); if (rq && scoreQuad(rq, G, thr) >= bestS - 0.02) best = rq; }
+    }
+    if (detect.debug) detect.debug({ G, thr, s, cands, scored, best, bestS, score: q => scoreQuad(q, G, thr), hq });
     const found = !!best && bestS > 0.45;
     const quad = found ? best.map(p => ({ x: Math.max(0, Math.min(W, (p.x + 0.5) / s)), y: Math.max(0, Math.min(H, (p.y + 0.5) / s)) })) : fullQuad(W, H);
     let lum = 0; for (let i = 0; i < g.length; i += 7) lum += g[i]; lum /= Math.ceil(g.length / 7);
@@ -1045,7 +1146,7 @@ const Engine = (() => {
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
-  return { canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, insetQuad, sharpness, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
+  return { houghLast: () => houghQuads.last, canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, insetQuad, sharpness, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
 })();
 
 </script>
@@ -1352,7 +1453,9 @@ const Engine = (() => {
   }
   function camDetect() {
     const v = $('#camVideo'); if (!v.videoWidth || Cam.busy) return;
-    const r = Engine.detect(v, v.videoWidth, v.videoHeight, 320);
+    const t0 = performance.now();
+    const r = Engine.detect(v, v.videoWidth, v.videoHeight, Cam.ws || 400);
+    Cam.dt = (Cam.dt || 0) * 0.8 + (performance.now() - t0) * 0.2; if (Cam.dt > 150 && (Cam.ws || 400) > 300) Cam.ws = 320; // langsames Gerät: kleinere Arbeitsgröße
     Cam.lum = Cam.lum * 0.6 + r.lum * 0.4;
     const hint = $('#camHint'), dark = Cam.lum < 70;
     if (r.found) {
