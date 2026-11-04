@@ -286,6 +286,55 @@ main .wrap{gap:22px}
 }
 @media (prefers-reduced-motion:no-preference){.st,.fb{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(-3px)}to{opacity:1;transform:none}}}
 
+/* ===== Druckversion Arbeitsblatt (überarbeitet) ===== */
+.ws{font-size:14px;line-height:1.4}
+.ws .task{break-inside:avoid;page-break-inside:avoid;gap:6px}
+.ws .task.ws-long{break-inside:auto;page-break-inside:auto}
+.ws .task-h,.ws h2,.ws h3{break-after:avoid;page-break-after:avoid}
+.ws .task::after,.ws .item::after{content:"";display:block;clear:both}
+.ws .item{display:flow-root;padding:3px 0 5px}
+.ws .task>svg,.ws .task>.fig,.ws .task>figure,.ws .ws-hg>svg,.ws .ws-hg>.fig,.ws .ws-hg>figure,.ws .item>svg,.ws .item>.fig{float:right;max-width:44%;height:auto;margin:2px 0 8px 14px}
+.ws .task>.fig:has(figure+figure),.ws .task>.fig:has(svg+svg),.ws .ws-hg>.fig:has(figure+figure),.ws .ws-hg>.fig:has(svg+svg){float:none;max-width:none;margin:2px 0 6px}
+.ws .fig{gap:8px}.ws .fig svg,.ws .fig figure{max-width:100%}
+.ws svg{max-height:62mm;width:auto}
+.ws .badge{background:none!important;border:1px solid #9ca3af;color:#374151!important}
+.ws .stars{color:#6b7280}
+.ws .taskgrid{grid-template-columns:minmax(0,1fr) auto;gap:12px}
+.ws .recipe{font-size:.88rem;padding:6px 10px}
+.ws .tbl{overflow:visible}
+.ws table.dreisatz td{padding:2px 8px}
+.ws-space.s{height:44px}.ws-space.m{height:96px}.ws-space.l{height:150px}
+.ws .ws-np{break-before:page;page-break-before:always}
+.ws-sol{font-size:.9rem}
+.ws-sol ol{columns:2;column-gap:26px;display:block;padding-left:1.4em}
+.ws-sol li{break-inside:avoid;margin-bottom:5px}
+.ws-sol li ol{columns:1;padding-left:1.1em;margin:2px 0}
+
+.ws .task{display:block}
+.ws .task>*+*,.ws .ws-hg>*+*{margin-top:6px}
+.ws .ws-hg{break-inside:avoid;page-break-inside:avoid}
+.ws .ws-hg::after{content:none}
+@media (max-width:600px){.ws .ws-hg>svg,.ws .ws-hg>.fig,.ws .task>svg,.ws .task>.fig,.ws .item>svg,.ws .item>.fig{float:none;max-width:100%;margin:4px 0}.ws-sol ol{columns:1}}
+@media print{
+  @page{size:A4;margin:13mm 13mm 15mm;@bottom-center{content:"Seite " counter(page) " von " counter(pages);font-size:8pt;color:#6b7280}}
+  #print-root .ws{font-size:10.5pt;line-height:1.38}
+  #print-root .ws h1{font-size:16pt}
+  #print-root .ws h2{font-size:12.5pt;margin-top:12px}
+  #print-root .ws .task{padding-top:8px}
+  .ws-space{border-color:#b8c0cc!important}
+  /* Direktdruck einer Seite über den Browser (ohne Arbeitsblatt-Knopf) */
+  body:not(.printing){background:#fff!important}
+  body:not(.printing) .topbar,body:not(.printing) .aufg-tools,body:not(.printing) a.back,body:not(.printing) .ws-actions,body:not(.printing) .ws-form,body:not(.printing) .test-check,body:not(.printing) .test-reset,body:not(.printing) #pstart,body:not(.printing) #psubmit,body:not(.printing) #preset{display:none!important}
+  body:not(.printing) section.box{break-inside:auto;border-color:#d1d5db;box-shadow:none}
+  body:not(.printing) .task,body:not(.printing) .item,body:not(.printing) .merk,body:not(.printing) .err>div,body:not(.printing) .ek,body:not(.printing) .fbox{break-inside:avoid;page-break-inside:avoid}
+  body:not(.printing) h1,body:not(.printing) h2,body:not(.printing) h3,body:not(.printing) .task-h{break-after:avoid}
+  body:not(.printing) .ans input,body:not(.printing) .ans select{border:0;border-bottom:1px solid #111;border-radius:0;background:none}
+  body:not(.printing) .ans .opt{display:inline-block!important;border:1px solid #9ca3af!important;background:none!important;color:#111!important}
+  body:not(.printing) .ans .opt::before{content:"☐ "}
+  body:not(.printing) .ws-preview{background:none;padding:0}
+  body:not(.printing) .ws{box-shadow:none;padding:0}
+}
+
 .b-h{background:var(--geo-soft);color:var(--geo)}
 .pts-b{font-size:.74rem;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted)}
 .exam-note{font-size:.92rem;border-left:3px solid var(--wahl);padding-left:10px;color:var(--ink)}
@@ -3387,6 +3436,7 @@ sub,sup{font-size:.72em}
     <label><input type="checkbox" id="ws-merk"> Merkkasten mitdrucken</label>
     <label><input type="checkbox" id="ws-test" checked> Selbsttest mitdrucken</label>
     <label><input type="checkbox" id="ws-sol"> Lösungsblatt anhängen</label>
+    <label><input type="checkbox" id="ws-newpage"> Jeden Kasten auf einer neuen Seite beginnen</label>
    </fieldset>
    <fieldset><legend>Kopfzeile</legend>
     <label for="ws-name" style="display:block">Name oder Kürzel (freiwillig)</label>
@@ -3741,6 +3791,7 @@ document.getElementById("w-go").onclick=()=>{const sel=[...document.querySelecto
 
 
 /* ---------- Arbeitsblatt / PDF ---------- */
+const WS_SHORT=".b-h";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 (()=>{const sel=document.getElementById("ws-kasten");sel.innerHTML=ORDER.map(k=>`<option value="${k[2]}">${k.code} ${k[1]}</option>`).join("");
  document.querySelectorAll('.ws-form input, .ws-form select').forEach(i=>i.addEventListener(i.type==="text"?"input":"change",()=>{if(i.id==="ws-kasten")document.querySelector('input[name=ws-mode][value=kasten]').checked=true;renderSheet();}));})();
@@ -3759,11 +3810,14 @@ function wsTask(task,keep,opt,sols,prefix){const c=task.cloneNode(true);const oi
   else if(val)box.innerHTML=`<span>Meine Antwort:</span> <b>${esc(val)}</b>${unit?" "+esc(unit):""}`+(st?` <span class="ws-st">${STATUS[st]||st}</span>`:"");
   else if(t==="choice")box.innerHTML=`<span>Kreuze an:</span> `+o.dataset.options.split("|").map(x=>`☐ ${esc(x)}`).join(" &nbsp; ");
   else box.innerHTML=`<span>Antwort:</span> <span class="ws-line"></span>${unit?" "+esc(unit):""}`;
-  it.appendChild(box);if(opt.space&&t!=="choice")it.insertAdjacentHTML("beforeend",'<div class="ws-space"></div>');
+  it.appendChild(box);if(opt.space&&t!=="choice")it.insertAdjacentHTML("beforeend",`<div class="ws-space ${wsSize(task,o,t)}"></div>`);
   const lbl=(prefix?prefix+" ":"")+h3+" "+((o.querySelector("b.l")?.textContent)||(o.classList.contains("q")?"":"")).trim();
   sols.push({lbl:lbl.trim()||prefix,html:wsResult(o)});});
  c.querySelectorAll(":scope > .note, .aufg-tools").forEach(x=>x.remove());
+ if(opt.space?n>=3:n>=5)c.classList.add("ws-long");
+ const fi=c.querySelector(":scope > .item");if(fi){const g=document.createElement("div");g.className="ws-hg";const pre=[];for(const ch of c.children){if(ch===fi)break;pre.push(ch);}pre.forEach(x=>g.appendChild(x));g.appendChild(fi);c.prepend(g);}
  return n?c:null;}
+function wsSize(task,o,t){if(t==="self")return "l";if(o.classList.contains("q"))return "s";const b=task.querySelector(".task-h .badge");if(b&&b.matches(WS_SHORT))return "s";if(task.dataset.teil==="1"||(!task.dataset.teil&&(task.dataset.block||"")[0]==="P"))return "s";return "m";}
 function wsTest(kid,opt,sols,onlyDone){const sec=document.getElementById(kid+"-test");if(!sec||(onlyDone&&!S.tests[kid]))return null;
  const d=document.createElement("div");d.className="task";d.innerHTML=`<div class="task-h"><h3>Selbsttest</h3></div>`;
  [...sec.querySelectorAll(".q")].forEach(q=>{d.appendChild(q.cloneNode(true));});
@@ -3773,7 +3827,7 @@ function wsTest(kid,opt,sols,onlyDone){const sec=document.getElementById(kid+"-t
  // Antworten aus den Original-Feldern übernehmen
  if(res&&opt.answers){const orig=[...sec.querySelectorAll(".q")],cl=[...res.querySelectorAll(".item")];cl.forEach((it,i)=>{const v=wsVal(orig[i]),st=orig[i].dataset.state;const a=it.querySelector(".ws-ans");if(v&&a)a.innerHTML=`<span>Meine Antwort:</span> <b>${esc(v)}</b>${orig[i].dataset.unit?" "+esc(orig[i].dataset.unit):""}`+(st?` <span class="ws-st">${STATUS[st]}</span>`:"");});}
  return res;}
-function wsKasten(kid,opt,sols,onlyDone){const k=PATH.find(p=>p[2]===kid);const view=document.getElementById("view-"+kid);const frag=document.createElement("div");
+function wsKasten(kid,opt,sols,onlyDone){const k=PATH.find(p=>p[2]===kid);const view=document.getElementById("view-"+kid);const frag=document.createElement("div");frag.className="ws-k";
  const keep=onlyDone?(o=>!!S.items[o.dataset.id]):(()=>true);let any=false;
  frag.innerHTML=`<h2>${k.code} · ${esc(k[1])}</h2>`;
  if(opt.merk){const m=view.querySelector(".merk");if(m){const c=m.cloneNode(true);c.querySelector(".sec-h .n")?.remove();frag.appendChild(c);}}
@@ -3781,7 +3835,7 @@ function wsKasten(kid,opt,sols,onlyDone){const k=PATH.find(p=>p[2]===kid);const 
  if(opt.test){const t=wsTest(kid,opt,sols,onlyDone);if(t){frag.appendChild(t);any=true;}}
  return any||(!onlyDone&&opt.merk)?frag:null;}
 function buildSheet(){const mode=document.querySelector("input[name=ws-mode]:checked").value;
- const opt={answers:document.getElementById("ws-answers").checked,space:document.getElementById("ws-space").checked,merk:document.getElementById("ws-merk").checked,test:document.getElementById("ws-test").checked,sol:document.getElementById("ws-sol").checked};
+ const opt={answers:document.getElementById("ws-answers").checked,space:document.getElementById("ws-space").checked,merk:document.getElementById("ws-merk").checked,test:document.getElementById("ws-test").checked,sol:document.getElementById("ws-sol").checked,newpage:document.getElementById("ws-newpage").checked};
  const name=document.getElementById("ws-name").value.trim(),kl=document.getElementById("ws-klasse").value.trim();
  const sols=[];const body=document.createElement("div");let title="Arbeitsblatt";
  if(mode==="done"){title="Meine bearbeiteten Aufgaben";
@@ -3793,6 +3847,7 @@ function buildSheet(){const mode=document.querySelector("input[name=ws-mode]:che
   if(S.probe)body.appendChild(wsProbe(opt,sols));}
  else if(mode==="kasten"){const kid=document.getElementById("ws-kasten").value;const k=PATH.find(p=>p[2]===kid);title=`${k.code} · ${k[1]}`;const f=wsKasten(kid,opt,sols,false);if(f){f.querySelector("h2").remove();body.appendChild(f);}}
  else{title="Probeprüfung · Realschulabschluss";body.appendChild(wsProbe(opt,sols,true));}
+ if(opt.newpage)[...body.children].forEach((d,i)=>{if(i>0)d.classList.add("ws-np");});
  const has=body.querySelector(".item");
  const now=new Date();
  let html=`<h1>${esc(title)}</h1><p style="margin:2px 0 0;color:#4b5563;font-size:.85rem">Realschulabschluss Hessen · Mathematik · Lernpfad</p>
@@ -3803,7 +3858,8 @@ function buildSheet(){const mode=document.querySelector("input[name=ws-mode]:che
  html+=`<p class="ws-foot">Keine Originalaufgaben – neu erstellt im Stil der Abschlussprüfungen Realschule Hessen. Erstellt am ${now.toLocaleDateString("de-DE")} um ${now.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr.</p>`;
  return {html,count:body.querySelectorAll(".item").length};}
 function wsProbe(opt,sols,all){const box=document.createElement("div");box.innerHTML=all?"":"<h2>Probeprüfung</h2>";
- document.querySelectorAll("#view-probe .pblock").forEach(b=>{const keep=all?(()=>true):(o=>!!(o.querySelector("input")?.value.trim()));const c=wsTask(b,keep,opt,sols,"");if(c)box.appendChild(c);});
+ const PART_T={"1":"Pflichtteil 1 · ohne Taschenrechner und Formelsammlung","2":"Pflichtteil 2 · mit Taschenrechner und Formelsammlung","P":"Pflichtaufgaben","W":"Wahlteil · zwei der vier Wahlaufgaben werden gewertet"};let last="";
+ document.querySelectorAll("#view-probe .pblock").forEach(b=>{const keep=all?(()=>true):(o=>!!wsVal(o));const c=wsTask(b,keep,opt,sols,"");if(c){const part=b.dataset.teil||(b.dataset.block||"")[0];if(part!==last){last=part;box.insertAdjacentHTML("beforeend",`<h2 class="ws-part">${PART_T[part]||""}</h2>`);}box.appendChild(c);}});
  return box;}
 function renderSheet(){const r=buildSheet();document.getElementById("ws-sheet").innerHTML=r.html;
  document.getElementById("ws-info").textContent=r.count?`${r.count} Aufgaben auf dem Blatt`:"";document.getElementById("ws-print").disabled=!r.count;}
