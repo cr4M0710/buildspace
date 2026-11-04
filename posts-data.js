@@ -1285,4 +1285,16 @@ const posts = [
     titleEn: "Scanwerk",
     excerptEn: "Document scanner like Adobe Scan: capture pages with the camera, detect and straighten edges automatically, fine-tune corners with a magnifier, apply filters (auto colour, black and white, whiteboard), reorder pages and save as a PDF with your own file name – optionally with text recognition. Everything stays on your device."
    },
+   {
+    title: "Mathewettbewerb Lernpfad",
+    excerpt: "Selbstlernpfad zur Vorbereitung auf den Mathematik-Wettbewerb Hessen (Klasse 8, Gruppe C): 19 Lernkästen mit Merkkasten, Beispiel, typischen Fehlern, Wettbewerbsaufgaben mit Tipps und Selbsttest, dazu Aufwärmen, Operatoren-Karte, Probe-Wettbewerb mit Punkten und Auswertung. Bearbeitete Aufgaben lassen sich als Arbeitsblatt drucken oder als PDF speichern.",
+    date: "2026-11-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "mathewettbewerb-lernpfad.html",
+    emoji: "🏆",
+    tags: ["tool", "zahlen", "bruchrechnung", "prozent", "geometrie", "funktionen", "einzelarbeit", "vertretung", "jg8"],
+    titleEn: "Maths Competition Learning Path",
+    excerptEn: "Self-study path to prepare for the Hesse maths competition (year 8, group C): 19 learning boxes with key facts, worked example, typical mistakes, competition-style tasks with hints and a self-test, plus warm-up, operator card, a mock competition with points and feedback. Completed tasks can be printed as a worksheet or saved as PDF."
+   },
 ];

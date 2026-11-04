@@ -65,6 +65,7 @@
     "mission-erde.html",
     "tueren-challenge.html",
     "trigonometrie-lernpfad.html",
+    "mathewettbewerb-lernpfad.html",
     "zahlenstrahl-werkstatt.html",
     "minigolf-winkel.html",
     "zahlen-werkstatt.html",
