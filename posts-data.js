@@ -1297,4 +1297,16 @@ const posts = [
     titleEn: "Maths Competition Learning Path",
     excerptEn: "Self-study path to prepare for the Hesse maths competition (year 8, group C): 19 learning boxes with key facts, worked example, typical mistakes, competition-style tasks with hints and a self-test, plus warm-up, operator card, a mock competition with points and feedback. Completed tasks can be printed as a worksheet or saved as PDF."
    },
+   {
+    title: "RSA-Lernpfad Mathematik",
+    excerpt: "Selbstlernpfad zur Abschlussprüfung Mathematik (Realschulabschluss Hessen): 19 Lernkästen von Grundrechenarten bis Trigonometrie mit ausführlicher Erklärung, Merkkasten, Beispiel, typischen Fehlern, Prüfungsaufgaben mit gestuften Hilfen und Selbsttest. Dazu vermischte Übungen für Pflichtteil 1 (hilfsmittelfrei), Pflichtteil 2 und Wahlteil, eine Probeprüfung mit 80 Punkten, das Formelblatt, Aufwärmen, Auswertung und PDF-Arbeitsblätter.",
+    date: "2026-11-04",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "rsa-lernpfad.html",
+    emoji: "🎓",
+    tags: ["tool", "zahlen", "bruchrechnung", "prozent", "gleichungen", "funktionen", "geometrie", "wahrscheinlichkeit", "einzelarbeit", "vertretung", "jg9", "jg10"],
+    titleEn: "Final Exam Learning Path Maths (Realschule)",
+    excerptEn: "Self-study path for the maths final exam (Realschulabschluss Hesse): 19 learning boxes from basic arithmetic to trigonometry with detailed explanations, key facts, worked example, typical mistakes, exam-style tasks with staged hints and a self-test. Plus mixed practice for part 1 (no calculator), part 2 and the elective part, a mock exam worth 80 points, the formula sheet, warm-up, feedback and PDF worksheets."
+   },
 ];
