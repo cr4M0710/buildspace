@@ -702,6 +702,20 @@ const Engine = (() => {
     }
     return res;
   }
+
+  /* Brennweite (relativ zur langen Bildseite) aus einem Viereck nach Zhang & He; null, wenn kaum Perspektive (nicht bestimmbar), -1 wenn unmöglich */
+  function focalRatio(q, W, H) {
+    const [tl, tr, br, bl] = q, u0 = W / 2, v0 = H / 2, M = Math.max(W, H);
+    const m1 = [tl.x, tl.y, 1], m2 = [tr.x, tr.y, 1], m3 = [bl.x, bl.y, 1], m4 = [br.x, br.y, 1];
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const k2 = dot(cross(m1, m4), m3) / dot(cross(m2, m4), m3), k3 = dot(cross(m1, m4), m2) / dot(cross(m3, m4), m2);
+    if (!isFinite(k2) || !isFinite(k3) || Math.abs(k2 - 1) + Math.abs(k3 - 1) < 0.12) return null; // fast Parallelogramm
+    const n2 = m2.map((v, i) => k2 * v - m1[i]), n3 = m3.map((v, i) => k3 * v - m1[i]), a = n2[2] * n3[2];
+    if (Math.abs(a) < 1e-9) return null;
+    const f2 = -((n2[0] * n3[0] - (n2[0] * n3[2] + n2[2] * n3[0]) * u0 + a * u0 * u0) + (n2[1] * n3[1] - (n2[1] * n3[2] + n2[2] * n3[1]) * v0 + a * v0 * v0)) / a;
+    return f2 > 0 ? Math.sqrt(f2) / M : -1;
+  }
   function scoreQuad(q, G, thr) {
     if (!q || !isConvex(q)) return 0;
     const a = polyArea(q) / (G.w * G.h);
@@ -711,7 +725,49 @@ const Engine = (() => {
     if (q.every(nearEdge)) return 0; // nur Bildrahmen, kein Dokument
     const sup = sideSupport(q, G, thr);
     const mean = sup.reduce((s, v) => s + v, 0) / 4, mn = Math.min(...sup);
-    return (0.6 * mean + 0.4 * mn) * (0.7 + 0.3 * Math.sqrt(a));
+    let sc = (0.6 * mean + 0.4 * mn) * (0.7 + 0.3 * Math.sqrt(a));
+    // Geometrie-Plausibilität: Ein echtes Rechteck in Perspektive ergibt eine Brennweite wie bei einer Handykamera (≈ 0,75 × lange Bildseite)
+    if (G.live) { const fr = focalRatio(q, G.w, G.h); if (fr !== null && (fr < 0.45 || fr > 1.6)) sc *= 0.75; } // nur bei unbeschnittenen Kamerabildern
+    if (G.g && !scoreQuad.noRegion) { const rg = regionSupport(q, G); sc *= (0.55 + 0.45 * (0.6 * rg.mean + 0.4 * rg.min)) * (1 - 0.2 * rg.interior); }
+    return sc;
+  }
+  /* Flächenkontrast je Seite: innen und außen müssen sich auf kurzer und längerer Distanz gleichsinnig unterscheiden.
+     Karolinien, Tabellen und Textzeilen haben beidseitig Papier und fallen dadurch heraus. */
+  function regionSupport(q, G) {
+    const { g, w, h } = G, o1 = 2.5, o2 = Math.max(6, 0.02 * Math.max(w, h)), T = G.stepT || 2.5, N = 30;
+    const cx = q.reduce((t, p) => t + p.x / 4, 0), cy = q.reduce((t, p) => t + p.y / 4, 0), res = []; let interior = 0;
+    for (let i = 0; i < 4; i++) {
+      const A = q[i], B = q[(i + 1) % 4], L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+      let nx = -(B.y - A.y) / L, ny = (B.x - A.x) / L;
+      const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2; if ((cx - mx) * nx + (cy - my) * ny < 0) { nx = -nx; ny = -ny; } // n zeigt nach innen
+      let pos = 0, neg = 0, n = 0;
+      for (let k = 0; k < N; k++) {
+        const t = 0.08 + 0.84 * k / (N - 1), px = A.x + (B.x - A.x) * t, py = A.y + (B.y - A.y) * t;
+        const ox = px - nx * o2, oy = py - ny * o2; if (ox < 1 || oy < 1 || ox > w - 2 || oy > h - 2) continue; // außen nicht im Bild
+        n++;
+        // Bandmittel innen minus außen (dünne gedruckte Linien mitteln sich heraus, Karo/Text beidseitig ebenso)
+        let si = 0, so = 0, c = 0;
+        for (let o = o1; o <= o2; o += 1.5) { si += bil(g, w, h, px + nx * o, py + ny * o); so += bil(g, w, h, px - nx * o, py - ny * o); c++; }
+        const d1 = (si - so) / c;
+        if (d1 > T) pos++; else if (d1 < -T) neg++;
+      }
+      res.push(n < 6 ? 0.6 : Math.max(pos, neg) / n); // Seite am Bildrand: neutral
+      // Liegt jenseits der Seite noch „dasselbe Papier“ (gleich hell, gleich gemustert wie Karo/Text)? Dann ist es keine Blattkante.
+      if (G.mag) {
+        let Ii = 0, Io = 0, Ti = 0, To = 0, m = 0;
+        for (let k = 0; k < 20; k++) {
+          const t = 0.1 + 0.8 * k / 19, px = A.x + (B.x - A.x) * t, py = A.y + (B.y - A.y) * t;
+          for (const f of [1, 1.6, 2.2]) {
+            const ix = px + nx * o2 * f, iy = py + ny * o2 * f, ox = px - nx * o2 * f, oy = py - ny * o2 * f;
+            if (ox < 1 || oy < 1 || ox > w - 2 || oy > h - 2) continue;
+            Ii += bil(g, w, h, ix, iy); Io += bil(g, w, h, ox, oy); Ti += bil(G.mag, w, h, ix, iy); To += bil(G.mag, w, h, ox, oy); m++;
+          }
+        }
+        if (m > 20) { Ii /= m; Io /= m; Ti /= m; To /= m;
+          if (Ti > 2.2 * G.noise + 1 && To > 0.55 * Ti && Math.abs(Ii - Io) < Math.max(5, 2 * T)) interior++; }
+      }
+    }
+    return { mean: res.reduce((t, v) => t + v, 0) / 4, min: Math.min(...res), interior };
   }
   function fitLine(pts) {
     const n = pts.length; let mx = 0, my = 0; for (const p of pts) { mx += p[0]; my += p[1]; } mx /= n; my /= n;
@@ -788,17 +844,19 @@ const Engine = (() => {
     peaks.sort((a, b) => b.v - a.v);
     // Linien nach „Stufe“ bewerten: eine Blattkante trennt hell und dunkel; Karo-, Text- und Tabellenlinien haben beidseitig Papier
     const cand = peaks.slice(0, 90).map(p => ({ ...p, c: Math.cos(p.th), s: Math.sin(p.th) }));
+    const o2 = Math.max(6, 0.02 * Math.max(w, h));
     for (const l of cand) {
       let pos = 0, neg = 0; const tx = -l.s, ty = l.c, x0 = l.c * l.rho, y0 = l.s * l.rho, T = Math.hypot(w, h);
       for (let t = -T; t <= T; t += 2) {
         const px = x0 + tx * t, py = y0 + ty * t; if (px < 4 || py < 4 || px > w - 5 || py > h - 5) continue;
+        // echte Stufe: auf kurzer UND längerer Distanz gleiches Vorzeichen (Karo- und Textmuster mitteln sich auf längerer Distanz weg)
         const d = bil(gb, w, h, px + l.c * 3, py + l.s * 3) - bil(gb, w, h, px - l.c * 3, py - l.s * 3);
         if (d > stepT) pos++; else if (d < -stepT) neg++;
       }
       l.step = Math.max(pos, neg) * 2;
     }
     const L = cand.filter(l => l.step >= 0.06 * Math.min(w, h)).sort((a, b) => b.step - a.step).slice(0, 26);
-    houghQuads.last = { acc, NR, diag, minV, tLow, pts: pts.length, peaks: peaks.length, L: L.map(l => [l.t, Math.round(l.rho), l.v, l.step]) };
+    houghQuads.last = { allPeaks: peaks.slice(0, 120).map(p => [p.t, p.rho, p.v, p.step]), acc, NR, diag, minV, tLow, pts: pts.length, peaks: peaks.length, L: L.map(l => [l.t, Math.round(l.rho), l.v, l.step]) };
     const inter = (a, b) => { const det = a.c * b.s - a.s * b.c; if (Math.abs(det) < 1e-6) return null; return { x: (a.rho * b.s - b.rho * a.s) / det, y: (a.c * b.rho - b.c * a.rho) / det }; };
     const angDiff = (a, b) => { let d = Math.abs(a.th - b.th) % Math.PI; return Math.min(d, Math.PI - d); };
     const minSep = 0.12 * Math.min(w, h), pairs = [];
@@ -823,13 +881,14 @@ const Engine = (() => {
   }
 
   /* Dokumentrand finden. src: Canvas/Bild/Video; gibt Viereck in Koordinaten von (W,H) zurück */
-  function detect(src, W, H, workSide = 640) {
+  function detect(src, W, H, workSide = 640, opts = {}) {
     const s = Math.min(1, workSide / Math.max(W, H)), w = Math.max(8, Math.round(W * s)), h = Math.max(8, Math.round(H * s));
     const c = canvas(w, h), x = ctx2d(c); x.drawImage(src, 0, 0, w, h);
     const id = x.getImageData(0, 0, w, h);
     const { g, s: sat } = grayAndSat(id);
     const gb = Math.max(w, h) > 560 ? blur5(blur5(g, w, h), w, h) : blur5(g, w, h); // bei kleiner Arbeitsgröße weniger glätten, sonst verschwinden schwache Kanten
     const S = sobel(gb, w, h); const G = { gx: S.gx, gy: S.gy, g: gb, w, h };
+    G.live = !!opts.live; G.noise = percentile(S.mag, 0.3); G.stepT = Math.max(2, 1.5 * G.noise + 1); G.mag = S.mag;
     const p98 = percentile(S.mag, 0.98), noise = percentile(S.mag, 0.3);
     const thr = Math.max(2.5, Math.min(0.3 * p98, 4 * noise + 1.5)); // passt sich an schwache Kanten (heller Untergrund) an
     const cands = [];
@@ -854,11 +913,21 @@ const Engine = (() => {
     let best = null, bestS = 0;
     const scored = hq.map(q => ({ q, s: scoreQuad(q, G, thr) })).sort((a, b) => b.s - a.s).slice(0, 16);
     for (const c of scored) cands.push(c.q);
+    // Nachführung: das zuletzt erkannte Viereck ist ein Kandidat und bekommt einen Bonus (verhindert Umspringen zwischen Bildern)
+    let pw = null; const near = 0.03 * Math.max(w, h);
+    const toW = q => q.map(p => ({ x: p.x * s - 0.5, y: p.y * s - 0.5 }));
+    if (opts.prev && opts.prev.length === 4) { pw = toW(opts.prev); cands.push(pw); }
+    for (const q of opts.extra || []) if (q && q.length === 4) cands.push(toW(q)); // weitere gemerkte Kandidaten (ohne Bonus)
+    const isNear = q => pw && q.every((p, i) => Math.hypot(p.x - pw[i].x, p.y - pw[i].y) < near);
+    // Ecken weit außerhalb des Bildes sind selten ein echtes Blatt im Sucher
+    const outPen = q => { const m = 0.01 * Math.max(w, h); let f = 1; for (const p of q) if (p.x < -m || p.y < -m || p.x > w + m || p.y > h + m) f *= 0.9; return f; };
+    const total = q => scoreQuad(q, G, thr) * outPen(q) + (isNear(q) ? 0.06 : 0);
     for (const q of cands) {
-      const s0 = scoreQuad(q, G, thr); if (s0 > bestS) { bestS = s0; best = q; }
-      const rq = refine(q, G, thr); if (rq) { const s1 = scoreQuad(rq, G, thr) + 0.01; if (s1 > bestS) { bestS = s1; best = rq; } }
+      const s0 = total(q); if (s0 > bestS) { bestS = s0; best = q; }
+      const rq = refine(q, G, thr); if (rq) { const s1 = total(rq) + 0.01; if (s1 > bestS) { bestS = s1; best = rq; } }
     }
-    if (best) { const rq = refine(best, G, thr); if (rq && scoreQuad(rq, G, thr) >= bestS - 0.02) best = rq; }
+    if (best) { const rq = refine(best, G, thr); if (rq && total(rq) >= bestS - 0.02) best = rq; }
+    if (best && isNear(best)) bestS -= 0.06; // Bonus nur für die Auswahl, nicht für die Erkennungsschwelle
     // Gedruckter Rahmen o. Ä. statt Blattrand? Dann das umschließende Viereck nehmen, wenn dazwischen nur gleichmäßiges Papier liegt
     if (best && bestS > 0.45 && !detect.noOuter) {
       const all = cands.map(q => ({ q, s: scoreQuad(q, G, thr) })).filter(c => c.s > 0.5);
@@ -879,7 +948,7 @@ const Engine = (() => {
         const mean = a => a.reduce((t, v) => t + v, 0) / a.length, rm = mean(ring), rs = Math.sqrt(mean(ring.map(v => (v - rm) ** 2)));
         const om = mean(outs.sort((a, b) => a - b).slice(4, -4));
         if (detect.trace) detect.trace.push({ s: c.s, A: A / bA, n: ring.length, rm, rs, om });
-        if (rs < 4.5 && c.s >= 0.85 * bestS && Math.abs(rm - om) > 3) { pick = c; pickA = A; }
+        if (rs < 6.2 && c.s >= 0.85 * bestS && Math.abs(rm - om) > 3) { pick = c; pickA = A; }
       }
       if (pick) { best = pick.q; bestS = pick.s; const rq = refine(best, G, thr, 0.005); if (rq && scoreQuad(rq, G, thr) >= bestS - 0.02) best = rq; }
     }
@@ -888,6 +957,47 @@ const Engine = (() => {
     const quad = found ? best.map(p => ({ x: Math.max(0, Math.min(W, (p.x + 0.5) / s)), y: Math.max(0, Math.min(H, (p.y + 0.5) / s)) })) : fullQuad(W, H);
     let lum = 0; for (let i = 0; i < g.length; i += 7) lum += g[i]; lum /= Math.ceil(g.length / 7);
     return { quad, found, score: bestS, lum };
+  }
+
+  /* Nachführung über mehrere Kamerabilder: glättet das Viereck, ignoriert einzelne Ausreißer und Aussetzer
+     und wechselt nur dann zu einem anderen Viereck, wenn es mehrfach hintereinander bestätigt wird. */
+  class QuadTracker {
+    constructor() { this.reset(); }
+    reset() { this.quad = null; this.cand = null; this.candHits = 0; this.alt = null; this.altHits = 0; this.misses = 0; this.stableSince = 0; this.lastMove = 1; }
+    static dist(a, b, diag) { let m = 0; for (let i = 0; i < 4; i++) m = Math.max(m, Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y)); return m / diag; }
+    update(r, W, H, now = performance.now()) {
+      const diag = Math.hypot(W, H), D = QuadTracker.dist;
+      if (!r.found) {
+        this.misses++;
+        if (this.misses > 5) this.reset();          // ~0,6 s ohne Dokument: verloren
+        else this.stableSince = this.stableSince && this.misses <= 2 ? this.stableSince : 0;
+        return this.state(now);
+      }
+      if (!this.quad) {                               // erst festlegen, wenn zwei Bilder übereinstimmen
+        if (this.cand && D(r.quad, this.cand, diag) < 0.03) { this.candHits++; }
+        else { this.cand = r.quad; this.candHits = 1; }
+        if (this.candHits >= 2) { this.quad = r.quad.map(p => ({ ...p })); this.cand = null; this.stableSince = now; this.misses = 0; }
+        return this.state(now);
+      }
+      const d = D(r.quad, this.quad, diag);
+      if (d < 0.05) {                                 // gleiches Blatt: sanft nachziehen, bei Bewegung schneller
+        const a = Math.min(0.85, 0.35 + d * 12);
+        const before = this.quad;
+        this.quad = this.quad.map((p, i) => ({ x: p.x + (r.quad[i].x - p.x) * a, y: p.y + (r.quad[i].y - p.y) * a }));
+        this.lastMove = D(this.quad, before, diag);
+        this.misses = 0; if (this.alt) this.altHits = Math.max(0, this.altHits - 1); if (!this.altHits) this.alt = null; // Herausforderer verblasst langsam
+        if (d > 0.02) this.stableSince = now;         // deutliche Bewegung: Ruhezeit neu beginnen
+        else if (!this.stableSince) this.stableSince = now;
+      } else {                                        // anderes Viereck: erst nach 3 Bestätigungen übernehmen
+        if (this.alt && D(r.quad, this.alt, diag) < 0.03) { this.altHits++; this.alt = r.quad; } else { this.alt = r.quad; this.altHits = 1; }
+        if (this.altHits >= 3) { this.quad = r.quad.map(p => ({ ...p })); this.alt = null; this.altHits = 0; this.stableSince = now; }
+        this.misses = 0;
+      }
+      return this.state(now);
+    }
+    hints() { return { prev: this.quad || this.cand || undefined, extra: [this.alt, this.cand].filter(Boolean) }; }
+    state(now = performance.now()) { return { quad: this.quad, found: !!this.quad, stableMs: this.quad && this.stableSince ? now - this.stableSince : 0 }; }
+    get stable() { return this.quad && this.stableSince ? performance.now() - this.stableSince : 0; }
   }
   function fullQuad(W, H, inset = 0) { const i = inset * Math.min(W, H); return [{ x: i, y: i }, { x: W - i, y: i }, { x: W - i, y: H - i }, { x: i, y: H - i }]; }
 
@@ -1146,7 +1256,7 @@ const Engine = (() => {
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
-  return { houghLast: () => houghQuads.last, canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, insetQuad, sharpness, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
+  return { _focal: focalRatio, _dbgRegion: (q, G) => regionSupport(q, G), _dbgSide: (q, G, thr) => sideSupport(q, G, thr), QuadTracker, houghLast: () => houghQuads.last, canvas, ctx2d, toBlob, normalize, decodeToCanvas, detect, fullQuad, homography, outputSize, warp, applyFilter, rotateCanvas, insetQuad, sharpness, buildPdf, pageGeometry, isConvex, polyArea, orderQuad, MAX_SRC_PX };
 })();
 
 </script>
@@ -1290,7 +1400,11 @@ const Engine = (() => {
     const n = await Engine.normalize(file);
     const page = { id: uid(), srcBlob: n.blob, srcW: n.w, srcH: n.h, rotation: 0, filter: settings.filter, brightness: 0, contrast: 0 };
     const pv = await previewSrc(page);
-    const d = Engine.detect(pv.canvas, n.w, n.h);
+    // Bei Kamerafotos den Rand aus der Live-Vorschau als Kandidaten mitgeben, damit Vorschau und Ergebnis übereinstimmen
+    const opts = {}, h = file.scanHint;
+    if (file.fromCamera) opts.live = true;
+    if (h && Math.abs(Math.log((n.w / n.h) / h.aspect)) < 0.02) opts.extra = [h.quad.map(p => ({ x: p.x * n.w, y: p.y * n.h }))];
+    const d = Engine.detect(pv.canvas, n.w, n.h, 640, opts);
     page.detected = d.found; setQuad(page, d.quad);
     return page;
   }
@@ -1394,7 +1508,7 @@ const Engine = (() => {
 
   /* ---------- Kamera ---------- */
   const Cam = { stream: null, track: null, caps: {}, photoCaps: null, ic: null, timer: 0, raf: 0, quad: null, disp: null, stable: 0, last: null, armed: true, busy: false, count: 0, pending: Promise.resolve(), lum: 128, torchOn: false, focusAt: 0, flashWarned: false };
-  const STABLE_NEEDED = 5; // × 200 ms ≈ 1 s ruhiges Bild bis zum Auto-Scan
+  const STABLE_MS = 900; // so lange muss das erkannte Blatt ruhig liegen, bis der Auto-Scan auslöst
   const FLASH_MODES = ['off', 'auto', 'on', 'torch'];
   const FLASH_LABEL = { off: 'Blitz aus', auto: 'Blitz auto', on: 'Blitz an', torch: 'Dauerlicht' };
   const liveCameraPossible = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.isSecureContext !== false);
@@ -1418,7 +1532,7 @@ const Engine = (() => {
   }
   async function openCamera() {
     showView('camera'); Cam.count = 0; updateCamStack(); $('#camFallback').hidden = true; $('#camHint').hidden = false; $('#camShutter').disabled = false;
-    Cam.armed = true; Cam.stable = 0; Cam.quad = null; Cam.disp = null; Cam.torchOn = false; Cam.flashWarned = false; syncCamUi();
+    Cam.armed = true; Cam.prog = 0; Cam.quad = null; Cam.disp = null; Cam.torchOn = false; Cam.flashWarned = false; syncCamUi();
     try {
       // 4:3 in höchster Auflösung anfordern (entspricht dem Fotoformat der Handykamera)
       Cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 3072 }, aspectRatio: { ideal: 4 / 3 } }, audio: false });
@@ -1440,10 +1554,10 @@ const Engine = (() => {
     if ('ImageCapture' in window) { try { Cam.ic = new ImageCapture(Cam.track); Cam.photoCaps = await Promise.race([Cam.ic.getPhotoCapabilities(), sleep(1500).then(() => null)]); } catch (e) { Cam.photoCaps = null; } }
     $('#camRes').textContent = `${v.videoWidth} × ${v.videoHeight}`;
     if (settings.flash === 'torch') setTorch(true);
-    Cam.timer = setInterval(camDetect, 200); Cam.raf = requestAnimationFrame(camDraw);
+    Cam.tr = new Engine.QuadTracker(); Cam.shotQuad = null; Cam.prog = 0; camLoop(); Cam.raf = requestAnimationFrame(camDraw);
   }
   function stopCamera() {
-    clearInterval(Cam.timer); cancelAnimationFrame(Cam.raf); Cam.timer = 0;
+    clearTimeout(Cam.timer); cancelAnimationFrame(Cam.raf); Cam.timer = 0;
     if (Cam.stream) Cam.stream.getTracks().forEach(t => t.stop());
     Cam.stream = null; Cam.track = null; Cam.ic = null; Cam.torchOn = false; const v = $('#camVideo'); if (v) v.srcObject = null;
   }
@@ -1451,33 +1565,59 @@ const Engine = (() => {
     if (!Cam.track || !Cam.caps.pointsOfInterest && !('pointsOfInterest' in (Cam.track.getSettings?.() || {}))) return;
     Cam.track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x: px, y: py }] }] }).catch(() => { });
   }
+  /* Kleines Graustufen-Abbild des Kamerabilds, um einen Seitenwechsel (Hand im Bild, neues Blatt) zu erkennen */
+  function frameSig(v) {
+    const c = frameSig.c || (frameSig.c = Engine.canvas(24, 32)), x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(v, 0, 0, 24, 32); const d = x.getImageData(0, 0, 24, 32).data, g = new Float32Array(768);
+    for (let i = 0; i < 768; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    let m = 0; for (const vv of g) m += vv / 768; for (let i = 0; i < 768; i++) g[i] -= m; // Helligkeitsschwankung ignorieren
+    return g;
+  }
+  const sigDiff = (a, b) => { let d = 0; for (let i = 0; i < a.length; i++) d += Math.abs(a[i] - b[i]); return d / a.length; };
+  function sceneChanged(v) { // großer Bildwechsel, z. B. Hand im Bild beim Umblättern
+    if (!Cam.shotSig) return false;
+    const whole = sigDiff(frameSig(v), Cam.shotSig); Cam.lastSceneDiff = +whole.toFixed(1);
+    Cam.changeHits = whole > 14 ? (Cam.changeHits || 0) + 1 : 0;
+    return Cam.changeHits >= 2; // zweimal hintereinander, damit Rauschen nicht auslöst
+  }
   function camDetect() {
     const v = $('#camVideo'); if (!v.videoWidth || Cam.busy) return;
-    const t0 = performance.now();
-    const r = Engine.detect(v, v.videoWidth, v.videoHeight, Cam.ws || 400);
-    Cam.dt = (Cam.dt || 0) * 0.8 + (performance.now() - t0) * 0.2; if (Cam.dt > 150 && (Cam.ws || 400) > 300) Cam.ws = 320; // langsames Gerät: kleinere Arbeitsgröße
+    const vw = v.videoWidth, vh = v.videoHeight, now = performance.now();
+    if (!Cam.tr) Cam.tr = new Engine.QuadTracker();
+    const r = Engine.detect(v, vw, vh, Cam.ws || 400, Object.assign({ live: true }, Cam.tr.hints()));
+    Cam.dt = (Cam.dt || 0) * 0.8 + (performance.now() - now) * 0.2; if (Cam.dt > 150 && (Cam.ws || 400) > 300) Cam.ws = 320; // langsames Gerät: kleinere Arbeitsgröße
     Cam.lum = Cam.lum * 0.6 + r.lum * 0.4;
+    const st = Cam.tr.update(r, vw, vh, now), diag = Math.hypot(vw, vh);
     const hint = $('#camHint'), dark = Cam.lum < 70;
-    if (r.found) {
-      if (Cam.last) {
-        const diag = Math.hypot(v.videoWidth, v.videoHeight);
-        const mv = Math.max(...r.quad.map((p, i) => Math.hypot(p.x - Cam.last[i].x, p.y - Cam.last[i].y))) / diag;
-        if (mv < 0.015) Cam.stable++; else Cam.stable = 0;
-        if (mv > 0.08) Cam.armed = true;
+    if (st.found) {
+      Cam.quad = st.quad;
+      // Nach einer Aufnahme erst wieder scannen, wenn eine neue Seite daliegt (deutlich verschoben) – nicht bei kurzen Aussetzern
+      if (!Cam.armed && Cam.needSig) { if (--Cam.needSig === 0) { Cam.shotSig = frameSig(v); Cam.shotQuad = st.quad.map(p => ({ ...p })); } }
+      else if (!Cam.armed && Cam.shotQuad) {
+        const ctr = q => q.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 }), c1 = ctr(st.quad), c0 = ctr(Cam.shotQuad);
+        const moved = Math.hypot(c1.x - c0.x, c1.y - c0.y) / diag, sizeCh = Math.abs(Math.log(Engine.polyArea(st.quad) / Engine.polyArea(Cam.shotQuad)));
+        if (moved > 0.1 || sizeCh > 0.5 || sceneChanged(v)) { Cam.armed = true; if (window.__camLog) window.__camLog.push(['rearm', moved.toFixed(3), sizeCh.toFixed(2), Cam.lastSceneDiff]); } // neue Seite (verschoben, andere Größe oder Hand im Bild)
       }
-      Cam.last = r.quad; Cam.quad = r.quad;
-      const area = Engine.polyArea(r.quad) / (v.videoWidth * v.videoHeight);
-      if (performance.now() - Cam.focusAt > 1500) { Cam.focusAt = performance.now(); const c = r.quad.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 }); focusOn(c.x / v.videoWidth, c.y / v.videoHeight); }
+      const area = Engine.polyArea(st.quad) / (vw * vh), prog = Math.min(1, st.stableMs / STABLE_MS);
+      Cam.prog = settings.auto && Cam.armed ? prog : 0;
+      if (now - Cam.focusAt > 1500) { Cam.focusAt = now; const c = st.quad.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 }); focusOn(c.x / vw, c.y / vh); }
       hint.textContent = !Cam.armed ? 'Erfasst – nächste Seite ins Bild legen'
         : area < 0.2 ? 'Näher heran'
         : dark && settings.flash === 'off' ? 'Zu dunkel – Blitz einschalten'
-        : settings.auto ? (Cam.stable > 1 ? 'Ruhig halten – scannt automatisch' : 'Dokument erkannt') : 'Dokument erkannt – jetzt auslösen';
-      if (settings.auto && Cam.armed && Cam.stable >= STABLE_NEEDED && area >= 0.12) camCapture(true);
+        : settings.auto ? (prog > 0.15 ? 'Ruhig halten – scannt automatisch' : 'Dokument erkannt') : 'Dokument erkannt – jetzt auslösen';
+      if (settings.auto && Cam.armed && st.stableMs >= STABLE_MS && area >= 0.12) camCapture(true);
     } else {
-      Cam.stable = 0; Cam.quad = null; Cam.last = null; Cam.armed = true;
+      Cam.quad = null; Cam.prog = 0;
+      if (!Cam.tr.cand && !Cam.tr.quad) { if (window.__camLog && !Cam.armed) window.__camLog.push(['lost']); Cam.armed = true; Cam.shotQuad = null; Cam.shotSig = null; } // Blatt wirklich weg
       hint.textContent = dark ? 'Zu dunkel – Blitz einschalten oder mehr Licht' : 'Dokument ins Bild halten';
     }
-    $('#camRing').style.strokeDashoffset = settings.auto && Cam.armed && r.found ? 226 - 226 * Math.min(1, Cam.stable / STABLE_NEEDED) : 226;
+    $('#camRing').style.strokeDashoffset = 226 - 226 * (Cam.prog || 0);
+  }
+  function camLoop() { // so oft wie das Gerät schafft, höchstens ~10× pro Sekunde
+    if (!Cam.stream) return;
+    const t0 = performance.now();
+    try { camDetect(); } catch (e) { console.error(e); }
+    Cam.timer = setTimeout(camLoop, Math.max(40, 100 - (performance.now() - t0)));
   }
   function camDraw() {
     Cam.raf = requestAnimationFrame(camDraw);
@@ -1491,7 +1631,7 @@ const Engine = (() => {
       Cam.disp = Cam.disp ? Cam.disp.map((p, i) => ({ x: p.x + (tgt[i].x - p.x) * 0.35, y: p.y + (tgt[i].y - p.y) * 0.35 })) : tgt;
     } else Cam.disp = null;
     if (Cam.disp) {
-      const prog = settings.auto && Cam.armed ? Math.min(1, Cam.stable / STABLE_NEEDED) : 0, done = !Cam.armed;
+      const prog = Cam.prog || 0, done = !Cam.armed;
       x.beginPath(); Cam.disp.forEach((p, i) => i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y)); x.closePath();
       x.fillStyle = done ? 'rgba(79,197,138,.22)' : `rgba(94,136,255,${0.16 + 0.2 * prog})`; x.fill();
       x.lineWidth = 3 + 2 * prog; x.strokeStyle = done ? '#4FC58A' : '#5E88FF'; x.stroke();
@@ -1511,7 +1651,10 @@ const Engine = (() => {
   }
   async function camCapture(auto) {
     const v = $('#camVideo'); if (Cam.busy || !v.videoWidth) return;
-    Cam.busy = true; Cam.armed = false; Cam.stable = 0;
+    Cam.busy = true; Cam.armed = false; Cam.prog = 0;
+    const vw = v.videoWidth, vh = v.videoHeight;
+    Cam.shotQuad = Cam.quad ? Cam.quad.map(p => ({ ...p })) : null; Cam.shotSig = null; Cam.needSig = 2; Cam.changeHits = 0; // Vergleichsbild erst nach der Aufnahme festhalten (Kamera stellt sich beim Foto kurz um)
+    const hint = Cam.quad ? { quad: Cam.quad.map(p => ({ x: p.x / vw, y: p.y / vh })), aspect: vw / vh } : null; // erkannter Rand aus der Vorschau
     const wantFlash = settings.flash === 'on' || (settings.flash === 'auto' && Cam.lum < 85);
     let blob = null, usedTorch = false;
     try {
@@ -1540,7 +1683,8 @@ const Engine = (() => {
     if (!blob) { Cam.busy = false; Cam.armed = true; toast('Aufnahme fehlgeschlagen – bitte erneut versuchen.'); return; }
     Cam.count++; updateCamStack(blob);
     const replace = S.replaceIdx; S.replaceIdx = null;
-    Cam.pending = Cam.pending.then(() => addFiles([new File([blob], `aufnahme-${Date.now()}.jpg`, { type: 'image/jpeg' })], { replaceIdx: replace, quiet: true })).catch(console.error);
+    const file = new File([blob], `aufnahme-${Date.now()}.jpg`, { type: 'image/jpeg' }); file.scanHint = hint; file.fromCamera = true;
+    Cam.pending = Cam.pending.then(() => addFiles([file], { replaceIdx: replace, quiet: true })).catch(console.error);
     Cam.busy = false;
     if (replace != null) camFinish();
   }
@@ -1563,7 +1707,7 @@ const Engine = (() => {
   $('#camShutter').onclick = () => camCapture(false);
   $('#camDone').onclick = camFinish;
   $('#camClose').onclick = camFinish;
-  $('#camAuto').onclick = () => { settings.auto = !settings.auto; saveSettings(); syncCamUi(); Cam.stable = 0; toast(settings.auto ? 'Auto-Scan an – scannt, sobald ein Dokument ruhig im Bild ist' : 'Auto-Scan aus – mit dem Auslöser fotografieren'); };
+  $('#camAuto').onclick = () => { settings.auto = !settings.auto; saveSettings(); syncCamUi(); Cam.prog = 0; if (Cam.tr) Cam.tr.stableSince = performance.now(); toast(settings.auto ? 'Auto-Scan an – scannt, sobald ein Dokument ruhig im Bild ist' : 'Auto-Scan aus – mit dem Auslöser fotografieren'); };
   $('#camFlashBtn').onclick = async () => {
     settings.flash = FLASH_MODES[(FLASH_MODES.indexOf(settings.flash) + 1) % FLASH_MODES.length]; saveSettings(); syncCamUi();
     if (settings.flash === 'torch') { if (!(await setTorch(true))) toast('Dauerlicht wird hier nicht unterstützt.'); }
