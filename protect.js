@@ -1830,10 +1830,11 @@
       if (cat) {
         /* Handball-Anwendungen (Strafenkasse, Anwurf, Hallenplan, Anzeigetafel …) sind keine
            Unterrichts-Tools: dort kein „Für Lernende freigeben“, kein QR-Aushang, keine
-           Bewertung und keine Bestenliste – nur Zurück-Link und Impressum/Datenschutz. */
+           Bewertung und keine Bestenliste – nur der Zurück-Link. Impressum/Datenschutz verlinkt
+           jede Handball-App selbst ganz unten in ihren Einstellungen. */
         const schlicht = cat === "handball";
         if (!schlicht) addShareButton(cat);
-        if (!isHomeApp_()) { addBackLink(); if (!schlicht) addPosterButton(); addLegalLinks(); }
+        if (!isHomeApp_()) { addBackLink(); if (!schlicht) addPosterButton(); if (!schlicht) addLegalLinks(); }
         if (!schlicht) { initFeedbackWidget(cat); initHighscoreWidget(); }
         if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
       }
