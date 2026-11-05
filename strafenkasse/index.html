@@ -11,7 +11,10 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="Strafenkasse">
-<title>Strafenkasse · HSG Wettenberg M2</title>
+<title>Strafenkasse · HSG Wettenberg</title>
+<meta property="og:title" content="Strafenkasse · HSG Wettenberg">
+<meta property="og:description" content="Offene Strafen und Kassenstand deiner Mannschaft – live.">
+<meta property="og:type" content="website">
 <style>
   :root {
     --rot: #C30606;
@@ -586,9 +589,12 @@ const LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAzsAAALfCAMAAABxUyw9
 // ---------- Mehrere Teams (Profile) ----------
 // Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync
 // (jeweils eigene localStorage-Schlüssel, siehe SPEICHER_KEY/UI_KEY/SYNC_KEY unten).
-// Weiteres Team ergänzen: einfach einen neuen Eintrag in PROFILE hinzufügen.
+// Feste Teams stehen in BASIS_PROFILE; jede weitere Mannschaft des Vereins legt sich ihr Team
+// selbst in der App an („Team wechseln → Neue Mannschaft anlegen“). Eigene Teams liegen in EIGENE_KEY.
 const PROFIL_KEY = 'hsg-aktives-profil';
-const PROFILE = {
+const EIGENE_KEY = 'hsg-eigene-teams-v1';
+const TEAM_ID_MUSTER = /^t-[a-z0-9]{4,16}$/;
+const BASIS_PROFILE = {
   m2: {
     id: 'm2', titel: 'Strafenkasse Männer 2', verein: 'HSG Wettenberg', paypal: 'nick-stroh@t-online.de',
     seedHistorie: true,
@@ -616,14 +622,46 @@ const PROFILE = {
     ],
   },
 };
+function eigeneTeamsLaden() {
+  try { const l = JSON.parse(localStorage.getItem(EIGENE_KEY) || '[]'); return Array.isArray(l) ? l.filter(t => t && TEAM_ID_MUSTER.test(t.id)) : []; }
+  catch (e) { return []; }
+}
+function eigeneTeamsSpeichern(liste) { try { localStorage.setItem(EIGENE_KEY, JSON.stringify(liste)); } catch (e) {} }
+function eigenesProfil(t) {
+  return { id: t.id, titel: t.titel || 'Neue Mannschaft', verein: t.verein != null ? t.verein : 'HSG Wettenberg',
+    paypal: '', seedHistorie: false, spieler: [], katalogLeer: !!t.katalogLeer, eigen: true };
+}
+const PROFILE = Object.assign({}, BASIS_PROFILE);
+let EIGENE_TEAMS = eigeneTeamsLaden();
+EIGENE_TEAMS.forEach(t => { PROFILE[t.id] = eigenesProfil(t); });
+// Unbekanntes eigenes Team per Link (?team=t-xxxx) – z. B. Spieler-Ansicht oder zweiter Kassenwart:
+// automatisch auf diesem Gerät anlegen; der Name wird beim ersten Laden aus den Daten übernommen.
+(() => {
+  try {
+    const t = new URLSearchParams(location.search).get('team');
+    if (t && !PROFILE[t] && TEAM_ID_MUSTER.test(t)) {
+      const neu = { id: t, titel: 'Neue Mannschaft', verein: 'HSG Wettenberg', viaLink: true };
+      EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS);
+      PROFILE[t] = eigenesProfil(neu);
+    }
+  } catch (e) {}
+})();
+let ERSTSTART = false; // Gerät ohne Team und ohne Daten -> Begrüßung mit Teamauswahl
 function ermittleAktivesProfil() {
   // Direktlink auf ein Team möglich: strafenkasse/index.html?team=m1
   try {
     const t = new URLSearchParams(location.search).get('team');
     if (t && PROFILE[t]) { try { localStorage.setItem(PROFIL_KEY, t); } catch (e) {} return t; }
   } catch (e) {}
-  try { const p = localStorage.getItem(PROFIL_KEY); return (p && PROFILE[p]) ? p : 'm2'; }
-  catch (e) { return 'm2'; }
+  try {
+    const p = localStorage.getItem(PROFIL_KEY);
+    if (p && PROFILE[p]) return p;
+    // Bestehende Geräte ohne gemerktes Team: das Team nehmen, zu dem Daten vorliegen
+    if (localStorage.getItem('hsg-m2-strafenkasse-v1')) return 'm2';
+    if (localStorage.getItem('hsg-m1-strafenkasse-v1')) return 'm1';
+    ERSTSTART = true;
+  } catch (e) {}
+  return 'm2';
 }
 const PROFIL_ID = ermittleAktivesProfil();
 const PROFIL = PROFILE[PROFIL_ID];
@@ -639,6 +677,7 @@ const STD_PAYPAL = PROFIL.paypal;
 // ---------- Inline-SVG-Icons (keine Emojis) ----------
 const S = (inner, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw||2}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 const ICON = {
+  link: S('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
   erfassen: S('<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>'),
   uebersicht: S('<line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>', 2.2),
   historie: S('<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>'),
@@ -667,7 +706,7 @@ function standardSpieler() {
   return STANDARD_SPIELER.map(name => ({ id: neueId(), name, aktiv: true }));
 }
 
-// ---------- Strafenkatalog HSG Wettenberg Männer 2 (aus SpielerPlus übernommen) ----------
+// ---------- Standard-Strafenkatalog (Vorlage aus Männer 2, aus SpielerPlus übernommen) ----------
 const KATALOG_VERSION = 3;
 const STANDARD_KATALOG = [
   { name: 'App nicht abgemeldet',                          betrag: 2 },
@@ -787,7 +826,7 @@ function standardDaten() {
   return {
     titel: STD_TITEL, verein: STD_VEREIN, paypal: STD_PAYPAL,
     spieler, spielerVersion: SPIELER_VERSION, spielerTs: ts,
-    katalog: STANDARD_KATALOG.map(k => ({ id: neueId(), ...k })), katalogVersion: KATALOG_VERSION, katalogTs: ts,
+    katalog: PROFIL.katalogLeer ? [] : STANDARD_KATALOG.map(k => ({ id: neueId(), ...k })), katalogVersion: KATALOG_VERSION, katalogTs: ts,
     buchungen, geloescht: {},
   };
 }
@@ -1416,6 +1455,14 @@ const App = {
     const sub = document.querySelector('header .sub');
     if (sub && !nurLesen) sub.textContent = daten.verein || '';
     document.title = (daten.titel || 'Strafenkasse') + (daten.verein ? ' · ' + daten.verein : '');
+    this.eigenesTeamAbgleichen();
+  },
+  // Hält den Namen eines eigenen Teams in der Teamliste aktuell (z. B. nach Umbenennen oder Laden per Link)
+  eigenesTeamAbgleichen() {
+    if (!PROFIL.eigen || !daten.titel) return;
+    const t = EIGENE_TEAMS.find(x => x.id === PROFIL_ID);
+    if (!t || (t.titel === daten.titel && t.verein === (daten.verein || ''))) return;
+    t.titel = daten.titel; t.verein = daten.verein || ''; PROFIL.titel = t.titel; eigeneTeamsSpeichern(EIGENE_TEAMS);
   },
 
   rendern() {
@@ -1974,7 +2021,7 @@ const App = {
   rendernVerwalten() {
     this.rendernVerwaltenSyncKnopf();
     const pinfo = document.getElementById('profil-info');
-    if (pinfo) pinfo.textContent = `Aktives Team: ${PROFIL.titel}. Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync – ein Wechsel lädt die App neu.`;
+    if (pinfo) pinfo.textContent = `Aktives Team: ${daten.titel || PROFIL.titel}. Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync – ein Wechsel lädt die App neu.`;
     const info = document.getElementById('einstellungen-info'); if (info) info.textContent = titelZeile() + (daten.paypal ? ' · PayPal: ' + daten.paypal : '');
     const mbEl = document.getElementById('mb-erinnerung'); if (mbEl) mbEl.checked = !prefs.mbErinnerungAus;
     const sortEl = document.getElementById('kat-sort'); if (sortEl) sortEl.value = prefs.sortKat;
@@ -2521,25 +2568,93 @@ const App = {
     Sync.trennen(); this.modalZu(); this.toast('Sync getrennt');
   },
 
-  // ===== Team wechseln =====
-  profilModal() {
+  // ===== Team wechseln / Mannschaft anlegen =====
+  profilModal(begruessung) {
     if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
-    const zeilen = Object.values(PROFILE).map(p => `
-      <button class="btn ${p.id === PROFIL_ID ? '' : 'sekundaer'}" style="width:100%;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="App.profilWechseln('${p.id}')">
-        <span>${esc(p.titel)}</span>${p.id === PROFIL_ID ? '<span style="font-size:.78rem;opacity:.85">Aktiv</span>' : ''}
-      </button>`).join('');
+    const zeile = p => {
+      const aktiv = p.id === PROFIL_ID && !begruessung;
+      const name = aktiv ? (daten.titel || p.titel) : p.titel;
+      return `<div style="display:flex;gap:8px;margin-bottom:9px">
+        <button class="btn ${aktiv ? '' : 'sekundaer'}" style="flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left" onclick="App.profilWechseln('${p.id}', ${begruessung ? 'true' : 'false'})">
+          <span>${esc(name)}</span>${aktiv ? '<span style="font-size:.78rem;opacity:.85">Aktiv</span>' : ''}
+        </button>
+        ${p.eigen ? `<button class="icon-btn" title="Teamlink kopieren" onclick="App.teamLinkKopieren('${p.id}')">${ICON.link}</button>
+        <button class="icon-btn rot" title="Team von diesem Gerät entfernen" onclick="App.teamEntfernen('${p.id}')">${ICON.del}</button>` : ''}
+      </div>`;
+    };
+    const zeilen = Object.values(PROFILE).map(zeile).join('');
     this.modal(`
-      <h3>Team wechseln</h3>
-      <div class="hinweis" style="margin-top:0;margin-bottom:12px">Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync. Die App lädt nach dem Wechsel neu.</div>
+      <h3>${begruessung ? 'Willkommen bei der Strafenkasse' : 'Team wechseln'}</h3>
+      <div class="hinweis" style="margin-top:0;margin-bottom:12px">${begruessung
+        ? 'Wähle deine Mannschaft aus – oder lege für deine Mannschaft ein eigenes Team an. Jede Mannschaft im Verein hat ihre eigenen Spieler, Strafen und Buchungen.'
+        : 'Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync. Die App lädt nach dem Wechsel neu.'}</div>
       ${zeilen}
+      <button class="btn" style="width:100%;margin-top:6px" onclick="App.teamNeuModal()">Neue Mannschaft anlegen</button>
+      <div class="hinweis">Eigene Teams lassen sich über den Link-Knopf an weitere Kassenwarte schicken: Wer den Link öffnet, bekommt das Team auf seinem Gerät und kann sich danach über den Cloud-Sync verbinden.</div>
       <div class="knoepfe">
-        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn sekundaer" onclick="App.modalZu()">${begruessung ? 'Später' : 'Abbrechen'}</button>
       </div>`);
   },
-  profilWechseln(id) {
-    if (id === PROFIL_ID || !PROFILE[id]) { this.modalZu(); return; }
+  profilWechseln(id, begruessung) {
+    if (!PROFILE[id]) { this.modalZu(); return; }
     try { localStorage.setItem(PROFIL_KEY, id); } catch (e) {}
-    location.reload();
+    if (id === PROFIL_ID && !begruessung) { this.modalZu(); return; }
+    if (id === PROFIL_ID) { ERSTSTART = false; this.modalZu(); return; }
+    location.href = location.pathname + '?team=' + encodeURIComponent(id);
+  },
+  teamNeuModal() {
+    this.modal(`
+      <h3>Neue Mannschaft anlegen</h3>
+      <div class="feld"><label>Mannschaft</label><input type="text" id="tn-name" placeholder="z. B. Damen 1, Männer 3, mA-Jugend"></div>
+      <div class="feld"><label>Verein</label><input type="text" id="tn-verein" value="HSG Wettenberg"></div>
+      <div class="feld"><label>Strafenkatalog</label>
+        <select id="tn-katalog">
+          <option value="vorlage">Vorlage übernehmen (danach frei anpassbar)</option>
+          <option value="leer">Leer starten</option>
+        </select>
+      </div>
+      <div class="hinweis" style="margin-top:0">Danach unter „Verwalten“ die Spieler hinzufügen (einzeln oder per Liste importieren) und den Strafenkatalog anpassen.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.profilModal(${ERSTSTART ? 'true' : ''})">Zurück</button>
+        <button class="btn" onclick="App.teamAnlegen()">Anlegen</button>
+      </div>`);
+    setTimeout(() => { const i = document.getElementById('tn-name'); if (i) i.focus(); }, 50);
+  },
+  teamAnlegen() {
+    const name = document.getElementById('tn-name').value.trim();
+    if (!name) { this.toast('Bitte einen Namen für die Mannschaft angeben.'); return; }
+    const verein = document.getElementById('tn-verein').value.trim();
+    const leer = document.getElementById('tn-katalog').value === 'leer';
+    const b = crypto.getRandomValues(new Uint8Array(8));
+    const id = 't-' + Array.from(b, x => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+    const titel = /strafenkasse/i.test(name) ? name : 'Strafenkasse ' + name;
+    EIGENE_TEAMS.push({ id, titel, verein, katalogLeer: leer });
+    eigeneTeamsSpeichern(EIGENE_TEAMS);
+    try { localStorage.setItem(PROFIL_KEY, id); } catch (e) {}
+    location.href = location.pathname + '?team=' + id;
+  },
+  teamLink(id) { return location.origin + location.pathname + '?team=' + id; },
+  async teamLinkKopieren(id) {
+    const link = this.teamLink(id);
+    const name = (PROFILE[id] || {}).titel || 'Strafenkasse';
+    try {
+      if (navigator.share) { await navigator.share({ title: name, text: name + ' – Teamlink für Kassenwarte:', url: link }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(link); this.toast('Teamlink kopiert'); }
+    catch (e) { prompt('Teamlink:', link); }
+  },
+  teamEntfernen(id) {
+    const p = PROFILE[id]; if (!p || !p.eigen) return;
+    if (!confirm(`„${p.titel}“ von diesem Gerät entfernen?\n\nAlle lokal gespeicherten Daten dieses Teams auf diesem Gerät werden gelöscht. Daten im Cloud-Sync bleiben online erhalten.`)) return;
+    EIGENE_TEAMS = EIGENE_TEAMS.filter(t => t.id !== id); eigeneTeamsSpeichern(EIGENE_TEAMS);
+    try {
+      Object.keys(localStorage).filter(k => k.indexOf('hsg-' + id + '-') === 0).forEach(k => localStorage.removeItem(k));
+      if (localStorage.getItem(PROFIL_KEY) === id) localStorage.removeItem(PROFIL_KEY);
+    } catch (e) {}
+    if (id === PROFIL_ID) { location.href = location.pathname; return; }
+    delete PROFILE[id];
+    this.toast('Team entfernt');
+    this.profilModal();
   },
 
   einstellungenModal() {
@@ -2561,6 +2676,7 @@ const App = {
     daten.titel = titel;
     daten.verein = document.getElementById('e-verein').value.trim();
     daten.paypal = document.getElementById('e-paypal').value.trim();
+    speichern();
     this.modalZu(); this.rendern();
     this.toast('Gespeichert');
   },
@@ -2969,7 +3085,8 @@ App.rendern();
 if (nurLesen) App.tab('uebersicht');
 if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
 else if (Sync.aktiv()) Sync.abgleichen(false);
-if (!nurLesen) App.monatsbeitragErinnerung();
+if (!nurLesen && ERSTSTART) App.profilModal(true);
+else if (!nurLesen) App.monatsbeitragErinnerung();
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && Sync.aktiv()) Sync.abgleichen(false);
