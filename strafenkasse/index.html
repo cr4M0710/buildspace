@@ -1100,6 +1100,7 @@ const Fb = {
   async anmelden() {
     // Firebase wird beim Start vorgeladen (siehe Sync.init) – dann öffnet sich das Popup
     // noch innerhalb des Antippens und Safari blockiert es nicht.
+    if (this.istIOS() || this.standalone()) { this.googleWeiterleiten(); return; }
     if (!this.auth) {
       try { await this.laden(); } catch (e) { App.toast('Firebase konnte nicht geladen werden (offline?)'); return; }
     }
@@ -1130,6 +1131,45 @@ const Fb = {
   },
   weiterleitungErledigt() { try { localStorage.removeItem(this.WEITERLEITUNG_KEY); } catch (e) {} },
   email() { return this.user ? String(this.user.email).toLowerCase() : ''; },
+  // iPhone/iPad (auch Homescreen-App): Firebase-Popup/-Weiterleitung über firebaseapp.com verliert die
+  // Anmeldung wegen der Speicher-Trennung von Safari. Daher wie im Cockpit: direkt bei Google anmelden,
+  // Rückkehr auf diese Seite (#id_token=…), dann mit dem Token bei Firebase anmelden.
+  GOOGLE_CLIENT: '210909884248-hshj85p0d4me9rde25vs50mk1ms35cnj.apps.googleusercontent.com',
+  OAUTH_KEY: 'hsg-strafenkasse-oauth',
+  istIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); },
+  rueckkehrAdresse() { const u = new URL('index.html', location.href); u.search = ''; u.hash = ''; return u.href; },
+  googleWeiterleiten() {
+    const rnd = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+    const st = rnd(), nonce = rnd();
+    try { localStorage.setItem(this.OAUTH_KEY, JSON.stringify({ st, nonce, t: Date.now(), team: PROFIL_ID })); } catch (e) {}
+    const q = new URLSearchParams({ client_id: this.GOOGLE_CLIENT, redirect_uri: this.rueckkehrAdresse(), response_type: 'id_token',
+      scope: 'openid email profile', nonce, state: st, prompt: 'select_account' });
+    App.toast('Weiter zu Google …');
+    location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q;
+  },
+  // Wird ganz am Anfang aufgerufen: übernimmt die Rückkehr von Google (#id_token=… oder #error=…)
+  async googleRueckkehr() {
+    if (!/(^|[#&])(id_token|error)=/.test(location.hash)) return false;
+    const h = new URLSearchParams(location.hash.slice(1));
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(this.OAUTH_KEY) || 'null'); localStorage.removeItem(this.OAUTH_KEY); } catch (e) {}
+    const ziel = location.pathname + (saved && saved.team ? '?team=' + encodeURIComponent(saved.team) : location.search);
+    try { history.replaceState(null, '', ziel); } catch (e) {}   // Token aus der Adresszeile nehmen
+    const fehler = t => { App.toast(t, null, null, 9000); };
+    if (h.get('error')) { fehler(h.get('error') === 'access_denied' ? 'Google-Anmeldung abgebrochen.' : 'Google meldet: ' + h.get('error')); return true; }
+    const tok = h.get('id_token');
+    if (!saved || saved.st !== h.get('state') || Date.now() - saved.t > 15 * 60e3) { fehler('Anmeldung abgelaufen – bitte noch einmal auf „Mit Google anmelden“ tippen.'); return true; }
+    let claims = {};
+    try { claims = JSON.parse(decodeURIComponent(escape(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {}
+    if (claims.nonce !== saved.nonce || claims.aud !== this.GOOGLE_CLIENT) { fehler('Die Antwort von Google passt nicht zu dieser Anmeldung. Bitte noch einmal versuchen.'); return true; }
+    try {
+      await this.laden();
+      await this.auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(tok));
+      App.toast('Angemeldet als ' + (claims.email || ''));
+      if (!Sync.aktiv() && !nurLesen) App.syncFirebaseModal();
+    } catch (e) { fehler('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); }
+    return true;
+  },
   ref(code) { return this.db.collection('strafenkasse').doc(code); },
   ansichtRef(token) { return this.db.collection('strafenkasse_ansicht').doc(token); },
 };
@@ -3056,6 +3096,7 @@ document.addEventListener('input', e => {
 })();
 
 // ---------- Start ----------
+const GOOGLE_RUECKKEHR = /(^|[#&])(id_token|error)=/.test(location.hash);
 Sync.init();
 
 // Team-Ansicht (nur Lesen): per Link (#v=...) aktivieren UND dauerhaft merken,
@@ -3132,7 +3173,8 @@ App.rendern();
 if (nurLesen) App.tab('uebersicht');
 if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
 else if (Sync.aktiv()) Sync.abgleichen(false);
-if (!nurLesen && ERSTSTART) App.profilModal(true);
+if (GOOGLE_RUECKKEHR) Fb.googleRueckkehr();
+else if (!nurLesen && ERSTSTART) App.profilModal(true);
 else if (!nurLesen) App.monatsbeitragErinnerung();
 
 document.addEventListener('visibilitychange', () => {
