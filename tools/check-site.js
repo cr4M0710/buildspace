@@ -25,7 +25,7 @@ try {
 
 const CATS = {
   schule: ["mathematik", "arbeitslehre", "faecheruebergreifend", "weiterefaecher", "sonstiges"],
-  handball: ["verein", "jugend", "maenner1", "hallendienst", "training"],
+  handball: ["verein", "jugend", "hallendienst", "training"],
   freizeit: [null]
 };
 /* Seiten, die bewusst ohne protect.js laufen */

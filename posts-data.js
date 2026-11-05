@@ -12,7 +12,7 @@
    - category:    'schule' | 'handball' | 'freizeit'
    - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'faecheruebergreifend'
                   | 'weiterefaecher' | 'sonstiges'
-                  bei 'handball' → 'verein' | 'jugend' | 'maenner1' | 'hallendienst' | 'training'
+                  bei 'handball' → 'verein' | 'jugend' | 'hallendienst' | 'training'
                   bei 'freizeit' → leer lassen (null)
    - url:         Pfad zur Beitragsseite, relativ zur index.html
    - emoji:       (optional) ein einzelnes Emoji, das groß auf der Karte
@@ -1178,15 +1178,15 @@ const posts = [
     excerptEn: "Build your own HTML pages for class with AI: eleven formats to try, a prompt builder for subject, year and course level, a code preview for iPad and smartboard and a checklist before use."
    },
    {
-    title: "Anwurf – Spielplan & Tabelle Männer 1",
+    title: "Anwurf – Spielplan & Tabelle",
     excerpt: "Alle Ligen der HSG: Tabellen, Spielpläne, Spielverlauf Tor für Tor, Team-, Kader- und Spielerstatistiken, Suche und Favoriten, automatisch aus nuLiga, mit Push bei Anwurf und Endstand. Als App installierbar.",
     date: "2026-10-25",
     category: "handball",
-    subcategory: "maenner1",
+    subcategory: "verein",
     url: "anwurf/index.html",
     emoji: "🤾",
     tags: ["tool"],
-    titleEn: "Anwurf – Fixtures & Table Men's 1",
+    titleEn: "Anwurf – Fixtures & Table",
     excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
    },
    {
