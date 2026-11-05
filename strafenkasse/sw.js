@@ -1,7 +1,7 @@
 /* Service Worker – Strafenkasse HSG Wettenberg (alle Mannschaften)
    Strategie: network-first für gleiche Herkunft (immer aktuell online, offline aus Cache).
    Fremd-Herkunft (z. B. Supabase-API) wird nicht angefasst. */
-const CACHE = 'strafenkasse-v5';
+const CACHE = 'strafenkasse-v6';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
@@ -21,7 +21,7 @@ self.addEventListener('fetch', event => {
 
   event.respondWith((async () => {
     try {
-      const net = await fetch(req);
+      const net = await fetch(req, req.mode === 'navigate' ? undefined : { cache: 'no-cache' });
       const cache = await caches.open(CACHE);
       cache.put(req, net.clone());
       return net;
