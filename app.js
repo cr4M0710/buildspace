@@ -60,6 +60,7 @@ const folderStructure = {
     color: "var(--c-handball)",
     icon: ICONS.handball,
     subfolders: [
+      { id: "verein" },
       { id: "jugend" },
       { id: "maenner1" },
       { id: "hallendienst" },
@@ -172,7 +173,7 @@ const I18N = {
       mathematik: "Mathematik", arbeitslehre: "Arbeitslehre",
       faecheruebergreifend: "Classroom Management", weiterefaecher: "Weitere Fächer",
       sonstiges: "Sonstiges", unterrichtsmaterialien: "Unterrichtsmaterialien",
-      jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
+      verein: "Verein", jugend: "Jugend", maenner1: "Männer 1", maenner2: "Männer 2",
       hallendienst: "Hallendienst", training: "Training"
     }
   },
@@ -264,7 +265,7 @@ const I18N = {
       mathematik: "Mathematics", arbeitslehre: "Vocational Studies",
       faecheruebergreifend: "Classroom Management", weiterefaecher: "Other subjects",
       sonstiges: "Miscellaneous", unterrichtsmaterialien: "Teaching materials",
-      jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
+      verein: "Club", jugend: "Youth", maenner1: "Men's 1", maenner2: "Men's 2",
       hallendienst: "Hall Duty", training: "Training"
     }
   }

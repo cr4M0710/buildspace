@@ -52,7 +52,7 @@ Wenn Marc „stell das auf buildspace“, „neues Tool“ o. Ä. schreibt, imme
 
 - `category` / `subcategory` – nur diese Werte:
   - `schule` → `mathematik` | `arbeitslehre` | `faecheruebergreifend` (= „Classroom Management“) | `weiterefaecher` | `sonstiges`
-  - `handball` → `jugend` | `maenner1` | `maenner2` | `hallendienst` | `training`
+  - `handball` → `verein` | `jugend` | `maenner1` | `hallendienst` | `training`
   - `freizeit` → `subcategory: null`
 - `tags` (optional, werden als Filter-Chips über der Liste jedes Fachs/Ordners angeboten – ab 5 Beiträgen; Gruppen ODER, zwischen Gruppen UND). Nur diese Werte (Reihenfolge: Art, Thema, Sozialform, Einsatz, Jahrgang):
   - Art: `spiel` | `tool`

@@ -12,7 +12,7 @@
    - category:    'schule' | 'handball' | 'freizeit'
    - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'faecheruebergreifend'
                   | 'weiterefaecher' | 'sonstiges'
-                  bei 'handball' → 'jugend' | 'maenner1' | 'hallendienst' | 'training'
+                  bei 'handball' → 'verein' | 'jugend' | 'maenner1' | 'hallendienst' | 'training'
                   bei 'freizeit' → leer lassen (null)
    - url:         Pfad zur Beitragsseite, relativ zur index.html
    - emoji:       (optional) ein einzelnes Emoji, das groß auf der Karte
@@ -93,16 +93,16 @@ const posts = [
     excerptEn: "Digital scoreboard for training sessions: score, time and penalty timers at a glance."
    },
    {
-    title: "Strafenkasse – Männer 1",
-    excerpt: "Strafen erfassen, Einzahlungen buchen und den Kassenstand teilen – als installierbare App, auch offline.",
+    title: "Strafenkasse – HSG Wettenberg",
+    excerpt: "Für jede Mannschaft im Verein: eigenes Team anlegen, Strafen erfassen, Einzahlungen buchen, Kassenstand live mit der Mannschaft teilen – als App installierbar, auch offline.",
     date: "2026-09-18",
     category: "handball",
-    subcategory: "maenner1",
-    url: "strafenkasse/index.html?team=m1",
+    subcategory: "verein",
+    url: "strafenkasse/index.html",
     emoji: "💰",
     tags: ["tool"],
-    titleEn: "Penalty Fund – Men's 1",
-    excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
+    titleEn: "Penalty Fund – HSG Wettenberg",
+    excerptEn: "For every team in the club: set up your own team, log fines, record payments and share the live balance with the squad — installable as an app, works offline too."
    },
    {
     title: "Wizard – Das Kartenspiel",

@@ -553,6 +553,16 @@
     <label class="filter-toggle"><input type="checkbox" id="mb-erinnerung" onchange="App.uiSet('mbErinnerungAus', !this.checked)"> Monatliche Erinnerung anzeigen</label>
     <div class="hinweis">Erinnert am Monatsanfang ans Abrechnen. Das Abrechnen selbst findest du jetzt unter „Erfassen → Monatsbeitrag abrechnen“.</div>
 
+    <h2>Saison</h2>
+    <div class="card" style="padding:14px">
+      <div class="hinweis" id="saison-info" style="margin-top:0"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+        <button class="btn klein sekundaer" onclick="App.saisonPdf()">Saisonübersicht (PDF)</button>
+        <button class="btn klein sekundaer" onclick="App.saisonAbschlussModal()">Saison abschließen</button>
+      </div>
+      <div id="saison-archiv"></div>
+    </div>
+
     <h2>Datensicherung</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
       <button class="btn klein sekundaer" onclick="App.exportieren()">Backup speichern</button>
@@ -836,7 +846,7 @@ function standardDaten() {
     id: neueId(), art: b[2], spielerId: idVon[b[1]], text: b[3], betrag: b[4], datum: b[0], notiz: b[5] || '', ts,
   }));
   return {
-    titel: STD_TITEL, verein: STD_VEREIN, paypal: STD_PAYPAL,
+    titel: STD_TITEL, verein: STD_VEREIN, paypal: STD_PAYPAL, paypalme: '', archiv: [],
     spieler, spielerVersion: SPIELER_VERSION, spielerTs: ts,
     katalog: PROFIL.katalogLeer ? [] : STANDARD_KATALOG.map(k => ({ id: neueId(), ...k })), katalogVersion: KATALOG_VERSION, katalogTs: ts,
     buchungen, geloescht: {},
@@ -851,6 +861,8 @@ function normalisieren(d) {
   if (d.titel == null) d.titel = STD_TITEL;
   if (d.verein == null) d.verein = STD_VEREIN;
   if (d.paypal == null) d.paypal = STD_PAYPAL;
+  if (d.paypalme == null) d.paypalme = '';
+  if (!Array.isArray(d.archiv)) d.archiv = [];
   return d;
 }
 
@@ -905,6 +917,8 @@ function laden() {
       if (d.titel == null) d.titel = STD_TITEL;
       if (d.verein == null) d.verein = STD_VEREIN;
       if (d.paypal == null) d.paypal = STD_PAYPAL;
+      if (d.paypalme == null) d.paypalme = '';
+      if (!Array.isArray(d.archiv)) d.archiv = [];
       alteSpielerEntfernen(d);
       return d;
     }
@@ -946,6 +960,15 @@ const monatName = iso7 => { const [j, m] = iso7.split('-'); return `${MONATE[par
 const spielerName = id => (daten.spieler.find(s => s.id === id) || { name: 'Unbekannt' }).name;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const nachName = (a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+// PayPal.me-Name aus Eingabe wie „paypal.me/name“, „https://www.paypal.com/paypalme/name“ oder „name“
+function paypalMeName(t) {
+  return String(t || '').trim().replace(/^https?:\/\//i, '').replace(/^(www\.)?(paypal\.me|paypal\.com\/paypalme)\//i, '').split(/[/?#\s]/)[0].replace(/[^A-Za-z0-9._-]/g, '');
+}
+function paypalZahlLink(betrag) {
+  if (!daten.paypalme || !(betrag > 0)) return '';
+  return 'https://www.paypal.com/paypalme/' + encodeURIComponent(daten.paypalme) + '/' + betrag.toFixed(2) + 'EUR';
+}
+const kannPaypal = () => !!(daten.paypalme || daten.paypal);
 const titelZeile = () => (daten.verein ? `${daten.titel} – ${daten.verein}` : daten.titel);
 
 function betragParsen(text) {
@@ -1004,7 +1027,11 @@ function stabil(o) {
 // Spieler/Katalog: ganze Sammlung, neuerer Zeitstempel (spielerTs/katalogTs) gewinnt.
 function mergeDaten(remote, local) {
   const m = {};
-  ['titel', 'verein', 'paypal'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
+  ['titel', 'verein', 'paypal', 'paypalme'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
+  // Saison-Archiv: Vereinigung nach id (abgeschlossene Saisons ändern sich nicht mehr)
+  const arch = {};
+  [...(remote.archiv || []), ...(local.archiv || [])].forEach(a => { if (a && a.id) arch[a.id] = a; });
+  m.archiv = Object.values(arch).sort((a, b) => (a.bis || '').localeCompare(b.bis || ''));
   m.spielerTs =Math.max(local.spielerTs || 0, remote.spielerTs || 0);
   m.spieler = (local.spielerTs || 0) >= (remote.spielerTs || 0) ? local.spieler : remote.spieler;
   m.spielerVersion = Math.max(local.spielerVersion || 1, remote.spielerVersion || 1);
@@ -1246,7 +1273,7 @@ const Sync = {
   },
   // ---- Spieler-Ansicht (schreibgeschützter Live-Stand für die Mannschaft) ----
   ansichtStand() {
-    const { geloescht, ...rest } = daten;
+    const { geloescht, archiv, ...rest } = daten;
     return rest;
   },
   // Veröffentlicht den aktuellen Stand, falls eine Spieler-Ansicht existiert und sich etwas geändert hat
@@ -1903,6 +1930,7 @@ const App = {
           <div class="betrag ${b.art === 'strafe' ? 'offen' : 'plus'}">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</div>
         </div>`).join('') : '<div class="leer">Noch keine Buchungen.</div>'}
       </div>
+      ${nurLesen && saldo(id) > 0 && kannPaypal() ? `<button class="btn" onclick="App.jetztZahlen('${id}')">Jetzt per PayPal zahlen (${eur(saldo(id))})</button><div style="height:9px"></div>` : ''}
       ${!nurLesen && saldo(id) > 0 ? `<button class="btn gruen" onclick="App.schnellzahlung('${id}')">Kompletten offenen Betrag einzahlen (${eur(saldo(id))})</button><div style="height:9px"></div>` : ''}
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.spielerPdf('${id}')">Als PDF</button>
@@ -1990,7 +2018,7 @@ const App = {
 
   // ===== Tab: Statistik =====
   rendernStatistik() {
-    const strafen = daten.buchungen.filter(b => b.art === 'strafe');
+    const strafen = daten.buchungen.filter(b => b.art === 'strafe' && !b.uebertrag);
     const summe = Math.round(strafen.reduce((s, b) => s + b.betrag, 0) * 100) / 100;
     document.getElementById('st-summe').textContent = eur(summe);
     document.getElementById('st-anzahl').textContent = String(strafen.length);
@@ -2101,6 +2129,7 @@ const App = {
     this.rendernVerwaltenSyncKnopf();
     const pinfo = document.getElementById('profil-info');
     if (pinfo) pinfo.textContent = `Aktives Team: ${daten.titel || PROFIL.titel}. Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync – ein Wechsel lädt die App neu.`;
+    this.rendernSaison();
     const info = document.getElementById('einstellungen-info'); if (info) info.textContent = titelZeile() + (daten.paypal ? ' · PayPal: ' + daten.paypal : '');
     const mbEl = document.getElementById('mb-erinnerung'); if (mbEl) mbEl.checked = !prefs.mbErinnerungAus;
     const sortEl = document.getElementById('kat-sort'); if (sortEl) sortEl.value = prefs.sortKat;
@@ -2562,11 +2591,34 @@ const App = {
     if (ich) {
       const sd = saldo(ich.id);
       unten = `<div class="mein-wert" style="color:${sd > 0 ? 'var(--rot)' : 'var(--gruen)'}">${eur(Math.max(0, sd))}</div>
-        <div class="mein-sub">${sd > 0 ? 'offen' : (sd < 0 ? 'Guthaben: ' + eur(-sd) : 'alles bezahlt')}${sd > 0 && daten.paypal ? ' · zahlbar per PayPal an ' + esc(daten.paypal) : ''}</div>
+        <div class="mein-sub">${sd > 0 ? 'offen' : (sd < 0 ? 'Guthaben: ' + eur(-sd) : 'alles bezahlt')}${sd > 0 && daten.paypal && !daten.paypalme ? ' · zahlbar per PayPal an ' + esc(daten.paypal) : ''}</div>
+        ${sd > 0 && kannPaypal() ? `<button class="btn" style="width:100%;margin-top:10px" onclick="App.jetztZahlen('${ich.id}')">Jetzt per PayPal zahlen (${eur(sd)})</button>` : ''}
         <button class="btn sekundaer klein" style="width:100%;margin-top:10px" onclick="App.spielerDetail('${ich.id}')">Meine Buchungen</button>`;
     }
     el.innerHTML = `<div class="sync-status" style="margin-bottom:8px">Mein Stand</div>
       <select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>${unten}`;
+  },
+
+  // Spieler-Ansicht: offenen Betrag per PayPal bezahlen
+  async jetztZahlen(id) {
+    const betrag = saldo(id);
+    if (!(betrag > 0)) { this.toast('Nichts offen 👍'); return; }
+    const link = paypalZahlLink(betrag);
+    if (link) { window.open(link, '_blank', 'noopener'); return; }
+    // Nur E-Mail hinterlegt: Adresse kopieren und PayPal öffnen
+    const zweck = (daten.titel || 'Strafenkasse') + ' – ' + spielerName(id);
+    try { await navigator.clipboard.writeText(daten.paypal); } catch (e) {}
+    this.modal(`
+      <h3>Per PayPal zahlen</h3>
+      <div class="hinweis" style="margin-top:0;margin-bottom:12px">In PayPal „Senden“ wählen und diese Angaben eintragen (Adresse ist schon kopiert):</div>
+      <div class="feld"><label>An</label><input type="text" readonly value="${esc(daten.paypal)}" onclick="this.select()"></div>
+      <div class="feld"><label>Betrag</label><input type="text" readonly value="${esc(betrag.toFixed(2).replace('.', ','))} €" onclick="this.select()"></div>
+      <div class="feld"><label>Verwendungszweck</label><input type="text" readonly value="${esc(zweck)}" onclick="this.select()"></div>
+      <div class="hinweis" style="margin-top:0">Bitte „Freunde &amp; Familie“ wählen. Die Einzahlung trägt der Kassenwart danach ein.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Schließen</button>
+        <button class="btn" onclick="window.open('https://www.paypal.com/myaccount/transfer/homepage/pay','_blank','noopener')">PayPal öffnen</button>
+      </div>`);
   },
 
   fbAnmelden() { Fb.anmelden(); },
@@ -2750,6 +2802,8 @@ const App = {
       <div class="feld"><label>Titel</label><input type="text" id="e-titel" value="${esc(daten.titel || '')}" placeholder="z. B. ${esc(STD_TITEL)}"></div>
       <div class="feld"><label>Verein</label><input type="text" id="e-verein" value="${esc(daten.verein || '')}" placeholder="z. B. HSG Wettenberg"></div>
       <div class="feld"><label>PayPal-Adresse (optional)</label><input type="text" id="e-paypal" value="${esc(daten.paypal || '')}" placeholder="name@mail.de"></div>
+      <div class="feld"><label>PayPal.me-Name (optional, für „Jetzt zahlen“)</label><input type="text" id="e-paypalme" value="${esc(daten.paypalme || '')}" placeholder="z. B. nickstroh – aus paypal.me/nickstroh"></div>
+      <div class="hinweis" style="margin-top:0">Mit PayPal.me-Name öffnet „Jetzt per PayPal zahlen“ in der Spieler-Ansicht PayPal direkt mit dem offenen Betrag. Deinen Namen findest du in der PayPal-App unter „PayPal.me“.</div>
       <div class="hinweis" style="margin-top:0">Erscheint im Kopf der App und in den geteilten Übersichten, Bildern und PDFs. PayPal leer lassen, wenn nicht gewünscht.</div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
@@ -2763,6 +2817,7 @@ const App = {
     daten.titel = titel;
     daten.verein = document.getElementById('e-verein').value.trim();
     daten.paypal = document.getElementById('e-paypal').value.trim();
+    daten.paypalme = paypalMeName(document.getElementById('e-paypalme').value);
     speichern();
     this.modalZu(); this.rendern();
     this.toast('Gespeichert');
@@ -2907,7 +2962,7 @@ const App = {
 
   // ===== Statistik teilen / exportieren =====
   statistikDaten() {
-    const strafen = daten.buchungen.filter(b => b.art === 'strafe');
+    const strafen = daten.buchungen.filter(b => b.art === 'strafe' && !b.uebertrag);
     const summe = Math.round(strafen.reduce((s, b) => s + b.betrag, 0) * 100) / 100;
     const proSpieler = daten.spieler.map(s => {
       const bs = strafen.filter(b => b.spielerId === s.id);
@@ -2965,6 +3020,147 @@ const App = {
         ${d.monate.map(m => `<tr><td>${monatName(m.m)}</td><td class="r">${eur(m.sum)}</td></tr>`).join('')}
       </table>`;
     window.print();
+  },
+
+  // ===== Saison: Übersicht, Abschluss, Archiv =====
+  saisonVorschlag() {
+    const d = new Date(), j = d.getFullYear(), m = d.getMonth() + 1;
+    const start = m >= 7 ? j : j - 1; // Handball-Saison: Juli bis Juni
+    return 'Saison ' + start + '/' + String((start + 1) % 100).padStart(2, '0');
+  },
+  saisonZeitraum(bs) {
+    const ds = bs.map(b => b.datum).filter(Boolean).sort();
+    return { von: ds[0] || heute(), bis: ds[ds.length - 1] || heute() };
+  },
+  rendernSaison() {
+    const info = document.getElementById('saison-info');
+    if (info) {
+      const z = this.saisonZeitraum(daten.buchungen);
+      const ue = daten.buchungen.find(b => b.uebertrag);
+      info.textContent = daten.buchungen.length
+        ? `Aktuelle Saison: ${daten.buchungen.length} Buchungen vom ${datumDE(z.von)} bis ${datumDE(z.bis)}${ue ? ' (inkl. Übertrag aus ' + (ue.saison || 'Vorsaison') + ')' : ''}. Am Saisonende: Übersicht als PDF sichern, dann abschließen – offene Beträge und der Kassenstand werden übernommen.`
+        : 'Noch keine Buchungen in dieser Saison.';
+    }
+    const el = document.getElementById('saison-archiv');
+    if (!el) return;
+    const arch = [...(daten.archiv || [])].reverse();
+    el.innerHTML = arch.length ? `<div class="sync-status" style="margin:14px 0 6px">Archiv</div>` + arch.map(a => `
+      <button class="btn klein sekundaer" style="width:100%;margin-bottom:7px;display:flex;justify-content:space-between;gap:8px" onclick="App.saisonPdf('${esc(a.id)}')">
+        <span>${esc(a.name)}</span><span style="opacity:.75">${esc(datumDE(a.von))} – ${esc(datumDE(a.bis))} · PDF</span>
+      </button>`).join('') : '';
+  },
+  // PDF für die laufende Saison (ohne id) oder eine archivierte Saison
+  saisonPdf(archivId) {
+    const a = archivId ? (daten.archiv || []).find(x => x.id === archivId) : null;
+    if (archivId && !a) return;
+    const bs = (a ? a.buchungen : daten.buchungen).slice().sort((x, y) => x.datum.localeCompare(y.datum));
+    const namen = {}; (a ? a.spieler : daten.spieler).forEach(sp => { namen[sp.id] = sp.name; });
+    daten.spieler.forEach(sp => { if (!namen[sp.id]) namen[sp.id] = sp.name; });
+    const r2 = x => Math.round(x * 100) / 100;
+    const z = a ? { von: a.von, bis: a.bis } : this.saisonZeitraum(bs);
+    const name = a ? a.name : this.saisonVorschlag() + ' (laufend)';
+    const pro = {};
+    bs.forEach(b => {
+      if (!b.spielerId) return;
+      const p = pro[b.spielerId] || (pro[b.spielerId] = { name: namen[b.spielerId] || 'Unbekannt', ue: 0, st: 0, anz: 0, gez: 0 });
+      if (b.art === 'strafe' && b.uebertrag) p.ue += b.betrag;
+      else if (b.art === 'strafe') { p.st += b.betrag; p.anz++; }
+      else if (b.art === 'zahlung' && b.uebertrag) p.ue -= b.betrag;
+      else if (b.art === 'zahlung') p.gez += b.betrag;
+    });
+    const zeilen = Object.values(pro).map(p => ({ ...p, off: r2(p.ue + p.st - p.gez) })).sort((x, y) => y.st - x.st || x.name.localeCompare(y.name, 'de'));
+    const sum = k => r2(zeilen.reduce((s2, p) => s2 + p[k], 0));
+    const kasse = bs.filter(b => b.art === 'kasse_ein' || b.art === 'kasse_aus');
+    let kstand = 0;
+    bs.forEach(b => { if (b.art === 'zahlung' || b.art === 'kasse_ein') kstand += b.betrag; if (b.art === 'kasse_aus') kstand -= b.betrag; });
+    const ein = r2(kasse.filter(b => b.art === 'kasse_ein' && !b.uebertrag).reduce((s2, b) => s2 + b.betrag, 0));
+    const aus = r2(kasse.filter(b => b.art === 'kasse_aus').reduce((s2, b) => s2 + b.betrag, 0));
+    const start = r2(bs.filter(b => b.uebertrag && (b.art === 'kasse_ein' || b.art === 'zahlung')).reduce((s2, b) => s2 + b.betrag, 0));
+    const top = {};
+    bs.filter(b => b.art === 'strafe' && !b.uebertrag).forEach(b => { const t = top[b.text] || (top[b.text] = { text: b.text, anz: 0, sum: 0 }); t.anz++; t.sum += b.betrag; });
+    const topL = Object.values(top).sort((x, y) => y.sum - x.sum).slice(0, 10);
+    document.getElementById('druckbereich').innerHTML = `
+      <h1>${esc(name)} · ${esc(titelZeile())}</h1>
+      <div class="datum">Zeitraum ${datumDE(z.von)} – ${datumDE(z.bis)} · erstellt am ${datumDE(heute())}</div>
+      <h2>Kasse</h2>
+      <table>
+        <tr><td>Kassenstand zu Saisonbeginn (Übertrag)</td><td class="r">${eur(start)}</td></tr>
+        <tr><td>Einzahlungen der Spieler</td><td class="r">${eur(sum('gez'))}</td></tr>
+        <tr><td>Sonstige Einnahmen</td><td class="r">${eur(ein)}</td></tr>
+        <tr><td>Ausgaben</td><td class="r">−${eur(aus)}</td></tr>
+        <tr class="summe"><td>Kassenstand zum Saisonende</td><td class="r">${eur(r2(kstand))}</td></tr>
+        <tr><td>Noch offene Strafen</td><td class="r">${eur(r2(zeilen.reduce((s2, p) => s2 + Math.max(0, p.off), 0)))}</td></tr>
+      </table>
+      <h2>Spieler</h2>
+      <table>
+        <tr><th>Spieler</th><th class="r">Übertrag</th><th class="r">Strafen</th><th class="r">Anzahl</th><th class="r">Gezahlt</th><th class="r">Offen</th></tr>
+        ${zeilen.map(p => `<tr><td>${esc(p.name)}</td><td class="r">${p.ue ? eur(r2(p.ue)) : '–'}</td><td class="r">${eur(r2(p.st))}</td><td class="r">${p.anz}</td><td class="r">${eur(r2(p.gez))}</td><td class="r">${eur(p.off)}</td></tr>`).join('')}
+        <tr class="summe"><td>Gesamt</td><td class="r">${eur(sum('ue'))}</td><td class="r">${eur(sum('st'))}</td><td class="r">${zeilen.reduce((s2, p) => s2 + p.anz, 0)}</td><td class="r">${eur(sum('gez'))}</td><td class="r">${eur(sum('off'))}</td></tr>
+      </table>
+      ${kasse.filter(b => !b.uebertrag).length ? `<h2>Einnahmen &amp; Ausgaben der Kasse</h2>
+      <table>
+        <tr><th>Datum</th><th>Buchung</th><th class="r">Betrag</th></tr>
+        ${kasse.filter(b => !b.uebertrag).map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'kasse_aus' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('')}
+      </table>` : ''}
+      ${topL.length ? `<h2>Häufigste Strafen</h2>
+      <table>
+        <tr><th>Strafe</th><th class="r">Anzahl</th><th class="r">Summe</th></tr>
+        ${topL.map(t => `<tr><td>${esc(t.text)}</td><td class="r">${t.anz}</td><td class="r">${eur(r2(t.sum))}</td></tr>`).join('')}
+      </table>` : ''}`;
+    window.print();
+  },
+  saisonAbschlussModal() {
+    if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
+    if (!daten.buchungen.length) { this.toast('Noch keine Buchungen – nichts abzuschließen.'); return; }
+    const offen = daten.spieler.filter(sp => saldo(sp.id) !== 0);
+    this.modal(`
+      <h3>Saison abschließen</h3>
+      <div class="feld"><label>Name der Saison</label><input type="text" id="sa-name" value="${esc(this.saisonVorschlag())}"></div>
+      <div class="hinweis" style="margin-top:0">
+        Alle ${daten.buchungen.length} Buchungen wandern ins Archiv (als PDF jederzeit abrufbar). Die neue Saison startet mit:
+        <br>• Kassenstand ${eur(kassenstand())} als Übertrag
+        <br>• ${offen.length} Spieler mit offenem Betrag oder Guthaben (wird übernommen)
+        <br>Spieler und Strafenkatalog bleiben unverändert.
+      </div>
+      <div class="hinweis">Tipp: Vorher „Saisonübersicht (PDF)“ speichern bzw. ein Backup anlegen.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" onclick="App.saisonAbschliessen()">Abschließen</button>
+      </div>`);
+  },
+  saisonAbschliessen() {
+    const name = (document.getElementById('sa-name').value || '').trim() || this.saisonVorschlag();
+    if (!confirm(`„${name}“ jetzt abschließen und eine neue Saison beginnen?`)) return;
+    const ts = Date.now(), datum = heute();
+    const alt = daten.buchungen.slice();
+    const z = this.saisonZeitraum(alt);
+    const r2 = x => Math.round(x * 100) / 100;
+    // Salden vor dem Verschieben berechnen
+    const salden = daten.spieler.map(sp => ({ id: sp.id, sd: saldo(sp.id) })).filter(x => x.sd !== 0);
+    const bar = kassenTeil('bar'), digital = kassenTeil('digital'), gesamt = kassenstand();
+    const guthaben = r2(salden.filter(x => x.sd < 0).reduce((s2, x) => s2 - x.sd, 0));
+    const neu = [];
+    const text = 'Übertrag aus ' + name;
+    salden.forEach(x => {
+      if (x.sd > 0) neu.push({ id: neueId(), art: 'strafe', spielerId: x.id, text, betrag: x.sd, datum, notiz: 'offener Betrag', ts, uebertrag: true, saison: name });
+      // Guthaben als Übertrags-Einzahlung; der Kassen-Übertrag wird darum gekürzt, damit der Kassenstand stimmt
+      else neu.push({ id: neueId(), art: 'zahlung', spielerId: x.id, text: 'Guthaben – ' + text, betrag: -x.sd, datum, notiz: '', zahlweg: 'uebertrag', ts, uebertrag: true, saison: name });
+    });
+    const rest = r2(gesamt - bar - digital - guthaben);
+    if (bar) neu.push({ id: neueId(), art: 'kasse_ein', text: 'Kassenstand – ' + text, betrag: bar, datum, notiz: 'bar', zahlweg: 'bar', ts, uebertrag: true, saison: name });
+    if (digital) neu.push({ id: neueId(), art: 'kasse_ein', text: 'Kassenstand – ' + text, betrag: digital, datum, notiz: 'digital', zahlweg: 'digital', ts, uebertrag: true, saison: name });
+    if (rest) neu.push({ id: neueId(), art: 'kasse_ein', text: 'Kassenstand – ' + text, betrag: rest, datum, notiz: '', ts, uebertrag: true, saison: name });
+    daten.archiv = (daten.archiv || []).concat([{
+      id: neueId(), name, von: z.von, bis: z.bis, erstellt: datum, kassenstand: gesamt,
+      spieler: daten.spieler.map(sp => ({ id: sp.id, name: sp.name })), buchungen: alt,
+    }]);
+    // Alte Buchungen per Löschmarke entfernen (damit der Cloud-Sync sie auch auf anderen Geräten entfernt)
+    alt.forEach(b => { daten.geloescht[b.id] = ts + 1; });
+    daten.buchungen = neu;
+    if (r2(kassenstand()) !== r2(gesamt)) console.warn('Kassenstand-Übertrag weicht ab', kassenstand(), gesamt);
+    speichern();
+    this.modalZu(); this.rendern();
+    this.toast(`${name} abgeschlossen – neue Saison gestartet`);
   },
 
   // ===== Backup =====
