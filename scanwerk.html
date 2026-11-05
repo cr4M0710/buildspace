@@ -125,7 +125,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .shutter svg{position:absolute;inset:-4px;width:76px;height:76px;transform:rotate(-90deg)}
 .shutter circle{fill:none;stroke:var(--hl);stroke-width:4;stroke-dasharray:226;stroke-dashoffset:226;transition:stroke-dashoffset .2s}
 .cam-done{justify-self:end;display:flex;align-items:center;gap:10px}
-.cam-stack{width:48px;height:60px;border-radius:6px;background:#222 center/cover no-repeat;border:2px solid #fff;position:relative}
+.cam-stack{width:48px;height:60px;border-radius:6px;background:#222 center/cover no-repeat;border:2px solid #fff;position:relative;flex:none}
+.cam-done-btn{background:var(--hl);color:var(--hl-ink);min-height:44px;padding:0 14px}
+.cam-tray{position:absolute;left:0;right:0;bottom:0;z-index:4;background:rgba(13,15,18,.94);padding:14px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));border-radius:18px 18px 0 0;display:flex;flex-direction:column;gap:12px}
+.cam-tray-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hint-dim{font-size:12px;color:var(--stage-dim);margin:0}
+.cam-tray-list{display:flex;gap:12px;overflow-x:auto;padding:6px 2px 4px;scrollbar-width:none}
+.cam-tray-list::-webkit-scrollbar{display:none}
+.tray-item{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--stage-dim)}
+.tray-img{width:72px;height:96px;border-radius:6px;background:#2a2e36 center/cover no-repeat;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.tray-del{position:absolute;top:-6px;right:-8px;width:34px;height:34px;border-radius:50%;background:#F06A5E;color:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.tray-del .ic{width:18px;height:18px}
 .cam-stack span{position:absolute;top:-8px;right:-8px;min-width:22px;height:22px;border-radius:11px;background:var(--hl);color:var(--hl-ink);font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 5px}
 .cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:3}
 .cam-flash.go{animation:flash .35s ease-out}
@@ -330,6 +340,11 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
       <button id="camAuto" class="toggle-chip" aria-pressed="true" aria-label="Auto-Scan ein- oder ausschalten"><svg class="ic" style="width:16px;height:16px"><use href="#i-scan"/></svg><span>Auto-Scan an</span></button>
     </div>
     <div id="camHint">Dokument ins Bild halten</div>
+    <div id="camTray" class="cam-tray" hidden role="dialog" aria-label="Aufgenommene Seiten">
+      <div class="cam-tray-head"><div><strong>Aufgenommen</strong> <span id="trayCount" class="mono"></span><div class="hint-dim">Auto-Scan pausiert</div></div><button id="trayClose" class="btn btn-accent">Weiter scannen</button></div>
+      <div class="cam-tray-list" id="trayList"></div>
+      <p id="trayEmpty" class="hint-dim" hidden>Alle Seiten verworfen.</p>
+    </div>
     <div id="camFallback" hidden>
       <div>
         <svg class="ic" style="width:44px;height:44px;color:var(--hl)"><use href="#i-camera"/></svg>
@@ -342,7 +357,7 @@ body.sw-work #protect-ui-handle,body.sw-work #protect-back-link,body.sw-work #pr
   <div class="cam-bottom">
     <div style="justify-self:start;display:flex;gap:4px"><button id="camNativeBtn" class="icon-btn" aria-label="Kamera-App mit Blitz verwenden"><svg class="ic" style="width:28px;height:28px"><use href="#i-camera"/></svg></button><button id="camGallery" class="icon-btn" aria-label="Fotos importieren"><svg class="ic" style="width:28px;height:28px"><use href="#i-image"/></svg></button></div>
     <button id="camShutter" class="shutter" aria-label="Auslösen"><svg viewBox="0 0 76 76"><circle cx="38" cy="38" r="36" id="camRing"/></svg></button>
-    <button id="camDone" class="cam-done" aria-label="Fertig"><span class="mono" style="font-weight:700">Fertig</span><span class="cam-stack" id="camStack"><span id="camCount">0</span></span></button>
+    <div class="cam-done"><button id="camStack" class="cam-stack" aria-label="Noch keine Seite aufgenommen"><span id="camCount">0</span></button><button id="camDone" class="btn btn-accent cam-done-btn">Fertig</button></div>
   </div>
 </section>
 
@@ -1532,7 +1547,7 @@ const Engine = (() => {
   };
 
   /* ---------- Kamera ---------- */
-  const Cam = { stream: null, track: null, caps: {}, photoCaps: null, ic: null, timer: 0, raf: 0, quad: null, disp: null, stable: 0, last: null, armed: true, busy: false, count: 0, pending: Promise.resolve(), lum: 128, torchOn: false, focusAt: 0, flashWarned: false };
+  const Cam = { shots: [], trayOpen: false, stream: null, track: null, caps: {}, photoCaps: null, ic: null, timer: 0, raf: 0, quad: null, disp: null, stable: 0, last: null, armed: true, busy: false, count: 0, pending: Promise.resolve(), lum: 128, torchOn: false, focusAt: 0, flashWarned: false };
   const STABLE_MS = 900; // so lange muss das erkannte Blatt ruhig liegen, bis der Auto-Scan auslöst
   const FLASH_MODES = ['off', 'auto', 'on', 'torch'];
   const FLASH_LABEL = { off: 'Blitz aus', auto: 'Blitz auto', on: 'Blitz an', torch: 'Dauerlicht' };
@@ -1556,7 +1571,7 @@ const Engine = (() => {
     try { await Cam.track.applyConstraints({ advanced: [{ torch: on }] }); Cam.torchOn = on; return true; } catch (e) { return false; }
   }
   async function openCamera() {
-    showView('camera'); Cam.count = 0; updateCamStack(); $('#camFallback').hidden = true; $('#camHint').hidden = false; $('#camShutter').disabled = false;
+    showView('camera'); (Cam.shots || []).forEach(x => URL.revokeObjectURL(x.url)); Cam.shots = []; Cam.trayOpen = false; $('#camTray').hidden = true; updateCamStack(); $('#camFallback').hidden = true; $('#camHint').hidden = false; $('#camShutter').disabled = false;
     Cam.armed = true; Cam.prog = 0; Cam.quad = null; Cam.disp = null; Cam.torchOn = false; Cam.flashWarned = false; syncCamUi();
     try {
       // 4:3 in höchster Auflösung anfordern (entspricht dem Fotoformat der Handykamera)
@@ -1629,13 +1644,13 @@ const Engine = (() => {
         if (moved > 0.1 || sizeCh > 0.5 || sceneChanged(v)) { Cam.armed = true; if (window.__camLog) window.__camLog.push(['rearm', moved.toFixed(3), sizeCh.toFixed(2), Cam.lastSceneDiff]); } // neue Seite (verschoben, andere Größe oder Hand im Bild)
       }
       const area = Engine.polyArea(st.quad) / (vw * vh), prog = Math.min(1, st.stableMs / STABLE_MS);
-      Cam.prog = settings.auto && Cam.armed ? prog : 0;
+      Cam.prog = settings.auto && Cam.armed && !Cam.trayOpen ? prog : 0;
       if (now - Cam.focusAt > 1500) { Cam.focusAt = now; const c = st.quad.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 }); focusOn(c.x / vw, c.y / vh); }
       hint.textContent = !Cam.armed ? 'Erfasst – nächste Seite ins Bild legen'
         : area < 0.2 ? 'Näher heran'
         : dark && settings.flash === 'off' ? 'Zu dunkel – Blitz einschalten'
         : settings.auto ? (prog > 0.15 ? 'Ruhig halten – scannt automatisch' : 'Dokument erkannt') : 'Dokument erkannt – jetzt auslösen';
-      if (settings.auto && Cam.armed && st.stableMs >= STABLE_MS && area >= 0.12) camCapture(true);
+      if (settings.auto && Cam.armed && !Cam.trayOpen && st.stableMs >= STABLE_MS && area >= 0.12) camCapture(true);
     } else {
       Cam.quad = null; Cam.prog = 0;
       if (!Cam.tr.cand && !Cam.tr.quad) { if (window.__camLog && !Cam.armed) window.__camLog.push(['lost']); Cam.armed = true; Cam.shotQuad = null; Cam.shotSig = null; } // Blatt wirklich weg
@@ -1711,28 +1726,68 @@ const Engine = (() => {
     } catch (e) { console.error(e); }
     finally { if (usedTorch && settings.flash !== 'torch') await setTorch(false); }
     if (!blob) { Cam.busy = false; Cam.armed = true; toast('Aufnahme fehlgeschlagen – bitte erneut versuchen.'); return; }
-    Cam.count++; updateCamStack(blob);
     const replace = S.replaceIdx; S.replaceIdx = null;
+    const shot = { url: URL.createObjectURL(blob), pageId: null, deleted: false };
+    Cam.shots.push(shot); updateCamStack();
     const file = new File([blob], `aufnahme-${Date.now()}.jpg`, { type: 'image/jpeg' }); file.scanHint = hint; file.fromCamera = true;
-    Cam.pending = Cam.pending.then(() => addFiles([file], { replaceIdx: replace, quiet: true })).catch(console.error);
+    Cam.pending = Cam.pending.then(() => addFiles([file], { replaceIdx: replace, quiet: true })).then(added => {
+      const p = added && added[0]; if (!p) { shot.deleted = true; updateCamStack(); return; }
+      shot.pageId = p.id; if (shot.deleted) removePageById(p.id); // während der Verarbeitung verworfen
+      renderTray();
+    }).catch(console.error);
     Cam.busy = false;
-    if (replace != null) camFinish();
+    if (replace != null) { camFinish(); return; }
+    const n = liveShots().length;
+    toast(`Seite ${n} erfasst`, 'Verwerfen', () => deleteShot(shot));
   }
+  /* ---------- Aufnahmen des laufenden Scans ---------- */
+  const liveShots = () => Cam.shots.filter(s => !s.deleted);
+  function removePageById(id) {
+    if (!S.doc) return; const i = S.doc.pages.findIndex(p => p.id === id); if (i < 0) return;
+    const [p] = S.doc.pages.splice(i, 1); prevCache.delete(p.id); if (p._viewUrl) URL.revokeObjectURL(p._viewUrl);
+    S.idx = Math.max(0, Math.min(S.idx, S.doc.pages.length - 1)); scheduleSave();
+  }
+  function deleteShot(shot) {
+    if (shot.deleted) return; shot.deleted = true;
+    if (shot.pageId) removePageById(shot.pageId);
+    // Wurde die letzte Aufnahme verworfen, darf dieselbe Seite gleich noch einmal gescannt werden
+    if (liveShots().length === 0 || Cam.shots[Cam.shots.length - 1] === shot) { Cam.armed = true; Cam.shotQuad = null; Cam.shotSig = null; Cam.needSig = 0; if (Cam.tr) Cam.tr.stableSince = performance.now(); }
+    updateCamStack(); renderTray();
+    toast(`Seite verworfen – ${liveShots().length === 1 ? '1 Seite' : liveShots().length + ' Seiten'} im Scan`);
+  }
+  function renderTray() {
+    if ($('#camTray').hidden) return;
+    const list = $('#trayList'), shots = liveShots(); list.textContent = '';
+    $('#trayCount').textContent = shots.length === 1 ? '1 Seite' : `${shots.length} Seiten`;
+    $('#trayEmpty').hidden = shots.length > 0;
+    shots.forEach((sh, i) => {
+      const it = document.createElement('div'); it.className = 'tray-item';
+      it.innerHTML = `<div class="tray-img"></div><span class="mono">${i + 1}</span><button class="tray-del" aria-label="Seite ${i + 1} verwerfen"><svg class="ic"><use href="#i-trash"/></svg></button>`;
+      const pg = sh.pageId && S.doc && S.doc.pages.find(p => p.id === sh.pageId);
+      it.querySelector('.tray-img').style.backgroundImage = `url(${(pg && pg._viewUrl) || sh.url})`;
+      it.querySelector('.tray-del').onclick = () => deleteShot(sh);
+      list.appendChild(it);
+    });
+  }
+  function openTray() { if (!liveShots().length) { toast('Noch keine Seite aufgenommen'); return; } Cam.trayOpen = true; $('#camTray').hidden = false; $('#camHint').hidden = true; renderTray(); }
+  function closeTray() { Cam.trayOpen = false; $('#camTray').hidden = true; $('#camHint').hidden = !$('#camFallback').hidden; if (Cam.tr) Cam.tr.stableSince = performance.now(); }
+  $('#camStack').onclick = openTray;
+  $('#trayClose').onclick = closeTray;
   function blink() { const fl = $('#camBlink'); fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go'); }
-  let stackUrl = null;
-  function updateCamStack(blob) {
+  function updateCamStack() {
+    const shots = liveShots(); Cam.count = shots.length;
     $('#camCount').textContent = Cam.count;
-    if (blob) { if (stackUrl) URL.revokeObjectURL(stackUrl); stackUrl = URL.createObjectURL(blob); $('#camStack').style.backgroundImage = `url(${stackUrl})`; }
-    else if (!Cam.count) $('#camStack').style.backgroundImage = '';
+    $('#camStack').style.backgroundImage = shots.length ? `url(${shots[shots.length - 1].url})` : '';
+    $('#camStack').setAttribute('aria-label', shots.length ? `${shots.length} aufgenommene Seiten ansehen und verwerfen` : 'Noch keine Seite aufgenommen');
   }
   async function camFinish() {
-    stopCamera();
-    if (Cam.count) { busy(true, 'Seiten werden verarbeitet…', 0.6); await Cam.pending; busy(false); }
+    stopCamera(); closeTray();
+    if (Cam.shots.length) { busy(true, 'Seiten werden verarbeitet…', 0.6); await Cam.pending; busy(false); }
+    const n = liveShots().length; Cam.shots.forEach(s => URL.revokeObjectURL(s.url)); Cam.shots = []; Cam.count = 0;
     if (S.doc && S.doc.pages.length) {
-      const one = Cam.count === 1 && settings.cropReview;
-      Cam.count = 0;
-      if (one) openCrop(S.idx); else showView('review');
-    } else showView('library');
+      const cur = Math.max(0, Math.min(S.idx, S.doc.pages.length - 1)); // addFiles setzt S.idx auf die zuletzt erfasste (oder ersetzte) Seite
+      if (n === 1 && settings.cropReview) openCrop(cur); else { S.idx = cur; showView('review'); }
+    } else { if (S.doc) saveDoc(S.doc); S.doc = null; showView('library'); }
   }
   $('#camShutter').onclick = () => camCapture(false);
   $('#camDone').onclick = camFinish;
@@ -2103,7 +2158,8 @@ const Engine = (() => {
   $('#btnBuildJpg').onclick = buildJpg;
   $('#btnShare').onclick = async () => {
     if (!lastExport) return;
-    try { await navigator.share({ files: lastExport.files, title: lastExport.files[0].name }); toast('Geteilt'); }
+    // Nur die Datei übergeben: Mit title/text legt iOS beim Sichern in „Dateien“ zusätzlich eine Textdatei an
+    try { await navigator.share({ files: lastExport.files }); toast('Gesichert'); }
     catch (e) { if (e && e.name !== 'AbortError') { toast('Teilen nicht möglich – Datei wird heruntergeladen.'); downloadFiles(lastExport.files); } }
   };
   $('#btnDownload').onclick = () => { if (lastExport) downloadFiles(lastExport.files); };
