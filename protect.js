@@ -470,6 +470,8 @@
       "#protect-legal { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(4px, env(safe-area-inset-bottom)); z-index: 9989; display: flex; gap: 6px; align-items: center;",
       "  padding: 2px 10px; border-radius: 999px; font: 11px/1.6 Arial, Helvetica, sans-serif; color: #F4F6FB; background: rgba(10,11,16,0.45); opacity: 0.65; transition: opacity 0.2s; white-space: nowrap; }",
       "#protect-legal:hover, #protect-legal:focus-within { opacity: 1; }",
+      ".protect-legal-mini { margin: 12px 0 0; font-size: 11px; text-align: center; opacity: 0.6; }",
+      ".protect-legal-mini a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }",
       "#protect-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }",
       "html.embed-mode #protect-legal { display: none !important; }",
       "@media print {",
@@ -1243,6 +1245,7 @@
           '<p class="protect-qr-hint">QR-Code scannen, um den Link direkt zu öffnen.</p>' +
         "</div>" +
         '<button class="protect-close" id="protect-close-btn">Schließen</button>' +
+        legalLinksHtml() +
       "</div>";
     document.body.appendChild(wrap);
     wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
@@ -1320,6 +1323,14 @@
 
   /* Impressum und Datenschutz müssen auf jeder Seite unmittelbar erreichbar sein (§ 5 DDG, Art. 13 DSGVO).
      Darum dauerhaft sichtbar (wird nicht automatisch ausgeblendet), klein unten mittig. */
+  /* Impressum/Datenschutz: kein dauerhafter Balken mehr. Die Links stehen klein unten in den
+     Fenstern „Für Lernende freigeben“ und „QR-Aushang“; außerdem führt der Zurück-Link mit
+     einem Tipp zur Startseite, deren Fußzeile Impressum und Datenschutz enthält. */
+  function legalLinksHtml() {
+    const base = HOME_HREF.replace(/index\.html$/, "");
+    return '<p class="protect-legal-mini"><a href="' + base + 'impressum.html">Impressum</a> · <a href="' + base + 'datenschutz.html">Datenschutz</a></p>';
+  }
+
   function addLegalLinks() {
     if (isEmbedMode() || document.getElementById("protect-legal")) return;
     ensureStyle();
@@ -1397,6 +1408,7 @@
           "</div>" +
         "</div>" +
         '<button type="button" class="protect-close" id="protect-poster-close">Schließen</button>' +
+        legalLinksHtml() +
       "</div>";
     document.body.appendChild(wrap);
     const close = () => { wrap.remove(); const b = document.getElementById("protect-poster-btn"); if (b) b.focus(); };
@@ -1837,7 +1849,7 @@
            jede Handball-App selbst ganz unten in ihren Einstellungen. */
         const schlicht = cat === "handball";
         if (!schlicht) addShareButton(cat);
-        if (!isHomeApp_() && !schlicht) { addBackLink(); addPosterButton(); addLegalLinks(); }
+        if (!isHomeApp_() && !schlicht) { addBackLink(); addPosterButton(); }
         if (!schlicht) { initFeedbackWidget(cat); initHighscoreWidget(); }
         if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
       }
