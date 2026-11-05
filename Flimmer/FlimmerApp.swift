@@ -16,7 +16,14 @@ struct FlimmerApp: App {
                 .environmentObject(player)
                 .tint(settings.accent.color)
                 .preferredColorScheme(settings.theme.scheme)
-                .onAppear { player.library = library }
+                .onAppear {
+                    player.library = library
+                    // Startparameter für Testbilder: -demo startet direkt die Demo
+                    if ProcessInfo.processInfo.arguments.contains("-demo"), store.active == nil {
+                        let d = store.profiles.first { $0.kind == .demo } ?? Profile(id: "demo", name: "Demo", kind: .demo)
+                        store.save(d); store.activate(d)
+                    }
+                }
         }
     }
 }
@@ -96,13 +103,30 @@ struct RootView: View {
 }
 
 struct MainView: View {
+    @State private var tab: Int = {
+        let a = ProcessInfo.processInfo.arguments
+        if let i = a.firstIndex(of: "-tab"), i + 1 < a.count { return Int(a[i + 1]) ?? 0 }
+        return 0
+    }()
+
     var body: some View {
-        TabView {
-            HomeView().tabItem { Label("Start", systemImage: "house.fill") }
-            LiveView().tabItem { Label("Live-TV", systemImage: "tv") }
-            MoviesView().tabItem { Label("Filme", systemImage: "film") }
-            SeriesListView().tabItem { Label("Serien", systemImage: "play.rectangle.on.rectangle") }
-            SearchView().tabItem { Label("Suche", systemImage: "magnifyingglass") }
+        TabView(selection: $tab) {
+            HomeView().tabItem { Label("Start", systemImage: "house.fill") }.tag(0)
+            LiveView().tabItem { Label("Live-TV", systemImage: "tv") }.tag(1)
+            MoviesView().tabItem { Label("Filme", systemImage: "film") }.tag(2)
+            SeriesListView().tabItem { Label("Serien", systemImage: "play.rectangle.on.rectangle") }.tag(3)
+            SearchView().tabItem { Label("Suche", systemImage: "magnifyingglass") }.tag(4)
         }
+        .task {
+            // -play startet den ersten Sender (nur für Testbilder)
+            if ProcessInfo.processInfo.arguments.contains("-play") { try? await Task.sleep(nanoseconds: 800_000_000); playFirst() }
+        }
+    }
+
+    @EnvironmentObject private var lib: Library
+    @EnvironmentObject private var player: PlayerModel
+    private func playFirst() {
+        let list = lib.channels(in: nil)
+        if let c = list.first { player.play(.live(c, list: list)) }
     }
 }
