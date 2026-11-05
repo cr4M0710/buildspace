@@ -1,0 +1,27 @@
+name: iOS-Build (Flimmer)
+on:
+  push:
+    branches: [flimmer-ios-ci]
+    paths-ignore: ['ci/**']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode-Version
+        run: xcodebuild -version
+      - name: Bauen (Simulator, ohne Signatur)
+        run: |
+          set -o pipefail
+          xcodebuild -project Flimmer.xcodeproj -target Flimmer -sdk iphonesimulator -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=CI build 2>&1 | tee build.log || echo "BUILD_FAILED" >> build.log
+      - name: Log zurückschreiben
+        if: always()
+        run: |
+          mkdir -p ci
+          grep -E "error:|warning: .*(deprecated|will never)|BUILD SUCCEEDED|BUILD FAILED|BUILD_FAILED" build.log | sort -u | head -300 > ci/summary.txt || true
+          tail -60 build.log > ci/tail.txt
+          git config user.name "ci"; git config user.email "ci@users.noreply.github.com"
+          git add ci && git commit -m "CI-Log [skip ci]" && git push || true
