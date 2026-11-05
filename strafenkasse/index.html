@@ -1098,17 +1098,26 @@ const Fb = {
     return !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
   },
   async anmelden() {
-    try { await this.laden(); } catch (e) { App.toast('Firebase konnte nicht geladen werden (offline?)'); return; }
+    // Firebase wird beim Start vorgeladen (siehe Sync.init) – dann öffnet sich das Popup
+    // noch innerhalb des Antippens und Safari blockiert es nicht.
+    if (!this.auth) {
+      try { await this.laden(); } catch (e) { App.toast('Firebase konnte nicht geladen werden (offline?)'); return; }
+    }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    // Als Homescreen-App gibt es keine Popup-Fenster -> direkt Weiterleitung
-    if (this.standalone()) { this.weiterleitungMerken(); await this.auth.signInWithRedirect(provider); return; }
+    const umleiten = async () => {
+      this.weiterleitungMerken();
+      try { await this.auth.signInWithRedirect(provider); }
+      catch (e) { this.weiterleitungErledigt(); App.toast('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); }
+    };
+    // Immer zuerst das Popup: Die Weiterleitung über firebaseapp.com scheitert in Safari/iOS
+    // (auch als Homescreen-App) oft an der Speicher-Trennung zwischen Websites.
     try { await this.auth.signInWithPopup(provider); }
     catch (err) {
       const c = err && err.code;
       if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
-      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { this.weiterleitungMerken(); await this.auth.signInWithRedirect(provider); return; }
-      App.toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''));
+      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment' || c === 'auth/web-storage-unsupported') { await umleiten(); return; }
+      App.toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''), null, null, 9000);
     }
   },
   async abmelden() { if (this.auth) await this.auth.signOut(); },
@@ -1135,7 +1144,8 @@ const Sync = {
   init() {
     try { this.cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { this.cfg = null; }
     if (this.istFirebase()) Fb.laden().catch(() => this.status('fehler', 'Firebase nicht erreichbar'));
-    else if (Fb.weiterleitungOffen() && !nurLesen) Fb.laden().catch(() => {});
+    // Sonst im Hintergrund vorladen: schließt eine laufende Anmeldung ab und hält das Anmelde-Popup schnell
+    else if (!nurLesen && navigator.onLine !== false) setTimeout(() => Fb.laden().catch(() => {}), Fb.weiterleitungOffen() ? 0 : 1200);
   },
   speichernCfg() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.cfg)); } catch (e) {} },
   istFirebase() { return !!(this.cfg && this.cfg.typ === 'firebase'); },
