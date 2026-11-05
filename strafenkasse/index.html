@@ -1080,7 +1080,9 @@ const Fb = {
         this.db = firebase.firestore();
         this.auth = firebase.auth();
         // Abschluss einer per Weiterleitung begonnenen Anmeldung (Homescreen-App)
-        this.auth.getRedirectResult().catch(e => App.toast('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')));
+        this.auth.getRedirectResult()
+          .then(() => { if (!this.user) this.weiterleitungErledigt(); })
+          .catch(e => { this.weiterleitungErledigt(); App.toast('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : '')); });
         this.auth.onAuthStateChanged(u => {
           // Anonyme Sitzungen (Feedback-Widget von protect.js) zählen nicht als Anmeldung
           this.user = (u && !u.isAnonymous && u.email) ? u : null;
@@ -1100,16 +1102,24 @@ const Fb = {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     // Als Homescreen-App gibt es keine Popup-Fenster -> direkt Weiterleitung
-    if (this.standalone()) { await this.auth.signInWithRedirect(provider); return; }
+    if (this.standalone()) { this.weiterleitungMerken(); await this.auth.signInWithRedirect(provider); return; }
     try { await this.auth.signInWithPopup(provider); }
     catch (err) {
       const c = err && err.code;
       if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
-      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { await this.auth.signInWithRedirect(provider); return; }
+      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { this.weiterleitungMerken(); await this.auth.signInWithRedirect(provider); return; }
       App.toast('Google-Anmeldung fehlgeschlagen' + (c ? ' (' + c + ')' : ''));
     }
   },
   async abmelden() { if (this.auth) await this.auth.signOut(); },
+  // Google-Anmeldung per Weiterleitung (Homescreen-App): Nach der Rückkehr muss Firebase sofort
+  // geladen werden, damit die Anmeldung abgeschlossen wird – auch wenn der Sync noch nicht verbunden ist.
+  WEITERLEITUNG_KEY: 'hsg-fb-weiterleitung',
+  weiterleitungMerken() { try { localStorage.setItem(this.WEITERLEITUNG_KEY, String(Date.now())); } catch (e) {} },
+  weiterleitungOffen() {
+    try { const t = +localStorage.getItem(this.WEITERLEITUNG_KEY); return !!t && Date.now() - t < 15 * 60 * 1000; } catch (e) { return false; }
+  },
+  weiterleitungErledigt() { try { localStorage.removeItem(this.WEITERLEITUNG_KEY); } catch (e) {} },
   email() { return this.user ? String(this.user.email).toLowerCase() : ''; },
   ref(code) { return this.db.collection('strafenkasse').doc(code); },
   ansichtRef(token) { return this.db.collection('strafenkasse_ansicht').doc(token); },
@@ -1125,6 +1135,7 @@ const Sync = {
   init() {
     try { this.cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { this.cfg = null; }
     if (this.istFirebase()) Fb.laden().catch(() => this.status('fehler', 'Firebase nicht erreichbar'));
+    else if (Fb.weiterleitungOffen() && !nurLesen) Fb.laden().catch(() => {});
   },
   speichernCfg() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.cfg)); } catch (e) {} },
   istFirebase() { return !!(this.cfg && this.cfg.typ === 'firebase'); },
@@ -1143,6 +1154,12 @@ const Sync = {
       if (this.aktiv()) this.synchronisieren(false);
     }
     App.rendernVerwaltenSyncKnopf();
+    if (Fb.user && Fb.weiterleitungOffen()) {
+      Fb.weiterleitungErledigt();
+      // Zurück von der Google-Anmeldung: Einrichtung direkt weiterführen
+      if (!nurLesen && !this.aktiv()) { App.syncFirebaseModal(); return; }
+      App.toast('Angemeldet als ' + Fb.email());
+    }
     if (document.getElementById('fb-modal')) App.syncFirebaseModal();
   },
 
