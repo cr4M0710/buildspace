@@ -62,7 +62,6 @@ const folderStructure = {
     subfolders: [
       { id: "jugend" },
       { id: "maenner1" },
-      { id: "maenner2" },
       { id: "hallendienst" },
       { id: "training" }
     ]

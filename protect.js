@@ -1828,10 +1828,13 @@
       document.documentElement.classList.add("protect-ready");
       document.documentElement.classList.remove("protect-open");
       if (cat) {
-        addShareButton(cat);
-        if (!isHomeApp_()) { addBackLink(); addPosterButton(); addLegalLinks(); }
-        initFeedbackWidget(cat);
-        initHighscoreWidget();
+        /* Handball-Anwendungen (Strafenkasse, Anwurf, Hallenplan, Anzeigetafel …) sind keine
+           Unterrichts-Tools: dort kein „Für Lernende freigeben“, kein QR-Aushang, keine
+           Bewertung und keine Bestenliste – nur Zurück-Link und Impressum/Datenschutz. */
+        const schlicht = cat === "handball";
+        if (!schlicht) addShareButton(cat);
+        if (!isHomeApp_()) { addBackLink(); if (!schlicht) addPosterButton(); addLegalLinks(); }
+        if (!schlicht) { initFeedbackWidget(cat); initHighscoreWidget(); }
         if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
       }
       /* Auf der Startseite (app.js) sorgt das dafür, dass die Ordner-

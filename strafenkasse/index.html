@@ -632,6 +632,13 @@ function eigenesProfil(t) {
     paypal: '', seedHistorie: false, spieler: [], katalogLeer: !!t.katalogLeer, eigen: true };
 }
 const PROFILE = Object.assign({}, BASIS_PROFILE);
+// Feste Teams (M1/M2), die auf diesem Gerät entfernt wurden – tauchen in der Teamliste nicht mehr auf.
+// Ein Link mit ?team=m1/m2 holt das Team automatisch zurück.
+const AUSGEBLENDET_KEY = 'hsg-ausgeblendete-teams-v1';
+function ausgeblendetLaden() { try { const l = JSON.parse(localStorage.getItem(AUSGEBLENDET_KEY) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function ausgeblendetSpeichern(l) { try { localStorage.setItem(AUSGEBLENDET_KEY, JSON.stringify(l)); } catch (e) {} }
+let AUSGEBLENDET = ausgeblendetLaden();
+const sichtbar = id => !!PROFILE[id] && !AUSGEBLENDET.includes(id);
 let EIGENE_TEAMS = eigeneTeamsLaden();
 EIGENE_TEAMS.forEach(t => { PROFILE[t.id] = eigenesProfil(t); });
 // Unbekanntes eigenes Team per Link (?team=t-xxxx) – z. B. Spieler-Ansicht oder zweiter Kassenwart:
@@ -651,17 +658,21 @@ function ermittleAktivesProfil() {
   // Direktlink auf ein Team möglich: strafenkasse/index.html?team=m1
   try {
     const t = new URLSearchParams(location.search).get('team');
-    if (t && PROFILE[t]) { try { localStorage.setItem(PROFIL_KEY, t); } catch (e) {} return t; }
+    if (t && PROFILE[t]) {
+      if (AUSGEBLENDET.includes(t)) { AUSGEBLENDET = AUSGEBLENDET.filter(x => x !== t); ausgeblendetSpeichern(AUSGEBLENDET); }
+      try { localStorage.setItem(PROFIL_KEY, t); } catch (e) {}
+      return t;
+    }
   } catch (e) {}
   try {
     const p = localStorage.getItem(PROFIL_KEY);
-    if (p && PROFILE[p]) return p;
+    if (p && sichtbar(p)) return p;
     // Bestehende Geräte ohne gemerktes Team: das Team nehmen, zu dem Daten vorliegen
-    if (localStorage.getItem('hsg-m2-strafenkasse-v1')) return 'm2';
-    if (localStorage.getItem('hsg-m1-strafenkasse-v1')) return 'm1';
+    const mitDaten = Object.keys(PROFILE).find(id => sichtbar(id) && localStorage.getItem(`hsg-${id}-strafenkasse-v1`));
+    if (mitDaten) return mitDaten;
     ERSTSTART = true;
   } catch (e) {}
-  return 'm2';
+  return Object.keys(PROFILE).find(sichtbar) || 'm2';
 }
 const PROFIL_ID = ermittleAktivesProfil();
 const PROFIL = PROFILE[PROFIL_ID];
@@ -2578,11 +2589,12 @@ const App = {
         <button class="btn ${aktiv ? '' : 'sekundaer'}" style="flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left" onclick="App.profilWechseln('${p.id}', ${begruessung ? 'true' : 'false'})">
           <span>${esc(name)}</span>${aktiv ? '<span style="font-size:.78rem;opacity:.85">Aktiv</span>' : ''}
         </button>
-        ${p.eigen ? `<button class="icon-btn" title="Teamlink kopieren" onclick="App.teamLinkKopieren('${p.id}')">${ICON.link}</button>
-        <button class="icon-btn rot" title="Team von diesem Gerät entfernen" onclick="App.teamEntfernen('${p.id}')">${ICON.del}</button>` : ''}
+        <button class="icon-btn" title="Teamlink kopieren" onclick="App.teamLinkKopieren('${p.id}')">${ICON.link}</button>
+        <button class="icon-btn rot" title="Team löschen / von diesem Gerät entfernen" onclick="App.teamEntfernen('${p.id}')">${ICON.del}</button>
       </div>`;
     };
-    const zeilen = Object.values(PROFILE).map(zeile).join('');
+    const liste = Object.values(PROFILE).filter(p => sichtbar(p.id));
+    const zeilen = liste.length ? liste.map(zeile).join('') : '<div class="hinweis" style="margin:0 0 9px">Auf diesem Gerät ist noch kein Team vorhanden.</div>';
     this.modal(`
       <h3>${begruessung ? 'Willkommen bei der Strafenkasse' : 'Team wechseln'}</h3>
       <div class="hinweis" style="margin-top:0;margin-bottom:12px">${begruessung
@@ -2590,13 +2602,13 @@ const App = {
         : 'Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync. Die App lädt nach dem Wechsel neu.'}</div>
       ${zeilen}
       <button class="btn" style="width:100%;margin-top:6px" onclick="App.teamNeuModal()">Neue Mannschaft anlegen</button>
-      <div class="hinweis">Eigene Teams lassen sich über den Link-Knopf an weitere Kassenwarte schicken: Wer den Link öffnet, bekommt das Team auf seinem Gerät und kann sich danach über den Cloud-Sync verbinden.</div>
+      <div class="hinweis">Link-Knopf: Teamlink an weitere Kassenwarte schicken – wer ihn öffnet, bekommt das Team auf sein Gerät und verbindet sich danach über den Cloud-Sync. Papierkorb: Team auf diesem Gerät löschen (Cloud-Daten bleiben erhalten, das Team lässt sich per Teamlink jederzeit zurückholen).</div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">${begruessung ? 'Später' : 'Abbrechen'}</button>
       </div>`);
   },
   profilWechseln(id, begruessung) {
-    if (!PROFILE[id]) { this.modalZu(); return; }
+    if (!sichtbar(id)) { this.modalZu(); return; }
     try { localStorage.setItem(PROFIL_KEY, id); } catch (e) {}
     if (id === PROFIL_ID && !begruessung) { this.modalZu(); return; }
     if (id === PROFIL_ID) { ERSTSTART = false; this.modalZu(); return; }
@@ -2644,16 +2656,23 @@ const App = {
     catch (e) { prompt('Teamlink:', link); }
   },
   teamEntfernen(id) {
-    const p = PROFILE[id]; if (!p || !p.eigen) return;
-    if (!confirm(`„${p.titel}“ von diesem Gerät entfernen?\n\nAlle lokal gespeicherten Daten dieses Teams auf diesem Gerät werden gelöscht. Daten im Cloud-Sync bleiben online erhalten.`)) return;
-    EIGENE_TEAMS = EIGENE_TEAMS.filter(t => t.id !== id); eigeneTeamsSpeichern(EIGENE_TEAMS);
+    const p = PROFILE[id]; if (!p) return;
+    const name = id === PROFIL_ID ? (daten.titel || p.titel) : p.titel;
+    const verbunden = (() => { try { return !!localStorage.getItem('hsg-' + id + '-sync-v1'); } catch (e) { return false; } })();
+    if (!confirm(`„${name}“ auf diesem Gerät löschen?\n\nAlle hier gespeicherten Spieler, Strafen und Buchungen dieses Teams werden von diesem Gerät entfernt.` +
+      (verbunden ? '\n\nDie Daten im Cloud-Sync bleiben online erhalten; über den Teamlink und eine erneute Anmeldung ist das Team wieder da.' : '\n\nDieses Team ist mit keinem Cloud-Sync verbunden – die Daten sind danach endgültig weg.'))) return;
+    if (p.eigen) {
+      EIGENE_TEAMS = EIGENE_TEAMS.filter(t => t.id !== id); eigeneTeamsSpeichern(EIGENE_TEAMS);
+    } else if (!AUSGEBLENDET.includes(id)) {
+      AUSGEBLENDET.push(id); ausgeblendetSpeichern(AUSGEBLENDET);
+    }
     try {
       Object.keys(localStorage).filter(k => k.indexOf('hsg-' + id + '-') === 0).forEach(k => localStorage.removeItem(k));
       if (localStorage.getItem(PROFIL_KEY) === id) localStorage.removeItem(PROFIL_KEY);
     } catch (e) {}
     if (id === PROFIL_ID) { location.href = location.pathname; return; }
-    delete PROFILE[id];
-    this.toast('Team entfernt');
+    if (p.eigen) delete PROFILE[id];
+    this.toast('Team gelöscht');
     this.profilModal();
   },
 

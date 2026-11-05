@@ -12,7 +12,7 @@
    - category:    'schule' | 'handball' | 'freizeit'
    - subcategory: bei 'schule' → 'mathematik' | 'arbeitslehre' | 'faecheruebergreifend'
                   | 'weiterefaecher' | 'sonstiges'
-                  bei 'handball' → 'jugend' | 'maenner1' | 'maenner2' | 'hallendienst' | 'training'
+                  bei 'handball' → 'jugend' | 'maenner1' | 'hallendienst' | 'training'
                   bei 'freizeit' → leer lassen (null)
    - url:         Pfad zur Beitragsseite, relativ zur index.html
    - emoji:       (optional) ein einzelnes Emoji, das groß auf der Karte
@@ -102,18 +102,6 @@ const posts = [
     emoji: "💰",
     tags: ["tool"],
     titleEn: "Penalty Fund – Men's 1",
-    excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
-   },
-   {
-    title: "Strafenkasse – Männer 2",
-    excerpt: "Strafen erfassen, Einzahlungen buchen und den Kassenstand teilen – als installierbare App, auch offline.",
-    date: "2026-09-18",
-    category: "handball",
-    subcategory: "maenner2",
-    url: "strafenkasse/index.html",
-    emoji: "💰",
-    tags: ["tool"],
-    titleEn: "Penalty Fund – Men's 2",
     excerptEn: "Log fines, record payments and share the running balance — as an installable app, works offline too."
    },
    {
@@ -1199,18 +1187,6 @@ const posts = [
     emoji: "🤾",
     tags: ["tool"],
     titleEn: "Anwurf – Fixtures & Table Men's 1",
-    excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
-   },
-   {
-    title: "Anwurf – Spielplan & Tabelle Männer 2",
-    excerpt: "Alle Ligen der HSG: Tabellen, Spielpläne, Spielverlauf Tor für Tor, Team-, Kader- und Spielerstatistiken, Suche und Favoriten, automatisch aus nuLiga, mit Push bei Anwurf und Endstand. Als App installierbar.",
-    date: "2026-10-25",
-    category: "handball",
-    subcategory: "maenner2",
-    url: "anwurf/index.html?team=m2",
-    emoji: "🤾",
-    tags: ["tool"],
-    titleEn: "Anwurf – Fixtures & Table Men's 2",
     excerptEn: "Every league the HSG plays in: tables, fixtures, goal-by-goal match flow, team, squad and player stats, search and favourites, synced automatically from nuLiga, with push alerts. Installable as an app."
    },
    {
