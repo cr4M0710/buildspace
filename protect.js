@@ -1819,6 +1819,9 @@
   function initStandalone() {
     const scriptTag = document.currentScript;
     const cat = scriptTag && scriptTag.dataset && scriptTag.dataset.category;
+    /* data-offen="1": Seite ist direkt ohne Kennwort nutzbar (z. B. Strafenkasse für die
+       Mannschaften). Der Bereich auf der Startseite bleibt trotzdem geschützt. */
+    const offen = !!(scriptTag && scriptTag.dataset && scriptTag.dataset.offen === "1");
     ensureStyle();
     if (isEmbedMode()) document.documentElement.classList.add("embed-mode");
     setTimeout(countView, 1500);
@@ -1845,7 +1848,7 @@
          schlicht nicht. */
       if (isHomeApp_()) global.render();
     }
-    function run() { guard(cat || null, reveal); }
+    function run() { if (offen) reveal(); else guard(cat || null, reveal); }
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", run);
     } else {
