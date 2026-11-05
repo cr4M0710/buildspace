@@ -1851,7 +1851,7 @@
         if (!schlicht) addShareButton(cat);
         if (!isHomeApp_() && !schlicht) { addBackLink(); addPosterButton(); }
         if (!schlicht) { initFeedbackWidget(cat); initHighscoreWidget(); }
-        if (!isHomeApp_() && !isEmbedMode()) initAutoHideUi();
+        if (!isHomeApp_() && !isEmbedMode() && !schlicht) initAutoHideUi();
       }
       /* Auf der Startseite (app.js) sorgt das dafür, dass die Ordner-
          Kacheln sofort den richtigen Zugriffsstand (voll/Gast/Kolleg:in)
