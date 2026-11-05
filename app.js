@@ -1994,6 +1994,32 @@ const PROGRAMS = [
     download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,4 MB", type: "ZIP" },
     manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "3,8 MB", type: "PDF" },
     share: "programme/cockpit.html"
+  },
+  {
+    id: "flimmer",
+    title: "Flimmer",
+    version: "1.1.0",
+    platform: "macOS 12 oder neuer · Mac mit Apple-Chip (M1–M5)",
+    platformEn: "macOS 12 or later · Mac with Apple silicon (M1–M5)",
+    icon: "assets/programme/flimmer-icon.png",
+    shot: "assets/programme/flimmer-vorschau.jpg",
+    text: "IPTV-Player für den Mac: Du meldest dich mit den Zugangsdaten deines eigenen Anbieters an (Xtream Codes oder M3U-Playlist mit XMLTV) und siehst Live-TV, Filme und Serien. Mit Vorschau-Player, TV-Guide über mehrere Stunden und Tage, Archiv (Catch-up), Favoriten und eigenen Senderlisten, Weiterschauen an der letzten Stelle und automatischer nächster Folge. Farbschema, Akzentfarbe, Schriftgröße und Layout der Senderliste stellst du selbst ein; App-PIN und Jugendschutz-PIN schützen gesperrte Kategorien. Bedienung mit Maus oder ganz mit der Tastatur – wie mit einer Fernbedienung. Flimmer enthält keine Sender oder Inhalte.",
+    textEn: "IPTV player for the Mac: sign in with the credentials of your own provider (Xtream Codes or an M3U playlist with XMLTV) and watch live TV, movies and series. With a preview player, a TV guide spanning several hours and days, catch-up, favourites and custom channel lists, resume where you left off and automatic next episode. Choose your own colour scheme, accent colour, text size and channel list layout; an app PIN and a parental PIN protect locked categories. Use it with the mouse or entirely with the keyboard, like a remote. Flimmer contains no channels or content.",
+    steps: [
+      "ZIP herunterladen und mit Doppelklick entpacken.",
+      "Im Ordner <b>Installieren.command</b> doppelklicken. Meldet macOS „nicht verifizierter Entwickler“: Systemeinstellungen › Datenschutz &amp; Sicherheit › <b>Dennoch öffnen</b>. Beim ersten Mal lädt das Programm die Laufzeit (ca. 110 MB) und legt Flimmer in „Programme“.",
+      "Flimmer startet von selbst. <b>Profil hinzufügen</b>, Xtream Codes oder M3U wählen und die Zugangsdaten deines Anbieters eintragen. Zurück geht es mit esc oder Rechtsklick."
+    ],
+    stepsEn: [
+      "Download the ZIP and double-click to unpack it.",
+      "Double-click <b>Installieren.command</b> in the folder. If macOS reports an “unidentified developer”: System Settings › Privacy &amp; Security › <b>Open Anyway</b>. The first time, it downloads the runtime (about 110 MB) and puts Flimmer in Applications.",
+      "Flimmer starts by itself. <b>Add profile</b>, choose Xtream Codes or M3U and enter your provider's credentials. Press esc or right-click to go back."
+    ],
+    note: "Flimmer ist ein reiner Player. Nutze nur Angebote, die du legal nutzen darfst – „alle Sender und Filme für wenige Euro“ sind in Deutschland in der Regel nicht lizenziert. Zugangsdaten bleiben auf deinem Mac und gehen nur an den eingetragenen Server.",
+    noteEn: "Flimmer is a player only. Only use services you are legally allowed to use – “all channels and movies for a few euros” offers are usually unlicensed in Germany. Your credentials stay on your Mac and are only sent to the server you entered.",
+    download: { href: "downloads/flimmer-mac.zip", name: "Flimmer-Mac.zip", size: "0,9 MB", type: "ZIP" },
+    manual: { href: "downloads/flimmer-anleitung.pdf", name: "Flimmer-Anleitung.pdf", size: "0,5 MB", type: "PDF" },
+    share: "programme/flimmer.html"
   }
 ];
 
