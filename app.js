@@ -2020,6 +2020,32 @@ const PROGRAMS = [
     download: { href: "downloads/flimmer-mac.zip", name: "Flimmer-Mac.zip", size: "0,9 MB", type: "ZIP" },
     manual: { href: "downloads/flimmer-anleitung.pdf", name: "Flimmer-Anleitung.pdf", size: "0,5 MB", type: "PDF" },
     share: "programme/flimmer.html"
+  },
+  {
+    id: "flimmer-iphone",
+    title: "Flimmer fürs iPhone",
+    version: "1.1.0",
+    platform: "iOS 17 oder neuer · Installation per Xcode vom Mac",
+    platformEn: "iOS 17 or later · installed with Xcode from a Mac",
+    icon: "assets/programme/flimmer-iphone-icon.png",
+    shot: "assets/programme/flimmer-iphone-vorschau.jpg",
+    text: "Flimmer als echte iPhone-App: Live-TV, Filme und Serien deines eigenen IPTV-Anbieters (Xtream Codes oder M3U mit XMLTV) – mit „Jetzt“ und „Danach“, Programmübersicht und Archiv, Favoriten, Weiterschauen und automatischer nächster Folge. Der System-Player bringt Vollbild im Querformat, Bild-in-Bild, AirPlay (z. B. auf den Fernseher) sowie Ton- und Untertitelwahl. Farbschema, Akzentfarbe, Senderliste, App-PIN und Jugendschutz-PIN stellst du selbst ein; Passwörter liegen im Schlüsselbund. Da Flimmer nicht im App Store steht, spielst du die App mit dem kostenlosen Xcode vom Mac aufs iPhone. Flimmer enthält keine Sender oder Inhalte.",
+    textEn: "Flimmer as a real iPhone app: live TV, movies and series from your own IPTV provider (Xtream Codes or M3U with XMLTV) – with now and next, programme guide and catch-up, favourites, resume and automatic next episode. The system player adds landscape full screen, picture in picture, AirPlay (e.g. to your TV) and audio and subtitle selection. Choose your own colour scheme, accent colour and channel list, plus an app PIN and parental PIN; passwords are kept in the keychain. As Flimmer is not on the App Store, you install it from your Mac with the free Xcode. Flimmer contains no channels or content.",
+    steps: [
+      "<b>Xcode</b> aus dem Mac App Store installieren, öffnen, iOS-Komponenten laden und unter Xcode › Settings › Accounts deine Apple-ID hinzufügen.",
+      "ZIP entpacken, <b>Flimmer.xcodeproj</b> öffnen und unter Signing &amp; Capabilities bei <b>Team</b> deinen Namen wählen.",
+      "iPhone anschließen, Entwicklermodus einschalten (Einstellungen › Datenschutz &amp; Sicherheit), iPhone als Ziel wählen und auf <b>▶</b> klicken. Mit kostenloser Apple-ID nach 7 Tagen erneut ▶ klicken."
+    ],
+    stepsEn: [
+      "Install <b>Xcode</b> from the Mac App Store, open it, download the iOS components and add your Apple ID under Xcode › Settings › Accounts.",
+      "Unpack the ZIP, open <b>Flimmer.xcodeproj</b> and pick your name as <b>Team</b> under Signing &amp; Capabilities.",
+      "Connect your iPhone, turn on Developer Mode (Settings › Privacy &amp; Security), select the iPhone as target and click <b>▶</b>. With a free Apple ID, click ▶ again after 7 days."
+    ],
+    note: "Flimmer ist ein reiner Player. Nutze nur Angebote, die du legal nutzen darfst. Filme im Format .mkv/.avi kann das iPhone nicht selbst abspielen – dafür gibt es den Knopf „In VLC öffnen“.",
+    noteEn: "Flimmer is a player only. Only use services you are legally allowed to use. The iPhone can't play .mkv/.avi movies itself – use the “Open in VLC” button instead.",
+    download: { href: "downloads/flimmer-iphone.zip", name: "Flimmer-iPhone.zip", size: "0,4 MB", type: "ZIP" },
+    manual: { href: "downloads/flimmer-iphone-anleitung.pdf", name: "Flimmer-iPhone-Anleitung.pdf", size: "0,3 MB", type: "PDF" },
+    share: "programme/flimmer-iphone.html"
   }
 ];
 
