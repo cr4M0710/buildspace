@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bordwerk</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/bordwerk/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/bordwerk/icon-180.png">
+<link rel="manifest" href="bordwerk.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bordwerk">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#06080B">
+<meta name="description" content="Eigenes Auto-Dashboard fürs iPhone in der Halterung: GPS-Tacho, Fahrten, App-Kacheln, Wetter, Fahrtenbuch und Tankprotokoll.">
+<link rel="stylesheet" href="assets/fonts/barlow.css">
+<link rel="stylesheet" href="assets/fonts/barlow-condensed.css">
+<script>
+/* Auto-Dashboard ohne Website-Extras (Zurück-Link, QR-Aushang, Bewertung): Einbettungsmodus von protect.js nutzen */
+(function(){try{if(!/[?&]embed=1(&|$)/.test(location.search))history.replaceState(null,"",location.pathname+(location.search?location.search+"&":"?")+"embed=1"+location.hash)}catch(e){}})();
+</script>
+<style>
+:root{
+  --bg:#06080B; --s1:#0F1318; --s2:#171C23; --s3:#232A34; --ink:#EEF2F7; --dim:#8C97A6; --line:#222932;
+  --acc:#3FA9F5; --acc-ink:#04121D; --warn:#FF4D4F; --ok:#33D69F; --amber:#FFB020;
+  --r:22px; --gap:12px;
+  --f-num:"Barlow Condensed", "SF Pro Display", system-ui, sans-serif;
+  --f-txt:"Barlow", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
+}
+:root[data-mode="tag"]{
+  --bg:#E9EDF2; --s1:#FFFFFF; --s2:#F2F4F7; --s3:#E1E6EC; --ink:#0E1216; --dim:#556070; --line:#D3D9E1;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-txt);font-size:17px;
+  -webkit-user-select:none;user-select:none;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+a{color:inherit;text-decoration:none}
+input,select,textarea{-webkit-user-select:text;user-select:text}
+
+/* ---------- Grundgerüst ---------- */
+#app{display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh;
+  padding:var(--st) var(--sr) 0 var(--sl)}
+header.top{display:flex;align-items:center;gap:10px;padding:10px 14px 4px}
+.brand{font-family:var(--f-num);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.brand i{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 12px var(--acc)}
+.top .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;background:var(--s2);
+  border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--dim);white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.chip.ok .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.chip.wait .dot{background:var(--amber)}
+.chip.bad .dot{background:var(--warn)}
+.top-clock{font-family:var(--f-num);font-weight:600;font-size:22px;letter-spacing:.02em}
+.icon-btn{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--s2);display:grid;place-items:center;font-size:20px}
+
+main{overflow:auto;-webkit-overflow-scrolling:touch;min-height:0}
+.view{display:none;padding:8px 12px 16px}
+.view.on{display:block}
+
+nav.rail{display:flex;justify-content:space-around;gap:6px;padding:8px 10px calc(8px + var(--sb));background:var(--s1);border-top:1px solid var(--line)}
+nav.rail button{flex:1;max-width:140px;min-height:58px;border:0;border-radius:16px;background:transparent;color:var(--dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:600}
+nav.rail button b{font-size:24px;line-height:1;font-weight:400}
+nav.rail button.on{background:var(--s3);color:var(--ink)}
+nav.rail button.on b{filter:none}
+
+/* Querformat (Halterung): Leiste links, auf der Fahrerseite */
+@media (orientation:landscape){
+  #app{grid-template-columns:auto 1fr;grid-template-rows:auto 1fr;padding-bottom:var(--sb)}
+  nav.rail{grid-column:1;grid-row:1/3;flex-direction:column;justify-content:center;padding:10px 8px;border-top:0;border-right:1px solid var(--line)}
+  nav.rail button{flex:0 0 auto;width:76px;min-height:70px}
+  header.top{grid-column:2;grid-row:1}
+  main{grid-column:2;grid-row:2}
+}
+
+/* ---------- Dashboard ---------- */
+.dash{display:grid;gap:var(--gap);grid-template-columns:repeat(auto-fill,minmax(168px,1fr));grid-auto-rows:150px;grid-auto-flow:dense}
+.w{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;
+  position:relative;overflow:hidden;container-type:size;min-width:0}
+.w > *{flex-shrink:0}
+.w.sz-w{grid-column:span 2}
+.w.sz-l{grid-column:span 2;grid-row:span 2}
+@media (max-width:359px){.w.sz-w,.w.sz-l{grid-column:span 1}}
+.w h3{margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
+.w .big{font-family:var(--f-num);font-weight:700;line-height:.95;letter-spacing:-.01em}
+.w .sub{color:var(--dim);font-size:15px;font-weight:500}
+.w .row{display:flex;gap:8px;margin-top:auto}
+.w .row .btn{min-height:42px;padding:0 10px;font-size:15px}
+.w .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{min-height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--line);background:var(--s2);font-weight:700;font-size:16px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:transparent}
+.btn.dan{background:transparent;border-color:color-mix(in srgb,var(--warn) 55%,transparent);color:var(--warn)}
+.btn.f{flex:1}
+.btn:active,.tile:active,.icon-btn:active{transform:scale(.97)}
+
+/* Tacho */
+.spd{align-items:center;justify-content:center;padding:10px}
+.spd svg{position:absolute;inset:6% 6% 0 6%;width:88%;height:94%}
+.spd .ring-bg{stroke:var(--s3)}
+.spd .ring-fg{stroke:var(--acc);transition:stroke-dasharray .35s ease-out,stroke .2s}
+.spd .tick{stroke:var(--dim);opacity:.5}
+.spd .num{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center}
+.spd .num b{font-family:var(--f-num);font-weight:800;font-size:min(40cqw,52cqh);line-height:.85;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.spd .num span{font-size:min(6cqw,15px);font-weight:700;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:2px}
+.spd .meta{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:8px;font-size:13px;font-weight:600;color:var(--dim)}
+.spd .lim{display:none;width:min(16cqw,54px);aspect-ratio:1;border-radius:50%;border:min(1.8cqw,6px) solid #E2202A;background:#fff;color:#111;
+  position:absolute;top:10px;right:10px;font-family:var(--f-num);font-weight:800;font-size:min(7cqw,24px);place-items:center}
+.spd .lim.on{display:grid}
+.spd.over .ring-fg{stroke:var(--warn)}
+.spd.over .num b{color:var(--warn)}
+.spd.over{border-color:var(--warn);animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--warn) 60%,transparent)}}
+.spd.stale .num b{opacity:.35}
+
+/* Fahrt */
+.trip .tr-main{display:flex;align-items:center;gap:10px;margin-top:auto;min-width:0}
+.trip .tr-btns{margin-left:auto;display:flex;gap:8px}
+.trip .tr-btns .btn{min-height:46px;padding:0 14px}
+.trip .big{font-size:min(20cqw,34cqh);white-space:nowrap}
+.sz-s.trip .tr-main{flex-wrap:wrap;gap:6px}.sz-s.trip .tr-btns{margin-left:0;width:100%}.sz-s.trip .tr-btns .btn{flex:1;padding:0 8px}
+.sz-l.trip .big{font-size:min(24cqw,24cqh)}
+.trip .big small{font-size:.38em;color:var(--dim);margin-left:4px;font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.stats div{font-size:12px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.stats b{display:block;font-family:var(--f-num);font-size:22px;color:var(--ink);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.sz-s.trip .stats{display:none}
+.rec{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--warn);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.2}}
+
+/* Uhr */
+.clk .big{font-size:min(36cqw,58cqh);margin:auto 0 4px;font-variant-numeric:tabular-nums}
+/* Wetter */
+.wx{cursor:pointer}
+.wx .line{display:flex;align-items:center;gap:10px;margin:auto 0 2px}
+.wx .ic{font-size:min(22cqw,46cqh);line-height:1}
+.wx .big{font-size:min(28cqw,44cqh)}
+/* Kalender */
+.cal .big{font-size:min(30cqw,36cqh);margin-top:2px}
+.cal .big span{font-size:.4em;color:var(--acc);margin-left:6px}
+/* Tanken */
+.fuel .big{font-size:min(22cqw,30cqh);margin-top:4px}
+.fuel .big small{font-size:.42em;color:var(--dim);margin-left:4px}
+
+/* App-Kacheln */
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.w .tiles{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));grid-auto-rows:88px;margin-top:8px;overflow:hidden;flex:1 1 0;min-height:0;align-content:start}
+.tile{position:relative;min-height:92px;border-radius:18px;background:var(--s2);border:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;padding:8px 6px;text-align:center;font-size:14px;font-weight:600;line-height:1.15;overflow:hidden}
+.w .tile{min-height:0;height:88px;font-size:13px;gap:4px}
+.w .tile .e{width:40px;height:40px;font-size:22px;border-radius:12px}
+.tile .e{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:26px;background:var(--c,var(--s3))}
+.tile .n{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.add{border-style:dashed;color:var(--dim)}
+.tile .edit-badge{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--acc);color:var(--acc-ink);font-size:13px;display:none;place-items:center;font-weight:800}
+.editing .tile .edit-badge{display:grid}
+.editing .tile{animation:wob .35s ease-in-out infinite alternate}
+@keyframes wob{from{transform:rotate(-1deg)}to{transform:rotate(1deg)}}
+.dest .e{background:color-mix(in srgb,var(--acc) 22%,var(--s3))}
+
+/* Abschnitte */
+.sec{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:var(--gap)}
+.sec-h{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.sec-h h2{margin:0;font-family:var(--f-num);font-size:24px;font-weight:700;letter-spacing:.02em;flex:1}
+.hint{color:var(--dim);font-size:14px;line-height:1.45;margin:8px 0 0}
+.seg{display:inline-flex;background:var(--s2);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{min-height:42px;padding:0 14px;border:0;border-radius:10px;background:transparent;font-weight:700;font-size:15px;color:var(--dim)}
+.seg button.on{background:var(--s3);color:var(--ink)}
+.set{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.set:first-of-type{border-top:0}
+.set > label,.set > .lbl{flex:1;min-width:150px;font-weight:600}
+.set .lbl small{display:block;color:var(--dim);font-weight:500;font-size:13.5px;margin-top:2px}
+.sw{position:relative;width:58px;height:34px;border-radius:999px;background:var(--s3);border:0;flex:none}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw.on{background:var(--acc)}
+.sw.on::after{transform:translateX(24px)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches button{width:42px;height:42px;border-radius:50%;border:3px solid transparent;background:var(--c)}
+.swatches button.on{border-color:var(--ink)}
+.wlist .wi{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.wlist .wi:first-child{border-top:0}
+.wlist .wi .nm{flex:1;font-weight:600;display:flex;align-items:center;gap:10px}
+.wlist .wi .nm span{font-size:22px;width:30px;text-align:center}
+.mini{min-width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s2);font-weight:700;font-size:14px;padding:0 10px}
+.mini:disabled{opacity:.3}
+.wi.off .nm{opacity:.45}
+
+/* Listen (Logbuch) */
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--s2);border:1px solid var(--line);border-radius:16px;padding:12px}
+.kpi div{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.kpi b{display:block;font-family:var(--f-num);font-size:28px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.entry{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:1px solid var(--line)}
+.entry:first-child{border-top:0}
+.entry .ico{width:42px;height:42px;border-radius:12px;background:var(--s2);display:grid;place-items:center;font-size:20px;flex:none}
+.entry .tx{flex:1;min-width:0}
+.entry .tx b{display:block;font-weight:700}
+.entry .tx span{display:block;color:var(--dim);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry .val{font-family:var(--f-num);font-size:22px;font-weight:700;text-align:right;white-space:nowrap}
+.entry .val small{display:block;font-family:var(--f-txt);font-size:12.5px;color:var(--dim);font-weight:600}
+.empty{color:var(--dim);text-align:center;padding:24px 8px;font-size:15px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--s3);color:var(--dim);margin-left:6px;vertical-align:2px;text-transform:uppercase;letter-spacing:.05em}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:var(--st) var(--sr) 0 var(--sl)}
+.modal.on{display:flex}
+.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--s1);border:1px solid var(--line);border-bottom:0;
+  border-radius:26px 26px 0 0;padding:20px 18px calc(20px + var(--sb))}
+@media (orientation:landscape){.modal{align-items:center}.sheet{border-radius:26px;border-bottom:1px solid var(--line);max-height:94dvh}}
+.sheet h2{margin:0 0 14px;font-family:var(--f-num);font-size:28px;font-weight:700}
+.fld{display:block;margin-bottom:12px}
+.fld > span{display:block;font-size:13px;font-weight:700;color:var(--dim);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.fld input,.fld select,.fld textarea{width:100%;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--s2);padding:10px 14px;font-size:17px}
+.fld textarea{min-height:80px;resize:vertical}
+.fld-row{display:flex;gap:10px}
+.fld-row .fld{flex:1;min-width:0}
+.acts{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.check{display:flex;align-items:center;gap:12px;min-height:50px;font-weight:600}
+.check input{width:26px;height:26px;accent-color:var(--acc)}
+.presets{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+.presets button{flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--s2);font-weight:600;font-size:14px}
+.res button{display:block;width:100%;text-align:left;min-height:50px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--s2);margin-bottom:6px}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--sb));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);
+  padding:12px 18px;border-radius:14px;font-weight:700;opacity:0;transition:.25s;z-index:60;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Start-Hinweis */
+.welcome{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 22%,var(--s1)),var(--s1));border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:var(--gap);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.welcome p{margin:0;flex:1;min-width:220px;line-height:1.4}
+.legal{text-align:center;color:var(--dim);font-size:13px;padding:8px 0 4px}
+.legal a{text-decoration:underline}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><i></i>Bordwerk</div>
+    <span class="sp"></span>
+    <span class="chip wait" id="gpsChip" title="GPS"><span class="dot"></span><span id="gpsTxt">GPS</span></span>
+    <span class="top-clock" id="topClock">--:--</span>
+    <button class="icon-btn" id="editBtn" aria-label="Dashboard anpassen">✏️</button>
+  </header>
+
+  <main>
+    <!-- Fahrt -->
+    <section class="view on" id="v-dash">
+      <div id="welcome"></div>
+      <div class="dash" id="dash"></div>
+    </section>
+
+    <!-- Apps -->
+    <section class="view" id="v-apps">
+      <div class="sec">
+        <div class="sec-h"><h2>Apps</h2><button class="btn" id="appsEdit">Bearbeiten</button></div>
+        <div class="tiles" id="appTiles"></div>
+        <p class="hint">Antippen öffnet die App. Spotify, Waze & Co. müssen auf dem iPhone installiert sein. Im Bearbeiten-Modus kannst du Kacheln ändern, sortieren, löschen und als Favorit aufs Dashboard legen.</p>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>Ziele</h2></div>
+        <div class="tiles" id="destTiles"></div>
+        <p class="hint">Startet die Navigation direkt in deiner Navi-App (Einstellungen › Fahrt).</p>
+      </div>
+    </section>
+
+    <!-- Logbuch -->
+    <section class="view" id="v-log">
+      <div class="tabs seg" id="logTabs">
+        <button data-tab="trips" class="on">🛣️ Fahrtenbuch</button>
+        <button data-tab="fuel">⛽ Tanken</button>
+      </div>
+      <div id="logBody"></div>
+    </section>
+
+    <!-- Einstellungen -->
+    <section class="view" id="v-set">
+      <div class="sec">
+        <div class="sec-h"><h2>Dashboard</h2></div>
+        <div class="wlist" id="wList"></div>
+        <p class="hint">Schalter blendet einen Baustein ein oder aus, die Größe wechselt zwischen klein, breit und groß, die Pfeile ändern die Reihenfolge.</p>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>Darstellung</h2></div>
+        <div class="set"><div class="lbl">Modus<small>Automatisch wechselt bei Sonnenauf- und -untergang</small></div>
+          <div class="seg" id="modeSeg"><button data-v="nacht">Nacht</button><button data-v="tag">Tag</button><button data-v="auto">Auto</button></div></div>
+        <div class="set"><div class="lbl">Akzentfarbe</div><div class="swatches" id="accSw"></div></div>
+        <div class="set"><div class="lbl">Tacho-Skala</div>
+          <div class="seg" id="scaleSeg"><button data-v="160">160</button><button data-v="200">200</button><button data-v="240">240</button></div></div>
+        <div class="set"><div class="lbl">Tempo-Warnung<small>Tacho wird rot, wenn du schneller fährst</small></div>
+          <div class="seg" id="limSeg"><button data-v="0">Aus</button><button data-v="30">30</button><button data-v="50">50</button><button data-v="70">70</button><button data-v="100">100</button><button data-v="130">130</button></div></div>
+        <div class="set"><div class="lbl">Tacho-Korrektur<small>Bei Bedarf an den Corsa-Tacho angleichen (GPS zeigt die echte Geschwindigkeit)</small></div>
+          <div class="seg" id="offSeg"><button data-v="0">±0</button><button data-v="2">+2</button><button data-v="3">+3</button><button data-v="5">+5 %</button></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>Fahrt</h2></div>
+        <div class="set"><div class="lbl">Navi-App für Ziele</div>
+          <div class="seg" id="navSeg"><button data-v="apple">Apple Karten</button><button data-v="google">Google Maps</button><button data-v="waze">Waze</button></div></div>
+        <div class="set"><div class="lbl">Bildschirm anlassen<small>Verhindert, dass das iPhone während der Fahrt sperrt</small></div><button class="sw" id="wlSw" aria-label="Bildschirm anlassen"></button></div>
+        <div class="set"><div class="lbl">Fahrt automatisch starten<small>Sobald du schneller als 10 km/h fährst</small></div><button class="sw" id="autoSw" aria-label="Automatisch starten"></button></div>
+        <div class="set"><div class="lbl">Wetterort<small id="wxPlaceTxt">Aktueller Standort</small></div>
+          <div class="seg" id="wxSeg"><button data-v="gps">Standort</button><button data-v="place">Ort wählen</button></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>Daten</h2></div>
+        <div class="acts" style="margin-top:0">
+          <button class="btn" id="bkOut">⬇️ Sicherung speichern</button>
+          <label class="btn" for="bkIn">⬆️ Sicherung laden</label><input type="file" id="bkIn" accept="application/json,.json" hidden>
+          <button class="btn dan" id="resetAll">Alles zurücksetzen</button>
+        </div>
+        <p class="hint">Alles bleibt nur auf diesem Gerät gespeichert. Mach ab und zu eine Sicherung, vor allem vom Fahrtenbuch.</p>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>So nutzt du Bordwerk im Auto</h2></div>
+        <p class="hint" style="margin-top:0"><b>1.</b> In Safari öffnen › Teilen › „Zum Home-Bildschirm“. Dann startet Bordwerk im Vollbild wie eine App.<br>
+        <b>2.</b> Beim ersten Start den Standort erlauben (für Tacho, Strecke und Wetter). In iOS unter Einstellungen › Datenschutz › Ortungsdienste lässt sich das ändern.<br>
+        <b>3.</b> iPhone quer in die Halterung, Bordwerk im Vordergrund lassen: Tacho und Strecke laufen nur, solange die App offen ist.<br>
+        <b>Gut zu wissen:</b> Auf den eingebauten Bildschirm des Corsa (CarPlay) lässt Apple keine eigenen Web-Apps. Bordwerk läuft deshalb auf dem iPhone selbst. Bitte nur im Stand bedienen.</p>
+      </div>
+      <div class="legal"><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a></div>
+    </section>
+  </main>
+
+  <nav class="rail" id="rail">
+    <button data-v="dash" class="on"><b>🚗</b>Fahrt</button>
+    <button data-v="apps"><b>▦</b>Apps</button>
+    <button data-v="log"><b>📒</b>Logbuch</button>
+    <button data-v="set"><b>⚙️</b>Anpassen</button>
+  </nav>
+</div>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+/* ================= Hilfen ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const pad=n=>String(n).padStart(2,"0");
+const nf=(v,d=1)=>Number(v).toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
+const num=v=>{const n=parseFloat(String(v).replace(",","."));return isFinite(n)?n:null};
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const fmtDate=s=>{if(!s)return"";const[y,m,d]=s.split("-");return d+"."+m+"."+y};
+const fmtDur=sec=>{sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);return h?h+":"+pad(m)+" h":m+" min"};
+const WD=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MO=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function kw(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);
+  const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
+function hav(a,b,c,d){const R=6371e3,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r;const h=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
+
+/* ================= Zustand ================= */
+const KEY="bordwerk_v1";
+const WIDGETS={
+  speed:{n:"Tacho",e:"⏱️",sz:"l"}, trip:{n:"Aktuelle Fahrt",e:"🛣️",sz:"w"}, clock:{n:"Uhr",e:"🕒",sz:"s"},
+  weather:{n:"Wetter",e:"⛅",sz:"s"}, favs:{n:"Lieblings-Apps",e:"▦",sz:"w"}, dests:{n:"Ziele",e:"📍",sz:"w"},
+  calendar:{n:"Kalender",e:"📅",sz:"s"}, fuel:{n:"Tanken",e:"⛽",sz:"s"}
+};
+const ACCENTS=[["#3FA9F5","#04121D"],["#33D69F","#03160F"],["#FFB020","#1E1200"],["#FF5A5F","#1E0405"],["#A78BFA","#10082A"],["#F5D90A","#1A1600"],["#E8EDF3","#0B0E12"]];
+const APP_PRESETS=[
+  {n:"Apple Karten",e:"🗺️",u:"maps://",c:"#2FB55A"},{n:"Google Maps",e:"📍",u:"comgooglemaps://",c:"#3B7CF0"},
+  {n:"Waze",e:"🚙",u:"waze://",c:"#2BB6E8"},{n:"Spotify",e:"🎧",u:"spotify://",c:"#1DB954"},
+  {n:"Musik",e:"🎵",u:"music://",c:"#F2364F"},{n:"Podcasts",e:"🎙️",u:"podcasts://",c:"#9353E8"},
+  {n:"Audible",e:"📚",u:"audible://",c:"#F39C12"},{n:"Telefon",e:"📞",u:"mobilephone://",c:"#2FB55A"},
+  {n:"Nachrichten",e:"💬",u:"sms:",c:"#34C759"},{n:"WhatsApp",e:"🟢",u:"whatsapp://",c:"#1FA855"},
+  {n:"Kalender",e:"📅",u:"calshow://",c:"#E5413B"},{n:"Wetter",e:"⛅",u:"weather://",c:"#2E7DE1"},
+  {n:"Tankstelle",e:"⛽",u:"maps://?q=Tankstelle",c:"#F08A0C"},{n:"Parkplatz",e:"🅿️",u:"maps://?q=Parkplatz",c:"#2E7DE1"},
+  {n:"E-Ladesäule",e:"🔌",u:"maps://?q=Ladestation",c:"#16A36B"},{n:"YouTube Music",e:"▶️",u:"youtubemusic://",c:"#E22B2B"},
+  {n:"Myopel",e:"🔑",u:"https://www.opel.de/myopel.html",c:"#5B6472"}
+];
+const DEF_FAV=["Apple Karten","Spotify","Musik","Telefon","Tankstelle","Nachrichten"];
+function defaults(){
+  return {
+    v:1,
+    set:{mode:"nacht",acc:0,scale:200,limit:0,offset:0,nav:"apple",wake:true,auto:false,wx:"gps",wxPlace:null,welcome:true},
+    widgets:["speed","trip","clock","weather","favs","dests","calendar","fuel"].map(id=>({id,on:true,sz:WIDGETS[id].sz})),
+    apps:APP_PRESETS.slice(0,13).concat([APP_PRESETS[13]]).map(a=>({id:uid(),n:a.n,e:a.e,u:a.u,c:a.c,f:DEF_FAV.includes(a.n)})),
+    dests:[{id:uid(),n:"Zuhause",e:"🏠",a:""},{id:uid(),n:"Arbeit",e:"💼",a:""}],
+    trips:[], fuel:[], trip:null, wx:null
+  };
+}
+function loadState(){
+  const d=defaults();let s=null;
+  try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!s||typeof s!=="object")return d;
+  s.set=Object.assign(d.set,s.set||{});
+  if(!Array.isArray(s.widgets))s.widgets=d.widgets;
+  Object.keys(WIDGETS).forEach(id=>{if(!s.widgets.some(w=>w.id===id))s.widgets.push({id,on:false,sz:WIDGETS[id].sz})});
+  s.widgets=s.widgets.filter(w=>WIDGETS[w.id]);
+  ["apps","dests","trips","fuel"].forEach(k=>{if(!Array.isArray(s[k]))s[k]=d[k]});
+  return s;
+}
+let S=loadState();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+/* ================= Darstellung ================= */
+let sun=null;
+function isNight(){
+  if(S.set.mode==="nacht")return true; if(S.set.mode==="tag")return false;
+  const now=Date.now();
+  if(sun&&sun.rise&&sun.set)return now<sun.rise||now>sun.set;
+  const h=new Date().getHours();return h<7||h>=19;
+}
+function applyLook(){
+  const r=document.documentElement;
+  r.dataset.mode=isNight()?"nacht":"tag";
+  const a=ACCENTS[S.set.acc]||ACCENTS[0];
+  r.style.setProperty("--acc",a[0]);r.style.setProperty("--acc-ink",a[1]);
+  const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.content=isNight()?"#06080B":"#E9EDF2";
+}
+
+/* ================= Navigation ================= */
+let view="dash";
+function show(v){
+  view=v;$$(".view").forEach(x=>x.classList.toggle("on",x.id==="v-"+v));
+  $$("#rail button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  $("main").scrollTop=0;
+  if(v==="apps")renderApps(); if(v==="log")renderLog(); if(v==="set")renderSettings(); if(v==="dash")renderDash();
+}
+$("#rail").addEventListener("click",e=>{const b=e.target.closest("button");if(b)show(b.dataset.v)});
+$("#editBtn").addEventListener("click",()=>show("set"));
+
+/* ================= GPS ================= */
+let gps={speed:null,lat:null,lon:null,acc:null,t:0,last:null,err:null,watching:false};
+let watchId=null;
+function startGPS(){
+  if(!("geolocation" in navigator)){gps.err="Kein GPS";updGpsChip();return}
+  if(watchId!=null)return;
+  watchId=navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  gps.watching=true;updGpsChip();
+}
+function onPos(p){
+  const c=p.coords,t=p.timestamp||Date.now();
+  gps.err=null;
+  let v=(c.speed!=null&&c.speed>=0)?c.speed:null;
+  const L=gps.last;
+  if(L){
+    const d=hav(L.lat,L.lon,c.latitude,c.longitude),dt=(t-L.t)/1000;
+    if(v==null&&dt>0.5)v=d/dt;
+    const good=c.accuracy<=40&&L.acc<=40&&dt>0&&d/dt<75;
+    if(d>=3||dt>15){
+      if(good&&S.trip&&S.trip.run)S.trip.dist+=d;
+      gps.last={lat:c.latitude,lon:c.longitude,acc:c.accuracy,t};
+    }
+  }else gps.last={lat:c.latitude,lon:c.longitude,acc:c.accuracy,t};
+  if(v!=null&&v<0.5)v=0;
+  gps.speed=v; gps.lat=c.latitude; gps.lon=c.longitude; gps.acc=c.accuracy; gps.t=Date.now();
+  const kmh=v==null?0:v*3.6;
+  if(S.trip&&S.trip.run&&c.accuracy<=30&&kmh>S.trip.max)S.trip.max=kmh;
+  if(S.set.auto&&!S.trip&&kmh>10)startTrip(true);
+  if(!wxLoadedOnce&&S.set.wx==="gps"){wxLoadedOnce=true;loadWeather(false)}
+  updGpsChip();updSpeed();
+}
+function onPosErr(e){
+  gps.err=e.code===1?"GPS gesperrt":e.code===3?"GPS sucht…":"Kein Signal";
+  if(e.code===1){navigator.geolocation.clearWatch(watchId);watchId=null;gps.watching=false}
+  updGpsChip();
+}
+function gpsFresh(){return gps.t&&Date.now()-gps.t<6000}
+function updGpsChip(){
+  const ch=$("#gpsChip"),tx=$("#gpsTxt");
+  ch.classList.remove("ok","wait","bad");
+  if(gps.err==="GPS gesperrt"||gps.err==="Kein GPS"){ch.classList.add("bad");tx.textContent=gps.err}
+  else if(gpsFresh()){ch.classList.add("ok");tx.textContent=gps.acc!=null?"GPS ±"+Math.round(gps.acc)+" m":"GPS"}
+  else{ch.classList.add("wait");tx.textContent=gps.watching?"GPS sucht…":"GPS aus"}
+}
+function shownKmh(){
+  if(!gpsFresh()||gps.speed==null)return null;
+  return gps.speed*3.6*(1+(S.set.offset||0)/100);
+}
+
+/* ================= Fahrt ================= */
+function startTrip(auto){
+  if(S.trip&&!S.trip.run){S.trip.run=true;S.trip.resumed=Date.now();save();renderTripW();toast("Fahrt fortgesetzt");return}
+  if(S.trip)return;
+  S.trip={id:uid(),start:Date.now(),dist:0,max:0,moving:0,paused:0,run:true,auto:!!auto};
+  gps.last=gps.lat!=null?{lat:gps.lat,lon:gps.lon,acc:gps.acc||99,t:Date.now()}:null;
+  save();renderTripW();toast(auto?"Fahrt automatisch gestartet":"Fahrt läuft – gute Fahrt!");
+  lockScreen();
+}
+function pauseTrip(){if(!S.trip)return;S.trip.run=false;save();renderTripW();toast("Fahrt pausiert")}
+function stopTrip(){
+  if(!S.trip)return;
+  const t=S.trip,km=t.dist/1000;
+  openModal(`<h2>Fahrt speichern</h2>
+   <div class="kpis"><div class="kpi"><div>Strecke</div><b>${nf(km,1)} km</b></div><div class="kpi"><div>Fahrzeit</div><b>${fmtDur(t.moving)}</b></div><div class="kpi"><div>Max</div><b>${Math.round(t.max)} km/h</b></div></div>
+   <div class="fld-row"><label class="fld"><span>Strecke (km)</span><input id="fKm" inputmode="decimal" value="${nf(km,1)}"></label>
+   <label class="fld"><span>Zweck</span><select id="fPur"><option>Privat</option><option>Arbeitsweg</option><option>Dienstlich</option></select></label></div>
+   <div class="fld-row"><label class="fld"><span>Von</span><input id="fFrom" placeholder="z. B. Zuhause"></label><label class="fld"><span>Nach</span><input id="fTo" placeholder="z. B. Arbeit"></label></div>
+   <label class="fld"><span>Kilometerstand am Ende (optional)</span><input id="fOdo" inputmode="numeric" placeholder="Corsa-Tacho"></label>
+   <label class="fld"><span>Notiz</span><input id="fNote" placeholder="optional"></label>
+   <div class="acts"><button class="btn pri f" data-m="saveTrip">Ins Fahrtenbuch</button><button class="btn" data-m="close">Weiterfahren</button><button class="btn dan" data-m="dropTrip">Verwerfen</button></div>`);
+}
+function finishTrip(keep){
+  const t=S.trip;if(!t)return;
+  if(keep){
+    S.trips.unshift({id:t.id,date:new Date(t.start).toISOString().slice(0,10),start:t.start,end:Date.now(),
+      km:num($("#fKm").value)??t.dist/1000,moving:t.moving,max:Math.round(t.max),
+      pur:$("#fPur").value,from:$("#fFrom").value.trim(),to:$("#fTo").value.trim(),odo:num($("#fOdo").value),note:$("#fNote").value.trim()});
+  }
+  S.trip=null;save();closeModal();renderTripW();renderFuelW();toast(keep?"Fahrt gespeichert":"Fahrt verworfen");
+}
+
+/* ================= Bildschirm wach halten ================= */
+let wl=null;
+async function lockScreen(){
+  if(!S.set.wake||document.visibilityState!=="visible"||wl)return;
+  try{if("wakeLock" in navigator){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null})}}catch(e){}
+}
+function unlockScreen(){if(wl){wl.release().catch(()=>{});wl=null}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){lockScreen();if(S.set.wx)loadWeather(false)}else save()});
+document.addEventListener("pointerdown",function first(){lockScreen();startGPS();document.removeEventListener("pointerdown",first)},{once:true});
+
+/* ================= Wetter (Open-Meteo) ================= */
+let wxLoadedOnce=false,wxBusy=false;
+const WMO={0:["☀️","Klar"],1:["🌤️","Überwiegend klar"],2:["⛅","Teils bewölkt"],3:["☁️","Bewölkt"],45:["🌫️","Nebel"],48:["🌫️","Reifnebel"],
+ 51:["🌦️","Leichter Niesel"],53:["🌦️","Niesel"],55:["🌧️","Starker Niesel"],56:["🧊","Gefrierender Niesel"],57:["🧊","Gefrierender Niesel"],
+ 61:["🌧️","Leichter Regen"],63:["🌧️","Regen"],65:["🌧️","Starker Regen"],66:["🧊","Gefrierender Regen"],67:["🧊","Gefrierender Regen"],
+ 71:["🌨️","Leichter Schnee"],73:["🌨️","Schnee"],75:["❄️","Starker Schnee"],77:["🌨️","Schneegriesel"],80:["🌦️","Schauer"],81:["🌧️","Schauer"],
+ 82:["⛈️","Heftige Schauer"],85:["🌨️","Schneeschauer"],86:["❄️","Schneeschauer"],95:["⛈️","Gewitter"],96:["⛈️","Gewitter mit Hagel"],99:["⛈️","Gewitter mit Hagel"]};
+function wxCoords(){
+  if(S.set.wx==="place"&&S.set.wxPlace)return{lat:S.set.wxPlace.lat,lon:S.set.wxPlace.lon,name:S.set.wxPlace.name};
+  if(gps.lat!=null)return{lat:Math.round(gps.lat*100)/100,lon:Math.round(gps.lon*100)/100,name:"Hier"};
+  return null;
+}
+async function loadWeather(force){
+  const c=wxCoords();if(!c){renderWxW();return}
+  const w=S.wx;
+  if(!force&&w&&Date.now()-w.t<20*60e3&&Math.abs(w.lat-c.lat)<0.15&&Math.abs(w.lon-c.lon)<0.15){setSun();renderWxW();return}
+  if(wxBusy)return;wxBusy=true;
+  try{
+    const u="https://api.open-meteo.com/v1/forecast?latitude="+c.lat+"&longitude="+c.lon+
+      "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&forecast_days=1";
+    const r=await fetch(u);if(!r.ok)throw 0;const j=await r.json();
+    S.wx={t:Date.now(),lat:c.lat,lon:c.lon,name:c.name,temp:j.current.temperature_2m,feel:j.current.apparent_temperature,code:j.current.weather_code,
+      wind:j.current.wind_speed_10m,max:j.daily.temperature_2m_max[0],min:j.daily.temperature_2m_min[0],rain:j.daily.precipitation_probability_max[0],
+      rise:j.daily.sunrise[0],set:j.daily.sunset[0]};
+    save();setSun();if(force)toast("Wetter aktualisiert");
+  }catch(e){if(force)toast("Wetter gerade nicht erreichbar")}
+  wxBusy=false;renderWxW();
+}
+function setSun(){
+  if(!S.wx||!S.wx.rise)return;
+  const rise=new Date(S.wx.rise).getTime(),set=new Date(S.wx.set).getTime();
+  if(isFinite(rise)&&isFinite(set)){sun={rise,set};applyLook()}
+}
+
+/* ================= Dashboard ================= */
+function renderWelcome(){
+  const box=$("#welcome");
+  if(!S.set.welcome){box.innerHTML="";return}
+  box.innerHTML=`<div class="welcome"><p><b>Willkommen im Bordwerk!</b> Tippe einmal auf den Bildschirm und erlaube den Standort – dann laufen Tacho, Strecke und Wetter. Über ✏️ baust du dir das Dashboard zusammen.</p>
+   <button class="btn pri" data-a="gpsOn">Standort erlauben</button><button class="btn" data-a="hideWelcome">Ausblenden</button></div>`;
+}
+function renderDash(){
+  renderWelcome();
+  const d=$("#dash");
+  d.innerHTML=S.widgets.filter(w=>w.on).map(w=>`<section class="w w-${w.id} sz-${w.sz}" id="w-${w.id}"></section>`).join("")||
+    `<div class="empty" style="grid-column:1/-1">Alle Bausteine sind ausgeblendet. Unter „Anpassen“ kannst du sie einschalten.</div>`;
+  renderSpeedW();renderTripW();renderClockW();renderWxW();renderFavsW();renderDestsW();renderCalW();renderFuelW();
+}
+const W=id=>document.getElementById("w-"+id);
+
+function renderSpeedW(){
+  const el=W("speed");if(!el)return;
+  el.classList.add("spd");
+  const sc=S.set.scale;let ticks="";
+  for(let i=0;i<=sc;i+=20){const a=(135+270*i/sc)*Math.PI/180,r1=92,r2=i%40===0?84:88;
+    ticks+=`<line class="tick" x1="${100+r1*Math.cos(a)}" y1="${100+r1*Math.sin(a)}" x2="${100+r2*Math.cos(a)}" y2="${100+r2*Math.sin(a)}" stroke-width="2" stroke-linecap="round"/>`}
+  const arc="M "+(100+78*Math.cos(135*Math.PI/180))+" "+(100+78*Math.sin(135*Math.PI/180))+" A 78 78 0 1 1 "+(100+78*Math.cos(45*Math.PI/180))+" "+(100+78*Math.sin(45*Math.PI/180));
+  el.innerHTML=`<svg viewBox="0 0 200 200" aria-hidden="true">${ticks}
+     <path class="ring-bg" d="${arc}" fill="none" stroke-width="12" stroke-linecap="round" pathLength="100"/>
+     <path class="ring-fg" id="ringFg" d="${arc}" fill="none" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/></svg>
+    <div class="lim${S.set.limit?" on":""}" id="limBadge">${S.set.limit||""}</div>
+    <div class="num"><b id="spdVal">–</b><span>km/h</span></div>
+    <div class="meta" id="spdMeta"></div>`;
+  updSpeed();
+}
+function updSpeed(){
+  const el=W("speed");if(!el)return;
+  const k=shownKmh(),v=$("#spdVal"),ring=$("#ringFg");
+  el.classList.toggle("stale",k==null);
+  v.textContent=k==null?"–":Math.round(k);
+  const p=Math.min(100,(k||0)/S.set.scale*100);
+  ring.setAttribute("stroke-dasharray",p.toFixed(1)+" 100");
+  el.classList.toggle("over",!!S.set.limit&&k!=null&&k>S.set.limit+1);
+  const m=$("#spdMeta");
+  if(m)m.textContent=k==null?(gps.err||"Warte auf GPS…"):(S.trip?"Max "+Math.round(S.trip.max)+" km/h":"");
+}
+function renderTripW(){
+  const el=W("trip");if(!el)return;
+  el.classList.add("trip");
+  const t=S.trip;
+  let btns;
+  if(!t)btns=`<button class="btn pri" data-a="tripStart">▶ Fahrt starten</button>`;
+  else if(t.run)btns=`<button class="btn" data-a="tripPause">❚❚ Pause</button><button class="btn dan" data-a="tripStop">■ Ende</button>`;
+  else btns=`<button class="btn pri" data-a="tripStart">▶ Weiter</button><button class="btn dan" data-a="tripStop">■ Ende</button>`;
+  el.innerHTML=`<h3>${t&&t.run?'<span class="rec"></span>':"🛣️"} ${t?(t.run?"Fahrt läuft":"Pausiert"):"Fahrt"}</h3>
+    <div class="tr-main"><div class="big"><span id="tKm">${nf(t?t.dist/1000:0,1)}</span><small>km</small></div><div class="tr-btns">${btns}</div></div>
+    <div class="stats"><div>Fahrzeit<b id="tMov">${fmtDur(t?t.moving:0)}</b></div><div>Ø<b id="tAvg">–</b></div><div>Start<b id="tStart">${t?new Date(t.start).toTimeString().slice(0,5):"–"}</b></div></div>`;
+  updTrip();
+}
+function updTrip(){
+  const t=S.trip;if(!t||!W("trip"))return;
+  $("#tKm").textContent=nf(t.dist/1000,1);
+  $("#tMov").textContent=fmtDur(t.moving);
+  $("#tAvg").textContent=t.moving>60?Math.round(t.dist/1000/(t.moving/3600))+" km/h":"–";
+}
+function renderClockW(){
+  const el=W("clock");if(!el)return;el.classList.add("clk");
+  el.innerHTML=`<h3>🕒 Uhr</h3><div class="big" id="cT">--:--</div><div class="sub" id="cD"></div>`;updClock();
+}
+function updClock(){
+  const d=new Date(),t=pad(d.getHours())+":"+pad(d.getMinutes());
+  $("#topClock").textContent=t;
+  const c=$("#cT");if(c){c.textContent=t;$("#cD").textContent=WD[d.getDay()]+", "+d.getDate()+". "+MO[d.getMonth()]}
+}
+function renderWxW(){
+  const el=W("weather");if(!el)return;el.classList.add("wx");el.dataset.a="wxRefresh";
+  const w=S.wx;
+  if(!w){el.innerHTML=`<h3>⛅ Wetter</h3><div class="sub" style="margin:auto 0">${S.set.wx==="place"&&!S.set.wxPlace?"Ort unter „Anpassen“ wählen":"Wartet auf Standort …"}</div>`;return}
+  const m=WMO[w.code]||["🌡️",""];
+  el.innerHTML=`<h3>${esc(w.name==="Hier"?"Wetter hier":w.name)}</h3>
+    <div class="line"><span class="ic">${m[0]}</span><span class="big">${Math.round(w.temp)}°</span></div>
+    <div class="sub">${esc(m[1])} · ${Math.round(w.min)}°/${Math.round(w.max)}°${w.rain!=null?" · ☔ "+w.rain+" %":""}</div>
+    ${w.temp<=3?'<div class="sub" style="color:var(--amber);font-weight:700">❄️ Glättegefahr</div>':""}`;
+}
+function tileHTML(a,editing){
+  const inner=`<span class="e" style="--c:${esc(a.c||"")}">${esc(a.e||"•")}</span><span class="n">${esc(a.n)}</span><span class="edit-badge">✎</span>`;
+  if(editing)return`<button class="tile" data-a="appEdit" data-id="${a.id}">${inner}</button>`;
+  return`<a class="tile" href="${esc(safeUrl(a.u))}" data-launch="1">${inner}</a>`;
+}
+function safeUrl(u){u=String(u||"").trim();if(/^\s*(javascript|data|vbscript):/i.test(u))return"#";return u||"#"}
+function renderFavsW(){
+  const el=W("favs");if(!el)return;
+  const f=S.apps.filter(a=>a.f);
+  el.innerHTML=`<h3>▦ Apps</h3><div class="tiles">${f.length?f.map(a=>tileHTML(a,false)).join(""):'<button class="tile add" data-a="go-apps"><span class="e">＋</span><span class="n">Favoriten wählen</span></button>'}</div>`;
+}
+function navUrl(addr){
+  const q=encodeURIComponent(addr);
+  if(S.set.nav==="google")return"comgooglemaps://?daddr="+q+"&directionsmode=driving";
+  if(S.set.nav==="waze")return"waze://?q="+q+"&navigate=yes";
+  return"maps://?daddr="+q+"&dirflg=d";
+}
+function destTile(d,editing){
+  const inner=`<span class="e">${esc(d.e||"📍")}</span><span class="n">${esc(d.n)}</span><span class="edit-badge">✎</span>`;
+  if(editing||!d.a)return`<button class="tile dest" data-a="destEdit" data-id="${d.id}">${inner}</button>`;
+  return`<a class="tile dest" href="${esc(navUrl(d.a))}">${inner}</a>`;
+}
+function renderDestsW(){
+  const el=W("dests");if(!el)return;
+  el.innerHTML=`<h3>📍 Ziele</h3><div class="tiles">${S.dests.map(d=>destTile(d,false)).join("")}<button class="tile add" data-a="destAdd"><span class="e">＋</span><span class="n">Ziel</span></button></div>`;
+}
+function renderCalW(){
+  const el=W("calendar");if(!el)return;el.classList.add("cal");
+  const d=new Date();
+  el.innerHTML=`<h3>📅 ${WD[d.getDay()]}</h3><div class="big">${d.getDate()}.<span>KW ${kw(d)}</span></div><div class="sub">${MO[d.getMonth()]} ${d.getFullYear()}</div>
+    <div class="row"><a class="btn f" href="calshow://">📅 Öffnen</a></div>`;
+}
+function fuelStats(){
+  const f=S.fuel.slice().filter(x=>x.odo!=null).sort((a,b)=>a.odo-b.odo);
+  const cons=[];let lastFull=-1;
+  for(let i=0;i<f.length;i++){
+    if(!f[i].full)continue;
+    if(lastFull>=0){let l=0;for(let j=lastFull+1;j<=i;j++)l+=f[j].l||0;const km=f[i].odo-f[lastFull].odo;if(km>0)cons.push({id:f[i].id,v:l/km*100,km,l})}
+    lastFull=i;
+  }
+  const tot=cons.reduce((a,c)=>({km:a.km+c.km,l:a.l+c.l}),{km:0,l:0});
+  const cost=S.fuel.reduce((a,x)=>a+(x.eur||0),0);
+  const span=f.length>1?f[f.length-1].odo-f[0].odo:0;
+  return{cons,avg:tot.km?tot.l/tot.km*100:null,last:cons.length?cons[cons.length-1].v:null,cost,
+    per100:span>0?(cost-(f[0].eur||0))/span*100:null,map:Object.fromEntries(cons.map(c=>[c.id,c.v]))};
+}
+function renderFuelW(){
+  const el=W("fuel");if(!el)return;el.classList.add("fuel");
+  const st=fuelStats(),last=S.fuel[0];
+  let sinceKm=null;
+  if(last){sinceKm=S.trips.filter(t=>t.start>last.ts).reduce((a,t)=>a+(t.km||0),0)}
+  el.innerHTML=`<h3>⛽ Tanken</h3>
+    <div class="big">${st.last!=null?nf(st.last,1):"–"}<small>l/100 km</small></div>
+    <div class="sub">${last?"Zuletzt "+fmtDate(last.date).slice(0,6)+(sinceKm?" · +"+nf(sinceKm,0)+" km":""):"Noch nichts eingetragen"}</div>
+    <div class="row"><button class="btn f" data-a="fuelAdd">＋ Tanken</button></div>`;
+}
+
+/* ================= Apps & Ziele ================= */
+let appsEditing=false;
+function renderApps(){
+  const t=$("#appTiles");t.classList.toggle("editing",appsEditing);
+  t.innerHTML=S.apps.map(a=>tileHTML(a,appsEditing)).join("")+`<button class="tile add" data-a="appAdd"><span class="e">＋</span><span class="n">App</span></button>`;
+  $("#appsEdit").textContent=appsEditing?"Fertig":"Bearbeiten";
+  $("#appsEdit").classList.toggle("pri",appsEditing);
+  const d=$("#destTiles");d.classList.toggle("editing",appsEditing);
+  d.innerHTML=S.dests.map(x=>destTile(x,appsEditing)).join("")+`<button class="tile add" data-a="destAdd"><span class="e">＋</span><span class="n">Ziel</span></button>`;
+}
+$("#appsEdit").addEventListener("click",()=>{appsEditing=!appsEditing;renderApps()});
+function appForm(a){
+  const isNew=!a;a=a||{n:"",e:"⭐",u:"",c:"#3B7CF0",f:false};
+  openModal(`<h2>${isNew?"App hinzufügen":"App bearbeiten"}</h2>
+   ${isNew?`<div class="presets">${APP_PRESETS.map((p,i)=>`<button data-m="preset" data-i="${i}">${p.e} ${esc(p.n)}</button>`).join("")}</div>`:""}
+   <div class="fld-row"><label class="fld" style="flex:0 0 90px"><span>Symbol</span><input id="aE" value="${esc(a.e)}" maxlength="4"></label>
+   <label class="fld"><span>Name</span><input id="aN" value="${esc(a.n)}" maxlength="24"></label></div>
+   <label class="fld"><span>Link / App-Adresse</span><input id="aU" value="${esc(a.u)}" placeholder="z. B. spotify:// oder https://…" autocapitalize="off" autocorrect="off"></label>
+   <div class="fld-row"><label class="fld" style="flex:0 0 110px"><span>Farbe</span><input id="aC" type="color" value="${esc(a.c||"#3B7CF0")}" style="padding:4px"></label>
+   <label class="check" style="flex:1"><input type="checkbox" id="aF" ${a.f?"checked":""}> Auf dem Dashboard zeigen</label></div>
+   <p class="hint">Apps öffnest du über ihre App-Adresse, z. B. <b>spotify://</b>, <b>waze://</b> oder <b>maps://?q=Bäcker</b>. Auch normale Web-Links gehen.</p>
+   <div class="acts"><button class="btn pri f" data-m="appSave" data-id="${isNew?"":a.id}">Speichern</button>
+   ${isNew?"":`<button class="btn" data-m="appMove" data-d="-1" data-id="${a.id}">◀ Vor</button><button class="btn" data-m="appMove" data-d="1" data-id="${a.id}">Zurück ▶</button><button class="btn dan" data-m="appDel" data-id="${a.id}">Löschen</button>`}
+   <button class="btn" data-m="close">Abbrechen</button></div>`);
+}
+function destForm(d){
+  const isNew=!d;d=d||{n:"",e:"📍",a:""};
+  openModal(`<h2>${isNew?"Ziel hinzufügen":"Ziel bearbeiten"}</h2>
+   <div class="fld-row"><label class="fld" style="flex:0 0 90px"><span>Symbol</span><input id="dE" value="${esc(d.e)}" maxlength="4"></label>
+   <label class="fld"><span>Name</span><input id="dN" value="${esc(d.n)}" maxlength="24" placeholder="z. B. Halle"></label></div>
+   <label class="fld"><span>Adresse</span><input id="dA" value="${esc(d.a)}" placeholder="Straße Nr, PLZ Ort"></label>
+   <div class="acts"><button class="btn pri f" data-m="destSave" data-id="${isNew?"":d.id}">Speichern</button>
+   ${isNew?"":`<button class="btn dan" data-m="destDel" data-id="${d.id}">Löschen</button>`}<button class="btn" data-m="close">Abbrechen</button></div>`);
+}
+
+/* ================= Logbuch ================= */
+let logTab="trips";
+$("#logTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;logTab=b.dataset.tab;
+  $$("#logTabs button").forEach(x=>x.classList.toggle("on",x===b));renderLog()});
+function renderLog(){
+  const b=$("#logBody");
+  if(logTab==="trips"){
+    const now=new Date(),ym=now.toISOString().slice(0,7);
+    const month=S.trips.filter(t=>(t.date||"").startsWith(ym));
+    const sum=a=>a.reduce((x,t)=>x+(t.km||0),0);
+    const work=month.filter(t=>t.pur!=="Privat");
+    b.innerHTML=`<div class="kpis"><div class="kpi"><div>${MO[now.getMonth()]}</div><b>${nf(sum(month),0)} km</b></div>
+      <div class="kpi"><div>Davon beruflich</div><b>${nf(sum(work),0)} km</b></div><div class="kpi"><div>Fahrten</div><b>${month.length}</b></div>
+      <div class="kpi"><div>Gesamt</div><b>${nf(sum(S.trips),0)} km</b></div></div>
+      <div class="sec"><div class="sec-h"><h2>Fahrten</h2><button class="btn" data-a="tripAdd">＋ Eintragen</button><button class="btn" data-a="csvTrips">CSV</button></div>
+      ${S.trips.length?S.trips.map(t=>`<div class="entry" data-a="tripEdit" data-id="${t.id}"><span class="ico">${t.pur==="Privat"?"🚗":t.pur==="Arbeitsweg"?"🏫":"💼"}</span>
+        <div class="tx"><b>${fmtDate(t.date)}${t.start?" · "+new Date(t.start).toTimeString().slice(0,5):""}<span class="tag">${esc(t.pur)}</span></b>
+        <span>${esc([t.from,t.to].filter(Boolean).join(" → ")||t.note||"—")}</span></div>
+        <div class="val">${nf(t.km||0,1)} km<small>${t.moving?fmtDur(t.moving):""}</small></div></div>`).join(""):`<div class="empty">Noch keine Fahrten. Starte eine Fahrt auf dem Dashboard oder trag sie hier ein.</div>`}</div>`;
+  }else{
+    const st=fuelStats();
+    b.innerHTML=`<div class="kpis"><div class="kpi"><div>Ø Verbrauch</div><b>${st.avg!=null?nf(st.avg,1):"–"} l</b></div>
+      <div class="kpi"><div>Letzter</div><b>${st.last!=null?nf(st.last,1):"–"} l</b></div><div class="kpi"><div>Kosten gesamt</div><b>${nf(st.cost,0)} €</b></div>
+      <div class="kpi"><div>Pro 100 km</div><b>${st.per100!=null?nf(st.per100,2)+" €":"–"}</b></div></div>
+      <div class="sec"><div class="sec-h"><h2>Tankstopps</h2><button class="btn pri" data-a="fuelAdd">＋ Tanken</button><button class="btn" data-a="csvFuel">CSV</button></div>
+      ${S.fuel.length?S.fuel.map(f=>`<div class="entry" data-a="fuelEdit" data-id="${f.id}"><span class="ico">⛽</span>
+        <div class="tx"><b>${fmtDate(f.date)}${f.full?"":'<span class="tag">Teil</span>'}</b><span>${f.odo!=null?nf(f.odo,0)+" km":""}${f.st?" · "+esc(f.st):""}${f.l&&f.eur?" · "+nf(f.eur/f.l,3)+" €/l":""}</span></div>
+        <div class="val">${nf(f.l||0,2)} l<small>${f.eur!=null?nf(f.eur,2)+" €":""}${st.map[f.id]!=null?" · "+nf(st.map[f.id],1)+" l/100":""}</small></div></div>`).join(""):`<div class="empty">Trag beim nächsten Tanken Kilometerstand, Liter und Betrag ein. Ab dem zweiten Volltanken siehst du deinen Verbrauch.</div>`}</div>
+      <p class="hint">Verbrauch wird von Volltanken zu Volltanken berechnet. Teilbetankungen dazwischen werden mitgezählt.</p>`;
+  }
+}
+function tripForm(t){
+  const isNew=!t;t=t||{date:today(),km:"",pur:"Privat",from:"",to:"",odo:"",note:""};
+  openModal(`<h2>${isNew?"Fahrt eintragen":"Fahrt bearbeiten"}</h2>
+   <div class="fld-row"><label class="fld"><span>Datum</span><input id="tD" type="date" value="${esc(t.date)}"></label><label class="fld"><span>Strecke (km)</span><input id="tK" inputmode="decimal" value="${t.km!==""?esc(nf(t.km,1)):""}"></label></div>
+   <label class="fld"><span>Zweck</span><select id="tP">${["Privat","Arbeitsweg","Dienstlich"].map(p=>`<option${p===t.pur?" selected":""}>${p}</option>`).join("")}</select></label>
+   <div class="fld-row"><label class="fld"><span>Von</span><input id="tF" value="${esc(t.from)}"></label><label class="fld"><span>Nach</span><input id="tT" value="${esc(t.to)}"></label></div>
+   <label class="fld"><span>Kilometerstand am Ende</span><input id="tO" inputmode="numeric" value="${t.odo!=null?esc(t.odo):""}"></label>
+   <label class="fld"><span>Notiz</span><input id="tN" value="${esc(t.note)}"></label>
+   <div class="acts"><button class="btn pri f" data-m="tripSave" data-id="${isNew?"":t.id}">Speichern</button>${isNew?"":`<button class="btn dan" data-m="tripDel" data-id="${t.id}">Löschen</button>`}<button class="btn" data-m="close">Abbrechen</button></div>`);
+}
+function fuelForm(f){
+  const isNew=!f;const lastOdo=S.fuel.length?S.fuel[0].odo:null;
+  f=f||{date:today(),odo:"",l:"",eur:"",full:true,st:""};
+  openModal(`<h2>${isNew?"Tanken eintragen":"Tankstopp bearbeiten"}</h2>
+   <div class="fld-row"><label class="fld"><span>Datum</span><input id="uD" type="date" value="${esc(f.date)}"></label>
+   <label class="fld"><span>Kilometerstand</span><input id="uO" inputmode="numeric" value="${f.odo!==""&&f.odo!=null?esc(f.odo):""}" placeholder="${lastOdo!=null?"zuletzt "+lastOdo:"vom Tacho"}"></label></div>
+   <div class="fld-row"><label class="fld"><span>Liter</span><input id="uL" inputmode="decimal" value="${f.l!==""?esc(nf(f.l,2)):""}"></label>
+   <label class="fld"><span>Betrag (€)</span><input id="uE" inputmode="decimal" value="${f.eur!==""&&f.eur!=null?esc(nf(f.eur,2)):""}"></label></div>
+   <label class="fld"><span>Tankstelle (optional)</span><input id="uS" value="${esc(f.st)}"></label>
+   <label class="check"><input type="checkbox" id="uF" ${f.full?"checked":""}> Vollgetankt</label>
+   <div class="acts"><button class="btn pri f" data-m="fuelSave" data-id="${isNew?"":f.id}">Speichern</button>${isNew?"":`<button class="btn dan" data-m="fuelDel" data-id="${f.id}">Löschen</button>`}<button class="btn" data-m="close">Abbrechen</button></div>`);
+}
+function csv(rows,name){
+  const body="﻿"+rows.map(r=>r.map(c=>{c=c==null?"":String(c);return/[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(";")).join("\r\n");
+  download(new Blob([body],{type:"text/csv;charset=utf-8"}),name);
+}
+function download(blob,name){
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+const dec=(v,d)=>v==null||v===""?"":Number(v).toFixed(d).replace(".",",");
+
+/* ================= Einstellungen ================= */
+function segSet(id,val){$$("#"+id+" button").forEach(b=>b.classList.toggle("on",b.dataset.v===String(val)))}
+function renderSettings(){
+  const L=$("#wList"),n=S.widgets.length,szN={s:"Klein",w:"Breit",l:"Groß"};
+  L.innerHTML=S.widgets.map((w,i)=>`<div class="wi${w.on?"":" off"}"><div class="nm"><span>${WIDGETS[w.id].e}</span>${WIDGETS[w.id].n}</div>
+    <button class="mini" data-s="wSize" data-i="${i}">${szN[w.sz]}</button>
+    <button class="mini" data-s="wUp" data-i="${i}" ${i===0?"disabled":""} aria-label="nach oben">↑</button>
+    <button class="mini" data-s="wDown" data-i="${i}" ${i===n-1?"disabled":""} aria-label="nach unten">↓</button>
+    <button class="sw${w.on?" on":""}" data-s="wOn" data-i="${i}" aria-label="${WIDGETS[w.id].n} anzeigen"></button></div>`).join("");
+  segSet("modeSeg",S.set.mode);segSet("scaleSeg",S.set.scale);segSet("limSeg",S.set.limit);segSet("navSeg",S.set.nav);segSet("wxSeg",S.set.wx);segSet("offSeg",S.set.offset);
+  $("#accSw").innerHTML=ACCENTS.map((a,i)=>`<button data-s="acc" data-i="${i}" style="--c:${a[0]}" class="${i===S.set.acc?"on":""}" aria-label="Farbe ${i+1}"></button>`).join("");
+  $("#wlSw").classList.toggle("on",S.set.wake);$("#autoSw").classList.toggle("on",S.set.auto);
+  $("#wxPlaceTxt").textContent=S.set.wx==="place"&&S.set.wxPlace?S.set.wxPlace.name:"Aktueller Standort";
+}
+$("#v-set").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const seg=b.closest(".seg");
+  if(seg&&b.dataset.v!=null){
+    const v=b.dataset.v;
+    if(seg.id==="modeSeg"){S.set.mode=v;applyLook()}
+    if(seg.id==="scaleSeg")S.set.scale=+v;
+    if(seg.id==="limSeg")S.set.limit=+v;
+    if(seg.id==="offSeg")S.set.offset=+v;
+    if(seg.id==="navSeg")S.set.nav=v;
+    if(seg.id==="wxSeg"){if(v==="place"){placeSearch();return}S.set.wx="gps";S.wx=null;loadWeather(true)}
+    save();renderSettings();return;
+  }
+  const s=b.dataset.s,i=+b.dataset.i,ws=S.widgets;
+  if(s==="wOn")ws[i].on=!ws[i].on;
+  if(s==="wSize"){const o=["s","w","l"];ws[i].sz=o[(o.indexOf(ws[i].sz)+1)%3]}
+  if(s==="wUp"&&i>0)[ws[i-1],ws[i]]=[ws[i],ws[i-1]];
+  if(s==="wDown"&&i<ws.length-1)[ws[i+1],ws[i]]=[ws[i],ws[i+1]];
+  if(s==="acc"){S.set.acc=i;applyLook()}
+  if(b.id==="wlSw"){S.set.wake=!S.set.wake;S.set.wake?lockScreen():unlockScreen()}
+  if(b.id==="autoSw"){S.set.auto=!S.set.auto;if(S.set.auto)startGPS()}
+  if(b.id==="bkOut"){download(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}),"bordwerk-sicherung-"+today()+".json");return}
+  if(b.id==="resetAll"){openModal(`<h2>Alles zurücksetzen?</h2><p class="hint">Fahrtenbuch, Tankprotokoll, Apps, Ziele und Einstellungen werden auf diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen.</p>
+    <div class="acts"><button class="btn dan f" data-m="reset">Ja, alles löschen</button><button class="btn" data-m="close">Abbrechen</button></div>`);return}
+  save();renderSettings();
+});
+$("#bkIn").addEventListener("change",async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const j=JSON.parse(await f.text());if(!j||!j.set||!Array.isArray(j.trips))throw 0;
+    localStorage.setItem(KEY,JSON.stringify(j));S=loadState();applyLook();toast("Sicherung geladen");renderSettings();
+  }catch(err){toast("Datei ist keine Bordwerk-Sicherung")}
+  e.target.value="";
+});
+function placeSearch(){
+  openModal(`<h2>Wetterort wählen</h2><label class="fld"><span>Ort</span><input id="pQ" placeholder="z. B. Wettenberg" autocomplete="off"></label>
+    <div class="res" id="pRes"></div><div class="acts"><button class="btn" data-m="close">Abbrechen</button></div>`);
+  const q=$("#pQ");q.focus();let tm;
+  q.addEventListener("input",()=>{clearTimeout(tm);tm=setTimeout(async()=>{
+    const v=q.value.trim();if(v.length<2){$("#pRes").innerHTML="";return}
+    try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?count=6&language=de&format=json&name="+encodeURIComponent(v));const j=await r.json();
+      $("#pRes").innerHTML=(j.results||[]).map((p,i)=>`<button data-m="place" data-lat="${p.latitude}" data-lon="${p.longitude}" data-n="${esc(p.name)}"><b>${esc(p.name)}</b> <span style="color:var(--dim)">${esc([p.admin1,p.country].filter(Boolean).join(", "))}</span></button>`).join("")||'<div class="empty">Nichts gefunden</div>';
+    }catch(e){$("#pRes").innerHTML='<div class="empty">Suche gerade nicht erreichbar</div>'}
+  },300)});
+}
+
+/* ================= Modal ================= */
+function openModal(h){$("#sheet").innerHTML=h;$("#modal").classList.add("on")}
+function closeModal(){$("#modal").classList.remove("on");$("#sheet").innerHTML=""}
+$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
+$("#sheet").addEventListener("click",e=>{
+  const b=e.target.closest("[data-m]");if(!b)return;
+  const m=b.dataset.m,id=b.dataset.id;
+  if(m==="close")return closeModal();
+  if(m==="saveTrip")return finishTrip(true);
+  if(m==="dropTrip")return finishTrip(false);
+  if(m==="preset"){const p=APP_PRESETS[+b.dataset.i];$("#aE").value=p.e;$("#aN").value=p.n;$("#aU").value=p.u;$("#aC").value=p.c;return}
+  if(m==="appSave"){
+    const o={n:$("#aN").value.trim()||"App",e:$("#aE").value.trim()||"⭐",u:$("#aU").value.trim(),c:$("#aC").value,f:$("#aF").checked};
+    if(!o.u){toast("Bitte einen Link eintragen");return}
+    if(id){Object.assign(S.apps.find(a=>a.id===id),o)}else S.apps.push(Object.assign({id:uid()},o));
+    save();closeModal();renderApps();renderFavsW();return;
+  }
+  if(m==="appMove"){const i=S.apps.findIndex(a=>a.id===id),j=i+(+b.dataset.d);if(j>=0&&j<S.apps.length){[S.apps[i],S.apps[j]]=[S.apps[j],S.apps[i]];save();renderApps();renderFavsW();toast("Verschoben")}return}
+  if(m==="appDel"){S.apps=S.apps.filter(a=>a.id!==id);save();closeModal();renderApps();renderFavsW();return}
+  if(m==="destSave"){
+    const o={n:$("#dN").value.trim()||"Ziel",e:$("#dE").value.trim()||"📍",a:$("#dA").value.trim()};
+    if(id)Object.assign(S.dests.find(d=>d.id===id),o);else S.dests.push(Object.assign({id:uid()},o));
+    save();closeModal();if(view==="apps")renderApps();renderDestsW();return;
+  }
+  if(m==="destDel"){S.dests=S.dests.filter(d=>d.id!==id);save();closeModal();renderApps();renderDestsW();return}
+  if(m==="tripSave"){
+    const o={date:$("#tD").value||today(),km:num($("#tK").value)||0,pur:$("#tP").value,from:$("#tF").value.trim(),to:$("#tT").value.trim(),odo:num($("#tO").value),note:$("#tN").value.trim()};
+    if(id)Object.assign(S.trips.find(t=>t.id===id),o);else S.trips.unshift(Object.assign({id:uid(),start:null,moving:0},o));
+    S.trips.sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.start||0)-(a.start||0));
+    save();closeModal();renderLog();return;
+  }
+  if(m==="tripDel"){S.trips=S.trips.filter(t=>t.id!==id);save();closeModal();renderLog();return}
+  if(m==="fuelSave"){
+    const o={date:$("#uD").value||today(),odo:num($("#uO").value),l:num($("#uL").value),eur:num($("#uE").value),st:$("#uS").value.trim(),full:$("#uF").checked};
+    if(o.l==null){toast("Bitte Liter eintragen");return}
+    if(id)Object.assign(S.fuel.find(f=>f.id===id),o);else S.fuel.unshift(Object.assign({id:uid(),ts:Date.now()},o));
+    S.fuel.sort((a,b)=>(b.odo??0)-(a.odo??0)||(b.date||"").localeCompare(a.date||""));
+    save();closeModal();if(view==="log")renderLog();renderFuelW();toast("Tankstopp gespeichert");return;
+  }
+  if(m==="fuelDel"){S.fuel=S.fuel.filter(f=>f.id!==id);save();closeModal();renderLog();renderFuelW();return}
+  if(m==="place"){S.set.wx="place";S.set.wxPlace={lat:+b.dataset.lat,lon:+b.dataset.lon,name:b.dataset.n};S.wx=null;save();closeModal();renderSettings();loadWeather(true);return}
+  if(m==="reset"){try{localStorage.removeItem(KEY)}catch(e){}S=defaults();save();closeModal();applyLook();renderSettings();toast("Zurückgesetzt");return}
+});
+
+/* ================= Aktionen (Dashboard, Apps, Logbuch) ================= */
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-a]");if(!el||el.closest("#sheet")||el.closest("#v-set"))return;
+  const a=el.dataset.a,id=el.dataset.id;
+  if(a==="tripStart")startTrip(false);
+  else if(a==="tripPause")pauseTrip();
+  else if(a==="tripStop")stopTrip();
+  else if(a==="wxRefresh")loadWeather(true);
+  else if(a==="go-apps"){appsEditing=true;show("apps")}
+  else if(a==="appAdd")appForm(null);
+  else if(a==="appEdit")appForm(S.apps.find(x=>x.id===id));
+  else if(a==="destAdd")destForm(null);
+  else if(a==="destEdit")destForm(S.dests.find(x=>x.id===id));
+  else if(a==="fuelAdd")fuelForm(null);
+  else if(a==="fuelEdit")fuelForm(S.fuel.find(x=>x.id===id));
+  else if(a==="tripAdd")tripForm(null);
+  else if(a==="tripEdit")tripForm(S.trips.find(x=>x.id===id));
+  else if(a==="gpsOn"){startGPS();lockScreen()}
+  else if(a==="hideWelcome"){S.set.welcome=false;save();renderWelcome()}
+  else if(a==="csvTrips")csv([["Datum","Start","Ende","Zweck","Von","Nach","Strecke km","Fahrzeit min","Max km/h","Km-Stand Ende","Notiz"]].concat(S.trips.slice().reverse().map(t=>[
+      fmtDate(t.date),t.start?new Date(t.start).toTimeString().slice(0,5):"",t.end?new Date(t.end).toTimeString().slice(0,5):"",t.pur,t.from,t.to,dec(t.km,1),t.moving?Math.round(t.moving/60):"",t.max||"",t.odo??"",t.note])),"fahrtenbuch-"+today()+".csv");
+  else if(a==="csvFuel"){const st=fuelStats();csv([["Datum","Km-Stand","Liter","Betrag €","€/l","Voll","Verbrauch l/100km","Tankstelle"]].concat(S.fuel.slice().reverse().map(f=>[
+      fmtDate(f.date),f.odo??"",dec(f.l,2),dec(f.eur,2),f.l&&f.eur?dec(f.eur/f.l,3):"",f.full?"ja":"nein",st.map[f.id]!=null?dec(st.map[f.id],1):"",f.st])),"tankprotokoll-"+today()+".csv")}
+});
+
+/* ================= Takt ================= */
+let tick=0;
+setInterval(()=>{
+  tick++;
+  updClock();
+  if(S.trip&&S.trip.run){const k=gps.speed!=null&&gpsFresh()?gps.speed*3.6:0;if(k>3)S.trip.moving+=1;updTrip()}
+  if(tick%2===0){updGpsChip();updSpeed()}
+  if(tick%5===0&&S.trip)save();
+  if(tick%60===0){applyLook();const d=new Date();if(d.getHours()===0&&d.getMinutes()===0)renderCalW()}
+  if(tick%(20*60)===0)loadWeather(false);
+},1000);
+
+/* ================= Start ================= */
+applyLook();setSun();renderDash();updGpsChip();
+if(S.trip&&S.trip.run)lockScreen();
+// Wurde die Standortfreigabe schon erteilt, direkt loslegen
+if(navigator.permissions&&navigator.permissions.query){
+  navigator.permissions.query({name:"geolocation"}).then(p=>{if(p.state==="granted")startGPS()}).catch(()=>{});
+}
+if(S.set.wx==="place"&&S.set.wxPlace)loadWeather(false);
+})();
+</script>
+<script defer data-category="freizeit" src="protect.js"></script>
+</body>
+</html>

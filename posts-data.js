@@ -1297,4 +1297,16 @@ const posts = [
     titleEn: "Blattwerk",
     excerptEn: "Design A4 worksheets with 20+ building blocks, one-click answer keys, A/B/C levels and export to PDF, Word or image."
    },
+   {
+    title: "Bordwerk",
+    excerpt: "Eigenes Auto-Dashboard fürs iPhone in der Halterung: großer GPS-Tacho mit Tempo-Warnung, Fahrtzähler, App-Kacheln (Karten, Spotify, Telefon …), Ziele mit Navi-Start, Uhr, Wetter, Kalender, Fahrtenbuch und Tankprotokoll mit Verbrauch – Bausteine frei anordnen, Nacht- und Tagmodus.",
+    date: "2026-11-07",
+    category: "freizeit",
+    subcategory: null,
+    url: "bordwerk.html",
+    emoji: "🚗",
+    tags: ["tool"],
+    titleEn: "Bordwerk – Car Dashboard",
+    excerptEn: "Your own car dashboard for an iPhone in a mount: big GPS speedometer with speed alert, trip counter, app tiles, saved destinations that start navigation, clock, weather, calendar, a driving log and a fuel log with consumption – rearrange the widgets freely, night and day mode."
+   },
 ];
