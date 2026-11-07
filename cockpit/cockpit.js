@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.9';
+const APP_VERSION = '3.0';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -186,7 +186,7 @@ const BG_PRESETS = [
 ];
 const ACCENTS = { blue: ['#4F7BFF', '#A46BFF'], violet: ['#A46BFF', '#F25FB0'], magenta: ['#F25FB0', '#FF9A4D'], orange: ['#FF9A4D', '#F25FB0'], green: ['#34C759', '#2DD4BF'], teal: ['#2DD4BF', '#4F7BFF'] };
 const ACCENT_NAMES = { blue: 'Blau', violet: 'Violett', magenta: 'Magenta', orange: 'Orange', green: 'Grün', teal: 'Türkis' };
-const LOOK_DEFAULT = { bg: 'horizont', blur: 26, glass: 6.5, dim: 45, accent: 'blue' };
+const LOOK_DEFAULT = { bg: 'horizont', blur: 26, glass: 6.5, dim: 45, accent: 'blue', edge: true, shine: true, stars: true, calm: false, sat: 160 };
 const ICON_COLORS = [['#4F7BFF', '#A46BFF'], ['#A46BFF', '#F25FB0'], ['#FF9A4D', '#F25FB0'], ['#34C759', '#2DD4BF'], ['#EF4444', '#FF9A4D'], ['#E0B24A', '#FF9A4D'], ['#2DD4BF', '#4F7BFF'], ['#334155', '#64748B']];
 const ICON_SYMS = ['rocket', 'school', 'book', 'cap', 'sparkle', 'star', 'heart', 'flag', 'bolt', 'grid', 'board', 'globe', 'pen', 'user'];
 const PROFILE_DEFAULT = { name: '', title: 'Cockpit', icon: { kind: 'logo', color: 0, sym: 'rocket', text: '' } };
@@ -221,7 +221,17 @@ function applyLook() {
   st.setProperty('--dim', (L.dim / 100).toFixed(2));
   const a = ACCENTS[L.accent] || ACCENTS.blue;
   st.setProperty('--accent', a[0]); st.setProperty('--accent-2', a[1]);
+  st.setProperty('--sat', L.sat + '%');
+  const cl = document.documentElement.classList;
+  cl.toggle('look-edge', L.edge !== false); cl.toggle('look-shine', L.shine !== false && L.calm !== true);
+  cl.toggle('no-stars', L.stars === false); cl.toggle('calm', L.calm === true);
 }
+/* Glanzlicht folgt Maus und Finger (wie auf buildspace) */
+let shineRaf = 0;
+const shineAt = (x, y, t) => { const el = t && t.closest && t.closest('.glass'); if (!el || !document.documentElement.classList.contains('look-shine')) return;
+  cancelAnimationFrame(shineRaf); shineRaf = requestAnimationFrame(() => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', ((x - r.left) / r.width * 100) + '%'); el.style.setProperty('--my', ((y - r.top) / r.height * 100) + '%'); }); };
+document.addEventListener('pointermove', e => shineAt(e.clientX, e.clientY, e.target), { passive: true });
+document.addEventListener('touchstart', e => { const t = e.touches[0]; if (!t) return; shineAt(t.clientX, t.clientY, e.target); const el = e.target.closest && e.target.closest('.glass'); if (el) { el.classList.add('shine'); setTimeout(() => el.classList.remove('shine'), 700); } }, { passive: true });
 function setLook(patch) { store.set('look', Object.assign(getLook(), patch)); applyLook(); }
 
 function symbolSvg(sym, color) { const node = document.getElementById('i-' + sym); return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${node ? node.innerHTML : ''}</svg>`; }
@@ -240,6 +250,20 @@ async function iconDataUrl(icon) {
   return cv.toDataURL('image/png');
 }
 let iconCache = '';
+/* Dock-Symbol wie bei Apple: Motiv auf 824 von 1024 Pixeln, abgerundet, mit leichtem Schatten –
+   sonst wirkt ein eigenes Symbol im Dock größer als die anderen Apps. */
+async function dockIconUrl(url) {
+  const S = 1024, P = 100, W = S - 2 * P, R = 185;
+  const im = await loadImg(url), cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const path = () => { g.beginPath(); g.moveTo(P + R, P); g.arcTo(P + W, P, P + W, P + W, R); g.arcTo(P + W, P + W, P, P + W, R); g.arcTo(P, P + W, P, P, R); g.arcTo(P, P, P + W, P, R); g.closePath(); };
+  g.save(); g.shadowColor = 'rgba(0,0,0,.28)'; g.shadowBlur = 26; g.shadowOffsetY = 10; path(); g.fillStyle = '#1b1b24'; g.fill(); g.restore();
+  g.save(); path(); g.clip();
+  const sc = Math.max(W / im.width, W / im.height), iw = im.width * sc, ih = im.height * sc;
+  g.drawImage(im, P + (W - iw) / 2, P + (W - ih) / 2, iw, ih); g.restore();
+  g.save(); path(); g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 3; g.stroke(); g.restore();
+  return cv.toDataURL('image/png');
+}
 async function applyProfile() {
   const P = getProfile();
   const url = await iconDataUrl(P.icon); iconCache = url;
@@ -250,7 +274,7 @@ async function applyProfile() {
   const set = (sel, attr, v) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, v); };
   set('link[rel="apple-touch-icon"]', 'href', url); set('link[rel="icon"]', 'href', url);
   set('meta[name="apple-mobile-web-app-title"]', 'content', P.title || 'Cockpit');
-  if (NATIVE) { try { NATIVE.set_icon(P.icon.kind === 'logo' ? null : url); NATIVE.set_title(P.title || 'Cockpit'); } catch (e) {} }
+  if (NATIVE) { try { NATIVE.set_icon(P.icon.kind === 'logo' ? null : await dockIconUrl(url).catch(() => url)); NATIVE.set_title(P.title || 'Cockpit'); } catch (e) {} }
   tick();
 }
 function setProfile(patch) { const P = getProfile(); store.set('profile', Object.assign(P, patch, { icon: Object.assign(P.icon, patch.icon || {}) })); applyProfile(); }
@@ -314,21 +338,71 @@ function layoutFor(items, cols) {
     for (let y = 0; y < 400; y++) { for (let x = 0; x + w <= cols; x++) if (fits(x, y, w, h)) { put(it, x, y, w, h); return; } } });
   return res;
 }
-/* Nach Verschieben/Größe ändern: alle Positionen für diese Spaltenzahl festhalten,
-   das bewegte Teil bekommt seinen Platz, überdeckte rutschen nach unten. */
+/* Nach Verschieben/Größe ändern: alle Positionen für diese Spaltenzahl festhalten.
+   Das bewegte Teil bekommt seinen Platz. Liegt dort genau ein gleich großes, tauschen beide.
+   Andere, die überdeckt werden, weichen zur nächstgelegenen freien Stelle aus –
+   bevorzugt in derselben Zeile, sonst knapp darunter oder darüber. Lücken bleiben erhalten. */
 function settleBoard(b, cols, movedKey, target) {
   const ck = String(cols), vis = b.filter(showable), lay = layoutFor(vis, cols);
   vis.forEach(it => { const r = lay.get(itemKey(it)); if (r) it.p = Object.assign({}, it.p, { [ck]: [r.x, r.y] }); });
   const moved = movedKey && vis.find(it => itemKey(it) === movedKey);
-  if (moved && target) moved.p[ck] = target;
-  const order = vis.filter(it => it.p && it.p[ck]).sort((a, c) => (a === moved ? -1 : c === moved ? 1 : (a.p[ck][1] - c.p[ck][1]) || (a.p[ck][0] - c.p[ck][0])));
+  const rectOf = it => { const [w, h] = dims(it, cols); return { x: it.p[ck][0], y: it.p[ck][1], w, h }; };
+  if (moved && target) {
+    const old = moved.p[ck].slice(), [mw, mh] = dims(moved, cols);
+    const tx = Math.max(0, Math.min(target[0], cols - mw)), ty = Math.max(0, target[1]);
+    const hit = vis.filter(it => it !== moved && it.p && it.p[ck]).filter(it => { const r = rectOf(it); return tx < r.x + r.w && r.x < tx + mw && ty < r.y + r.h && r.y < ty + mh; });
+    if (hit.length === 1) { const o = hit[0], [ow, oh] = dims(o, cols), r = rectOf(o);
+      if (ow === mw && oh === mh && r.x === tx && r.y === ty) { o.p[ck] = old; moved.p[ck] = [tx, ty]; return sortBoard(b, ck); } }
+    moved.p[ck] = [tx, ty];
+  }
   const placed = [];
-  const fits = (x, y, w, h) => !placed.some(r => x < r.x + r.w && r.x < x + w && y < r.y + r.h && r.y < y + h);
-  order.forEach(it => { const [w, h] = dims(it, cols); let [x, y] = it.p[ck]; x = Math.max(0, Math.min(x, cols - w)); y = Math.max(0, y); let n = 0; while (!fits(x, y, w, h) && n++ < 400) y++; placed.push({ x, y, w, h }); it.p[ck] = [x, y]; });
+  const free = (x, y, w, h) => x >= 0 && y >= 0 && x + w <= cols && !placed.some(r => x < r.x + r.w && r.x < x + w && y < r.y + r.h && r.y < y + h);
+  const put = (it, x, y) => { const [w, h] = dims(it, cols); placed.push({ x, y, w, h }); it.p[ck] = [x, y]; };
+  const rest = vis.filter(it => it !== moved && it.p && it.p[ck]).sort((a, c) => (a.p[ck][1] - c.p[ck][1]) || (a.p[ck][0] - c.p[ck][0]));
+  if (moved) { const [x, y] = moved.p[ck]; put(moved, Math.max(0, Math.min(x, cols - dims(moved, cols)[0])), Math.max(0, y)); }
+  const bumped = [];
+  rest.forEach(it => { const [w, h] = dims(it, cols); const x = Math.min(it.p[ck][0], cols - w), y = it.p[ck][1]; if (free(x, y, w, h)) put(it, x, y); else bumped.push(it); });
+  /* 1. Versuch: Verdrängte finden ganz in der Nähe (höchstens 2 Zeilen entfernt) einen freien Platz */
+  const snap = placed.slice(), spots = [];
+  let near = bumped.every(it => {
+    const [w, h] = dims(it, cols), ox = it.p[ck][0], oy = it.p[ck][1]; let best = null, bs = Infinity;
+    for (let y = Math.max(0, oy - 2); y <= oy + 2; y++) for (let x = 0; x + w <= cols; x++) {
+      if (!free(x, y, w, h)) continue;
+      const sc = Math.abs(y - oy) * 2.2 + Math.abs(x - ox) + (y < oy ? 0.6 : 0);
+      if (sc < bs) { bs = sc; best = [x, y]; }
+    }
+    if (!best) return false;
+    spots.push([it, best]); placed.push({ x: best[0], y: best[1], w, h }); return true;
+  });
+  if (near) { spots.forEach(([it, [x, y]]) => { it.p[ck] = [x, y]; }); return sortBoard(b, ck); }
+  /* 2. Sonst rücken alle Bausteine darunter gemeinsam nach unten – wie beim iPhone bleibt alles beisammen */
+  placed.length = 0; snap.length && moved && placed.push(snap[0]);
+  const order = vis.filter(it => it !== moved && it.p && it.p[ck]).sort((a, c) => (a.p[ck][1] - c.p[ck][1]) || (a.p[ck][0] - c.p[ck][0]));
+  order.forEach(it => { const [w, h] = dims(it, cols); let x = Math.min(it.p[ck][0], cols - w), y = it.p[ck][1], n = 0;
+    if (bumped.includes(it) && moved) { const mr = placed[0]; y = Math.max(y, mr.y + mr.h); }
+    while (!free(x, y, w, h) && n++ < 400) y++; put(it, x, y); });
+  return sortBoard(b, ck);
+}
+function sortBoard(b, ck) {
   /* Listenreihenfolge folgt der Anordnung – andere Geräte übernehmen sie so sinngemäß */
   const pos = it => it.p && it.p[ck] ? it.p[ck][1] * 100 + it.p[ck][0] : 1e9;
   b.sort((a, c) => pos(a) - pos(c));
   return b;
+}
+/* Vorschau während des Ziehens: die anderen Bausteine gleiten an ihren neuen Platz */
+function flipBoard(fn) {
+  const els = $$('#board>.bitem:not(.bdrag)'), before = new Map(els.map(el => [el, el.getBoundingClientRect()]));
+  fn();
+  els.forEach(el => { const a = before.get(el), c = el.getBoundingClientRect(), dx = a.left - c.left, dy = a.top - c.top;
+    if (!dx && !dy) return; el.style.transition = 'none'; el.style.translate = `${dx}px ${dy}px`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = 'translate .24s cubic-bezier(.2,.8,.2,1)'; el.style.translate = '0 0'; })); });
+}
+function previewBoard(key, target, size) {
+  const b = JSON.parse(JSON.stringify(getBoard())), it = b.find(x => itemKey(x) === key);
+  if (it && size) { it.w = size[0]; it.h = size[1]; }
+  settleBoard(b, boardCols, key, target);
+  const lay = layoutFor(b.filter(showable), boardCols);
+  flipBoard(() => b.forEach(x => { const k = itemKey(x); if (k === key) return; const el = $(`#board>[data-key="${k}"]`), r = lay.get(k); if (el && r) { el.style.gridColumn = `${r.x + 1} / span ${r.w}`; el.style.gridRow = `${r.y + 1} / span ${r.h}`; } }));
 }
 
 function defaultBoard() {
@@ -474,6 +548,16 @@ function setEdit(on) {
   renderApps(); renderBoard();
 }
 $('#editBtn').addEventListener('click', () => setEdit(!document.body.classList.contains('edit-on')));
+/* Wie beim iPhone: Tippen auf eine freie Fläche beendet das Anpassen */
+let downFree = false, downAt = null;
+const FREE_EXCLUDE = '.bitem, #arrangeBar, #editBtn, #ov, .scrim, .modal, #rail, #notifP, .toast, button, a, input, select, textarea, label';
+document.addEventListener('pointerdown', e => { downFree = !e.target.closest(FREE_EXCLUDE); downAt = [e.clientX, e.clientY]; }, true);
+document.addEventListener('click', e => {
+  if (!document.body.classList.contains('edit-on') || swallowClick || !downFree) return;
+  if (downAt && Math.abs(e.clientX - downAt[0]) + Math.abs(e.clientY - downAt[1]) > 10) return;   /* war ein Ziehen, kein Tippen */
+  if (e.target.closest('.bitem, #arrangeBar, #editBtn, #ov, .scrim, .modal, #rail, #notifP, .toast, button, a, input, select, textarea, label')) return;
+  setEdit(false);
+});
 
 function cycleSize(key, dir = 1) {
   const b = getBoard(), it = b.find(x => itemKey(x) === key); if (!it) return;
@@ -528,17 +612,18 @@ document.addEventListener('pointerdown', e => {
     /* Größe: Ecke ziehen → in ganzen Zellen größer/kleiner; nur antippen → nächste Stufe */
     const b = getBoard(), it = b.find(x => itemKey(x) === key), cols = m.cols, L = sizeLimits(it, cols);
     const r0 = layoutFor(b.filter(showable), cols).get(key);
-    let cw = r0.w, chh = r0.h;
+    let cw = r0.w, chh = r0.h, rsT = null;
     el.classList.add('bresizing');
     const mv = ev => {
       const dx = ev.clientX - x0, dy = ev.clientY - y0;
       if (!moved && Math.abs(dx) + Math.abs(dy) < 8) return; moved = true;
       const w = Math.max(L.w0, Math.min(L.w1, Math.round(r0.w + dx / step))), h = Math.max(L.h0, Math.min(L.h1, Math.round(r0.h + dy / step)));
-      if (w !== cw || h !== chh) { cw = w; chh = h; const r = { x: Math.min(r0.x, cols - w), y: r0.y, w, h };   /* am rechten Rand wächst es nach links */ placeEl(el, r, nearestPreset(it, w, h, cols)); const lb = el.querySelector('[data-bsize] b'); if (lb) lb.textContent = sizeLabel(r); }
+      if (w !== cw || h !== chh) { cw = w; chh = h; const r = { x: Math.min(r0.x, cols - w), y: r0.y, w, h };   /* am rechten Rand wächst es nach links */
+        clearTimeout(rsT); rsT = setTimeout(() => previewBoard(key, [r.x, r.y], [w, h]), 60); placeEl(el, r, nearestPreset(it, w, h, cols)); const lb = el.querySelector('[data-bsize] b'); if (lb) lb.textContent = sizeLabel(r); }
     };
     const up = () => {
       removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
-      el.classList.remove('bresizing'); swallow(60);
+      el.classList.remove('bresizing'); clearTimeout(rsT); swallow(60);
       if (!moved) { cycleSize(key); return; }
       if (cw !== r0.w || chh !== r0.h) { it.w = cw; it.h = chh; it.s = nearestPreset(it, cw, chh, cols); setBoard(settleBoard(b, cols, key, [Math.min(r0.x, cols - cw), r0.y])); refreshWidget(it.id); toast(`Größe: ${cw} × ${chh}`, 'expand'); }
       else renderBoard();
@@ -547,7 +632,7 @@ document.addEventListener('pointerdown', e => {
     return;
   }
   /* Verschieben: an jede Zelle, auch mit Lücken; überdeckte Bausteine rutschen nach unten */
-  let ph = null, dx = 0, dy = 0, tgt = null, r0 = null;
+  let ph = null, dx = 0, dy = 0, tgt = null, r0 = null, pvT = null;
   const bd = $('#board');
   const start = () => {
     const r = el.getBoundingClientRect(); dx = x0 - r.left; dy = y0 - r.top;
@@ -563,13 +648,14 @@ document.addEventListener('pointerdown', e => {
     const br = bd.getBoundingClientRect();
     const x = Math.max(0, Math.min(m.cols - r0.w, Math.round((ev.clientX - dx - br.left) / step)));
     const y = Math.max(0, Math.round((ev.clientY - dy - br.top) / step));
-    if (!tgt || tgt[0] !== x || tgt[1] !== y) { tgt = [x, y]; ph.style.gridColumn = `${x + 1} / span ${r0.w}`; ph.style.gridRow = `${y + 1} / span ${r0.h}`; }
+    if (!tgt || tgt[0] !== x || tgt[1] !== y) { tgt = [x, y]; ph.style.gridColumn = `${x + 1} / span ${r0.w}`; ph.style.gridRow = `${y + 1} / span ${r0.h}`;
+      clearTimeout(pvT); pvT = setTimeout(() => previewBoard(key, tgt), 90); }
     if (ev.clientY < 70) scrollBy(0, -16); else if (ev.clientY > innerHeight - 70) scrollBy(0, 16);
   };
   const up = () => {
     removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
     if (!moved) return;           /* nur angetippt: der normale Klick übernimmt (App bearbeiten) */
-    swallow(60);
+    clearTimeout(pvT); swallow(60);
     document.body.classList.remove('dragging-w');
     ph.remove(); el.classList.remove('bdrag'); ['width', 'height', 'left', 'top'].forEach(p => el.style[p] = '');
     if (tgt && (tgt[0] !== r0.x || tgt[1] !== r0.y)) setBoard(settleBoard(getBoard(), m.cols, key, tgt)); else renderBoard();
@@ -1278,7 +1364,7 @@ async function eventsFor(day) {
     const d0 = parseDay(day), d1 = addDays(d0, 1), events = []; let macState = null;
     const push = (e, src) => { e.src = src; e.key = e.key || `${src}:${e.title}:${e.start}`; evIndex[e.key] = e; events.push(e); };
     if (NATIVE) {
-      try { const r = NATIVE.events ? await NATIVE.events(day) : (day === isoDay(new Date()) ? await NATIVE.today_events() : { state: 'ok', events: [] }); macState = r.state; (r.events || []).forEach(e => push({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, location: e.location, calendar: e.calendar, color: e.color }, 'mac')); }
+      try { const r = macPre.has(day) ? macPre.get(day) : NATIVE.events ? await NATIVE.events(day) : (day === isoDay(new Date()) ? await NATIVE.today_events() : { state: 'ok', events: [] }); macState = r.state; (r.events || []).forEach(e => push({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, location: e.location, calendar: e.calendar, color: e.color }, 'mac')); }
       catch (e) { macState = 'error'; }
     }
     const mc = NATIVE ? null : macCalGet();
@@ -1301,7 +1387,19 @@ async function eventsFor(day) {
   calCache.set(day, p);
   return p;
 }
-function invalidateCal() { calCache.clear(); renderToday(); if (currentView === 'kalender') renderCalendar(); updateBadge(); if (NATIVE) scheduleMacCal(); }
+/* Mac: Monats-/Jahresansicht holt alle Mac-Termine in einer Abfrage statt Tag für Tag */
+const macPre = new Map();
+async function macPrefetch(from, days) {
+  if (!NATIVE || !NATIVE.events_range) return;
+  const need = [...Array(days)].some((_, i) => !calCache.has(isoDay(addDays(from, i))) && !macPre.has(isoDay(addDays(from, i))));
+  if (!need) return;
+  const r = await NATIVE.events_range(isoDay(from), days).catch(() => null); if (!r) return;
+  for (let i = 0; i < days; i++) {
+    const d0 = addDays(from, i), a = d0.getTime() / 1000, b = addDays(d0, 1).getTime() / 1000;
+    macPre.set(isoDay(d0), { state: r.state, events: (r.events || []).filter(e => e.start < b && (e.end > a || (e.end === e.start && e.start >= a))) });
+  }
+}
+function invalidateCal() { calCache.clear(); macPre.clear(); renderToday(); if (currentView === 'kalender') renderCalendar(); updateBadge(); if (NATIVE) scheduleMacCal(); }
 
 /* ---- Mac-Termine für iPad & iPhone (über die Synchronisation) ----
    Safari darf weder den Gerätekalender lesen noch die meisten Abo-Server abrufen.
@@ -1337,33 +1435,86 @@ const agoText = ts => { const m = Math.round((Date.now() - ts) / 60000); return 
 
 /* ---- Kalenderansicht ---- */
 let selDay = isoDay(new Date());
-async function renderCalendar() {
-  const d = parseDay(selDay), today = isoDay(new Date());
-  $('#calSub').textContent = (selDay === today ? 'Heute · ' : '') + FMT_DAY.format(d);
-  const mon = addDays(d, -((d.getDay() + 6) % 7));
-  const week = [...Array(7)].map((_, i) => addDays(mon, i));
-  $('#calWeek').innerHTML = week.map(w => { const k = isoDay(w); return `<button data-day="${k}" class="${k === today ? 'today' : ''}" aria-pressed="${k === selDay}"><small>${new Intl.DateTimeFormat('de-DE', { weekday: 'short' }).format(w)}</small><b class="num">${w.getDate()}</b><span class="dots" data-dots="${k}"></span></button>`; }).join('');
-  week.forEach(async w => { const k = isoDay(w), r = await eventsFor(k), el = $(`[data-dots="${k}"]`); if (el) el.innerHTML = '<i></i>'.repeat(Math.min(4, r.events.length)); });
-  const r = await eventsFor(selDay);
-  if (isoDay(parseDay(selDay)) !== selDay) return;
-  const all = r.events.filter(e => e.allDay), timed = r.events.filter(e => !e.allDay);
-  const dayStart = d.getTime() / 1000;
-  let h0 = 7, h1 = 19;
-  timed.forEach(e => { h0 = Math.min(h0, Math.floor((e.start - dayStart) / 3600)); h1 = Math.max(h1, Math.ceil((e.end - dayStart) / 3600)); });
-  h0 = Math.max(0, h0); h1 = Math.min(24, h1);
-  const HR = 48, px = t => ((t - dayStart) / 3600 - h0) * HR;
-  /* Spalten für überlappende Termine */
+let calMode = store.get('calMode', 'day');
+const CAL_WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const monday = d => addDays(d, -((d.getDay() + 6) % 7));
+const FMT_MON = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
+/* Zeitleiste eines Tages (für Tag und Woche) */
+function laneHtml(timed, dayStart, h0, HR, isToday, h1) {
+  const px = t => ((t - dayStart) / 3600 - h0) * HR, now = Date.now() / 1000;
   const lanes = []; timed.forEach(e => { let l = lanes.findIndex(end => end <= e.start); if (l < 0) { l = lanes.length; lanes.push(0); } lanes[l] = e.end; e._lane = l; });
   timed.forEach(e => { e._cols = Math.max(1, timed.filter(o => o.start < e.end && o.end > e.start).reduce((m, o) => Math.max(m, o._lane + 1), 1)); });
-  const now = Date.now() / 1000;
-  $('#calDay').innerHTML = `${all.length ? `<div class="allday">${all.map(e => `<button data-evid="${esc(e.key)}" style="--c:${esc(e.color)}"><span style="--c:${esc(e.color)}">${esc(e.title)}</span></button>`).join('')}</div>` : ''}
-    <div class="tl"><div class="hrs">${[...Array(h1 - h0)].map((_, i) => `<span class="num">${pad(h0 + i)}:00</span>`).join('')}</div>
-    <div class="lane" style="height:${(h1 - h0) * HR}px">${timed.map(e => { const top = px(e.start), hgt = Math.max(14, px(e.end) - top - 2), w = 100 / e._cols;
-      return `<button class="blk${hgt < 30 ? ' mini' : ''}" data-evid="${esc(e.key)}" style="--c:${esc(e.color)};top:${top + 1}px;height:${hgt}px;left:calc(${w * e._lane}% + 6px);right:auto;width:calc(${w}% - 12px)">${hgt < 46 ? `<b>${esc(e.title)} <small class="num">${hm(e.start)}${e.location ? ' · ' + esc(e.location) : ''}</small></b>` : `<b>${esc(e.title)}</b><small class="num">${hm(e.start)} – ${hm(e.end)}${e.location ? ' · ' + esc(e.location) : ''}</small>`}</button>`; }).join('')}
-    ${selDay === today && now > dayStart + h0 * 3600 && now < dayStart + h1 * 3600 ? `<span class="nowline" style="top:${px(now)}px"></span>` : ''}</div></div>
-    ${!r.events.length ? '<p class="empty dayempty">Keine Termine an diesem Tag.</p>' : ''}`;
+  return timed.map(e => { const top = Math.max(0, px(e.start)), hgt = Math.max(14, Math.min(px(e.end), (h1 - h0) * HR) - top - 2), w = 100 / e._cols;
+      return `<button class="blk${hgt < 30 ? ' mini' : ''}" data-evid="${esc(e.key)}" style="--c:${esc(e.color)};top:${top + 1}px;height:${hgt}px;left:calc(${w * e._lane}% + 3px);right:auto;width:calc(${w}% - 6px)" title="${esc(e.title)} · ${hm(e.start)}–${hm(e.end)}">${hgt < 46 ? `<b>${esc(e.title)} <small class="num">${hm(e.start)}${e.location ? ' · ' + esc(e.location) : ''}</small></b>` : `<b>${esc(e.title)}</b><small class="num">${hm(e.start)} – ${hm(e.end)}${e.location ? ' · ' + esc(e.location) : ''}</small>`}</button>`; }).join('')
+    + (isToday && now > dayStart + h0 * 3600 && now < dayStart + h1 * 3600 ? `<span class="nowline" style="top:${px(now)}px"></span>` : '');
+}
+function hourRange(timedLists, dayStarts) {
+  let h0 = 7, h1 = 19;
+  timedLists.forEach((tl, i) => tl.forEach(e => { h0 = Math.min(h0, Math.floor((e.start - dayStarts[i]) / 3600)); h1 = Math.max(h1, Math.ceil((e.end - dayStarts[i]) / 3600)); }));
+  return [Math.max(0, h0), Math.min(24, h1)];
+}
+async function renderCalendar() {
+  const d = parseDay(selDay), today = isoDay(new Date()), token = (renderCalendar.n = (renderCalendar.n || 0) + 1);
+  $$('#calMode [data-cm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.cm === calMode));
+  $('#v-kalender').dataset.mode = calMode;
+  $('#calWeek').hidden = calMode !== 'day';
+  const unit = { day: 'Tag', week: 'Woche', month: 'Monat', year: 'Jahr' }[calMode];
+  $('#calPrev').setAttribute('aria-label', 'Vorherige' + (calMode === 'day' || calMode === 'month' ? 'r ' : ' ') + unit); $('#calNext').setAttribute('aria-label', 'Nächste' + (calMode === 'day' || calMode === 'month' ? 'r ' : ' ') + unit);
+  let r = { events: [], macState: null };
+  if (calMode === 'day') {
+    $('#calSub').textContent = (selDay === today ? 'Heute · ' : '') + FMT_DAY.format(d);
+    const week = [...Array(7)].map((_, i) => addDays(monday(d), i));
+    $('#calWeek').innerHTML = week.map(w => { const k = isoDay(w); return `<button data-day="${k}" class="${k === today ? 'today' : ''}" aria-pressed="${k === selDay}"><small>${CAL_WD[(w.getDay() + 6) % 7]}</small><b class="num">${w.getDate()}</b><span class="dots" data-dots="${k}"></span></button>`; }).join('');
+    week.forEach(async w => { const k = isoDay(w), rr = await eventsFor(k), el = $(`[data-dots="${k}"]`); if (el) el.innerHTML = '<i></i>'.repeat(Math.min(4, rr.events.length)); });
+    r = await eventsFor(selDay);
+    if (token !== renderCalendar.n) return;
+    const all = r.events.filter(e => e.allDay), timed = r.events.filter(e => !e.allDay);
+    const dayStart = d.getTime() / 1000, [h0, h1] = hourRange([timed], [dayStart]), HR = 48;
+    $('#calDay').innerHTML = `${all.length ? `<div class="allday">${all.map(e => `<button data-evid="${esc(e.key)}" style="--c:${esc(e.color)}"><span style="--c:${esc(e.color)}">${esc(e.title)}</span></button>`).join('')}</div>` : ''}
+      <div class="tl"><div class="hrs">${[...Array(h1 - h0)].map((_, i) => `<span class="num">${pad(h0 + i)}:00</span>`).join('')}</div>
+      <div class="lane" style="height:${(h1 - h0) * HR}px">${laneHtml(timed, dayStart, h0, HR, selDay === today, h1)}</div></div>
+      ${!r.events.length ? '<p class="empty dayempty">Keine Termine an diesem Tag.</p>' : ''}`;
+  } else if (calMode === 'week') {
+    const mon = monday(d), days = [...Array(7)].map((_, i) => addDays(mon, i));
+    const kw = isoWeek(mon);
+    $('#calSub').textContent = `KW ${kw} · ${new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(mon)} – ${new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric' }).format(days[6])}`;
+    await macPrefetch(mon, 7);
+    const res = await Promise.all(days.map(x => eventsFor(isoDay(x)))); r = res[0];
+    if (token !== renderCalendar.n) return;
+    const starts = days.map(x => x.getTime() / 1000), timed = res.map(x => x.events.filter(e => !e.allDay)), all = res.map(x => x.events.filter(e => e.allDay));
+    const [h0, h1] = hourRange(timed, starts), HR = 44;
+    $('#calDay').innerHTML = `<div class="wk">
+      <div class="wk-row wk-head"><span></span>${days.map(x => { const k = isoDay(x); return `<button data-goday="${k}" class="${k === today ? 'today' : ''}${k === selDay ? ' sel' : ''}"><small>${CAL_WD[(x.getDay() + 6) % 7]}</small><b class="num">${x.getDate()}</b></button>`; }).join('')}</div>
+      ${all.some(a => a.length) ? `<div class="wk-row wk-all"><span class="lbl">ganztg.</span>${all.map(a => `<div>${a.map(e => `<button class="chip" data-evid="${esc(e.key)}" style="--c:${esc(e.color)}">${esc(e.title)}</button>`).join('')}</div>`).join('')}</div>` : ''}
+      <div class="wk-row wk-body"><div class="hrs">${[...Array(h1 - h0)].map((_, i) => `<span class="num">${pad(h0 + i)}:00</span>`).join('')}</div>
+      ${days.map((x, i) => `<div class="lane${isoDay(x) === today ? ' today' : ''}" style="height:${(h1 - h0) * HR}px;--hr:${HR}px">${laneHtml(timed[i], starts[i], h0, HR, isoDay(x) === today, h1)}</div>`).join('')}</div></div>`;
+  } else if (calMode === 'month') {
+    const first = new Date(d.getFullYear(), d.getMonth(), 1), start = monday(first), cells = [...Array(42)].map((_, i) => addDays(start, i));
+    $('#calSub').textContent = FMT_MON.format(first);
+    await macPrefetch(start, 42);
+    const res = await Promise.all(cells.map(x => eventsFor(isoDay(x)))); r = res[0];
+    if (token !== renderCalendar.n) return;
+    const rows = cells[35].getMonth() === d.getMonth() ? 6 : 5;
+    $('#calDay').innerHTML = `<div class="mo"><div class="mo-h">${CAL_WD.map(w => `<span>${w}</span>`).join('')}</div>
+      <div class="mo-g" style="grid-template-rows:repeat(${rows},minmax(96px,1fr))">${cells.slice(0, rows * 7).map((x, i) => { const k = isoDay(x), ev = res[i].events;
+        return `<div class="mc${x.getMonth() !== d.getMonth() ? ' out' : ''}${k === today ? ' today' : ''}${k === selDay ? ' sel' : ''}" data-goday="${k}" role="button" tabindex="0" aria-label="${FMT_DAY.format(x)}${ev.length ? ', ' + ev.length + ' Termine' : ''}"><b class="num">${x.getDate()}</b>
+          ${ev.slice(0, 3).map(e => `<button class="chip${e.allDay ? ' ad' : ''}" data-evid="${esc(e.key)}" style="--c:${esc(e.color)}">${e.allDay ? '' : `<small class="num">${hm(e.start)}</small>`}${esc(e.title)}</button>`).join('')}
+          ${ev.length > 3 ? `<span class="more">+${ev.length - 3} weitere</span>` : ''}<span class="mdots">${'<i></i>'.repeat(Math.min(4, ev.length))}</span></div>`; }).join('')}</div></div>`;
+  } else {
+    const y = d.getFullYear(), jan = new Date(y, 0, 1), n = Math.round((new Date(y + 1, 0, 1) - jan) / 864e5);
+    $('#calSub').textContent = String(y);
+    $('#calDay').innerHTML = '<p class="empty">Jahr wird geladen …</p>';
+    await macPrefetch(jan, n);
+    const res = await Promise.all([...Array(n)].map((_, i) => eventsFor(isoDay(addDays(jan, i))))); r = res[0];
+    if (token !== renderCalendar.n) return;
+    const cnt = new Map(); res.forEach((x, i) => cnt.set(isoDay(addDays(jan, i)), x.events.length));
+    $('#calDay').innerHTML = `<div class="yr">${[...Array(12)].map((_, m) => { const f = new Date(y, m, 1), s0 = monday(f), cells = [...Array(42)].map((_, i) => addDays(s0, i));
+      return `<section class="ym${m === new Date().getMonth() && y === new Date().getFullYear() ? ' cur' : ''}"><button class="ym-t" data-gomonth="${isoDay(f)}">${new Intl.DateTimeFormat('de-DE', { month: 'long' }).format(f)}</button>
+        <div class="ym-g">${CAL_WD.map(w => `<small>${w[0]}</small>`).join('')}${cells.map(x => { const k = isoDay(x), c = cnt.get(k) || 0, out = x.getMonth() !== m;
+          return out ? '<span></span>' : `<button data-goday="${k}" class="num${k === today ? ' today' : ''}${c ? ' has' : ''}${c > 2 ? ' many' : ''}" title="${c ? c + ' Termin' + (c > 1 ? 'e' : '') : ''}">${x.getDate()}</button>`; }).join('')}</div></section>`; }).join('')}</div>`;
+  }
   /* Nächste Termine (7 Tage) */
-  const upcoming = [];
+  const now = Date.now() / 1000, upcoming = [];
   for (let i = 0; i < 7 && upcoming.length < 8; i++) { const k = isoDay(addDays(new Date(), i)), rr = await eventsFor(k); rr.events.filter(e => e.end > now).forEach(e => upcoming.push(e)); }
   $('#calNextList').innerHTML = upcoming.length ? upcoming.slice(0, 8).map(e => { const dd = new Date(e.start * 1000), lbl = isoDay(dd) === today ? 'Heute' : isoDay(dd) === isoDay(addDays(new Date(), 1)) ? 'Morgen' : new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(dd);
     return `<div class="ev"><time class="num" style="font-size:11px">${lbl}<br>${e.allDay ? '' : hm(e.start)}</time><button class="box" data-evid="${esc(e.key)}" style="--c:${esc(e.color)}"><b>${esc(e.title)}</b><span>${esc(e.calendar || '')}</span></button></div>`; }).join('')
@@ -1380,8 +1531,24 @@ async function renderCalendar() {
   $('#calSrcs').innerHTML = src.join('');
 }
 $('#calWeek').addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (b) { selDay = b.dataset.day; renderCalendar(); } });
-$('#calPrev').addEventListener('click', () => { selDay = isoDay(addDays(parseDay(selDay), -1)); renderCalendar(); });
-$('#calNext').addEventListener('click', () => { selDay = isoDay(addDays(parseDay(selDay), 1)); renderCalendar(); });
+function calStep(dir) {
+  const d = parseDay(selDay);
+  if (calMode === 'day') selDay = isoDay(addDays(d, dir));
+  else if (calMode === 'week') selDay = isoDay(addDays(d, 7 * dir));
+  else if (calMode === 'month') { const t = new Date(d.getFullYear(), d.getMonth() + dir, 1); selDay = isoDay(new Date(t.getFullYear(), t.getMonth(), Math.min(d.getDate(), new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()))); }
+  else selDay = isoDay(new Date(d.getFullYear() + dir, d.getMonth(), Math.min(d.getDate(), 28)));
+  renderCalendar();
+}
+$('#calPrev').addEventListener('click', () => calStep(-1));
+$('#calNext').addEventListener('click', () => calStep(1));
+const setCalMode = m => { calMode = m; store.set('calMode', m); renderCalendar(); };
+$('#calMode').addEventListener('click', e => { const b = e.target.closest('[data-cm]'); if (b) setCalMode(b.dataset.cm); });
+$('#calDay').addEventListener('click', e => {
+  if (e.target.closest('[data-evid]')) return;
+  const g = e.target.closest('[data-goday]'); if (g) { selDay = g.dataset.goday; setCalMode('day'); return; }
+  const m = e.target.closest('[data-gomonth]'); if (m) { selDay = m.dataset.gomonth; setCalMode('month'); }
+});
+$('#calDay').addEventListener('keydown', e => { const g = e.target.closest('[data-goday]'); if (g && e.key === 'Enter' && g.tagName !== 'BUTTON') { selDay = g.dataset.goday; setCalMode('day'); } });
 $('#calToday').addEventListener('click', () => { selDay = isoDay(new Date()); renderCalendar(); });
 $('#evAdd').addEventListener('click', () => editEvent(null));
 function showEvent(key) {
@@ -1958,6 +2125,7 @@ function webTick() {
 function webShowNow() { webShown = false; webTick(); }
 function renderWeb() {
   if (!NATIVE) return go('start');
+  if (!CHR.profiles) loadChromeBm();
   clearInterval(webLoop); clearInterval(webPoll); webShown = false; webRect = '';
   webRefresh();
   setTimeout(() => { if (currentView === 'web') { webLoop = setInterval(webTick, 120); webTick(); } }, 300);
@@ -1998,6 +2166,69 @@ if (NATIVE) {
   });
   setTimeout(webRefresh, 1500);
 }
+
+/* ---- Lesezeichen aus Google Chrome & Google-Anmeldung im Cockpit-Browser ----
+   Chrome lässt sich nicht einbetten. Seine Lesezeichen liegen aber auf dem Mac in
+   einer Datei, die Chrome aktuell hält (inkl. Sync aus deinem Google-Konto) –
+   die liest die Mac-App und zeigt sie hier als Leiste und Liste. */
+const CHR = { profiles: null, bm: null, err: '' };
+const GOOGLE_LOGIN = 'https://accounts.google.com/ServiceLogin?continue=' + encodeURIComponent('https://myaccount.google.com/');
+async function loadChromeBm(force) {
+  if (!NATIVE || !NATIVE.chrome_bookmarks) return;
+  if (!CHR.profiles || force) CHR.profiles = await NATIVE.chrome_profiles().catch(() => ({ installed: false, profiles: [] }));
+  const ps = CHR.profiles.profiles || [];
+  let prof = store.get('chromeProfile', null); if (!ps.some(p => p.dir === prof)) prof = ps[0] ? ps[0].dir : null;
+  if (!prof) { CHR.bm = null; CHR.err = CHR.profiles.installed ? 'In Chrome gibt es noch keine Lesezeichen.' : 'Google Chrome ist auf diesem Mac nicht installiert.'; renderBmBar(); return; }
+  const r = await NATIVE.chrome_bookmarks(prof).catch(() => null);
+  CHR.bm = r && r.ok ? Object.assign(r, { profile: prof }) : null; CHR.err = r && !r.ok ? r.error : '';
+  renderBmBar();
+}
+const bmOn = () => store.get('webBmBar', true) !== false;
+function bmFlat(list, path = []) { const out = []; (list || []).forEach(n => { if (n.u) out.push(Object.assign({ path: path.join(' › ') }, n)); else out.push(...bmFlat(n.c, path.concat(n.n))); }); return out; }
+function renderBmBar() {
+  const bar = $('#webBmBar'); if (!bar) return;
+  const items = CHR.bm ? CHR.bm.bar : [];
+  bar.hidden = !bmOn() || !items.length;
+  bar.innerHTML = items.slice(0, 40).map((n, i) => n.u ? `<button class="bmi" data-bmu="${esc(n.u)}" title="${esc(n.u)}">${ic('globe', 'i xs')}<span>${esc(n.n)}</span></button>`
+    : `<button class="bmi" data-bmf="${i}">${ic('folder', 'i xs')}<span>${esc(n.n)}</span></button>`).join('');
+  const st = $('#webStart'); if (!st) return;
+  st.innerHTML = `${items.length ? `<div class="web-tiles">${bmFlat(items).slice(0, 12).map(n => `<button class="wtile" data-bmu="${esc(n.u)}" title="${esc(n.u)}"><b>${esc((n.n || '?').trim().charAt(0).toUpperCase())}</b><span>${esc(n.n)}</span></button>`).join('')}</div>` : ''}
+    <div class="row" style="justify-content:center"><button class="btn" data-google-login>${ic('user', 'i sm')} Bei Google anmelden</button><button class="btn" data-bm-open>${ic('bookmark', 'i sm')} Alle Lesezeichen</button></div>`;
+}
+function bmTree(list) {
+  return (list || []).map(n => n.u ? `<button class="bml" data-bmu="${esc(n.u)}"><span>${esc(n.n)}</span><small>${esc(webHost(n.u))}</small></button>`
+    : `<details class="bmd"><summary>${ic('folder', 'i xs')} ${esc(n.n)} <small class="num">${bmFlat(n.c).length}</small></summary><div>${bmTree(n.c)}</div></details>`).join('');
+}
+function bmModal(folderIdx) {
+  const ps = (CHR.profiles && CHR.profiles.profiles) || [], b = CHR.bm;
+  const folder = folderIdx != null && b ? b.bar[folderIdx] : null;
+  modal(`<div class="glass modal wide bmm" role="dialog" aria-label="Lesezeichen"><div class="mh"><h3>${ic('bookmark', 'i sm')} ${folder ? esc(folder.n) : 'Lesezeichen aus Chrome'}</h3><button class="orb sm" data-close aria-label="Schließen">${ic('x', 'i xs')}</button></div>
+    ${b ? `<div class="bm-top"><input id="bmQ" placeholder="Lesezeichen durchsuchen" aria-label="Lesezeichen durchsuchen" autocomplete="off">${ps.length > 1 ? `<select id="bmProf" aria-label="Chrome-Profil">${ps.map(p => `<option value="${esc(p.dir)}"${p.dir === b.profile ? ' selected' : ''}>${esc(p.name)}${p.email ? ' · ' + esc(p.email) : ''}</option>`).join('')}</select>` : ps[0] && ps[0].email ? `<small class="lead">Chrome: ${esc(ps[0].email)}</small>` : ''}</div>
+      <div class="bm-list" id="bmList">${folder ? bmTree(folder.c) : `<h4 class="zh">Lesezeichenleiste</h4>${bmTree(b.bar)}${b.other.length ? `<h4 class="zh">Weitere Lesezeichen</h4>${bmTree(b.other)}` : ''}${b.synced.length ? `<h4 class="zh">Mobile Lesezeichen</h4>${bmTree(b.synced)}` : ''}`}</div>`
+      : `<p class="lead">${esc(CHR.err || 'Lesezeichen werden geladen …')}</p>`}
+    <p class="lead" style="margin-top:10px"><small>Cockpit liest die Lesezeichen, die Google Chrome auf diesem Mac speichert – mit Chrome-Sync also auch die aus deinem Google-Konto. Ändern kannst du sie in Chrome.</small></p>
+    <div class="row"><div class="wrow" style="flex:1;padding:0"><span class="t"><b>Lesezeichenleiste anzeigen</b></span><button type="button" class="sw" role="switch" id="bmBarSw" aria-checked="${bmOn()}" aria-label="Lesezeichenleiste anzeigen"></button></div>
+      <button class="btn" data-google-login>${ic('user', 'i sm')} Bei Google anmelden</button><button class="btn" id="bmReload">${ic('refresh', 'i sm')} Neu einlesen</button></div></div>`);
+  $('#bmBarSw').onclick = () => { const on = !bmOn(); store.set('webBmBar', on); $('#bmBarSw').setAttribute('aria-checked', on); renderBmBar(); };
+  $('#bmReload').onclick = async () => { await loadChromeBm(true); bmModal(folderIdx); toast('Lesezeichen neu eingelesen', 'bookmark'); };
+  $('#bmProf')?.addEventListener('change', async e => { store.set('chromeProfile', e.target.value); await loadChromeBm(); bmModal(); });
+  $('#bmQ')?.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { $('#bmList').innerHTML = folder ? bmTree(folder.c) : bmTree(b.bar) + bmTree(b.other) + bmTree(b.synced); return; }
+    const hits = bmFlat((folder ? folder.c : b.bar.concat(b.other, b.synced))).filter(n => (n.n + ' ' + n.u + ' ' + n.path).toLowerCase().includes(q)).slice(0, 80);
+    $('#bmList').innerHTML = hits.length ? hits.map(n => `<button class="bml" data-bmu="${esc(n.u)}"><span>${esc(n.n)}</span><small>${esc(n.path ? n.path + ' · ' : '')}${esc(webHost(n.u))}</small></button>`).join('') : '<p class="empty">Nichts gefunden.</p>';
+  });
+  setTimeout(() => $('#bmQ')?.focus(), 60);
+}
+document.addEventListener('click', async e => {
+  if (!NATIVE) return;
+  const u = e.target.closest('[data-bmu]');
+  if (u) { e.preventDefault(); const inModal = !!u.closest('#ov'); if (inModal) close(); const newTab = inModal || e.metaKey || !WEB.active || !!u.closest('#webStart'); if (newTab) webOpen(u.dataset.bmu, true); else webCmd('go', u.dataset.bmu); return; }
+  const f = e.target.closest('[data-bmf]'); if (f) { bmModal(+f.dataset.bmf); return; }
+  if (e.target.closest('[data-bm-open]')) { bmModal(); return; }
+  if (e.target.closest('[data-google-login]')) { if (e.target.closest('#ov')) close(); webOpen(GOOGLE_LOGIN, true); toast('Melde dich bei Google an – danach bleibst du im Cockpit-Browser angemeldet', 'user'); }
+});
+if (NATIVE) { $('#webBm').onclick = () => bmModal(); setTimeout(() => loadChromeBm(), 2500); }
 
 function renderWaWidget() {
   const box = $('#waBox'); if (!box || !NATIVE) return;
@@ -2062,7 +2293,7 @@ const SYNC_RULE = `match /cockpit/{uid}/{document=**} {
   allow read, write: if request.auth != null && request.auth.uid == uid;
 }`;
 /* bleiben auf dem Gerät */
-const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig', 'macRemShare', 'macRemSig', 'weatherLoc', 'weatherCache', 'widgetsKnown', 'linkMode']);
+const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig', 'macRemShare', 'macRemSig', 'weatherLoc', 'weatherCache', 'widgetsKnown', 'linkMode', 'chromeProfile', 'webBmBar']);
 const PART = 700000;          // Zeichen pro Teil (Firestore erlaubt 1 MB je Dokument)
 const FILE_MAX = 40e6;
 const encKey = k => 'k_' + k.replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16).padStart(4, '0'));
@@ -2475,6 +2706,9 @@ function setup(tab = 'personal') {
       <div class="lrange"><label for="lGlass">Glas-Deckkraft <output id="oGlass" class="num">${L.glass} %</output></label><input type="range" id="lGlass" min="0" max="30" step=".5" value="${L.glass}"></div>
       <div class="lrange"><label for="lDim">Hintergrund abdunkeln <output id="oDim" class="num">${L.dim} %</output></label><input type="range" id="lDim" min="0" max="90" value="${L.dim}"></div>
       <div class="field">Akzentfarbe<div class="swatches" id="lAcc">${Object.keys(ACCENTS).map(k => `<button type="button" data-acc="${k}" aria-pressed="${L.accent === k}" style="background:linear-gradient(135deg,${ACCENTS[k][0]},${ACCENTS[k][1]})" aria-label="${ACCENT_NAMES[k]}" title="${ACCENT_NAMES[k]}"></button>`).join('')}</div></div>
+      <div class="lrange"><label for="lSat">Farbsättigung im Glas <output id="oSat" class="num">${L.sat} %</output></label><input type="range" id="lSat" min="100" max="220" step="5" value="${L.sat}"></div>
+      <div class="wlist" style="margin:6px 0 14px">${[['edge', 'Glaskante', 'Heller, geschliffener Lichtrand an allen Glasflächen', L.edge !== false], ['shine', 'Glanzlicht', 'Ein Lichtschein folgt Maus und Finger über das Glas', L.shine !== false], ['stars', 'Sternschnuppen', 'Fliegen ab und zu über den Hintergrund', L.stars !== false], ['calm', 'Bewegung reduzieren', 'Schaltet Animationen, Glanzlicht und Sternschnuppen ab', L.calm === true]]
+        .map(([k, t, d, on]) => `<div class="wrow"><span class="t"><b>${t}</b><span>${d}</span></span><button type="button" class="sw" role="switch" data-lk="${k}" aria-checked="${on}" aria-label="${t}"></button></div>`).join('')}</div>
       <div class="row" style="justify-content:flex-start"><button type="button" class="btn" id="lReset">Aussehen zurücksetzen</button></div>`,
     widgets: widgetsTab(),
     calendar: `<p class="lead">${NATIVE ? 'Termine aus der Mac-Kalender-App erscheinen automatisch, sobald du den Zugriff erlaubst. Zusätzlich kannst du Kalender-Abos (iCal-Links) eintragen.' : 'Im Browser kann Cockpit nur eigene Termine und Abos von Servern laden, die das erlauben. IServ- und WebUntis-Abos funktionieren zuverlässig in der Mac-App.'}</p>
@@ -2585,6 +2819,8 @@ function bindSettings(tab) {
     });
     [['lBlur', 'blur', 'oBlur', ' px'], ['lGlass', 'glass', 'oGlass', ' %'], ['lDim', 'dim', 'oDim', ' %']].forEach(([id, k, o, u]) => $('#' + id).addEventListener('input', e => { $('#' + o).textContent = e.target.value + u; setLook({ [k]: +e.target.value }); }));
     $('#lAcc').addEventListener('click', e => { const b = e.target.closest('[data-acc]'); if (!b) return; $$('#lAcc button').forEach(x => x.setAttribute('aria-pressed', x === b)); setLook({ accent: b.dataset.acc }); });
+    $('#lSat').addEventListener('input', e => { $('#oSat').textContent = e.target.value + ' %'; setLook({ sat: +e.target.value }); });
+    $$('[data-lk]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.lk, on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); setLook({ [k]: on }); }));
     $('#lReset').addEventListener('click', () => { store.set('look', {}); applyLook(); setup('look'); toast('Aussehen zurückgesetzt'); });
   }
   if (tab === 'widgets') bindWidgetsTab();
