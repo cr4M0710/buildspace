@@ -1987,7 +1987,7 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "3.1",
+    version: "3.2",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",
@@ -2007,8 +2007,8 @@ const PROGRAMS = [
     note: "Alles bleibt auf deinem Gerät. Cockpit speichert keine Zugangsdaten und liest Termine nur, ohne sie zu ändern. Von Version 1.x einfach drüber installieren, deine Daten bleiben.",
     noteEn: "Everything stays on your device. Cockpit stores no login details and only reads appointments without changing them. Install over version 1.x; your data is kept.",
     open: { href: "cockpit/" },
-    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,4 MB", type: "ZIP" },
-    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "3,8 MB", type: "PDF" },
+    download: { href: "downloads/cockpit-mac.zip", name: "Cockpit-Mac.zip", size: "2,9 MB", type: "ZIP" },
+    manual: { href: "downloads/cockpit-anleitung.pdf", name: "Cockpit-Anleitung.pdf", size: "4,0 MB", type: "PDF" },
     share: "programme/cockpit.html"
   },
   {
