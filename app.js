@@ -1586,6 +1586,22 @@ function renderRail() {
 function initRail() {
   const rail = document.getElementById("rail");
   if (!rail) return;
+  /* Liquid-Glass-Bewegung wie im Referenzvideo (liquid-nav.js): Glas-Kapsel gleitet als Tropfen
+     zum aktiven Eintrag, ein Hinweisschild folgt dem Zeiger, die Seitenleiste wächst aus der Leiste. */
+  if (window.LiquidNav) {
+    const html = document.documentElement;
+    LiquidNav.attach(rail, {
+      item: ".rail-btn", active: ".rail-btn.is-active", collapsed: () => true,
+      tip: (el) => (el.querySelector(".rail-tip") || {}).textContent || el.getAttribute("aria-label") || ""
+    });
+    LiquidNav.attach(document.getElementById("sidebar-nav"), {
+      item: ".side-link, .side-sublink", active: ".side-link.is-active, .side-sublink.is-active"
+    });
+    LiquidNav.morph(document.getElementById("sidebar"), rail, "sidebar-open", {
+      when: () => html.classList.contains("has-rail") && window.innerWidth > 760,
+      items: ".side-head, .side-search, .side-link, .side-sublink, .side-settings"
+    });
+  }
   rail.addEventListener("click", (e) => {
     const b = e.target.closest("[data-rail]");
     if (!b) { closeLook(false); return; }
@@ -1971,7 +1987,7 @@ const PROGRAMS = [
   {
     id: "cockpit",
     title: "Cockpit",
-    version: "3.0",
+    version: "3.1",
     platform: "macOS 11 oder neuer · iPad als Web-App",
     platformEn: "macOS 11 or later · iPad as web app",
     icon: "assets/programme/cockpit-icon.png",

@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -716,8 +716,14 @@ function renderRail() {
   $('#railSearch').onclick = () => palette();
   $('#railBell').onclick = () => toggleNotif();
   $('#railSet').onclick = () => setup();
-  $('#railToggle').onclick = () => { store.set('railOpen', !store.get('railOpen', false)); renderRail(); updateBadge(); };
+  $('#railToggle').onclick = () => { store.set('railOpen', !store.get('railOpen', false)); renderRail(); updateBadge(); const l = $('#rail')._lq; if (l) { l.hideTip(); l.track(750); } };
   updateBadge();
+  /* Liquid-Glass-Bewegung wie im Referenzvideo (liquid-nav.js) */
+  if (window.LiquidNav && !$('#rail')._lq) LiquidNav.attach($('#rail'), {
+    item: '.rb', active: '.rb[aria-current="page"]',
+    collapsed: () => !$('#rail').classList.contains('open') && innerWidth > 760,
+    tip: el => (el.querySelector('.tt') || {}).textContent || el.getAttribute('aria-label') || ''
+  });
 }
 function showView(id) {
   if (id !== 'start' && document.body.classList.contains('edit-on')) setEdit(false);
