@@ -8,7 +8,7 @@
    ===================================================================== */
 function cockpitMain() {
 'use strict';
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.9';
 const NATIVE = window.NATIVE || null;
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#i-${id}"/></svg>`;
@@ -112,8 +112,20 @@ const shortcutUrl = (name, text) => 'shortcuts://run-shortcut?name=' + encodeURI
 /* Öffnen mit sichtbarer Rückmeldung.
    Mac-App: ausschließlich über die Python-Brücke (im Fenster selbst würde window.open nichts tun).
    Browser: window.open direkt im Klick; wird es blockiert, erscheint ein Link zum Antippen. */
-async function openUrl(u, label) {
+/* Mac-App: Internetseiten im Cockpit, im Standard-Browser oder in Google Chrome öffnen */
+const linkMode = () => NATIVE ? store.get('linkMode', 'browser') : 'browser';
+let WEB = { tabs: [], active: null };   /* offene Tabs des Cockpit-Browsers */
+const STAYS_OUT = /^https?:\/\/(wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)([\/?#]|$)/i;
+async function openUrl(u, label, opts = {}) {
   label = label || 'Seite';
+  if (NATIVE && /^https?:/i.test(u) && !STAYS_OUT.test(u) && !opts.external) {
+    const mode = linkMode();
+    if (mode === 'cockpit' && NATIVE.web_open) { if (await webOpen(u)) return true; }
+    else if (mode === 'chrome' && NATIVE.open_in_chrome) {
+      const r = await NATIVE.open_in_chrome(u).catch(() => null);
+      if (r && r.ok) { toast(`${label} wird in ${r.chrome ? 'Chrome' : 'deinem Browser'} geöffnet`, 'ext'); return true; }
+    }
+  }
   if (NATIVE) {
     try { const r = await NATIVE.open_url(u); if (r && r.ok) { toast(`${label} wird geöffnet`, 'ext'); return true; } toast((r && r.error) || `${label} ließ sich nicht öffnen`, 'x'); }
     catch (e) { toast(`${label} ließ sich nicht öffnen`, 'x'); }
@@ -595,7 +607,7 @@ function gallery() {
 const VIEWS = [
   { id: 'start', name: 'Start', icon: 'home' },
   { id: 'kalender', name: 'Kalender', icon: 'cal' },
-  ...(NATIVE ? [{ id: 'whatsapp', name: 'WhatsApp', icon: 'phonechat' }] : []),
+  ...(NATIVE ? [{ id: 'whatsapp', name: 'WhatsApp', icon: 'phonechat' }, { id: 'web', name: 'Browser', icon: 'globe' }] : []),
   { id: 'projekte', name: 'Projekte', icon: 'kanban' },
   { id: 'gespeichert', name: 'Gespeichert', icon: 'bookmark' },
   { id: 'whiteboard', name: 'Whiteboard', icon: 'whiteboard' },
@@ -608,7 +620,7 @@ function renderRail() {
   $('#rail').innerHTML = `
     <button class="rb brand opt" id="railBrand" aria-label="Persönlich anpassen"><img src="${esc(iconCache || 'icon-192.png')}" alt=""><span class="lb">${esc(P.title || 'Cockpit')}</span><span class="tt">${esc(P.title || 'Cockpit')}</span></button>
     <hr class="opt">
-    ${VIEWS.map(v => `<a class="rb" href="#${v.id}" data-view-link="${v.id}" ${v.id === currentView ? 'aria-current="page"' : ''} aria-label="${v.name}">${ic(v.icon)}${v.id === 'whatsapp' ? '<span class="badge num" id="waBadge" hidden>0</span>' : ''}<span class="lb">${v.name}</span><span class="tt">${v.name}</span></a>`).join('')}
+    ${VIEWS.filter(v => v.id !== 'web' || linkMode() === 'cockpit' || WEB.tabs.length).map(v => `<a class="rb" href="#${v.id}" data-view-link="${v.id}" ${v.id === currentView ? 'aria-current="page"' : ''} aria-label="${v.name}">${ic(v.icon)}${v.id === 'whatsapp' ? '<span class="badge num" id="waBadge" hidden>0</span>' : ''}<span class="lb">${v.name}</span><span class="tt">${v.name}</span></a>`).join('')}
     <hr>
     <button class="rb" id="railSearch" aria-label="Suchen (⌘K)">${ic('search')}<span class="lb">Suchen</span><span class="tt">Suchen · ⌘K</span></button>
     <button class="rb" id="railBell" aria-label="Mitteilungen">${ic('bell')}<span class="badge num" id="bellBadge" hidden>0</span><span class="lb">Mitteilungen</span><span class="tt">Mitteilungen</span></button>
@@ -626,11 +638,12 @@ function showView(id) {
   if (!VIEWS.some(v => v.id === id)) id = 'start';
   if (currentView === 'whiteboard' && id !== 'whiteboard') wbLeave();
   if (currentView === 'whatsapp' && id !== 'whatsapp') waLeave();
-  document.body.classList.toggle('wa-on', id === 'whatsapp');
+  if (currentView === 'web' && id !== 'web') webLeave();
+  document.body.classList.toggle('wa-on', id === 'whatsapp' || id === 'web');
   currentView = id;
   $$('.view').forEach(s => { s.hidden = s.dataset.view !== id; });
   $$('#rail [data-view-link]').forEach(a => a.dataset.viewLink === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
-  ({ start: renderStart, kalender: renderCalendar, projekte: renderKanban, gespeichert: renderSaved, whiteboard: renderWhiteboard, dateien: renderFiles, whatsapp: renderWhatsApp })[id]();
+  ({ start: renderStart, kalender: renderCalendar, projekte: renderKanban, gespeichert: renderSaved, whiteboard: renderWhiteboard, dateien: renderFiles, whatsapp: renderWhatsApp, web: renderWeb })[id]();
   window.scrollTo({ top: 0 });
   closeNotif();
 }
@@ -1892,6 +1905,100 @@ if (NATIVE) {
   $('#waExt').onclick = () => openUrl('https://web.whatsapp.com/', 'WhatsApp Web');
   $('#waWin').onclick = async () => { const r = NATIVE.wa_window ? await NATIVE.wa_window().catch(() => null) : null; toast(r && r.ok ? 'WhatsApp öffnet in einem eigenen Fenster' : 'Eigenes Fenster ging nicht' + (r && r.error ? ': ' + r.error : ''), r && r.ok ? 'phonechat' : 'x'); };
 }
+
+/* =====================================================================
+   BROWSER IM COCKPIT (nur Mac-App)
+   Internetseiten als Tabs direkt im Fenster. Technik: WebKit-Ansichten,
+   die Python genau über #webFrame legt (wie bei WhatsApp).
+   ===================================================================== */
+let webShown = false, webRect = '', webLoop = null, webPoll = null, webNewTab = false;
+const webHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u || ''; } };
+async function webOpen(url, newTab = true) {
+  if (!NATIVE || !NATIVE.web_open) return false;
+  const r = await NATIVE.web_open(url, newTab).catch(() => null);
+  if (!r || !r.ok) { if (r && r.error) toast(r.error, 'x'); return false; }
+  await webRefresh();
+  if (currentView !== 'web') go('web'); else webShowNow();
+  return true;
+}
+window.__webChanged = reason => { webRefresh().then(() => { if (reason === 'new' && currentView !== 'web') go('web'); }); };
+async function webRefresh() {
+  if (!NATIVE || !NATIVE.web_state) return;
+  const st = await NATIVE.web_state().catch(() => null); if (!st) return;
+  const had = WEB.tabs.length;
+  WEB = { tabs: st.tabs || [], active: st.active };
+  if (!!had !== !!WEB.tabs.length) renderRail();
+  renderWebBar();
+}
+function renderWebBar() {
+  if (!$('#webTabs')) return;
+  const act = WEB.tabs.find(t => t.id === WEB.active);
+  $('#webTabs').innerHTML = WEB.tabs.map(t => `<div class="wtab${t.id === WEB.active ? ' on' : ''}" role="tab" aria-selected="${t.id === WEB.active}" data-wtab="${t.id}" title="${esc(t.title || t.url)}">
+      ${t.loading ? '<span class="spin"></span>' : ic('globe', 'i xs')}
+      <span>${esc(t.title || webHost(t.url) || 'Neuer Tab')}</span><button class="wx" data-wclose="${t.id}" aria-label="Tab schließen">${ic('x', 'i xs')}</button></div>`).join('')
+    + `<button class="wtab add" id="webNew" aria-label="Neuer Tab" title="Neuer Tab">${ic('plus', 'i xs')}</button>`;
+  $('#webPh').hidden = !!WEB.tabs.length;
+  $('#webBack').disabled = !(act && act.back); $('#webFwd').disabled = !(act && act.fwd);
+  $('#webReload').innerHTML = act && act.loading ? ic('x', 'i sm') : ic('refresh', 'i sm');
+  $('#webReload').setAttribute('aria-label', act && act.loading ? 'Laden stoppen' : 'Neu laden');
+  $('#webChrome').disabled = !act || !act.url;
+  const inp = $('#webUrl');
+  if (document.activeElement !== inp) inp.value = act ? act.url : '';
+  $('#webProg').style.width = act && act.loading ? Math.max(8, act.progress * 100) + '%' : '0';
+  if (act && act.error && !act.loading) $('#webProg').title = act.error;
+}
+const webBlocked = () => !!($('#ov').innerHTML.trim() || $('#notifP'));
+function webTick() {
+  if (currentView !== 'web' || !NATIVE) return;
+  const r = $('#webFrame').getBoundingClientRect(), k = 6;
+  const rect = { x: Math.round(r.left + k), y: Math.round(r.top + k), w: Math.round(r.width - 2 * k), h: Math.round(r.height - 2 * k) }, key = JSON.stringify(rect);
+  if (webBlocked() || document.hidden || !WEB.tabs.length) { if (webShown) { webShown = false; NATIVE.web_hide(); } return; }
+  if (!webShown || key !== webRect) { webShown = true; webRect = key; NATIVE.web_show(rect); }
+}
+function webShowNow() { webShown = false; webTick(); }
+function renderWeb() {
+  if (!NATIVE) return go('start');
+  clearInterval(webLoop); clearInterval(webPoll); webShown = false; webRect = '';
+  webRefresh();
+  setTimeout(() => { if (currentView === 'web') { webLoop = setInterval(webTick, 120); webTick(); } }, 300);
+  webPoll = setInterval(() => { if (currentView === 'web' && !document.hidden) webRefresh(); }, 700);
+}
+function webLeave() { clearInterval(webLoop); clearInterval(webPoll); webLoop = webPoll = null; if (webShown && NATIVE) NATIVE.web_hide(); webShown = false; }
+const webCmd = (cmd, arg, id) => NATIVE.web_cmd(id || WEB.active, cmd, arg == null ? null : arg).then(() => webRefresh());
+function webTarget(v) {
+  v = v.trim(); if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  if (!/\s/.test(v) && /^[\w-]+(\.[\w-]+)+(:\d+)?([\/?#].*)?$/.test(v)) return 'https://' + v;
+  return 'https://www.google.com/search?q=' + encodeURIComponent(v);
+}
+if (NATIVE) {
+  $('#webTabs').addEventListener('click', e => {
+    const c = e.target.closest('[data-wclose]'); if (c) { e.stopPropagation(); webCmd('close', null, c.dataset.wclose); return; }
+    if (e.target.closest('#webNew')) { webNewTab = true; const i = $('#webUrl'); i.value = ''; i.placeholder = 'Neuer Tab: Adresse oder Suchbegriff'; i.focus(); return; }
+    const t = e.target.closest('[data-wtab]'); if (t) webCmd('select', null, t.dataset.wtab);
+  });
+  $('#webTabs').addEventListener('auxclick', e => { const t = e.target.closest('[data-wtab]'); if (t && e.button === 1) webCmd('close', null, t.dataset.wtab); });
+  $('#webBack').onclick = () => webCmd('back'); $('#webFwd').onclick = () => webCmd('forward');
+  $('#webReload').onclick = () => { const a = WEB.tabs.find(t => t.id === WEB.active); webCmd(a && a.loading ? 'stop' : 'reload'); };
+  $('#webChrome').onclick = async () => { const a = WEB.tabs.find(t => t.id === WEB.active); if (!a || !a.url) return; const r = await NATIVE.open_in_chrome(a.url).catch(() => null); toast(r && r.ok ? (r.chrome ? 'In Chrome geöffnet' : 'Chrome ist nicht installiert – im Standard-Browser geöffnet') : 'Ließ sich nicht öffnen', r && r.ok ? 'ext' : 'x'); };
+  $('#webForm').addEventListener('submit', async e => {
+    e.preventDefault(); const u = webTarget($('#webUrl').value); if (!u) return;
+    $('#webUrl').blur(); $('#webUrl').placeholder = 'Adresse eingeben oder suchen';
+    if (webNewTab || !WEB.active) { webNewTab = false; await webOpen(u, true); } else webCmd('go', u);
+  });
+  $('#webUrl').addEventListener('focus', () => setTimeout(() => $('#webUrl').select(), 0));
+  $('#webUrl').addEventListener('keydown', e => { if (e.key === 'Escape') { webNewTab = false; $('#webUrl').placeholder = 'Adresse eingeben oder suchen'; $('#webUrl').blur(); renderWebBar(); } });
+  document.addEventListener('keydown', e => {
+    if (currentView !== 'web' || !(e.metaKey || e.ctrlKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'l') { e.preventDefault(); $('#webUrl').focus(); }
+    else if (k === 't') { e.preventDefault(); $('#webNew')?.click(); }
+    else if (k === 'w' && WEB.active) { e.preventDefault(); webCmd('close'); }
+    else if (k === 'r') { e.preventDefault(); webCmd('reload'); }
+  });
+  setTimeout(webRefresh, 1500);
+}
+
 function renderWaWidget() {
   const box = $('#waBox'); if (!box || !NATIVE) return;
   const w = waState.web, d = waState.desktop || {}, used = store.get('waUsed', false);
@@ -1930,7 +2037,7 @@ function macBanner() {
   $('#mbX').onclick = () => { try { localStorage.setItem('cockpit:macBannerOff', Date.now() + 7 * 864e5); } catch (e) {} el.hidden = true; };
 }
 macBanner();
-if (NATIVE && NATIVE.safe_status) setTimeout(() => NATIVE.safe_status().then(st => { const off = [st && st.whatsapp && 'WhatsApp einbetten', st && st.mitteilungen && 'macOS-Mitteilungen'].filter(Boolean); if (off.length) toast(`Sicherheitshalber aus: ${off.join(' und ')} (beim letzten Start abgestürzt) – Details unter Einstellungen › Diagnose`, 'x'); }).catch(() => {}), 1800);
+if (NATIVE && NATIVE.safe_status) setTimeout(() => NATIVE.safe_status().then(st => { const off = [st && st.whatsapp && 'WhatsApp einbetten', st && st.mitteilungen && 'macOS-Mitteilungen', st && st.browser && 'Browser im Cockpit'].filter(Boolean); if (off.length) toast(`Sicherheitshalber aus: ${off.join(' und ')} (beim letzten Start abgestürzt) – Details unter Einstellungen › Diagnose`, 'x'); }).catch(() => {}), 1800);
 if (NATIVE && NATIVE.wa_set_notify) NATIVE.wa_set_notify(notifyPrefs().whatsapp !== false);
 if (NATIVE && NATIVE.wa_status) {
   /* Wer WhatsApp im Cockpit schon einmal geöffnet hat: im Hintergrund laden, damit Widget und Zähler stimmen */
@@ -1955,7 +2062,7 @@ const SYNC_RULE = `match /cockpit/{uid}/{document=**} {
   allow read, write: if request.auth != null && request.auth.uid == uid;
 }`;
 /* bleiben auf dem Gerät */
-const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig', 'macRemShare', 'macRemSig', 'weatherLoc', 'weatherCache', 'widgetsKnown']);
+const SYNC_LOCAL = new Set(['board', 'syncMeta', 'syncInfo', 'syncFiles', 'notifiedN', 'seenN', 'waUsed', 'waWebOk', 'railOpen', 'fZoom', 'appsKnown', 'macBannerOff', 'macCalShare', 'macCalSig', 'macRemShare', 'macRemSig', 'weatherLoc', 'weatherCache', 'widgetsKnown', 'linkMode']);
 const PART = 700000;          // Zeichen pro Teil (Firestore erlaubt 1 MB je Dokument)
 const FILE_MAX = 40e6;
 const encKey = k => 'k_' + k.replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16).padStart(4, '0'));
@@ -2360,7 +2467,9 @@ function setup(tab = 'personal') {
         <div class="field">Symbol<div class="syms" id="pIcSym">${ICON_SYMS.map(s => `<button type="button" data-sym="${s}" aria-pressed="${!P.icon.text && P.icon.sym === s}" aria-label="${s}">${ic(s, 'i sm')}</button>`).join('')}</div></div>
         <label class="field">… oder Buchstaben (max. 2)<input id="pIcTxt" maxlength="2" value="${esc(P.icon.text)}" placeholder="z. B. MS"></label></div>
       <div id="pIcCustom" ${P.icon.kind === 'custom' ? '' : 'hidden'}><button type="button" class="btn" id="pIcUp">${ic('image', 'i sm')} Bild auswählen</button></div>
-      <p class="lead" style="margin-top:12px">${NATIVE ? 'Das Symbol erscheint im Dock, solange Cockpit läuft.' : 'Auf dem iPad gilt ein neues Symbol, wenn du Cockpit neu zum Home-Bildschirm hinzufügst.'}</p>`,
+      <p class="lead" style="margin-top:12px">${NATIVE ? 'Das Symbol erscheint im Dock, solange Cockpit läuft.' : 'Auf dem iPad gilt ein neues Symbol, wenn du Cockpit neu zum Home-Bildschirm hinzufügst.'}</p>
+      ${NATIVE ? `<div class="field" style="margin-top:16px">Internetseiten öffnen<div class="seg" id="pLink">${[['cockpit', 'Im Cockpit'], ['browser', 'Standard-Browser'], ['chrome', 'Google Chrome']].map(([k, l]) => `<button type="button" data-lm="${k}" aria-pressed="${linkMode() === k}">${l}</button>`).join('')}</div>
+        <small>„Im Cockpit“: Apps, Links und Lesezeichen öffnen als Tabs im eigenen Bereich <b>Browser</b> (Seitenreiter) – mit Adresszeile, Vor/Zurück und „In Chrome“. Er nutzt die Web-Engine des Macs; Anmeldungen machst du dort einmal, danach bleiben sie. WhatsApp bleibt in seinem eigenen Bereich.</small></div>` : ''}`,
     look: `<div class="field">Hintergrund<div class="bgs" id="lBg">${bgTiles(L.bg, true)}</div></div>
       <div class="lrange"><label for="lBlur">Glas-Unschärfe <output id="oBlur" class="num">${L.blur} px</output></label><input type="range" id="lBlur" min="0" max="60" value="${L.blur}"></div>
       <div class="lrange"><label for="lGlass">Glas-Deckkraft <output id="oGlass" class="num">${L.glass} %</output></label><input type="range" id="lGlass" min="0" max="30" step=".5" value="${L.glass}"></div>
@@ -2456,6 +2565,8 @@ function bindSettings(tab) {
     const refresh = async () => { await applyProfile(); const pv = $('#pIcPrev'); if (pv) pv.src = iconCache; renderRail(); };
     let tmr; const live = () => { clearTimeout(tmr); tmr = setTimeout(() => { setProfile({ name: $('#pName').value.trim(), title: $('#pTitle').value.trim() || 'Cockpit' }); renderRail(); }, 250); };
     $('#pName').addEventListener('input', live); $('#pTitle').addEventListener('input', live);
+    $$('#pLink [data-lm]').forEach(b => b.onclick = () => { store.set('linkMode', b.dataset.lm); $$('#pLink [data-lm]').forEach(x => x.setAttribute('aria-pressed', x === b)); renderRail();
+      toast(b.dataset.lm === 'cockpit' ? 'Internetseiten öffnen jetzt im Cockpit' : b.dataset.lm === 'chrome' ? 'Internetseiten öffnen jetzt in Google Chrome' : 'Internetseiten öffnen im Standard-Browser', 'globe'); });
     $('#pIcKind').addEventListener('click', async e => {
       const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k;
       if (k === 'custom' && !store.get('iconImage', '')) { const [f] = await pickFiles('image/*'); if (!f) return; try { store.set('iconImage', await shrink(f, 512, true)); } catch (er) { toast('Das Bild ließ sich nicht laden', 'x'); return; } }
@@ -2532,7 +2643,7 @@ function bindSettings(tab) {
   }
   if (tab === 'diag') {
     $('#dgUrl').onclick = () => openUrl(SITE, 'buildspace');
-    if (NATIVE && NATIVE.safe_status) NATIVE.safe_status().then(st => { const dl = $('.diag'); if (!dl || !st) return; const off = [st.whatsapp && 'WhatsApp einbetten', st.mitteilungen && 'macOS-Mitteilungen'].filter(Boolean);
+    if (NATIVE && NATIVE.safe_status) NATIVE.safe_status().then(st => { const dl = $('.diag'); if (!dl || !st) return; const off = [st.whatsapp && 'WhatsApp einbetten', st.mitteilungen && 'macOS-Mitteilungen', st.browser && 'Browser im Cockpit'].filter(Boolean);
       dl.insertAdjacentHTML('beforeend', `<dt>Selbstschutz</dt><dd>${off.length ? `<span class="bad">Abgeschaltet: ${off.join(', ')}</span> – beim letzten Start abgestürzt. <button class="btn sm" id="dgSafe">Wieder einschalten</button>` : '<span class="ok">alles aktiv</span>'}</dd>`);
       $('#dgSafe')?.addEventListener('click', async () => { await NATIVE.safe_reset(); toast('Wieder eingeschaltet – gilt ab dem nächsten Start', 'check'); setup('diag'); }); }).catch(() => {});
     if (NATIVE && NATIVE.wa_debug) NATIVE.wa_debug().then(d => { const dl = $('.diag'); if (!dl || !d) return; dl.insertAdjacentHTML('beforeend', `<dt>WhatsApp</dt><dd>${esc([d.embedded ? 'eingebettet' : 'nicht geladen', d.window ? 'eigenes Fenster offen' : '', d.url || '', d.progress != null ? Math.round(d.progress * 100) + ' %' : '', d.frame ? 'Rahmen ' + d.frame.join('·') : '', d.error ? 'Fehler: ' + d.error : ''].filter(Boolean).join(' · '))}</dd>`); }).catch(() => {});
