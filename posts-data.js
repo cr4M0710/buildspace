@@ -1285,4 +1285,16 @@ const posts = [
     titleEn: "Final Exam Learning Path Maths (Realschule)",
     excerptEn: "Self-study path for the maths final exam (Realschulabschluss Hesse): 19 learning boxes from basic arithmetic to trigonometry with detailed explanations, key facts, worked example, typical mistakes, exam-style tasks with staged hints and a self-test. Plus mixed practice for part 1 (no calculator), part 2 and the elective part, a mock exam worth 80 points, the formula sheet, warm-up, feedback and PDF worksheets."
    },
+   {
+    title: "Blattwerk",
+    excerpt: "Arbeitsblätter im A4-Format gestalten: über 20 Bausteine (Lückentext, Suchsel, Rechenpäckchen, Zahlenstrahl, Koordinatensystem …), Lösungsblatt auf Knopfdruck, A/B/C-Niveaus und Export als PDF, Word oder Bild.",
+    date: "2026-11-07",
+    category: "schule",
+    subcategory: "faecheruebergreifend",
+    url: "blattwerk.html",
+    emoji: "📝",
+    tags: ["tool", "organisation"],
+    titleEn: "Blattwerk",
+    excerptEn: "Design A4 worksheets with 20+ building blocks, one-click answer keys, A/B/C levels and export to PDF, Word or image."
+   },
 ];
