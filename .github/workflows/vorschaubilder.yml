@@ -1,0 +1,51 @@
+name: Newsletter – Vorschaubilder
+# Fotografiert jede Tool-Seite aus posts-data.js (nur neue oder geänderte) und legt
+# die Bilder in assets/newsletter/previews/ ab. Der Newsletter zeigt sie als Vorschau.
+# Läuft nach jedem Push mit geänderten Seiten und sonntags vor dem Versand (So 18 Uhr).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.html"
+      - "posts-data.js"
+      - "tools/newsletter/previews.mjs"
+      - ".github/workflows/vorschaubilder.yml"
+  schedule:
+    - cron: "30 15 * * 0"   # Sonntag 16:30 (Winter) / 17:30 (Sommer) deutscher Zeit
+  workflow_dispatch:
+    inputs:
+      alle:
+        description: "Alle Vorschaubilder neu erstellen"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vorschaubilder
+  cancel-in-progress: false
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Playwright installieren
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Vorschaubilder erstellen
+        run: node tools/newsletter/previews.mjs ${{ github.event.inputs.alle == 'true' && '--all' || '' }}
+      - name: Änderungen speichern
+        run: |
+          git config user.name "vorschau-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/newsletter/previews
+          if git diff --cached --quiet; then echo "Nichts zu speichern"; exit 0; fi
+          git commit -m "Vorschaubilder aktualisiert [still]"
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep 5; done

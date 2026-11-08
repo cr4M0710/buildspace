@@ -80,6 +80,9 @@ function makeEnv(opts = {}) {
           const page = Number((/[?&]page=(\d+)/.exec(url) || [])[1] || 1);
           return resp(200, JSON.stringify(page === 1 ? env.commits : []));
         }
+        if (url.startsWith("https://buildspaceos.de/assets/newsletter/previews/index.json")) {
+          return env.previews ? resp(200, JSON.stringify(env.previews)) : resp(404, "");
+        }
         if (url.startsWith("https://buildspaceos.de/")) {
           const path = url.slice("https://buildspaceos.de/".length).replace(/[?&]nocache=\d+$/, "");
           return resp(200, env.pages[path] || "<html>" + path + "</html>");
@@ -455,6 +458,34 @@ test("Erster Lauf ohne Fingerabdrücke: Commit-Nachrichten der Woche reichen", (
   const r = e.ctx.sendWeeklyDigest();
   eq(r.updates, 1);
   ok(e.ctx.resendLastDigest().updates === 1, "Erneut senden enthält Updates");
+});
+
+test("Vorschaubilder: neue Tools mit großem Bild, Updates mit kleinem", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.ctx.sendWeeklyDigest();
+  const p = firstPage(e);
+  e.env.pages[p.url.replace(/[?#].*$/, "")] = "z";
+  e.env.commits = [commit(p.title + ": neue Ansicht")];
+  e.env.previews = { "vorschau-neu.html": { file: "vorschau-neu.jpg", v: "abc" } };
+  e.env.previews[p.url.replace(/[?#].*$/, "")] = { file: "upd.jpg", v: "x1" };
+  postsSrc = addPost(original, "vorschau-neu.html", "Vorschau-Neu");
+  e.advance(7 * 86400000);
+  const before = e.mails.length;
+  e.ctx.sendWeeklyDigest();
+  const h = e.mails[before].htmlBody;
+  ok(h.includes('src="https://buildspaceos.de/assets/newsletter/previews/vorschau-neu.jpg?v=abc" width="526"'), "großes Bild fehlt");
+  ok(h.includes('previews/upd.jpg?v=x1" width="112"'), "kleines Bild fehlt");
+  postsSrc = original;
+});
+
+test("Ohne Vorschaubild bleibt die Karte wie bisher", () => {
+  const e = makeEnv();
+  e.env.previews = null;
+  const items = e.ctx.loadPosts_();
+  ok(items.every((i) => i.preview === ""), "kein Bild erwartet");
+  ok(!e.ctx.buildDigest_(items.slice(0, 2), "0".repeat(32), new Date(), []).html.includes("/previews/"));
 });
 
 test("Test-Newsletter geht nur an die eigene Adresse", () => {

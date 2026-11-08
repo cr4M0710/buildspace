@@ -225,7 +225,7 @@ function findUpdates_(posts, fresh, since) {
     var mine = notes ? notesFor_(notes, p, path) : [];
     if (notes && !mine.length) return;
     if (!notes && (!changed || changed.baseline)) return;
-    out.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, areas: p.areas, notes: mine });
+    out.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, preview: p.preview, areas: p.areas, notes: mine });
   });
   return out.slice(0, CONFIG.MAX_UPDATES);
 }
@@ -364,7 +364,7 @@ function sendTestDigest() {
     var path = pagePath_(p.url);
     if (!path || newPaths[path] || used[path]) return;
     var mine = notesFor_(notes, p, path);
-    if (mine.length) { used[path] = true; updates.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, areas: p.areas, notes: mine }); }
+    if (mine.length) { used[path] = true; updates.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, preview: p.preview, areas: p.areas, notes: mine }); }
   });
   var mail = buildDigest_(posts, "0123456789abcdef0123456789abcdef", new Date(), updates.slice(0, CONFIG.MAX_UPDATES));
   var me = Session.getEffectiveUser().getEmail();
@@ -372,7 +372,23 @@ function sendTestDigest() {
   console.log("Test-Newsletter an " + me + " verschickt.");
 }
 
+/* Vorschaubilder (Screenshots der Tool-Seiten), erstellt von der GitHub Action
+   „Newsletter – Vorschaubilder“; index.json ordnet Seite → Bilddatei zu */
+function loadPreviews_() {
+  try {
+    var r = UrlFetchApp.fetch(CONFIG.SITE_URL + "/assets/newsletter/previews/index.json?nocache=" + Date.now(), { muteHttpExceptions: true });
+    return r.getResponseCode() === 200 ? JSON.parse(r.getContentText()) : {};
+  } catch (err) { return {}; }
+}
+
+function previewFor_(previews, url) {
+  if (!url || /^https?:\/\//.test(url)) return "";
+  var m = previews[url.replace(/^\.?\//, "").replace(/[?#].*$/, "")];
+  return m && m.file ? CONFIG.SITE_URL + "/assets/newsletter/previews/" + m.file + (m.v ? "?v=" + m.v : "") : "";
+}
+
 function loadPosts_() {
+  var previews = loadPreviews_();
   var resp = UrlFetchApp.fetch(CONFIG.SITE_URL + "/posts-data.js?nocache=" + Date.now(), { muteHttpExceptions: true });
   if (resp.getResponseCode() !== 200) throw new Error("posts-data.js nicht erreichbar (" + resp.getResponseCode() + ")");
   var list = new Function(resp.getContentText() + "; return posts;")();
@@ -380,7 +396,7 @@ function loadPosts_() {
   list.forEach(function (p) {
     if (!p || !p.url || p.gate) return;            // geschützte Unterrichtsmaterialien nicht verlinken
     if (byUrl[p.url]) { byUrl[p.url].areas.push(area_(p)); return; }
-    var item = { url: p.url, title: p.title, excerpt: short_(p.excerpt), icon: icon_(p), date: p.date || "", areas: [area_(p)] };
+    var item = { url: p.url, title: p.title, excerpt: short_(p.excerpt), icon: icon_(p), preview: previewFor_(previews, p.url), date: p.date || "", areas: [area_(p)] };
     byUrl[p.url] = item;
     out.push(item);
   });
@@ -453,7 +469,10 @@ function buildDigest_(tools, token, date, updates) {
       '<td valign="top">' +
       '<div style="font-size:15px;font-weight:700;line-height:1.3;color:#111827">' + esc_(t.title) + '</div>' +
       '<div style="font-size:14px;line-height:1.45;color:#4b5563;margin-top:2px">' + esc_(what) + '</div>' +
-      '</td></tr></table></a></td></tr>';
+      '</td>' +
+      (t.preview ? '<td width="112" valign="top" style="width:112px;padding:2px 0 0 12px">' +
+        '<img src="' + esc_(t.preview) + '" width="112" height="70" alt="" style="display:block;width:112px;height:70px;object-fit:cover;border:1px solid #e5e7eb;border-radius:8px"></td>' : '') +
+      '</tr></table></a></td></tr>';
   }).join("");
   var updBlock = !u ? "" :
     '<tr><td style="padding:' + (n ? '8px' : '0') + ' 4px 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b7280">' +
@@ -465,6 +484,7 @@ function buildDigest_(tools, token, date, updates) {
     var link = toolLink_(t.url);
     return '<tr><td style="padding:0 0 12px">' +
       '<a href="' + esc_(link) + '" style="display:block;text-decoration:none;color:#111827;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:16px">' +
+      (t.preview ? '<img src="' + esc_(t.preview) + '" width="526" alt="Vorschau: ' + esc_(t.title) + '" style="display:block;width:100%;max-width:526px;height:auto;border:1px solid #e5e7eb;border-radius:10px;margin:0 0 14px">' : '') +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
       '<td width="48" valign="top" style="width:48px;padding:2px 14px 0 0">' +
       '<img src="' + esc_(t.icon) + '" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border:0;border-radius:12px"></td>' +
