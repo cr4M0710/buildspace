@@ -227,12 +227,11 @@ function TF(x,y,z,n,cls,size){size=size||20;const w=Math.max(String(z).length,St
 /* Streifen (ein Ganzes): parts = Grobteilung, sub = Feinteilung je Teil,
    fills: Array der Länge parts*sub mit Klassen ('fA','fB','fR','fE','X'),
    subStyle: 'thin'|'dash'|'new' */
+const runs=(arr,N)=>{const r=[];let i=0;while(i<N){const f=arr[i]||'fE';let j=i+1;while(j<N&&(arr[j]||'fE')===f)j++;r.push([i,j,f]);i=j}return r};
+const fillAttr=f=>f==='X'?'fill="__HX__"':f==='HB'?'fill="__HB__"':`class="${f}"`;
 function stripe(x,y,w,h,o){
   const N=o.parts*o.sub, cw=w/N; let s='';
-  for(let i=0;i<N;i++){const f=o.fills[i]||'fE';
-    if(f==='X') s+=`<rect x="${x+i*cw}" y="${y}" width="${cw}" height="${h}" fill="__HX__"/>`;
-    else if(f==='HB') s+=`<rect x="${x+i*cw}" y="${y}" width="${cw}" height="${h}" fill="__HB__"/>`;
-    else s+=`<rect x="${x+i*cw}" y="${y}" width="${cw}" height="${h}" class="${f}"/>`;}
+  runs(o.fills,N).forEach(([i,j,f])=>{s+=`<rect x="${x+i*cw}" y="${y}" width="${(j-i)*cw}" height="${h}" ${fillAttr(f)}/>`});
   if(o.sub>1){const cls=o.subStyle==='dash'?'dash':'thin';const anim=o.subStyle==='new'?' grow':'';
     for(let i=1;i<N;i++){if(i%o.sub===0)continue;s+=`<line x1="${x+i*cw}" y1="${y}" x2="${x+i*cw}" y2="${y+h}" class="${cls}${anim}"/>`}}
   for(let i=1;i<o.parts;i++){s+=`<line x1="${x+i*o.sub*cw}" y1="${y}" x2="${x+i*o.sub*cw}" y2="${y+h}" class="thick"/>`}
@@ -264,9 +263,8 @@ function sectorPath(cx,cy,r,a0,a1){if(a1-a0>=PI2-1e-9)return null;const lg=(a1-a
   return `M${cx},${cy} L${cx+r*Math.cos(a0)},${cy+r*Math.sin(a0)} A${r},${r} 0 ${lg} 1 ${cx+r*Math.cos(a1)},${cy+r*Math.sin(a1)} Z`}
 function pie(cx,cy,r,o){
   const N=o.parts*o.sub;let s='';
-  for(let i=0;i<N;i++){const f=o.fills[i]||'fE';const d=sectorPath(cx,cy,r,ang(i,N),ang(i+1,N));
-    const fa=f==='X'?'fill="__HX__"':f==='HB'?'fill="__HB__"':`class="${f}"`;
-    s+=d?`<path d="${d}" ${fa}/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" ${fa}/>`;}
+  runs(o.fills,N).forEach(([i,j,f])=>{const d=sectorPath(cx,cy,r,ang(i,N),ang(j,N));
+    s+=d?`<path d="${d}" ${fillAttr(f)}/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" ${fillAttr(f)}/>`});
   const ray=(i,cls)=>{const a=ang(i,N);return `<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" class="${cls}"/>`};
   if(o.sub>1){const cls=o.subStyle==='dash'?'dash':'thin';const an=o.subStyle==='new'?' grow':'';for(let i=0;i<N;i++){if(i%o.sub)s+=ray(i,cls+an)}}
   if(o.parts>1)for(let i=0;i<o.parts;i++)s+=ray(i*o.sub,'thick');
@@ -529,28 +527,34 @@ function buildScenes(t,p){
 /* ============ Schieberegler (Addition/Subtraktion) ============ */
 const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
 const clamp01=x=>Math.max(0,Math.min(1,x));
+// Ablauf: Bruch zeigen → Unterteilung verfeinern (Linien wachsen) → neue Beschriftung → schieben
+function phase(same,t){
+  if(same)return {p1:1,p2:ease(clamp01(t/.88))};
+  return {p1:clamp01((t-.06)/.24),p2:ease(clamp01((t-.34)/.56))};
+}
 function slideSVG(p,op,t,shape){
   const {a,n,b,m}=p,N=lcm(n,m),fa=N/n,fb=N/m,A=a*fa,B=b*fb,R=op==='+'?A+B:A-B,same=n===m;
-  const p1=same?1:clamp01(t/.25);
-  const p2=ease(same?clamp01(t/.88):clamp01((t-.25)/.63));
-  const p3=op==='−'?clamp01((t-.9)/.1):0;
+  const {p1,p2}=phase(same,t),p3=op==='−'?clamp01((t-.9)/.1):0;
   const aW=Math.max(1,Math.ceil(A/N)),topW=Math.max(aW,op==='+'?Math.ceil(R/N):1),bW=Math.max(1,Math.ceil(B/N));
   const tgt=i=>op==='+'?A+i:A-B+i;
-  const X=70,Wd=500,lbA=p1>.5?[A,N]:[a,n],lbB=p1>.5?[B,N]:[b,m];
+  const X=70,Wd=500,lbA=p1>=1?[A,N]:[a,n],lbB=p1>=1?[B,N]:[b,m];
   const fadeTop=j=>j>=aW?` opacity="${(.3+.7*p2).toFixed(3)}"`:'';
+  const moved=p2>0;
   let fills='',lines='',mov='',outl='',hat='',lab='',H;
   if(shape==='rect'){
     const h=54,gap=16,cw=Wd/N,yT=16,yB=yT+topW*(h+gap)+30;
     const pos=(k,top)=>({x:X+(k%N)*cw,y:(top?yT:yB)+Math.floor(k/N)*(h+gap)});
-    const grp=(y0,wh,parts,f,cnt,cls,top)=>{for(let j=0;j<wh;j++){const y=y0+j*(h+gap),fo=top?fadeTop(j):'';
-      for(let c=0;c<N;c++){const k=j*N+c;fills+=`<rect x="${X+c*cw}" y="${y}" width="${cw}" height="${h}" class="${k<cnt?cls:'fE'}"${fo}/>`}
-      for(let c=1;c<N;c++){if(c%f)lines+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${y+h}" class="thin" opacity="${(p1*(top&&j>=aW?.3+.7*p2:1)).toFixed(3)}"/>`}
+    const grp=(y0,wh,parts,f,cnt,cls,top,keep)=>{for(let j=0;j<wh;j++){const y=y0+j*(h+gap),fo=top?fadeTop(j):'';
+      const arr=[];for(let c=0;c<N;c++){const k=j*N+c;arr.push(k<cnt?cls:'fE')}
+      runs(arr,N).forEach(([i,e,cl])=>{fills+=`<rect x="${X+i*cw}" y="${y}" width="${(e-i)*cw}" height="${h}" class="${cl}"${fo}/>`});
+      if(p1>0)for(let c=1;c<N;c++){if(c%f)lines+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${(y+h*p1).toFixed(2)}" class="thin"${fo}/>`}
       for(let c=1;c<parts;c++)lines+=`<line x1="${X+c*f*cw}" y1="${y}" x2="${X+c*f*cw}" y2="${y+h}" class="thick"${fo}/>`;
       lines+=`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" rx="3" class="thick"${fo}/>`;}};
-    grp(yT,topW,n,fa,A,'fA',true);grp(yB,bW,m,fb,0,'fB',false);
-    for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true),x=f.x+(g.x-f.x)*p2,y=f.y+(g.y-f.y)*p2;
-      mov+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" class="fB" opacity="${(1-p3).toFixed(3)}"/>`;
-      outl+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(p1*(1-p3)).toFixed(3)}"/>`;
+    grp(yT,topW,n,fa,A,'fA',true);
+    grp(yB,bW,m,fb,moved?0:B,'fB',false);
+    if(moved)for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true),x=f.x+(g.x-f.x)*p2,y=f.y+(g.y-f.y)*p2;
+      mov+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" class="fB" stroke="var(--B)" stroke-width="1" opacity="${(1-p3).toFixed(3)}"/>`;
+      outl+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(1-p3).toFixed(3)}"/>`;
       if(p3>0)hat+=`<rect x="${g.x}" y="${g.y}" width="${cw}" height="${h}" fill="__HX__" opacity="${p3.toFixed(3)}"/>`;}
     lab=TF(34,yT+(aW*(h+gap)-gap)/2,lbA[0],lbA[1],'txA',17)+TF(34,yB+(bW*(h+gap)-gap)/2,lbB[0],lbB[1],'txB',17)+T(34,yB-15,op,'tx'+(op==='+'?'':' txX'),24);
     H=yB+bW*(h+gap)+4;
@@ -561,30 +565,39 @@ function slideSVG(p,op,t,shape){
     const pos=(k,top)=>({cx:(top?cT:cB)[Math.floor(k/N)],cy:top?yT:yB,a:ang(k%N,N)});
     const sec=(q,attrs)=>N===1?`<circle cx="${q.cx}" cy="${q.cy}" r="${r}" ${attrs}/>`:`<path d="${sectorPath(0,0,r,0,PI2/N)}" transform="translate(${q.cx.toFixed(2)},${q.cy.toFixed(2)}) rotate(${(q.a*180/Math.PI).toFixed(2)})" ${attrs}/>`;
     const grp=(cs,cy,parts,f,cnt,cls,top)=>cs.forEach((cx,j)=>{const fo=top?fadeTop(j):'';
-      for(let c=0;c<N;c++){const k=j*N+c;fills+=sec({cx,cy,a:ang(c,N)},`class="${k<cnt?cls:'fE'}"${fo}`)}
-      const ray=(c,cl,op2)=>`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(ang(c,N))}" y2="${cy+r*Math.sin(ang(c,N))}" class="${cl}" ${op2}/>`;
-      for(let c=0;c<N;c++){if(N>1&&c%f)lines+=ray(c,'thin',`opacity="${(p1*(top&&j>=aW?.3+.7*p2:1)).toFixed(3)}"`)}
-      if(parts>1)for(let c=0;c<parts;c++)lines+=ray(c*f,'thick',fo);
+      const arr=[];for(let c=0;c<N;c++)arr.push(j*N+c<cnt?cls:'fE');
+      runs(arr,N).forEach(([i,e,cl])=>{const d=sectorPath(cx,cy,r,ang(i,N),ang(e,N));fills+=d?`<path d="${d}" class="${cl}"${fo}/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" class="${cl}"${fo}/>`});
+      const ray=(c,cl,len)=>`<line x1="${cx}" y1="${cy}" x2="${(cx+r*len*Math.cos(ang(c,N))).toFixed(2)}" y2="${(cy+r*len*Math.sin(ang(c,N))).toFixed(2)}" class="${cl}"${fo}/>`;
+      if(p1>0)for(let c=0;c<N;c++){if(N>1&&c%f)lines+=ray(c,'thin',p1)}
+      if(parts>1)for(let c=0;c<parts;c++)lines+=ray(c*f,'thick',1);
       lines+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="thick"${fo}/>`;});
-    grp(cT,yT,n,fa,A,'fA',true);grp(cB,yB,m,fb,0,'fB',false);
-    for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true);
+    grp(cT,yT,n,fa,A,'fA',true);grp(cB,yB,m,fb,moved?0:B,'fB',false);
+    if(moved)for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true);
       const q={cx:f.cx+(g.cx-f.cx)*p2,cy:f.cy+(g.cy-f.cy)*p2,a:f.a+(g.a-f.a)*p2};
-      mov+=sec(q,`class="fB" opacity="${(1-p3).toFixed(3)}"`);
-      outl+=sec(q,`fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(p1*(1-p3)).toFixed(3)}"`);
+      mov+=sec(q,`class="fB" stroke="var(--B)" stroke-width="1" opacity="${(1-p3).toFixed(3)}"`);
+      outl+=sec(q,`fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(1-p3).toFixed(3)}"`);
       if(p3>0)hat+=sec(g,`fill="__HX__" opacity="${p3.toFixed(3)}"`);}
     lab=TF(30,yT,lbA[0],lbA[1],'txA',17)+TF(30,yB,lbB[0],lbB[1],'txB',17)+T(30,(yT+yB)/2,op,'tx'+(op==='+'?'':' txX'),24);
     H=yB+r+12;
   }
   return svgWrap(W,H,fills+mov+hat+lines+outl+lab);
 }
+// Text für die Verfeinerungs-Phase (gemeinsam für +, −, :)
+function refineText(a,n,b,m,p1){
+  const N=lcm(n,m),fa=N/n,fb=N/m;
+  if(p1<1){const parts=[fa>1?`jedes ${F(1,n,'ca')} in ${fa} Teile`:null,fb>1?`jedes ${F(1,m,'cb')} in ${fb} Teile`:null].filter(Boolean).join(' und ');
+    return `Erweitern: Die Unterteilung wird verfeinert – ${parts} …`;}
+  return `Verfeinert: ${F(a,n,'ca')} = ${F(a*fa,N,'ca')} und ${F(b,m,'cb')} = ${F(b*fb,N,'cb')} – jetzt sind alle Teile gleich groß.`;
+}
 function slideText(p,op,t,hide){
-  const {a,n,b,m}=p,N=lcm(n,m),A=a*N/n,B=b*N/m,R=op==='+'?A+B:A-B,same=n===m;
-  if(t<.002)return same?`Zieh den Regler nach rechts: Die orangen Teile werden ${op==='+'?'an die blauen herangeschoben':'auf die blauen geschoben und heben sie auf'}.`:`Die Teile sind verschieden groß. Zieh den Regler: Zuerst werden beide Brüche auf den Hauptnenner ${N} verfeinert.`;
-  if(!same&&t<.25)return `Verfeinern: ${F(a,n,'ca')} = ${F(A,N,'ca')} und ${F(b,m,'cb')} = ${F(B,N,'cb')} – jetzt sind alle Teile gleich groß.`;
+  const {a,n,b,m}=p,N=lcm(n,m),A=a*N/n,B=b*N/m,R=op==='+'?A+B:A-B,same=n===m,{p1}=phase(same,t);
+  if(t<.002||(!same&&t<.06))return same?`Zieh den Regler nach rechts: Die orangen Teile werden ${op==='+'?'an die blauen herangeschoben':'auf die blauen geschoben und heben sie auf'}.`:`Hier siehst du ${F(a,n,'ca')} und ${F(b,m,'cb')}. Die Teile sind verschieden groß. Zieh den Regler: Zuerst werden beide auf den Hauptnenner ${N} erweitert.`;
+  if(!same&&t<.34)return refineText(a,n,b,m,p1);
   if(t<.999)return op==='+'?`Die ${B} orangen Teile (je ${F(1,N)}) werden hinter die ${A} blauen geschoben …`:`Die ${B} orangen Teile (je ${F(1,N)}) werden auf die blauen geschoben – sie heben sich gegenseitig auf …`;
   if(hide)return op==='+'?`Zähle: Wie viele Teile (je ${F(1,N)}) sind jetzt gefärbt?`:`Zähle: Wie viele blaue Teile (je ${F(1,N)}) bleiben übrig?`;
   return op==='+'?`${A} + ${B} = <b class="cr">${R}</b> Teile → ${F(A,N,'ca')} ${O('+')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`:`${A} − ${B} = <b class="cr">${R}</b> Teile bleiben → ${F(A,N,'ca')} ${O('−')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`;
 }
+
 /* --- Multiplikation: Folie darüberschieben (Rechteck) / Anteil vom Anteil färben (Kreis) --- */
 function mulSVG(p,op,t,shape){
   const {a,n,b,m}=p;
@@ -632,20 +645,21 @@ function mulText(p,op,t,hide){
 /* --- Division: oranges Stück immer wieder anlegen --- */
 function divGeo(p,t){
   const {a,n,b,m}=p,N=lcm(n,m),A=a*N/n,B=b*N/m,same=n===m,Q=Math.max(1,Math.ceil(A/B));
-  const t0=same?0:.2,p1=same?1:clamp01(t/.2),u=clamp01((t-t0)/(.95-t0))*Q;
+  const p1=same?1:clamp01((t-.06)/.2),s0=same?0:.3,u=clamp01((t-s0)/(.95-s0))*Q;
   return {N,A,B,same,Q,p1,u,cnt:Math.min(Q,Math.floor(u+1e-9)),fa:N/n,fb:N/m};
 }
 function divSVG(p,op,t,shape){
   const {a,n,b,m}=p,G=divGeo(p,t),{N,A,B,Q,p1,u,cnt,fa,fb}=G;
-  const lbA=p1>.5?[A,N]:[a,n],lbB=p1>.5?[B,N]:[b,m];
+  const lbA=p1>=1?[A,N]:[a,n],lbB=p1>=1?[B,N]:[b,m];
   // Position des Messstücks: Start (Index) und Flug-Anteil vom Vorlagenplatz
   let start=0,fly=0;
   if(u<1)fly=1-ease(u);else{const k=Math.min(Q-1,Math.floor(u)),fr=u>=Q?1:ease(u-k);start=k===0?0:((k-1)+fr)*B}
   let s='';
   if(shape==='circle'){
-    const R=100,cy=145,c1=170,c2=440,sub=p1>=.5;
-    s+=pie(c1,cy,R,{parts:n,sub:sub?fa:1,subStyle:'thin',fills:fillArr(n*(sub?fa:1),[[sub?A:a,'fA']])});
-    s+=pie(c2,cy,R,{parts:m,sub:sub?fb:1,subStyle:'thin',fills:fillArr(m*(sub?fb:1),[[sub?B:b,'fB']])});
+    const R=100,cy=145,c1=170,c2=440;
+    const fine=(cx,f)=>{let g='';if(p1>0)for(let c=0;c<N;c++){if(c%f)g+=`<line x1="${cx}" y1="${cy}" x2="${(cx+R*p1*Math.cos(ang(c,N))).toFixed(2)}" y2="${(cy+R*p1*Math.sin(ang(c,N))).toFixed(2)}" class="thin"/>`}return g};
+    s+=pie(c1,cy,R,{parts:n,sub:1,fills:fillArr(n,[[a,'fA']])})+fine(c1,fa);
+    s+=pie(c2,cy,R,{parts:m,sub:1,fills:fillArr(m,[[b,'fB']])})+fine(c2,fb);
     s+=TF(c1,cy+R+34,lbA[0],lbA[1],'txA',18)+TF(c2,cy+R+34,lbB[0],lbB[1],'txB',18)+T(c2,cy-R-14,'Vorlage','txs',13);
     for(let j=0;j<cnt;j++){const len=Math.min(B,A-j*B),full=len===B,a0=ang(j*B,N)+.06,a1=ang(j*B+len,N)-.06,rr=R+12;
       s+=`<path d="M${c1+rr*Math.cos(a0)},${cy+rr*Math.sin(a0)} A${rr},${rr} 0 ${a1-a0>Math.PI?1:0} 1 ${c1+rr*Math.cos(a1)},${cy+rr*Math.sin(a1)}" fill="none" stroke="var(--B)" stroke-width="6" stroke-linecap="round" ${full?'':'stroke-dasharray="4 7"'}/>`;
@@ -657,8 +671,8 @@ function divSVG(p,op,t,shape){
     return svgWrap(W,cy+R+60,s);
   }
   const X=70,Wd=500,cw=Wd/N,h=56,y1=50,y2=176;
-  const bar=(y,parts,f,cnt2,cls)=>{let g='';for(let c=0;c<N;c++)g+=`<rect x="${X+c*cw}" y="${y}" width="${cw}" height="${h}" class="${c<cnt2?cls:'fE'}"/>`;
-    for(let c=1;c<N;c++){if(c%f)g+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${y+h}" class="thin" opacity="${p1.toFixed(3)}"/>`}
+  const bar=(y,parts,f,cnt2,cls)=>{let g=`<rect x="${X}" y="${y}" width="${cnt2*cw}" height="${h}" class="${cls}"/><rect x="${X+cnt2*cw}" y="${y}" width="${(N-cnt2)*cw}" height="${h}" class="fE"/>`;
+    if(p1>0)for(let c=1;c<N;c++){if(c%f)g+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${(y+h*p1).toFixed(2)}" class="thin"/>`}
     for(let c=1;c<parts;c++)g+=`<line x1="${X+c*f*cw}" y1="${y}" x2="${X+c*f*cw}" y2="${y+h}" class="thick"/>`;
     return g+`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" rx="3" class="thick"/>`};
   s+=bar(y1,n,fa,A,'fA')+bar(y2,m,fb,B,'fB');
@@ -675,9 +689,9 @@ function divSVG(p,op,t,shape){
 }
 function divText(p,op,t,hide){
   const {a,n,b,m}=p,G=divGeo(p,t),{N,A,B,same,Q,u,cnt}=G,q=Math.floor(A/B),r=A%B,g=gcd(A,B);
-  if(t<.002)return same?`Wie oft passt das orange Stück in das blaue? Zieh den Regler – das orange Stück wird immer wieder angelegt.`:`Zum Messen müssen die Teile gleich groß sein. Zieh den Regler: Zuerst werden beide auf den Hauptnenner ${N} verfeinert.`;
-  if(!same&&t<.2)return `Verfeinern: ${F(a,n,'ca')} = ${F(A,N,'ca')} und ${F(b,m,'cb')} = ${F(B,N,'cb')} – jetzt kann man messen.`;
-  if(u<Q)return `Das orange Stück wird angelegt … bisher <b>${cnt}</b>-mal.`;
+  if(t<.002||(!same&&t<.06))return same?`Wie oft passt das orange Stück in das blaue? Zieh den Regler – das orange Stück wird immer wieder angelegt.`:`Hier siehst du ${F(a,n,'ca')} und ${F(b,m,'cb')}. Zum Messen müssen die Teile gleich groß sein. Zieh den Regler: Zuerst werden beide auf den Hauptnenner ${N} erweitert.`;
+  if(!same&&t<.3)return refineText(a,n,b,m,G.p1);
+  if(u<Q)return cnt?`Das orange Stück wird angelegt … bisher <b>${cnt}</b>-mal.`:`Das orange Stück wird angelegt …`;
   if(hide)return `Wie oft hat es gepasst? Zähle die ganzen Male – und welcher Teil des orangen Stücks passt beim letzten Mal noch hinein?`;
   const res=`${F(a,n,'ca')} ${O(':')} ${F(b,m,'cb')} ${O('=')} ${mixed(A/g,B/g,'cr')}`;
   if(!r)return `Es passt genau <b class="cr">${q}</b>-mal → ${res}`;
