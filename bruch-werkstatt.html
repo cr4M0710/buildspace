@@ -148,6 +148,14 @@ input.wrong{border-color:var(--bad);background:var(--badbg)}
 .dual>div{min-width:0}
 .dual>div+div{border-top:2px dashed var(--line);padding-top:10px}
 .vlab{font-weight:800;color:var(--soft);font-size:.85rem;margin-right:2px}
+.slidecard{margin-top:16px;padding:14px}
+.slrow{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.slrow .slplay{min-width:58px;padding:0 14px}
+.slr{flex:1;min-width:180px;-webkit-appearance:none;appearance:none;height:14px;margin:14px 0;border-radius:999px;background:linear-gradient(90deg,var(--B) var(--v,0%),var(--card2) var(--v,0%));border:1px solid var(--line);touch-action:pan-y}
+.slr::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:40px;height:40px;border-radius:50%;background:var(--card);border:5px solid var(--B);box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:grab}
+.slr::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:var(--card);border:5px solid var(--B);cursor:grab}
+.sll{font-size:1.25rem;font-weight:800}
+.slstage svg{width:100%;height:auto;display:block}
 .foot{margin-top:24px;text-align:center;font-size:.85rem;color:var(--soft)}
 </style>
 </head>
@@ -496,6 +504,89 @@ function buildScenes(t,p){
   return a.map((s,i)=>({...s,g:`<div class="dual"><div>${s.g}</div><div>${b[i].g}</div></div>`}));
 }
 
+/* ============ Schieberegler (Addition/Subtraktion) ============ */
+const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+const clamp01=x=>Math.max(0,Math.min(1,x));
+function slideSVG(p,op,t,shape){
+  const {a,n,b,m}=p,N=lcm(n,m),fa=N/n,fb=N/m,A=a*fa,B=b*fb,R=op==='+'?A+B:A-B,same=n===m;
+  const p1=same?1:clamp01(t/.25);
+  const p2=ease(same?clamp01(t/.88):clamp01((t-.25)/.63));
+  const p3=op==='−'?clamp01((t-.9)/.1):0;
+  const aW=Math.max(1,Math.ceil(A/N)),topW=Math.max(aW,op==='+'?Math.ceil(R/N):1),bW=Math.max(1,Math.ceil(B/N));
+  const tgt=i=>op==='+'?A+i:A-B+i;
+  const X=70,Wd=500,lbA=p1>.5?[A,N]:[a,n],lbB=p1>.5?[B,N]:[b,m];
+  const fadeTop=j=>j>=aW?` opacity="${(.3+.7*p2).toFixed(3)}"`:'';
+  let fills='',lines='',mov='',outl='',hat='',lab='',H;
+  if(shape==='rect'){
+    const h=54,gap=16,cw=Wd/N,yT=16,yB=yT+topW*(h+gap)+30;
+    const pos=(k,top)=>({x:X+(k%N)*cw,y:(top?yT:yB)+Math.floor(k/N)*(h+gap)});
+    const grp=(y0,wh,parts,f,cnt,cls,top)=>{for(let j=0;j<wh;j++){const y=y0+j*(h+gap),fo=top?fadeTop(j):'';
+      for(let c=0;c<N;c++){const k=j*N+c;fills+=`<rect x="${X+c*cw}" y="${y}" width="${cw}" height="${h}" class="${k<cnt?cls:'fE'}"${fo}/>`}
+      for(let c=1;c<N;c++){if(c%f)lines+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${y+h}" class="thin" opacity="${(p1*(top&&j>=aW?.3+.7*p2:1)).toFixed(3)}"/>`}
+      for(let c=1;c<parts;c++)lines+=`<line x1="${X+c*f*cw}" y1="${y}" x2="${X+c*f*cw}" y2="${y+h}" class="thick"${fo}/>`;
+      lines+=`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" rx="3" class="thick"${fo}/>`;}};
+    grp(yT,topW,n,fa,A,'fA',true);grp(yB,bW,m,fb,0,'fB',false);
+    for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true),x=f.x+(g.x-f.x)*p2,y=f.y+(g.y-f.y)*p2;
+      mov+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" class="fB" opacity="${(1-p3).toFixed(3)}"/>`;
+      outl+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(p1*(1-p3)).toFixed(3)}"/>`;
+      if(p3>0)hat+=`<rect x="${g.x}" y="${g.y}" width="${cw}" height="${h}" fill="__HX__" opacity="${p3.toFixed(3)}"/>`;}
+    lab=TF(34,yT+(aW*(h+gap)-gap)/2,lbA[0],lbA[1],'txA',17)+TF(34,yB+(bW*(h+gap)-gap)/2,lbB[0],lbB[1],'txB',17)+T(34,yB-15,op,'tx'+(op==='+'?'':' txX'),24);
+    H=yB+bW*(h+gap)+4;
+  }else{
+    const nmax=Math.max(topW,bW),gap=22,r=Math.min(64,(Wd-(nmax-1)*gap)/(2*nmax));
+    const row=cnt=>{const tot=cnt*2*r+(cnt-1)*gap;return Array.from({length:cnt},(_,k)=>X+(Wd-tot)/2+r+k*(2*r+gap))};
+    const cT=row(topW),cB=row(bW),yT=12+r,yB=yT+2*r+40;
+    const pos=(k,top)=>({cx:(top?cT:cB)[Math.floor(k/N)],cy:top?yT:yB,a:ang(k%N,N)});
+    const sec=(q,attrs)=>N===1?`<circle cx="${q.cx}" cy="${q.cy}" r="${r}" ${attrs}/>`:`<path d="${sectorPath(0,0,r,0,PI2/N)}" transform="translate(${q.cx.toFixed(2)},${q.cy.toFixed(2)}) rotate(${(q.a*180/Math.PI).toFixed(2)})" ${attrs}/>`;
+    const grp=(cs,cy,parts,f,cnt,cls,top)=>cs.forEach((cx,j)=>{const fo=top?fadeTop(j):'';
+      for(let c=0;c<N;c++){const k=j*N+c;fills+=sec({cx,cy,a:ang(c,N)},`class="${k<cnt?cls:'fE'}"${fo}`)}
+      const ray=(c,cl,op2)=>`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(ang(c,N))}" y2="${cy+r*Math.sin(ang(c,N))}" class="${cl}" ${op2}/>`;
+      for(let c=0;c<N;c++){if(N>1&&c%f)lines+=ray(c,'thin',`opacity="${(p1*(top&&j>=aW?.3+.7*p2:1)).toFixed(3)}"`)}
+      if(parts>1)for(let c=0;c<parts;c++)lines+=ray(c*f,'thick',fo);
+      lines+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="thick"${fo}/>`;});
+    grp(cT,yT,n,fa,A,'fA',true);grp(cB,yB,m,fb,0,'fB',false);
+    for(let i=0;i<B;i++){const f=pos(i,false),g=pos(tgt(i),true);
+      const q={cx:f.cx+(g.cx-f.cx)*p2,cy:f.cy+(g.cy-f.cy)*p2,a:f.a+(g.a-f.a)*p2};
+      mov+=sec(q,`class="fB" opacity="${(1-p3).toFixed(3)}"`);
+      outl+=sec(q,`fill="none" stroke="var(--cellline)" stroke-width="1.2" opacity="${(p1*(1-p3)).toFixed(3)}"`);
+      if(p3>0)hat+=sec(g,`fill="__HX__" opacity="${p3.toFixed(3)}"`);}
+    lab=TF(30,yT,lbA[0],lbA[1],'txA',17)+TF(30,yB,lbB[0],lbB[1],'txB',17)+T(30,(yT+yB)/2,op,'tx'+(op==='+'?'':' txX'),24);
+    H=yB+r+12;
+  }
+  return svgWrap(W,H,fills+mov+hat+lines+outl+lab);
+}
+function slideText(p,op,t,hide){
+  const {a,n,b,m}=p,N=lcm(n,m),A=a*N/n,B=b*N/m,R=op==='+'?A+B:A-B,same=n===m;
+  if(t<.002)return same?`Zieh den Regler nach rechts: Die orangen Teile werden ${op==='+'?'an die blauen herangeschoben':'auf die blauen geschoben und heben sie auf'}.`:`Die Teile sind verschieden groß. Zieh den Regler: Zuerst werden beide Brüche auf den Hauptnenner ${N} verfeinert.`;
+  if(!same&&t<.25)return `Verfeinern: ${F(a,n,'ca')} = ${F(A,N,'ca')} und ${F(b,m,'cb')} = ${F(B,N,'cb')} – jetzt sind alle Teile gleich groß.`;
+  if(t<.999)return op==='+'?`Die ${B} orangen Teile (je ${F(1,N)}) werden hinter die ${A} blauen geschoben …`:`Die ${B} orangen Teile (je ${F(1,N)}) werden auf die blauen geschoben – sie heben sich gegenseitig auf …`;
+  if(hide)return op==='+'?`Zähle: Wie viele Teile (je ${F(1,N)}) sind jetzt gefärbt?`:`Zähle: Wie viele blaue Teile (je ${F(1,N)}) bleiben übrig?`;
+  return op==='+'?`${A} + ${B} = <b class="cr">${R}</b> Teile → ${F(A,N,'ca')} ${O('+')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`:`${A} − ${B} = <b class="cr">${R}</b> Teile bleiben → ${F(A,N,'ca')} ${O('−')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`;
+}
+function mountSlider(host,p,op,opts){
+  if(!host)return;opts=opts||{};
+  host.innerHTML=`<div class="card slidecard"><div class="ph"><span class="dot" style="background:var(--B)"></span>Schieberegler – ${op==='+'?'Teile zusammenschieben':'Teile wegnehmen'}</div>
+   <div class="slstage"></div>
+   <div class="slrow"><button class="btn slplay" aria-label="Abspielen">▶</button><input type="range" class="slr" min="0" max="1000" value="0" aria-label="Schieberegler"><span class="sll">${F(p.a,p.n,'ca')} ${O(op)} ${F(p.b,p.m,'cb')}</span></div>
+   <div class="say slsay"></div></div>`;
+  const st=host.querySelector('.slstage'),rg=host.querySelector('.slr'),say=host.querySelector('.slsay'),play=host.querySelector('.slplay');
+  const shapes=VIEW==='both'?['rect','circle']:[VIEW];
+  st.className='slstage'+(shapes.length>1?' dual':'');
+  function draw(){const t=rg.value/1000;st.innerHTML=shapes.map(sh=>`<div>${slideSVG(p,op,t,sh)}</div>`).join('');say.innerHTML=slideText(p,op,t,opts.hideRes);rg.style.setProperty('--v',(t*100)+'%')}
+  let raf=null;
+  const stop=()=>{if(raf){cancelAnimationFrame(raf);raf=null}};
+  play.onclick=()=>{
+    if(raf){stop();play.textContent='▶';return}
+    const from=+rg.value>=1000?0:+rg.value;let start=null;play.textContent='❚❚';
+    const step=ts=>{if(start==null)start=ts;const v=Math.min(1000,from+(ts-start)/3.2);rg.value=v;draw();
+      if(v<1000)raf=requestAnimationFrame(step);else{raf=null;play.textContent='↺'}};
+    raf=requestAnimationFrame(step);
+  };
+  rg.addEventListener('input',()=>{stop();play.textContent=+rg.value>=1000?'↺':'▶';draw()});
+  draw();
+}
+const OPCH=tid=>tid==='add'?'+':tid==='sub'?'−':null;
+
 /* ============ Themen ============ */
 const TOPICS=[
  {id:'groessen',ic:'½',name:'Brüche & Größen',merke:`Ein Bruch beschreibt einen Anteil: Der <b>Nenner</b> (unten) sagt, in wie viele gleich große Teile das Ganze geteilt wird, der <b>Zähler</b> (oben), wie viele Teile man nimmt. <b>Bruchteil einer Größe:</b> erst durch den Nenner teilen, dann mal den Zähler.`,
@@ -565,6 +656,7 @@ function renderView(){
 }
 function refreshHelp(){
   if(!helpCtl||!cur)return;const t=topic();const sc=scenesFor(t.id,cur);const i=helpCtl.i;
+  if(OPCH(t.id))mountSlider($('#hslide'),cur.p,OPCH(t.id),{hideRes:helpCtl.kind!=='sol'});
   if(helpCtl.kind==='sol'){helpCtl=stepper($('#hs'),sc,{start:sc.length-1});helpCtl.kind='sol'}
   else{const lim=Math.min(helpUsed,Math.max(0,sc.length-2));helpCtl=stepper($('#hs'),sc,{limit:lim});helpCtl.go(i);helpCtl.kind='help'}
 }
@@ -580,9 +672,10 @@ function renderBsp(){
   const t=topic();const list=t.ops?t.ex[S.kind]:t.ex;
   const m=$('#main');
   m.innerHTML=`<div class="merke"><b class="tag">Merke</b><div>${t.merke}</div></div>
-   <div class="exrow" id="exrow">${list.map((p,k)=>`<button class="btn ${k===S.ex?'':'ghost'} exb" data-i="${k}" style="font-size:1.1rem">Beispiel ${k+1}: ${exampleTitle(t,p)}</button>`).join('')}</div><div id="stp"></div>`;
+   <div class="exrow" id="exrow">${list.map((p,k)=>`<button class="btn ${k===S.ex?'':'ghost'} exb" data-i="${k}" style="font-size:1.1rem">Beispiel ${k+1}: ${exampleTitle(t,p)}</button>`).join('')}</div><div id="stp"></div><div id="slide"></div>`;
   m.querySelectorAll('.exb').forEach(b=>b.onclick=()=>{S.ex=+b.dataset.i;renderBsp()});
   stepper($('#stp'),buildScenes(t,list[S.ex]));
+  if(OPCH(t.id))mountSlider($('#slide'),list[S.ex],OPCH(t.id));
 }
 
 /* ============ Üben ============ */
@@ -696,14 +789,16 @@ function showHelp(){
   const t=topic();const sc=scenesFor(t.id,cur);
   const limit=Math.max(0,sc.length-2);
   const h=$('#help');
-  if(!helpCtl){h.className='help show';h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--B)"></span>Bild-Hilfe – Schritt für Schritt zur Lösung</div><div id="hs"></div></div>';
+  if(!helpCtl){h.className='help show';h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--B)"></span>Bild-Hilfe – Schritt für Schritt zur Lösung</div><div id="hs"></div><div id="hslide"></div></div>';
+    if(OPCH(t.id))mountSlider($('#hslide'),cur.p,OPCH(t.id),{hideRes:true});
     helpCtl=stepper($('#hs'),sc,{limit:Math.min(helpUsed,limit)});helpUsed=1;helpCtl.kind='help';}
   else{helpUsed++;helpCtl.setLimit(Math.min(helpUsed,limit));helpCtl.go(helpUsed)}
   h.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function showSolution(){
   const t=topic();const sc=scenesFor(t.id,cur);const h=$('#help');h.className='help show';
-  h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--R)"></span>Lösungsweg</div><div id="hs"></div></div>';
+  h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--R)"></span>Lösungsweg</div><div id="hs"></div><div id="hslide"></div></div>';
+  if(OPCH(t.id))mountSlider($('#hslide'),cur.p,OPCH(t.id));
   helpCtl=stepper($('#hs'),sc,{start:sc.length-1});helpCtl.kind='sol';helpUsed=99;
   if(!cur.done){cur.done=true;bump(false)}
   const fb=$('#fb');fb.className='fb show half';fb.innerHTML='Schau dir den Lösungsweg an – dann probier eine neue Aufgabe.';
@@ -768,7 +863,7 @@ function renderLabor(){
   else if(t.id==='erweitern')form=`${finV('l1',d.z,d.n)} erweitern mit ${inp('lk',d.k)}`;
   else if(t.id==='kuerzen')form=`${finV('l1',d.z,d.n)} kürzen mit ${inp('lk',d.k)} <span class="small muted">(leer = ggT)</span>`;
   else form=`${finV('l1',d.a,d.n)} ${O(OPSYM[t.id])} ${finV('l2',d.b,d.m)}`;
-  $('#main').innerHTML=`<div class="card"><div class="instr">Trag deine eigenen Brüche ein – das Tool zeichnet und rechnet Schritt für Schritt.</div><div class="form">${form}<button class="btn" id="lgo">Darstellen ▶</button></div><div class="err" id="lerr"></div></div><div id="lstp" style="margin-top:14px"></div>`;
+  $('#main').innerHTML=`<div class="card"><div class="instr">Trag deine eigenen Brüche ein – das Tool zeichnet und rechnet Schritt für Schritt.</div><div class="form">${form}<button class="btn" id="lgo">Darstellen ▶</button></div><div class="err" id="lerr"></div></div><div id="lstp" style="margin-top:14px"></div><div id="lslide"></div>`;
   $('#lgo').onclick=runLab;$('#main').querySelectorAll('input,select').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter')runLab()}));
   runLab();
 }
@@ -794,9 +889,10 @@ function runLab(){
     else if(t.id==='add'&&p.a/p.n+p.b/p.m>3)e='Das Ergebnis bitte höchstens 3 Ganze.';
     else if(t.id==='sub'&&p.a/p.n>3)e='Erster Bruch bitte höchstens 3 Ganze.';
     else if(t.id==='div'&&p.a<1)e='Der erste Bruch ist 0 – da gibt es nichts zu messen.';}
-  if(e){err.textContent=e;$('#lstp').innerHTML='';return}
+  if(e){err.textContent=e;$('#lstp').innerHTML='';$('#lslide').innerHTML='';return}
   store.set('lab:'+t.id,p);
   stepper($('#lstp'),buildScenes(t,p));
+  if(OPCH(t.id))mountSlider($('#lslide'),p,OPCH(t.id));
 }
 
 /* ============ Start ============ */
