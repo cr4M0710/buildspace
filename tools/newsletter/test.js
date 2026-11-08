@@ -30,6 +30,7 @@ function makeEnv(opts = {}) {
       if (typeof r === "string") return { setNumberFormat: (f) => { sh.format = f; } };
       return {
         getValue: () => (sh.rows[r - 1] || [])[c - 1],
+        clearContent: () => { for (let i = 0; i < nr; i++) if (sh.rows[r - 1 + i]) for (let j = 0; j < nc; j++) sh.rows[r - 1 + i][c - 1 + j] = ""; },
         setValue: (v) => { while (sh.rows.length < r) sh.rows.push([]); sh.rows[r - 1][c - 1] = v; },
         getValues: () => Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => (sh.rows[r - 1 + i] || [])[c - 1 + j] ?? "")),
         setValues: (vals) => vals.forEach((row, i) => row.forEach((v, j) => {
@@ -50,6 +51,7 @@ function makeEnv(opts = {}) {
     static now() { return now; }
   }
 
+  const env = { pages: {}, commits: [], githubDown: false };
   const ctx = {
     console: { log() {}, warn() {}, error() {} },
     Date: FakeDate, JSON, Math, Number, String, Object, Array, Error, RegExp,
@@ -69,9 +71,23 @@ function makeEnv(opts = {}) {
       sendEmail: (m) => { if (opts.failFor && opts.failFor.includes(m.to)) throw new Error("boom");
         if (quota <= 0) throw new Error("quota"); quota--; mails.push(m); }
     },
-    UrlFetchApp: { fetch: (url) => {
-      if (!url.startsWith("https://buildspaceos.de/posts-data.js")) throw new Error("falsche URL " + url);
-      return { getResponseCode: () => (opts.siteDown ? 503 : 200), getContentText: () => postsSrc }; } },
+    UrlFetchApp: (() => {
+      const resp = (code, text) => ({ getResponseCode: () => code, getContentText: () => text });
+      const fetch = (url) => {
+        if (url.startsWith("https://buildspaceos.de/posts-data.js")) return resp(opts.siteDown ? 503 : 200, postsSrc);
+        if (url.startsWith("https://api.github.com/")) {
+          if (env.githubDown) return resp(403, "rate limited");
+          const page = Number((/[?&]page=(\d+)/.exec(url) || [])[1] || 1);
+          return resp(200, JSON.stringify(page === 1 ? env.commits : []));
+        }
+        if (url.startsWith("https://buildspaceos.de/")) {
+          const path = url.slice("https://buildspaceos.de/".length).replace(/[?&]nocache=\d+$/, "");
+          return resp(200, env.pages[path] || "<html>" + path + "</html>");
+        }
+        throw new Error("falsche URL " + url);
+      };
+      return { fetch, fetchAll: (reqs) => reqs.map((r) => fetch(r.url)) };
+    })(),
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: "json" }, createTextOutput: (s) => ({ text: s, setMimeType() { return this; } }) },
     Session: { getEffectiveUser: () => ({ getEmail: () => "marc@example.org" }) },
@@ -90,7 +106,7 @@ function makeEnv(opts = {}) {
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(__dirname, "Code.gs"), "utf8"), ctx, { filename: "Code.gs" });
   return {
-    ctx, mails, props, triggers, book,
+    ctx, mails, props, triggers, book, env,
     setQuota: (q) => { quota = q; }, advance: (ms) => { now += ms; },
     api: (p) => JSON.parse(ctx.doGet({ parameter: p }).text),
     post: (body) => JSON.parse(ctx.doPost({ parameter: {}, postData: { contents: JSON.stringify(body) } }).text),
@@ -358,6 +374,87 @@ test("Piktogramme statt Emojis, Ausgabe erneut senden", () => {
   eq([r.sent, r.tools], [2, 2]);
   eq(e.mails.slice(n).map(m => m.subject), ["2 neue Tools auf buildspace", "2 neue Tools auf buildspace"]);
   postsSrc = original;
+});
+
+const commit = (msg, bot) => ({ author: { login: bot ? "github-actions[bot]" : "cr4M0710" }, commit: { message: msg + "\n\nCo-Authored-By: x", author: { name: bot ? "anwurf-bot" : "Marc Stroh" } } });
+function firstPage(e) { return vm.runInNewContext(original + "; posts").find((p) => !p.gate && !/^https?:/.test(p.url) && p.category === "schule"); }
+
+test("Updates: geänderte Seite mit passender Commit-Nachricht wird darunter gelistet", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.advance(7 * 86400000);
+  e.ctx.sendWeeklyDigest();                       // Fingerabdrücke anlegen
+  const p = firstPage(e);
+  const path = p.url.replace(/[?#].*$/, "");
+  e.env.pages[path] = "<html>geändert</html>";
+  e.env.commits = [commit(p.title + ": bessere Randerkennung"), commit("Anwurf: Spieldaten aktualisiert", true), commit("Neues Tool: X"), commit("Tools: Aufräumen [still]")];
+  postsSrc = addPost(original, "brandneu.html", "Brandneu");
+  e.advance(7 * 86400000);
+  const before = e.mails.length;
+  const r = e.ctx.sendWeeklyDigest();
+  eq([r.tools, r.updates, r.sent], [1, 1, 1]);
+  const m = e.mails[before];
+  eq(m.subject, "Neu auf buildspace: Brandneu + 1 Update");
+  ok(m.htmlBody.includes("Außerdem verbessert") && m.htmlBody.includes("bessere Randerkennung"), "Update-Abschnitt fehlt");
+  ok(m.htmlBody.indexOf("Brandneu") < m.htmlBody.indexOf("Außerdem verbessert"), "Updates müssen unter den neuen Tools stehen");
+  ok(!m.htmlBody.includes("Spieldaten") && !m.htmlBody.includes("Aufräumen"), "Bot/[still] dürfen nicht auftauchen");
+  ok(m.body.includes("— Außerdem verbessert —"), "Text-Version fehlt");
+  postsSrc = original;
+});
+
+test("Updates: Sammel-Änderung ohne passende Nachricht wird nicht gelistet", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.ctx.sendWeeklyDigest();
+  vm.runInNewContext(original + "; posts").forEach((p) => { e.env.pages[p.url.replace(/[?#].*$/, "")] = "neu " + p.url; });
+  e.env.commits = [commit("Schriften lokal eingebunden [still]")];
+  e.advance(7 * 86400000);
+  const before = e.mails.length;
+  eq(e.ctx.sendWeeklyDigest().updates, 0);
+  eq(e.mails.length, before, "keine Mail ohne Neues");
+});
+
+test("Updates allein: eigener Betreff, Versand auch ohne neue Tools", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.ctx.sendWeeklyDigest();
+  const p = firstPage(e);
+  e.env.pages[p.url.replace(/[?#].*$/, "")] = "x";
+  e.env.commits = [commit(p.title + ": neue Ansicht")];
+  e.advance(7 * 86400000);
+  const before = e.mails.length;
+  eq(e.ctx.sendWeeklyDigest().updates, 1);
+  eq(e.mails[before].subject, "Verbessert auf buildspace: " + p.title);
+  ok(e.mails[before].htmlBody.includes(">Verbessert<"), "Überschrift fehlt");
+});
+
+test("Updates: GitHub nicht erreichbar → geänderte Seiten ohne Beschreibung", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.ctx.sendWeeklyDigest();
+  const p = firstPage(e);
+  e.env.pages[p.url.replace(/[?#].*$/, "")] = "y";
+  e.env.githubDown = true;
+  e.advance(7 * 86400000);
+  eq(e.ctx.sendWeeklyDigest().updates, 1);
+});
+
+test("Erster Lauf ohne Fingerabdrücke: Commit-Nachrichten der Woche reichen", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  const p = firstPage(e);
+  e.ctx.PropertiesService.getScriptProperties().setProperty("LAST_RUN", "");
+  e.book.getSheetByName("Stand").rows.splice(1);   // Fingerabdrücke leeren
+  e.env.commits = [commit(p.title + ": Druckansicht")];
+  e.advance(7 * 86400000);
+  const r = e.ctx.sendWeeklyDigest();
+  eq(r.updates, 1);
+  ok(e.ctx.resendLastDigest().updates === 1, "Erneut senden enthält Updates");
 });
 
 test("Test-Newsletter geht nur an die eigene Adresse", () => {

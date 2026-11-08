@@ -11,6 +11,7 @@
      setup()              – einmalig: Tabelle + Wochen-Zeitplan anlegen
      sendTestDigest()     – Vorschau des Newsletters an dich selbst
      sendWeeklyDigest()   – Versand jetzt auslösen (läuft sonst automatisch)
+     resendLastDigest()   – letzte Ausgabe noch einmal an alle Abos senden
      status()             – Überblick im Protokoll
    ========================================================= */
 
@@ -24,12 +25,15 @@ var CONFIG = {
   CONFIRM_COOLDOWN_MIN: 10,     // Bestätigungs-Mail höchstens alle 10 Minuten pro Adresse
   MAX_CONFIRM_PER_DAY: 40,      // Schutz des Tageskontingents
   PENDING_DAYS: 7,              // unbestätigte Anmeldungen danach löschen
-  KEEP_MAIL_QUOTA: 5            // so viele Mails bleiben als Reserve übrig
+  KEEP_MAIL_QUOTA: 5,           // so viele Mails bleiben als Reserve übrig
+  GITHUB_REPO: "cr4M0710/buildspace",  // Commit-Nachrichten = „Was ist neu“ bei Updates
+  MAX_UPDATES: 10               // höchstens so viele Updates pro Ausgabe
 };
 
 var HEAD = ["email", "status", "token", "angemeldet", "bestaetigt"];
 var SHEET_SUBS = "Abonnenten";
 var SHEET_SEEN = "Tools";
+var SHEET_STAND = "Stand";       // Fingerabdruck jeder Tool-Seite, um Updates zu erkennen
 
 /* ---------------- Web-App ---------------- */
 
@@ -151,21 +155,27 @@ function sendWeeklyDigest() {
       seenSh.getRange(seenSh.getLastRow() + 1, 1, fresh.length, 2)
         .setValues(fresh.map(function (p) { return [p.url, now]; }));
     }
+    var props = PropertiesService.getScriptProperties();
+    var since = props.getProperty("LAST_RUN") ? new Date(props.getProperty("LAST_RUN")) : new Date(now.getTime() - 7 * 86400000);
+    var updates = findUpdates_(posts, fresh, since);
+    props.setProperty("LAST_RUN", now.toISOString());
+
     if (firstRun) {
       console.log("Erster Lauf: " + fresh.length + " bestehende Tools gemerkt, nichts verschickt.");
-      return { sent: 0, tools: 0, firstRun: true };
+      return { sent: 0, tools: 0, updates: 0, firstRun: true };
     }
-    if (!fresh.length && CONFIG.SKIP_IF_EMPTY) {
-      console.log("Keine neuen Tools – kein Versand.");
-      return { sent: 0, tools: 0 };
+    if (!fresh.length && !updates.length && CONFIG.SKIP_IF_EMPTY) {
+      console.log("Keine neuen Tools und keine Updates – kein Versand.");
+      return { sent: 0, tools: 0, updates: 0 };
     }
+    saveEdition_(fresh, updates, now);
 
     var subs = activeSubs_();
     var sent = 0, failed = [];
     subs.forEach(function (s) {
       if (MailApp.getRemainingDailyQuota() <= CONFIG.KEEP_MAIL_QUOTA) { failed.push(s.email); return; }
       try {
-        var mail = buildDigest_(fresh, s.token, now);
+        var mail = buildDigest_(fresh, s.token, now, updates);
         MailApp.sendEmail({ to: s.email, subject: mail.subject, htmlBody: mail.html, body: mail.text, name: CONFIG.SENDER_NAME });
         sent++;
       } catch (err) {
@@ -178,16 +188,147 @@ function sendWeeklyDigest() {
       var urls = {};
       fresh.forEach(function (p) { urls[p.url] = true; });
       removeSeen_(seenSh, urls);
-      console.warn(failed.length + " Empfänger:innen nicht erreicht – Tools bleiben für den nächsten Lauf vorgemerkt.");
+      props.setProperty("LAST_RUN", since.toISOString());
+      console.warn(failed.length + " Empfänger:innen nicht erreicht – Inhalte bleiben für den nächsten Lauf vorgemerkt.");
     }
-    console.log("Newsletter mit " + fresh.length + " Tools an " + sent + " Abonnent:innen verschickt.");
-    return { sent: sent, tools: fresh.length, failed: failed.length };
+    console.log("Newsletter mit " + fresh.length + " neuen Tools und " + updates.length + " Updates an " + sent + " Abonnent:innen verschickt.");
+    return { sent: sent, tools: fresh.length, updates: updates.length, failed: failed.length };
   });
+}
+
+/* ---------------- Updates bestehender Tools ----------------
+   1. Welche Seiten sich geändert haben, zeigt ein Fingerabdruck (MD5) jeder Tool-Seite
+      (Blatt „Stand“). Beim allerersten Mal gibt es noch keinen Fingerabdruck – dann
+      zählen alle Tools als Kandidaten.
+   2. „Was ist neu“ kommt aus den Commit-Nachrichten auf GitHub („Scanwerk: bessere
+      Randerkennung“). Nachrichten von Bots, „Neues Tool: …“ und solche mit [still]
+      werden ignoriert.
+   3. Gelistet wird nur, was sich geändert hat UND eine passende Nachricht hat – so
+      tauchen technische Sammel-Änderungen über viele Seiten nicht auf. Ist GitHub nicht
+      erreichbar, werden geänderte Seiten ohne Beschreibung gelistet. */
+function findUpdates_(posts, fresh, since) {
+  var freshUrl = {};
+  fresh.forEach(function (p) { freshUrl[pagePath_(p.url)] = true; });
+  var byPath = {}, list = [];
+  posts.forEach(function (p) {
+    var path = pagePath_(p.url);
+    if (!path || freshUrl[path] || byPath[path]) return;
+    byPath[path] = p; list.push(path);
+  });
+  var changed;
+  try { changed = changedPages_(list); } catch (err) { console.warn("Fingerabdrücke nicht prüfbar: " + err); changed = null; }
+  var notes = commitNotes_(since);   // null, wenn GitHub nicht erreichbar
+  var out = [];
+  list.forEach(function (path) {
+    var p = byPath[path];
+    if (changed && !changed.baseline && !changed.paths[path]) return;
+    var mine = notes ? notesFor_(notes, p, path) : [];
+    if (notes && !mine.length) return;
+    if (!notes && (!changed || changed.baseline)) return;
+    out.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, areas: p.areas, notes: mine });
+  });
+  return out.slice(0, CONFIG.MAX_UPDATES);
+}
+
+function pagePath_(url) {
+  if (!url || /^https?:\/\//.test(url)) return "";   // externe Links nicht prüfen
+  return url.replace(/^\.?\//, "").replace(/[?#].*$/, "") || "";
+}
+
+function changedPages_(paths) {
+  var sh = standSheet_();
+  var old = {}, baseline = sh.getLastRow() < 2;
+  if (!baseline) sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (r) { old[r[0]] = r[1]; });
+  var reqs = paths.map(function (path) {
+    return { url: CONFIG.SITE_URL + "/" + path + (path.indexOf("?") < 0 ? "?nocache=" : "&nocache=") + Date.now(), muteHttpExceptions: true };
+  });
+  var resps = [];
+  for (var i = 0; i < reqs.length; i += 25) resps = resps.concat(UrlFetchApp.fetchAll(reqs.slice(i, i + 25)));
+  var now = new Date(), result = {}, rows = [];
+  paths.forEach(function (path, i) {
+    var r = resps[i];
+    if (!r || r.getResponseCode() !== 200) { if (old[path]) rows.push([path, old[path], ""]); return; }
+    var h = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, r.getContentText()));
+    if (old[path] && old[path] !== h) result[path] = true;
+    rows.push([path, h, old[path] && old[path] === h ? "" : now]);
+  });
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 3).clearContent();
+  if (rows.length) sh.getRange(2, 1, rows.length, 3).setValues(rows);
+  return { baseline: baseline, paths: result };
+}
+
+function commitNotes_(since) {
+  if (!CONFIG.GITHUB_REPO) return null;
+  var notes = [];
+  try {
+    for (var page = 1; page <= 3; page++) {
+      var r = UrlFetchApp.fetch("https://api.github.com/repos/" + CONFIG.GITHUB_REPO + "/commits?per_page=100&page=" + page +
+        "&since=" + encodeURIComponent(since.toISOString()), { muteHttpExceptions: true, headers: { Accept: "application/vnd.github+json" } });
+      if (r.getResponseCode() !== 200) return page === 1 ? null : notes;
+      var arr = JSON.parse(r.getContentText());
+      arr.forEach(function (c) {
+        var login = (c.author && c.author.login) || "";
+        var msg = String((c.commit && c.commit.message) || "").split("\n")[0].trim();
+        if (/\[bot\]$/.test(login) || /bot$/i.test((c.commit && c.commit.author && c.commit.author.name) || "")) return;
+        if (!msg || /\[still\]/i.test(msg) || /^(Merge|Revert)\b/.test(msg) || /^Neues (Tool|Programm)\b/i.test(msg)) return;
+        var m = /^([^:]{2,60}):\s*(.+)$/.exec(msg);
+        if (!m) return;
+        notes.push({ names: m[1].split(/\s*[\/,]\s*/).map(norm_), text: m[2] });
+      });
+      if (arr.length < 100) break;
+    }
+  } catch (err) { console.warn("GitHub nicht erreichbar: " + err); return null; }
+  return notes;
+}
+
+function norm_(s) {
+  return String(s || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]/g, "");
+}
+
+function notesFor_(notes, p, path) {
+  // Treffer nur bei genauem Namen: ganzer Titel, Titel vor „–“/„(“ oder Dateiname
+  // („Handball: …“ passt also nicht zu „Handball-Anzeigetafel“)
+  var keys = {};
+  keys[norm_(p.title)] = 1;
+  keys[norm_(String(p.title).split(/\s+[–—-]\s+|\s*\(/)[0])] = 1;
+  keys[norm_(path.replace(/\/index\.html$|\.html$|\/$/g, "").split("/")[0])] = 1;
+  var seen = {}, out = [];
+  notes.forEach(function (n) {
+    var hit = n.names.some(function (x) { return x.length >= 4 && keys[x]; });
+    if (!hit || /\.(js|html|css|json)\b/i.test(n.text)) return;   // rein technische Notizen weglassen
+    var t = n.text.length > 140 ? n.text.slice(0, 137).replace(/\s+\S*$/, "") + " …" : n.text;
+    if (seen[t]) return;
+    seen[t] = true; out.push(t);
+  });
+  return out.slice(0, 3);
+}
+
+function hex_(bytes) {
+  return bytes.map(function (b) { return ((b + 256) % 256).toString(16).padStart(2, "0"); }).join("");
+}
+
+function saveEdition_(tools, updates, date) {
+  try {
+    var json = JSON.stringify({ date: date.toISOString(), tools: tools, updates: updates });
+    if (json.length < 8500) PropertiesService.getScriptProperties().setProperty("LAST_EDITION", json);
+  } catch (err) { /* nur für resendLastDigest */ }
 }
 
 /* Die zuletzt verschickte Ausgabe noch einmal an alle bestätigten Abos senden
    (z. B. nach einer Design-Änderung). Nimmt die Tools des jüngsten Laufs. */
 function resendLastDigest() {
+  var saved = PropertiesService.getScriptProperties().getProperty("LAST_EDITION");
+  if (saved) {
+    var ed = JSON.parse(saved), d = new Date(ed.date), n = 0;
+    activeSubs_().forEach(function (s) {
+      if (MailApp.getRemainingDailyQuota() <= CONFIG.KEEP_MAIL_QUOTA) return;
+      var mail = buildDigest_(ed.tools, s.token, d, ed.updates);
+      MailApp.sendEmail({ to: s.email, subject: mail.subject, htmlBody: mail.html, body: mail.text, name: CONFIG.SENDER_NAME });
+      n++;
+    });
+    console.log("Ausgabe vom " + Utilities.formatDate(d, "Europe/Berlin", "dd.MM.yyyy") + " erneut an " + n + " Abonnent:innen verschickt.");
+    return { sent: n, tools: ed.tools.length, updates: ed.updates.length };
+  }
   var sh = seenSheet_();
   if (sh.getLastRow() < 2) { console.log("Noch keine Ausgabe verschickt."); return { sent: 0 }; }
   var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues();
@@ -215,7 +356,17 @@ function sendTestDigest() {
   var since = Utilities.formatDate(new Date(Date.now() - 7 * 86400000), "Europe/Berlin", "yyyy-MM-dd");
   var posts = all.filter(function (p) { return p.date >= since; });
   if (!posts.length) posts = all.slice(0, 4);
-  var mail = buildDigest_(posts, "0123456789abcdef0123456789abcdef", new Date());
+  var notes = commitNotes_(new Date(Date.now() - 7 * 86400000)) || [];
+  var newPaths = {};
+  posts.forEach(function (p) { newPaths[pagePath_(p.url)] = true; });
+  var updates = [], used = {};
+  all.forEach(function (p) {
+    var path = pagePath_(p.url);
+    if (!path || newPaths[path] || used[path]) return;
+    var mine = notesFor_(notes, p, path);
+    if (mine.length) { used[path] = true; updates.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, areas: p.areas, notes: mine }); }
+  });
+  var mail = buildDigest_(posts, "0123456789abcdef0123456789abcdef", new Date(), updates.slice(0, CONFIG.MAX_UPDATES));
   var me = Session.getEffectiveUser().getEmail();
   MailApp.sendEmail({ to: me, subject: "[Test] " + mail.subject, htmlBody: mail.html, body: mail.text, name: CONFIG.SENDER_NAME });
   console.log("Test-Newsletter an " + me + " verschickt.");
@@ -275,16 +426,40 @@ function esc_(s) {
   });
 }
 
-function buildDigest_(tools, token, date) {
-  var n = tools.length;
+function buildDigest_(tools, token, date, updates) {
+  updates = updates || [];
+  var n = tools.length, u = updates.length;
   var dateStr = Utilities.formatDate(date, "Europe/Berlin", "dd.MM.yyyy");
-  var subject = n === 0 ? "buildspace – diese Woche nichts Neues"
-    : n === 1 ? "Neu auf buildspace: " + tools[0].title
-    : n + " neue Tools auf buildspace";
+  var subject = n === 0 && u === 0 ? "buildspace – diese Woche nichts Neues"
+    : n === 0 ? (u <= 2 ? "Verbessert auf buildspace: " + updates.map(function (x) { return x.title; }).join(" und ")
+                        : u + " Tools auf buildspace verbessert")
+    : (n === 1 ? "Neu auf buildspace: " + tools[0].title : n + " neue Tools auf buildspace") +
+      (u ? " + " + u + (u === 1 ? " Update" : " Updates") : "");
   var unsub = CONFIG.SITE_URL + "/" + CONFIG.PAGE + "?abmelden=" + token;
-  var intro = n === 0 ? "Diese Woche ist kein neues Tool dazugekommen."
+  var intro = n === 0 && u === 0 ? "Diese Woche ist kein neues Tool dazugekommen."
+    : n === 0 ? "Diese Woche gibt es kein neues Tool – dafür " + (u === 1 ? "wurde ein Tool" : "wurden " + u + " Tools") + " verbessert:"
     : n === 1 ? "Diese Woche ist ein neues Tool dazugekommen:"
     : "Diese Woche sind " + n + " neue Tools dazugekommen:";
+
+  var updRows = updates.map(function (t, i) {
+    var link = toolLink_(t.url);
+    var what = t.notes && t.notes.length ? t.notes.join(" · ") : t.excerpt;
+    var pad = (i ? '14px' : '0') + ' 0 ' + (i < u - 1 ? '14px' : '0');
+    return '<tr><td style="padding:' + pad + ';' + (i ? 'border-top:1px solid #eef0f3' : '') + '">' +
+      '<a href="' + esc_(link) + '" style="display:block;text-decoration:none;color:#111827">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+      '<td width="32" valign="top" style="width:32px;padding:0 12px 0 0">' +
+      '<img src="' + esc_(t.icon) + '" width="32" height="32" alt="" style="display:block;width:32px;height:32px;border:0;border-radius:8px"></td>' +
+      '<td valign="top">' +
+      '<div style="font-size:15px;font-weight:700;line-height:1.3;color:#111827">' + esc_(t.title) + '</div>' +
+      '<div style="font-size:14px;line-height:1.45;color:#4b5563;margin-top:2px">' + esc_(what) + '</div>' +
+      '</td></tr></table></a></td></tr>';
+  }).join("");
+  var updBlock = !u ? "" :
+    '<tr><td style="padding:' + (n ? '8px' : '0') + ' 4px 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b7280">' +
+    (n ? 'Außerdem verbessert' : 'Verbessert') + '</td></tr>' +
+    '<tr><td style="padding:0 0 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px">' +
+    '<tr><td style="padding:16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + updRows + '</table></td></tr></table></td></tr>';
 
   var cards = tools.map(function (t) {
     var link = toolLink_(t.url);
@@ -312,7 +487,7 @@ function buildDigest_(tools, token, date) {
     '<td valign="middle" style="padding-right:12px"><img src="' + CONFIG.SITE_URL + '/assets/app-icon-v3-96.png" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:10px"></td>' +
     '<td valign="middle" style="font-size:26px;font-weight:800;color:#ffffff">buildspace</td></tr></table>' +
     '<div style="font-size:15px;margin-top:6px;opacity:.9">' + esc_(intro) + '</div></td></tr>' +
-    '<tr><td style="height:16px"></td></tr>' + cards +
+    '<tr><td style="height:16px"></td></tr>' + cards + updBlock +
     '<tr><td align="center" style="padding:8px 0 4px"><a href="' + CONFIG.SITE_URL + '" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">Alle Tools ansehen</a></td></tr>' +
     '<tr><td style="padding:20px 8px 0;font-size:12px;line-height:1.5;color:#6b7280;text-align:center">' +
     'Du bekommst diese Mail, weil du den buildspace-Newsletter auf buildspaceos.de abonniert hast.<br>' +
@@ -325,6 +500,9 @@ function buildDigest_(tools, token, date) {
     tools.map(function (t) {
       return t.title + " (" + t.areas.join(" | ") + ")\n" + t.excerpt + "\n" + toolLink_(t.url);
     }).join("\n\n") +
+    (u ? (n ? "\n\n— Außerdem verbessert —\n\n" : "") + updates.map(function (t) {
+      return t.title + ": " + (t.notes && t.notes.length ? t.notes.join(" · ") : t.excerpt) + "\n" + toolLink_(t.url);
+    }).join("\n\n") : "") +
     "\n\nAlle Tools: " + CONFIG.SITE_URL + "\n\nNewsletter abbestellen: " + unsub + "\n";
   return { subject: subject, html: html, text: text };
 }
@@ -398,6 +576,17 @@ function seenSheet_() {
   return sh;
 }
 
+function standSheet_() {
+  var ss = book_();
+  var sh = ss.getSheetByName(SHEET_STAND);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_STAND);
+    sh.appendRow(["seite", "fingerabdruck", "geändert am"]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
 function findRow_(sh, col, value) {
   var last = sh.getLastRow();
   if (last < 2) return 0;
@@ -437,7 +626,7 @@ function removeSeen_(sh, urls) {
 
 function newToken_() {
   var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, Utilities.getUuid() + Utilities.getUuid() + Date.now());
-  return bytes.map(function (b) { return ((b + 256) % 256).toString(16).padStart(2, "0"); }).join("");
+  return hex_(bytes);
 }
 
 function withLock_(fn) {
