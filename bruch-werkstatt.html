@@ -563,29 +563,136 @@ function slideText(p,op,t,hide){
   if(hide)return op==='+'?`Zähle: Wie viele Teile (je ${F(1,N)}) sind jetzt gefärbt?`:`Zähle: Wie viele blaue Teile (je ${F(1,N)}) bleiben übrig?`;
   return op==='+'?`${A} + ${B} = <b class="cr">${R}</b> Teile → ${F(A,N,'ca')} ${O('+')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`:`${A} − ${B} = <b class="cr">${R}</b> Teile bleiben → ${F(A,N,'ca')} ${O('−')} ${F(B,N,'cb')} ${O('=')} ${F(R,N,'cr')}`;
 }
+/* --- Multiplikation: Folie darüberschieben (Rechteck) / Anteil vom Anteil färben (Kreis) --- */
+function mulSVG(p,op,t,shape){
+  const {a,n,b,m}=p;
+  if(shape==='circle'){
+    const cx=230,cy=150,R=125,tot=a*b,k=Math.round(clamp01(t/.9)*tot),end=t>.95;
+    const fills=[];let idx=0;
+    for(let c=0;c<n;c++)for(let j=0;j<m;j++){
+      if(c>=a)fills.push('fE');else if(j<b){fills.push(idx<k?'fR':'fA');idx++}else fills.push(end?'fAs':'fA');}
+    let s=pie(cx,cy,R,{parts:n,sub:m,subStyle:'dash',fills});
+    s+=TF(cx-R-55,cy,a,n,'txA',20)+T(cx-R-55,cy+46,'blau','txs',13);
+    s+=T(cx+R+105,cy-22,k,'tx txR',40)+T(cx+R+105,cy+14,`von ${tot} Stücken`,'txs',14)+T(cx+R+105,cy+32,'grün','txs',14);
+    if(end)s+=TF(cx+R+105,cy+82,a*b,n*m,'txR',22);
+    return svgWrap(W,cy+R+22,s);
+  }
+  const S=240,cw=S/n,rh=S/m,bx=60,by=24,ox0=330;
+  const p2=ease(clamp01(t/.85)),p3=clamp01((t-.88)/.12),ox=ox0+(bx-ox0)*p2;
+  let s='';
+  for(let c=0;c<n;c++)s+=`<rect x="${bx+c*cw}" y="${by}" width="${cw}" height="${S}" class="${c<a?'fA':'fE'}"/>`;
+  // Überlappung grün
+  const gx0=Math.max(bx,ox),gx1=Math.min(bx+a*cw,ox+S);
+  if(gx1>gx0+.5)s+=`<rect x="${gx0}" y="${by}" width="${gx1-gx0}" height="${b*rh}" class="fR"/>`;
+  // Kästchen-Raster erscheint am Ende
+  if(p3>0)for(let r=1;r<m;r++)s+=`<line x1="${bx}" y1="${by+r*rh}" x2="${bx+S}" y2="${by+r*rh}" class="thin" opacity="${p3.toFixed(3)}" style="stroke-width:2"/>`;
+  for(let c=1;c<n;c++)s+=`<line x1="${bx+c*cw}" y1="${by}" x2="${bx+c*cw}" y2="${by+S}" class="thick"/>`;
+  s+=`<rect x="${bx}" y="${by}" width="${S}" height="${S}" class="thick"/>`;
+  // Folie
+  const fo=(1-p3).toFixed(3);
+  s+=`<rect x="${ox}" y="${by}" width="${S}" height="${b*rh}" fill="__HB__" opacity="${(.6*(1-p3)).toFixed(3)}"/>`;
+  for(let r=1;r<m;r++)s+=`<line x1="${ox}" y1="${by+r*rh}" x2="${ox+S}" y2="${by+r*rh}" stroke="var(--B)" stroke-width="2" opacity="${fo}"/>`;
+  s+=`<rect x="${ox}" y="${by}" width="${S}" height="${S}" rx="4" fill="none" stroke="var(--B)" stroke-width="3" stroke-dasharray="9 6" opacity="${fo}"/>`;
+  s+=`<path class="br stB" d="M${ox-8},${by} L${ox-16},${by} L${ox-16},${by+b*rh} L${ox-8},${by+b*rh}" opacity="${fo}"/>`;
+  s+=`<g opacity="${fo}">${TF(ox+S-26,by+S+46,b,m,'txB',17)}${T(ox+S-60,by+S+46,'Folie:','txs',13,'end')}</g>`;
+  s+=`<path class="br stA" d="M${bx},${by+S+10} L${bx},${by+S+18} L${bx+a*cw},${by+S+18} L${bx+a*cw},${by+S+10}"/>`+TF(bx+a*cw/2,by+S+46,a,n,'txA',17);
+  if(p3>0)s+=`<g opacity="${p3.toFixed(3)}">${TF(460,by+S/2-10,a*b,n*m,'txR',26)}${T(460,by+S/2+50,`${a*b} von ${n*m} Kästchen`,'txs',15)}</g>`;
+  return svgWrap(W,by+S+76,s);
+}
+function mulText(p,op,t,hide){
+  const {a,n,b,m}=p,circ=VIEW==='circle',piece=circ?'Stücke':'Kästchen';
+  if(t<.002)return circ?`Blau sind ${F(a,n,'ca')} des Kreises. Zieh den Regler: Von jedem blauen Teil werden ${F(b,m,'cb')} grün gefärbt.`:`Blau sind ${F(a,n,'ca')} des Quadrats. Rechts liegt eine Folie, auf der ${F(b,m,'cb')} schraffiert ist. Schieb die Folie über das Quadrat!`;
+  if(t<.9)return circ?`Von jedem blauen Teil werden ${b} von ${m} Stücken grün – das ist ${F(b,m,'cb')} von ${F(a,n,'ca')} …`:`Wo sich Blau und Schraffur überlappen, wird es grün – das ist ${F(b,m,'cb')} von ${F(a,n,'ca')} …`;
+  if(hide)return `Zähle: Wie viele ${piece} sind grün – und wie viele ${piece} hat das Ganze?`;
+  return `Das Ganze hat ${n} · ${m} = ${n*m} ${piece}, grün sind ${a} · ${b} = <b class="cr">${a*b}</b> → ${F(a,n,'ca')} ${O('·')} ${F(b,m,'cb')} ${O('=')} ${F(a*b,n*m,'cr')}`;
+}
+
+/* --- Division: oranges Stück immer wieder anlegen --- */
+function divGeo(p,t){
+  const {a,n,b,m}=p,N=lcm(n,m),A=a*N/n,B=b*N/m,same=n===m,Q=Math.max(1,Math.ceil(A/B));
+  const t0=same?0:.2,p1=same?1:clamp01(t/.2),u=clamp01((t-t0)/(.95-t0))*Q;
+  return {N,A,B,same,Q,p1,u,cnt:Math.min(Q,Math.floor(u+1e-9)),fa:N/n,fb:N/m};
+}
+function divSVG(p,op,t,shape){
+  const {a,n,b,m}=p,G=divGeo(p,t),{N,A,B,Q,p1,u,cnt,fa,fb}=G;
+  const lbA=p1>.5?[A,N]:[a,n],lbB=p1>.5?[B,N]:[b,m];
+  // Position des Messstücks: Start (Index) und Flug-Anteil vom Vorlagenplatz
+  let start=0,fly=0;
+  if(u<1)fly=1-ease(u);else{const k=Math.min(Q-1,Math.floor(u)),fr=u>=Q?1:ease(u-k);start=k===0?0:((k-1)+fr)*B}
+  let s='';
+  if(shape==='circle'){
+    const R=100,cy=145,c1=170,c2=440,sub=p1>=.5;
+    s+=pie(c1,cy,R,{parts:n,sub:sub?fa:1,subStyle:'thin',fills:fillArr(n*(sub?fa:1),[[sub?A:a,'fA']])});
+    s+=pie(c2,cy,R,{parts:m,sub:sub?fb:1,subStyle:'thin',fills:fillArr(m*(sub?fb:1),[[sub?B:b,'fB']])});
+    s+=TF(c1,cy+R+34,lbA[0],lbA[1],'txA',18)+TF(c2,cy+R+34,lbB[0],lbB[1],'txB',18)+T(c2,cy-R-14,'Vorlage','txs',13);
+    for(let j=0;j<cnt;j++){const len=Math.min(B,A-j*B),full=len===B,a0=ang(j*B,N)+.06,a1=ang(j*B+len,N)-.06,rr=R+12;
+      s+=`<path d="M${c1+rr*Math.cos(a0)},${cy+rr*Math.sin(a0)} A${rr},${rr} 0 ${a1-a0>Math.PI?1:0} 1 ${c1+rr*Math.cos(a1)},${cy+rr*Math.sin(a1)}" fill="none" stroke="var(--B)" stroke-width="6" stroke-linecap="round" ${full?'':'stroke-dasharray="4 7"'}/>`;
+      const am=(a0+a1)/2;s+=T(c1+(R+30)*Math.cos(am),cy+(R+30)*Math.sin(am),full?j+1:`${len}/${B}`,'tx txB',full?16:13);}
+    const cx=c1+(c2-c1)*fly,rot=ang(start,N)*180/Math.PI;
+    const inside=u>=1?Math.max(0,Math.min(B,A-start)):B;
+    const piece=(from,len,op)=>len<=0?'':(len>=N?`<circle cx="${cx}" cy="${cy}" r="${R}" class="fB" opacity="${op}"/>`:`<path d="${sectorPath(0,0,R,from*PI2/N,(from+len)*PI2/N)}" transform="translate(${cx.toFixed(2)},${cy}) rotate(${rot.toFixed(2)})" class="fB" opacity="${op}" stroke="var(--B)" stroke-width="3"/>`);
+    s+=piece(0,inside,.9)+piece(inside,B-inside,.3);
+    return svgWrap(W,cy+R+60,s);
+  }
+  const X=70,Wd=500,cw=Wd/N,h=56,y1=50,y2=176;
+  const bar=(y,parts,f,cnt2,cls)=>{let g='';for(let c=0;c<N;c++)g+=`<rect x="${X+c*cw}" y="${y}" width="${cw}" height="${h}" class="${c<cnt2?cls:'fE'}"/>`;
+    for(let c=1;c<N;c++){if(c%f)g+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${y+h}" class="thin" opacity="${p1.toFixed(3)}"/>`}
+    for(let c=1;c<parts;c++)g+=`<line x1="${X+c*f*cw}" y1="${y}" x2="${X+c*f*cw}" y2="${y+h}" class="thick"/>`;
+    return g+`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" rx="3" class="thick"/>`};
+  s+=bar(y1,n,fa,A,'fA')+bar(y2,m,fb,B,'fB');
+  s+=TF(34,y1+h/2,lbA[0],lbA[1],'txA',17)+TF(34,y2+h/2,lbB[0],lbB[1],'txB',17)+T(X,y2-12,'Vorlage','txs',13,'start');
+  for(let j=0;j<cnt;j++){const len=Math.min(B,A-j*B),x1=X+j*B*cw,x2=x1+len*cw,full=len===B;
+    s+=`<rect x="${x1+2}" y="${y1-32}" width="${x2-x1-4}" height="24" rx="8" fill="${full?'var(--Bsoft)':'none'}" stroke="var(--B)" stroke-width="2.5" ${full?'':'stroke-dasharray="5 4"'}/>`;
+    s+=T((x1+x2)/2,y1-20,full?j+1:`${len}/${B}`,'tx txB',full?15:13);}
+  const bx=X+start*cw,byy=y1+(y2-y1)*fly;
+  const inside=u>=1?Math.max(0,Math.min(B,A-start)):B;
+  if(inside>0)s+=`<rect x="${bx}" y="${byy}" width="${inside*cw}" height="${h}" class="fB" opacity=".9"/>`;
+  if(B-inside>0)s+=`<rect x="${bx+inside*cw}" y="${byy}" width="${(B-inside)*cw}" height="${h}" class="fB" opacity=".3"/>`;
+  s+=`<rect x="${bx}" y="${byy}" width="${B*cw}" height="${h}" fill="none" stroke="var(--B)" stroke-width="4" rx="3"/>`;
+  return svgWrap(W,y2+h+14,s);
+}
+function divText(p,op,t,hide){
+  const {a,n,b,m}=p,G=divGeo(p,t),{N,A,B,same,Q,u,cnt}=G,q=Math.floor(A/B),r=A%B,g=gcd(A,B);
+  if(t<.002)return same?`Wie oft passt das orange Stück in das blaue? Zieh den Regler – das orange Stück wird immer wieder angelegt.`:`Zum Messen müssen die Teile gleich groß sein. Zieh den Regler: Zuerst werden beide auf den Hauptnenner ${N} verfeinert.`;
+  if(!same&&t<.2)return `Verfeinern: ${F(a,n,'ca')} = ${F(A,N,'ca')} und ${F(b,m,'cb')} = ${F(B,N,'cb')} – jetzt kann man messen.`;
+  if(u<Q)return `Das orange Stück wird angelegt … bisher <b>${cnt}</b>-mal.`;
+  if(hide)return `Wie oft hat es gepasst? Zähle die ganzen Male – und welcher Teil des orangen Stücks passt beim letzten Mal noch hinein?`;
+  const res=`${F(a,n,'ca')} ${O(':')} ${F(b,m,'cb')} ${O('=')} ${mixed(A/g,B/g,'cr')}`;
+  if(!r)return `Es passt genau <b class="cr">${q}</b>-mal → ${res}`;
+  if(!q)return `Das orange Stück passt nicht einmal ganz hinein – nur ${F(A,B)} davon → ${res}`;
+  return `Es passt <b class="cr">${q}</b>-mal ganz und dann noch ${F(r,B)} → ${res}`;
+}
+
+const SLIDE={
+  '+':{svg:slideSVG,text:slideText,title:()=>'Teile zusammenschieben'},
+  '−':{svg:slideSVG,text:slideText,title:()=>'Teile wegnehmen'},
+  '·':{svg:mulSVG,text:mulText,title:()=>VIEW==='circle'?'Anteil vom Anteil färben':'Folie darüberschieben'},
+  ':':{svg:divSVG,text:divText,title:()=>'Stück immer wieder anlegen'},
+};
 function mountSlider(host,p,op,opts){
-  if(!host)return;opts=opts||{};
-  host.innerHTML=`<div class="card slidecard"><div class="ph"><span class="dot" style="background:var(--B)"></span>Schieberegler – ${op==='+'?'Teile zusammenschieben':'Teile wegnehmen'}</div>
+  if(!host)return;opts=opts||{};const K=SLIDE[op];
+  host.innerHTML=`<div class="card slidecard"><div class="ph"><span class="dot" style="background:var(--B)"></span>Schieberegler – ${K.title()}</div>
    <div class="slstage"></div>
    <div class="slrow"><button class="btn slplay" aria-label="Abspielen">▶</button><input type="range" class="slr" min="0" max="1000" value="0" aria-label="Schieberegler"><span class="sll">${F(p.a,p.n,'ca')} ${O(op)} ${F(p.b,p.m,'cb')}</span></div>
    <div class="say slsay"></div></div>`;
   const st=host.querySelector('.slstage'),rg=host.querySelector('.slr'),say=host.querySelector('.slsay'),play=host.querySelector('.slplay');
   const shapes=VIEW==='both'?['rect','circle']:[VIEW];
   st.className='slstage'+(shapes.length>1?' dual':'');
-  function draw(){const t=rg.value/1000;st.innerHTML=shapes.map(sh=>`<div>${slideSVG(p,op,t,sh)}</div>`).join('');say.innerHTML=slideText(p,op,t,opts.hideRes);rg.style.setProperty('--v',(t*100)+'%')}
+  const dur=op===':'?4.5:3.2;
+  function draw(){const t=rg.value/1000;st.innerHTML=shapes.map(sh=>`<div>${K.svg(p,op,t,sh)}</div>`).join('');say.innerHTML=K.text(p,op,t,opts.hideRes);rg.style.setProperty('--v',(t*100)+'%')}
   let raf=null;
   const stop=()=>{if(raf){cancelAnimationFrame(raf);raf=null}};
   play.onclick=()=>{
     if(raf){stop();play.textContent='▶';return}
     const from=+rg.value>=1000?0:+rg.value;let start=null;play.textContent='❚❚';
-    const step=ts=>{if(start==null)start=ts;const v=Math.min(1000,from+(ts-start)/3.2);rg.value=v;draw();
+    const step=ts=>{if(start==null)start=ts;const v=Math.min(1000,from+(ts-start)/dur);rg.value=v;draw();
       if(v<1000)raf=requestAnimationFrame(step);else{raf=null;play.textContent='↺'}};
     raf=requestAnimationFrame(step);
   };
   rg.addEventListener('input',()=>{stop();play.textContent=+rg.value>=1000?'↺':'▶';draw()});
   draw();
 }
-const OPCH=tid=>tid==='add'?'+':tid==='sub'?'−':null;
+const OPCH=tid=>({add:'+',sub:'−',mult:'·',div:':'})[tid]||null;
 
 /* ============ Themen ============ */
 const TOPICS=[
