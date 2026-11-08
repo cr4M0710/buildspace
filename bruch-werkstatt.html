@@ -156,6 +156,8 @@ input.wrong{border-color:var(--bad);background:var(--badbg)}
 .slr::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:var(--card);border:5px solid var(--B);cursor:grab}
 .sll{font-size:1.25rem;font-weight:800}
 .slstage svg{width:100%;height:auto;display:block}
+.unitpick{display:inline-flex;flex-wrap:wrap;align-items:center;gap:10px}
+.unitrow{display:inline-flex;align-items:center;gap:8px}
 .foot{margin-top:24px;text-align:center;font-size:.85rem;color:var(--soft)}
 </style>
 </head>
@@ -282,17 +284,37 @@ function pies(x,y,w,r,o){
 function wholes(x,y,w,h,gap,o){return SHAPE==='circle'?pies(x,y,w,o.r||58,o):stripes(x,y,w,h,gap,o)}
 
 /* --- Brüche & Größen --- */
-const UNITS={
-  min:{name:'min',whole:'1 h',T:60},
-  eur:{name:'€',whole:null,T:20},
-  g:{name:'g',whole:'1 kg',T:1000},
-  cm:{name:'cm',whole:'1 m',T:100},
-  ml:{name:'ml',whole:'1 l',T:1000},
+// Größenarten mit Einheiten [Schlüssel, Name, Faktor zur kleinsten Einheit, Standardwert, Einzahl]
+const CATS={
+  laenge:{name:'Längen',def:'cm',units:[['mm','mm',1,100],['cm','cm',10,100],['dm','dm',100,10],['m','m',1000,1],['km','km',1e6,1]]},
+  geld:{name:'Geld',def:'eur',units:[['ct','ct',1,100],['eur','€',100,20]]},
+  gewicht:{name:'Gewicht',def:'g',units:[['mg','mg',1,1000],['g','g',1e3,1000],['kg','kg',1e6,1],['t','t',1e9,1]]},
+  zeit:{name:'Zeit',def:'min',units:[['s','s',1,60],['min','min',60,60],['h','h',3600,24],['d','Tage',86400,7,'Tag'],['wo','Wochen',604800,4,'Woche']]},
+  hohl:{name:'Hohlmaße',def:'ml',units:[['ml','ml',1,1000],['cl','cl',10,100],['dl','dl',100,10],['l','l',1000,1],['hl','hl',1e5,1]]},
+  raum:{name:'Rauminhalt',def:'cm3',units:[['mm3','mm³',1,1000],['cm3','cm³',1e3,1000],['dm3','dm³',1e6,1000],['m3','m³',1e9,1]]},
+  flaeche:{name:'Flächen',def:'cm2',units:[['mm2','mm²',1,100],['cm2','cm²',100,100],['dm2','dm²',1e4,100],['m2','m²',1e6,100],['a','a',1e8,100],['ha','ha',1e10,100],['km2','km²',1e12,1]]},
 };
+const UNITS={};
+for(const [ck,c] of Object.entries(CATS))c.units.forEach(([k,name,f,T,sing],i)=>{UNITS[k]={name,f,T,sing:sing||name,cat:ck,i}});
+const isExact=x=>Math.abs(x*1000-Math.round(x*1000))<1e-9;
+const EQ=x=>isExact(x)?'=':'≈';
+// „1 kg = 1.000 g“: größte größere Einheit, in der T eine ganze Zahl ist
+function wholeLabel(uk,T){
+  const u=UNITS[uk],us=CATS[u.cat].units;
+  for(let i=us.length-1;i>u.i;i--){const v=T*u.f/us[i][2];if(v>=1&&Math.abs(v-Math.round(v))<1e-9){const r=Math.round(v),L=UNITS[us[i][0]];return `${fmt(r)} ${r===1?L.sing:L.name} = ${fmt(T)} ${u.name}`}}
+  return `${fmt(T)} ${u.name}`;
+}
+// Ergebnis in einer kleineren Einheit, falls es dort ganzzahlig wird
+function convLower(uk,x){
+  if(Number.isInteger(Math.round(x*1e9)/1e9))return null;
+  const u=UNITS[uk],us=CATS[u.cat].units;
+  for(let i=u.i-1;i>=0;i--){const v=x*u.f/us[i][2];if(Math.abs(v-Math.round(v))<1e-6){const r=Math.round(v);return `${fmt(r)} ${r===1?UNITS[us[i][0]].sing:us[i][1]}`}}
+  return null;
+}
 function scGroessen(p){
   const u=UNITS[p.unit],Tt=p.T,part=Tt/p.n,res=part*p.z;
   const wh=Math.max(1,Math.ceil(p.z/p.n));
-  const wl=u.whole&&Tt===u.T?`${u.whole} = ${fmt(Tt)} ${u.name}`:`${fmt(Tt)} ${u.name}`;
+  const wl=wholeLabel(p.unit,Tt);
   function draw(st){
     const fills=fillArr(wh*p.n,st>=2?[[p.z,'fA']]:[]);
     const o=st>=1?{parts:p.n,sub:1,fills}:{parts:1,sub:1,fills:fillArr(wh,[])};
@@ -320,8 +342,8 @@ function scGroessen(p){
   const of=`${F(p.z,p.n,'ca')} von ${fmt(Tt)} ${u.name}`;
   return [
     {g:draw(0),t:`Das Ganze: ${wl}. Gesucht sind ${p.z}/${p.n} davon.`,s:[{h:of}]},
-    {g:draw(1),t:`Teile das Ganze in ${p.n} gleich große Teile: ${fmt(Tt)} ${u.name} : ${p.n} = ${fmt(part)} ${u.name}. Das ist ${F(1,p.n)}.`,s:[{h:`${fmt(Tt)} ${u.name} ${O(':')} <span class="ca">${p.n}</span> ${O('=')} ${fmt(part)} ${u.name}`,note:'durch den Nenner teilen → ein Teil'}]},
-    {g:draw(2),t:`Nimm ${p.z} dieser Teile: ${fmt(part)} ${u.name} · ${p.z} = ${fmt(res)} ${u.name}.`,s:[{h:`${fmt(part)} ${u.name} ${O('·')} <span class="ca">${p.z}</span> ${O('=')} <b class="cr">${fmt(res)} ${u.name}</b>`,note:'mal den Zähler → so viele Teile'},{h:`${of} ${O('=')} <b class="cr">${fmt(res)} ${u.name}</b>`}]}
+    {g:draw(1),t:`Teile das Ganze in ${p.n} gleich große Teile: ${fmt(Tt)} ${u.name} : ${p.n} ${EQ(part)} ${fmt(part)} ${u.name}. Das ist ${F(1,p.n)}.`+(isExact(part)?'':` <i>(Tipp: In einer kleineren Einheit geht die Division vielleicht auf.)</i>`),s:[{h:`${fmt(Tt)} ${u.name} ${O(':')} <span class="ca">${p.n}</span> ${O(EQ(part))} ${fmt(part)} ${u.name}`,note:'durch den Nenner teilen → ein Teil'}]},
+    {g:draw(2),t:`Nimm ${p.z} dieser Teile: ${fmt(part)} ${u.name} · ${p.z} ${EQ(res)} ${fmt(res)} ${u.name}.`,s:[{h:`${fmt(part)} ${u.name} ${O('·')} <span class="ca">${p.z}</span> ${O(EQ(res))} <b class="cr">${fmt(res)} ${u.name}</b>`,note:'mal den Zähler → so viele Teile'},{h:`${of} ${O(EQ(res))} <b class="cr">${fmt(res)} ${u.name}</b>`}].concat(convLower(p.unit,res)?[{h:`${O('=')} <b class="cr">${convLower(p.unit,res)}</b>`,note:'in eine kleinere Einheit umgerechnet'}]:[])}
   ];
 }
 
@@ -964,13 +986,18 @@ function wrongHint(tid,z,n){
 const LAB={groessen:{z:3,n:4,T:60,unit:'min'},erweitern:{z:2,n:3,k:4},kuerzen:{z:6,n:9,k:''},add:{a:1,n:3,b:1,m:4},sub:{a:3,n:4,b:1,m:3},mult:{a:2,n:3,b:3,m:5},div:{a:5,n:6,b:1,m:3}};
 const inp=(id,v,w)=>`<input class="numin" id="${id}" value="${esc(v)}" inputmode="numeric" style="width:${w||76}px">`;
 const finV=(id,z,n)=>`<span class="fin"><input id="${id}z" inputmode="numeric" value="${esc(z)}" aria-label="Zähler"><span class="fl"></span><input id="${id}n" inputmode="numeric" value="${esc(n)}" aria-label="Nenner"></span>`;
+function unitOptions(ck,sel){return CATS[ck].units.map(([k,name])=>`<option value="${k}" ${k===sel?'selected':''}>${name}</option>`).join('')}
 function renderLabor(){
   const t=topic(),d=store.get('lab:'+t.id,LAB[t.id]);let form='';
-  if(t.id==='groessen')form=`${finV('l1',d.z,d.n)} von ${inp('lT',d.T,110)} <select id="lU" class="sel">${Object.entries(UNITS).map(([k,u])=>`<option value="${k}" ${k===d.unit?'selected':''}>${u.name}</option>`).join('')}</select>`;
+  if(t.id==='groessen'){const uk=UNITS[d.unit]?d.unit:'min',ck=UNITS[uk].cat;
+    form=`${finV('l1',d.z,d.n)} von <span class="unitpick"><select id="lC" class="sel" aria-label="Größenart">${Object.entries(CATS).map(([k,c])=>`<option value="${k}" ${k===ck?'selected':''}>${c.name}</option>`).join('')}</select>
+      <span class="unitrow">${`<input class="numin" id="lT" value="${esc(d.T)}" inputmode="decimal" style="width:120px" aria-label="Größe">`} <select id="lU" class="sel" aria-label="Einheit">${unitOptions(ck,uk)}</select></span></span>`;}
   else if(t.id==='erweitern')form=`${finV('l1',d.z,d.n)} erweitern mit ${inp('lk',d.k)}`;
   else if(t.id==='kuerzen')form=`${finV('l1',d.z,d.n)} kürzen mit ${inp('lk',d.k)} <span class="small muted">(leer = ggT)</span>`;
   else form=`${finV('l1',d.a,d.n)} ${O(OPSYM[t.id])} ${finV('l2',d.b,d.m)}`;
   $('#main').innerHTML=`<div class="card"><div class="instr">Trag deine eigenen Brüche ein – das Tool zeichnet und rechnet Schritt für Schritt.</div><div class="form">${form}<button class="btn" id="lgo">Darstellen ▶</button></div><div class="err" id="lerr"></div></div><div id="lstp" style="margin-top:14px"></div><div id="lslide"></div>`;
+  const lC=document.getElementById('lC');
+  if(lC){lC.onchange=()=>{const c=CATS[lC.value];$('#lU').innerHTML=unitOptions(lC.value,c.def);$('#lT').value=UNITS[c.def].T;runLab()};$('#lU').onchange=()=>{$('#lT').value=UNITS[$('#lU').value].T;runLab()}}
   $('#lgo').onclick=runLab;$('#main').querySelectorAll('input,select').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter')runLab()}));
   runLab();
 }
@@ -979,7 +1006,7 @@ function runLab(){
   const isInt=(...xs)=>xs.every(x=>x!=null&&Number.isInteger(x)&&x>=0);
   let p,e='';
   if(t.id==='groessen'){p={z:I('l1z'),n:I('l1n'),T:I('lT'),unit:$('#lU').value};
-    if(!isInt(p.z,p.n)||p.n<1||p.z<1)e='Bitte ganze Zahlen für Zähler und Nenner (mind. 1) eintragen.';else if(p.n>20)e='Nenner bitte höchstens 20.';else if(p.z>3*p.n)e='Höchstens 3 Ganze, bitte.';else if(!(p.T>0))e='Bitte eine Größe eintragen.';}
+    if(!isInt(p.z,p.n)||p.n<1||p.z<1)e='Bitte ganze Zahlen für Zähler und Nenner (mind. 1) eintragen.';else if(p.n>20)e='Nenner bitte höchstens 20.';else if(p.z>3*p.n)e='Höchstens 3 Ganze, bitte.';else if(!(p.T>0))e='Bitte eine Größe eintragen.';else if(p.T>1e7)e='Die Größe ist zu groß – nimm eine größere Einheit.';}
   else if(t.id==='erweitern'){p={z:I('l1z'),n:I('l1n'),k:I('lk')};
     if(!isInt(p.z,p.n,p.k)||p.n<1||p.k<1)e='Bitte ganze Zahlen eintragen.';else if(p.z>p.n)e='Für die Darstellung bitte einen echten Bruch (Zähler ≤ Nenner).';else if(p.n>12||p.k>8)e='Nenner höchstens 12 und Faktor höchstens 8, damit man es noch gut sieht.';}
   else if(t.id==='kuerzen'){const z=I('l1z'),n=I('l1n');let k=I('lk');
