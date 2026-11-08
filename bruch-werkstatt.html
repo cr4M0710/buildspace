@@ -144,6 +144,10 @@ input.wrong{border-color:var(--bad);background:var(--badbg)}
 @keyframes grow{from{opacity:0}to{opacity:1}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.dual{display:grid;gap:10px}
+.dual>div{min-width:0}
+.dual>div+div{border-top:2px dashed var(--line);padding-top:10px}
+.vlab{font-weight:800;color:var(--soft);font-size:.85rem;margin-right:2px}
 .foot{margin-top:24px;text-align:center;font-size:.85rem;color:var(--soft)}
 </style>
 </head>
@@ -162,7 +166,7 @@ input.wrong{border-color:var(--bad);background:var(--badbg)}
       <button data-mode="ueben" aria-pressed="false">Üben</button>
       <button data-mode="labor" aria-pressed="false">Eigene Brüche</button>
     </div>
-    <div class="seg" id="kindSeg"></div>
+    <div class="row" style="gap:10px;align-items:center"><div class="seg" id="kindSeg"></div><div class="seg" id="viewSeg" role="group" aria-label="Darstellung"></div></div>
   </div>
 
   <div id="main"></div>
@@ -242,61 +246,67 @@ const fillArr=(len,spec)=>{const a=new Array(len).fill('fE');let i=0;spec.forEac
    Jede Szene: {g: SVG, t: Erklärtext, s: [{h, note}] (neue Symbolzeilen dieses Schritts)} */
 const W=600,X0=30;
 
+/* --- Kreis-Bausteine (gleiche Optionen wie stripe) --- */
+let SHAPE='rect';
+const PI2=Math.PI*2;
+const ang=(i,N)=>-Math.PI/2+i*PI2/N;
+function sectorPath(cx,cy,r,a0,a1){if(a1-a0>=PI2-1e-9)return null;const lg=(a1-a0)>Math.PI?1:0;
+  return `M${cx},${cy} L${cx+r*Math.cos(a0)},${cy+r*Math.sin(a0)} A${r},${r} 0 ${lg} 1 ${cx+r*Math.cos(a1)},${cy+r*Math.sin(a1)} Z`}
+function pie(cx,cy,r,o){
+  const N=o.parts*o.sub;let s='';
+  for(let i=0;i<N;i++){const f=o.fills[i]||'fE';const d=sectorPath(cx,cy,r,ang(i,N),ang(i+1,N));
+    const fa=f==='X'?'fill="__HX__"':f==='HB'?'fill="__HB__"':`class="${f}"`;
+    s+=d?`<path d="${d}" ${fa}/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" ${fa}/>`;}
+  const ray=(i,cls)=>{const a=ang(i,N);return `<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" class="${cls}"/>`};
+  if(o.sub>1){const cls=o.subStyle==='dash'?'dash':'thin';const an=o.subStyle==='new'?' grow':'';for(let i=0;i<N;i++){if(i%o.sub)s+=ray(i,cls+an)}}
+  if(o.parts>1)for(let i=0;i<o.parts;i++)s+=ray(i*o.sub,'thick');
+  s+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="thick"/>`;
+  return s;
+}
+// mehrere Ganze als Kreise nebeneinander
+function pies(x,y,w,r,o){
+  const N=o.parts*o.sub,n=Math.max(1,Math.ceil(o.fills.length/N)),gap=18;
+  const rr=Math.min(r,(w-(n-1)*gap)/(2*n)),tot=n*2*rr+(n-1)*gap;let s='';const cs=[];
+  for(let k=0;k<n;k++){const cx=x+(w-tot)/2+rr+k*(2*rr+gap);cs.push(cx);s+=pie(cx,y+rr,rr,{...o,fills:o.fills.slice(k*N,(k+1)*N)})}
+  return {svg:s,height:2*rr,r:rr,cs,cy:y+rr};
+}
+// Ganze: Rechteck-Streifen untereinander oder Kreise nebeneinander
+function wholes(x,y,w,h,gap,o){return SHAPE==='circle'?pies(x,y,w,o.r||58,o):stripes(x,y,w,h,gap,o)}
+
 /* --- Brüche & Größen --- */
 const UNITS={
-  min:{name:'min',whole:'1 h',T:60,kind:'pie'},
-  eur:{name:'€',whole:null,T:20,kind:'coins'},
-  g:{name:'g',whole:'1 kg',T:1000,kind:'bar'},
-  cm:{name:'cm',whole:'1 m',T:100,kind:'bar'},
-  ml:{name:'ml',whole:'1 l',T:1000,kind:'bar'},
+  min:{name:'min',whole:'1 h',T:60},
+  eur:{name:'€',whole:null,T:20},
+  g:{name:'g',whole:'1 kg',T:1000},
+  cm:{name:'cm',whole:'1 m',T:100},
+  ml:{name:'ml',whole:'1 l',T:1000},
 };
 function scGroessen(p){
   const u=UNITS[p.unit],Tt=p.T,part=Tt/p.n,res=part*p.z;
-  let kind=u.kind;
-  if(kind==='pie'&&Tt!==60)kind='bar';
-  if(kind==='coins'&&(Tt>40||part%1||p.z>p.n))kind='bar';
-  if(p.z>p.n&&kind==='pie')kind='bar';
-  const wholes=Math.ceil(p.z/p.n);
+  const wh=Math.max(1,Math.ceil(p.z/p.n));
   const wl=u.whole&&Tt===u.T?`${u.whole} = ${fmt(Tt)} ${u.name}`:`${fmt(Tt)} ${u.name}`;
   function draw(st){
-    if(kind==='pie'){
-      const cx=300,cy=150,r=115;let s='';
-      s+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="fE thick"/>`;
-      for(let i=0;i<p.n&&st>=1;i++){
-        const a0=-Math.PI/2+i*2*Math.PI/p.n,a1=a0+2*Math.PI/p.n;
-        const f=st>=2&&i<p.z?'fA':'fE';
-        const lg=p.n===1?1:0;
-        s+=`<path class="${f} ${st===2&&i<p.z?'pop':''}" d="M${cx},${cy} L${cx+r*Math.cos(a0)},${cy+r*Math.sin(a0)} A${r},${r} 0 ${lg} 1 ${cx+r*Math.cos(a1)},${cy+r*Math.sin(a1)} Z" stroke="var(--cellline)" stroke-width="2.5"/>`;
-        const am=(a0+a1)/2;s+=T(cx+r*.62*Math.cos(am),cy+r*.62*Math.sin(am),fmt(part),f==='fA'?'tx':'txs',16);
-      }
-      for(let i=0;i<12;i++){const a=i*Math.PI/6;s+=`<line x1="${cx+(r-8)*Math.cos(a)}" y1="${cy+(r-8)*Math.sin(a)}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="var(--cellline)" stroke-width="2"/>`}
-      s+=`<circle cx="${cx}" cy="${cy}" r="4" fill="var(--cellline)"/>`;
-      s+=T(cx,cy+r+24,st>=2?`${p.z} Teile = ${fmt(res)} ${u.name}`:wl,st>=2?'tx txA':'tx',18);
-      return svgWrap(W,310,s);
-    }
-    if(kind==='coins'){
-      const per=part,cols=Math.min(p.n,5),rowsG=Math.ceil(p.n/cols);
-      const gw=104,cr=11,cpr=Math.min(per,4),gh=Math.ceil(per/cpr)*26+18;
-      const startX=(W-cols*gw-(cols-1)*10)/2;let s='';
-      for(let g=0;g<p.n;g++){const gx=startX+(g%cols)*(gw+10),gy=20+Math.floor(g/cols)*(gh+14);
-        const on=st>=2&&g<p.z;
-        if(st>=1)s+=`<rect x="${gx}" y="${gy}" width="${gw}" height="${gh}" rx="12" class="${on?'fAs':'fE'} ${st===1?'pop':''}" stroke="${on?'var(--A)':'var(--cellline)'}" stroke-width="${on?3:1.5}" ${st>=1?'':'opacity="0"'}/>`;
-        for(let c=0;c<per;c++){const cx=gx+gw/2-(cpr-1)*13+(c%cpr)*26,cy=gy+20+Math.floor(c/cpr)*26;
-          s+=`<circle cx="${cx}" cy="${cy}" r="${cr}" fill="${on?'#e0b33a':'#d9c48a'}" stroke="#9c7a1c" stroke-width="1.5"/>`+T(cx,cy+1,'1','tx',11);}
-      }
-      const H=20+rowsG*(gh+14)+30;
-      s+=T(300,H-14,st>=2?`${p.z} Gruppen = ${fmt(res)} €`:st===1?`${p.n} Gruppen zu je ${fmt(part)} €`:`${fmt(Tt)} € (${fmt(Tt)} Münzen)`,st>=2?'tx txA':'tx',18);
+    const fills=fillArr(wh*p.n,st>=2?[[p.z,'fA']]:[]);
+    const o=st>=1?{parts:p.n,sub:1,fills}:{parts:1,sub:1,fills:fillArr(wh,[])};
+    if(SHAPE==='circle'){
+      let s=T(300,18,wl+(wh>1?' (je Kreis)':''),'tx',17);
+      const r=pies(20,38,W-40,115,o);s+=r.svg;
+      const clock=p.unit==='min'&&Tt===60;
+      r.cs.forEach((cx,k)=>{
+        if(clock)for(let i=0;i<12;i++){const a=i*Math.PI/6;s+=`<line x1="${cx+(r.r-8)*Math.cos(a)}" y1="${r.cy+(r.r-8)*Math.sin(a)}" x2="${cx+r.r*Math.cos(a)}" y2="${r.cy+r.r*Math.sin(a)}" stroke="var(--cellline)" stroke-width="2"/>`}
+        if(st>=1&&p.n<=12)for(let i=0;i<p.n;i++){const am=(ang(i,p.n)+ang(i+1,p.n))/2;s+=T(cx+r.r*.62*Math.cos(am),r.cy+r.r*.62*Math.sin(am),fmt(part),k*p.n+i<p.z&&st>=2?'tx':'txs',r.r<80||p.n>8?12:15)}
+      });
+      const H=38+r.height+44;
+      s+=T(300,H-16,st>=2?`${p.z} Teile = ${fmt(res)} ${u.name}`:st===1?`${p.n} gleich große Teile zu je ${fmt(part)} ${u.name}`:wl,st>=2?'tx txA':'tx',18);
       return svgWrap(W,H,s);
     }
-    // Streifen
-    const fills=st>=2?fillArr(wholes*p.n,[[p.z,'fA']]):fillArr(wholes*p.n,[]);
-    let s=T(300,22,wl+(wholes>1?' (je Streifen)':''),'tx',17);
-    const r=stripes(X0+10,44,W-2*X0-20,60,26,st>=1?{parts:p.n,sub:1,fills}:{parts:1,sub:1,fills:fillArr(wholes,[])});
-    s+=r.svg;
-    if(st>=1&&p.n<=12){for(let k=0;k<wholes;k++)for(let i=0;i<p.n;i++){const cw=(W-2*X0-20)/p.n;s+=T(X0+10+cw*(i+.5),44+k*86+30,fmt(part),k*p.n+i<p.z&&st>=2?'tx':'txs',p.n>8?12:15)}}
-    if(st>=2&&wholes===1){const cw=(W-2*X0-20)/p.n;s+=brace(X0+10,X0+10+cw*p.z,44+64,`${fmt(res)} ${u.name}`,'A',true)}
-    const H=44+r.height+(st>=2&&wholes===1?60:24);
-    if(st>=2&&wholes>1)s+=T(300,H-10,`${p.z} Teile = ${fmt(res)} ${u.name}`,'tx txA',18);
+    let s=T(300,22,wl+(wh>1?' (je Streifen)':''),'tx',17);
+    const r=stripes(X0+10,44,W-2*X0-20,60,26,o);s+=r.svg;
+    if(st>=1&&p.n<=12){const cw=(W-2*X0-20)/p.n;for(let k=0;k<wh;k++)for(let i=0;i<p.n;i++)s+=T(X0+10+cw*(i+.5),44+k*86+30,fmt(part),k*p.n+i<p.z&&st>=2?'tx':'txs',p.n>8?12:15)}
+    if(st>=2&&wh===1){const cw=(W-2*X0-20)/p.n;s+=brace(X0+10,X0+10+cw*p.z,44+64,`${fmt(res)} ${u.name}`,'A',true)}
+    const H=44+r.height+(st>=2&&wh===1?60:34);
+    if(st>=2&&wh>1)s+=T(300,H-10,`${p.z} Teile = ${fmt(res)} ${u.name}`,'tx txA',18);
+    if(st===1&&wh===1)s+=T(300,H-10,`${p.n} gleich große Teile`,'txs',15);
     return svgWrap(W,H,s);
   }
   const of=`${F(p.z,p.n,'ca')} von ${fmt(Tt)} ${u.name}`;
@@ -317,12 +327,20 @@ function grid(x,y,w,h,cols,rows,zCols,rowStyle,fillCls){
   s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" class="thick"/>`;
   return s;
 }
+// Ein Ganzes: parts große Teile, je sub feine Teile, zParts große Teile gefärbt
+const PC={cx:270,cy:130,r:110};
+function partFig(parts,sub,zParts,style){
+  if(SHAPE==='circle')return pie(PC.cx,PC.cy,PC.r,{parts,sub,subStyle:style,fills:fillArr(parts*sub,[[zParts*sub,'fA']])});
+  return grid(150,30,300,200,parts,sub,zParts,style,'fA');
+}
+const figLabX=()=>SHAPE==='circle'?PC.cx+PC.r+95:520;
+const figLeftX=()=>SHAPE==='circle'?PC.cx-PC.r-16:134;
 function scErweitern(p){
-  const {z,n,k}=p,gx=150,gy=30,gw=300,gh=200;
-  const lab=(a,b,c)=>TF(gx+gw+70,gy+gh/2,a,b,c,24);
-  const g0=svgWrap(W,260,grid(gx,gy,gw,gh,n,1,z,'none','fA')+lab(z,n,'txA'));
-  const g1=svgWrap(W,260,grid(gx,gy,gw,gh,n,k,z,'new','fA')+T(gx-16,gy+gh/2,`je ${k}`,'tx txK',18,'end')+lab(z+'·'+k,n+'·'+k,'txK'));
-  const g2=svgWrap(W,260,grid(gx,gy,gw,gh,n,k,z,'thin','fA')+lab(z*k,n*k,'txR'));
+  const {z,n,k}=p;
+  const lab=(a,b,c)=>TF(figLabX(),130,a,b,c,24);
+  const g0=svgWrap(W,260,partFig(n,1,z,'none')+lab(z,n,'txA'));
+  const g1=svgWrap(W,260,partFig(n,k,z,'new')+T(figLeftX(),130,`je ${k}`,'tx txK',18,'end')+lab(z+'·'+k,n+'·'+k,'txK'));
+  const g2=svgWrap(W,260,partFig(n,k,z,'thin')+lab(z*k,n*k,'txR'));
   return [
     {g:g0,t:`${z} von ${n} gleich großen Teilen sind gefärbt: ${z}/${n}.`,s:[{h:F(z,n,'ca')}]},
     {g:g1,t:`Jedes Teil wird in ${k} kleinere Teile zerlegt (Erweitern mit ${k}). Zähler und Nenner werden mit ${k} multipliziert.`,s:[{h:`${O('=')} ${F(`${z}${K('·'+k)}`,`${n}${K('·'+k)}`)}`,note:`Zähler und Nenner mal ${k}`}]},
@@ -330,12 +348,14 @@ function scErweitern(p){
   ];
 }
 function scKuerzen(p){
-  const {z,n,k}=p,a=z/k,b=n/k,gx=150,gy=30,gw=300,gh=200;
-  const lab=(x,y,c)=>TF(gx+gw+70,gy+gh/2,x,y,c,24);
-  const g0=svgWrap(W,260,grid(gx,gy,gw,gh,b,k,a,'thin','fA')+lab(z,n,'txA'));
-  let hl='';const cw=gw/b;for(let c=0;c<b;c++)hl+=`<rect x="${gx+c*cw+4}" y="${gy+4}" width="${cw-8}" height="${gh-8}" rx="6" fill="none" stroke="var(--K)" stroke-width="3" class="grow" stroke-dasharray="7 5"/>`;
-  const g1=svgWrap(W,260,grid(gx,gy,gw,gh,b,k,a,'thin','fA')+hl+T(gx-16,gy+gh/2,`je ${k}`,'tx txK',18,'end')+lab(z+':'+k,n+':'+k,'txK'));
-  const g2=svgWrap(W,260,grid(gx,gy,gw,gh,b,k,a,'dash','fA')+lab(a,b,'txR'));
+  const {z,n,k}=p,a=z/k,b=n/k;
+  const lab=(x,y,c)=>TF(figLabX(),130,x,y,c,24);
+  const g0=svgWrap(W,260,partFig(b,k,a,'thin')+lab(z,n,'txA'));
+  let hl='';
+  if(SHAPE==='circle'){for(let c=0;c<b;c++){const d=sectorPath(PC.cx,PC.cy,PC.r-6,ang(c,b)+.05,ang(c+1,b)-.05);hl+=d?`<path d="${d}" fill="none" stroke="var(--K)" stroke-width="3" stroke-dasharray="7 5" class="grow"/>`:''}}
+  else{const cw=300/b;for(let c=0;c<b;c++)hl+=`<rect x="${150+c*cw+4}" y="34" width="${cw-8}" height="192" rx="6" fill="none" stroke="var(--K)" stroke-width="3" class="grow" stroke-dasharray="7 5"/>`}
+  const g1=svgWrap(W,260,partFig(b,k,a,'thin')+hl+T(figLeftX(),130,`je ${k}`,'tx txK',18,'end')+lab(z+':'+k,n+':'+k,'txK'));
+  const g2=svgWrap(W,260,partFig(b,k,a,'dash')+lab(a,b,'txR'));
   const gg=gcd(a,b);
   const fin=gg>1?` Achtung: ${a}/${b} lässt sich noch weiter kürzen (mit ${gg}).`:(k===gcd(z,n)?` ${k} ist der größte gemeinsame Teiler (ggT) von ${z} und ${n} – damit ist vollständig gekürzt.`:'');
   return [
@@ -345,75 +365,60 @@ function scKuerzen(p){
   ];
 }
 
-/* --- Addition / Subtraktion: Streifen-Modell --- */
+/* --- Addition / Subtraktion --- */
 const SW=W-2*X0-20, SX=X0+20;
-function rowLabel(y,h,z,n,c){return TF(14,y+h/2,z,n,c,16)}
 function scAddSub(p,op){
   const {a,n,b,m}=p,N=lcm(n,m),fa=N/n,fb=N/m,A=a*fa,B=b*fb;
   const same=n===m;const R=op==='+'?A+B:A-B;
-  const bh=56,gap=22;
+  const bh=56,gap=22,sign=op==='+'?'+':'−';
   const sc=[];
-  const sign=op==='+'?'+':'−';
-  // Schritt 1: Ausgangsbrüche
-  function twoBars(refined,style,crossB){
+  function twoBars(refined,style){
     let s='',y=16;
-    const ra=stripes(SX+20,y,SW-20,bh,gap,{parts:n,sub:refined?fa:1,subStyle:style,fills:fillArr(Math.max(1,Math.ceil(a/n))*n*(refined?fa:1),[[crossB?A-B:(refined?A:a),'fA'],[crossB?B:0,'X']])});
-    s+=ra.svg+TF(SX-8,y+bh/2,a,n,'txA',17);y+=ra.height+gap+6;
-    if(op==='−'&&!crossB) s+=T(SX-8,y+bh/2,'−','tx txX',22);
-    const rb=stripes(SX+20,y,SW-20,bh,gap,{parts:m,sub:refined?fb:1,subStyle:style,fills:fillArr(Math.max(1,Math.ceil(b/m))*m*(refined?fb:1),[[refined?B:b,crossB?'HB':'fB']])});
-    s+=rb.svg+TF(SX-8,y+bh/2,b,m,'txB',17);if(op==='+')s+=T(SX-8,16+ra.height+gap/2+3,'+','tx',22);
-    y+=rb.height+16;
-    return svgWrap(W,y,s);
+    const ra=wholes(SX+20,y,SW-20,bh,gap,{parts:n,sub:refined?fa:1,subStyle:style,fills:fillArr(Math.max(1,Math.ceil(a/n))*n*(refined?fa:1),[[refined?A:a,'fA']])});
+    s+=ra.svg+TF(SX-8,y+ra.height/2,a,n,'txA',17);y+=ra.height+gap+6;
+    s+=T(SX-8,y-(gap+6)/2,sign,'tx '+(op==='+'?'':'txX'),24);
+    const rb=wholes(SX+20,y,SW-20,bh,gap,{parts:m,sub:refined?fb:1,subStyle:style,fills:fillArr(Math.max(1,Math.ceil(b/m))*m*(refined?fb:1),[[refined?B:b,'fB']])});
+    s+=rb.svg+TF(SX-8,y+rb.height/2,b,m,'txB',17);
+    return svgWrap(W,y+rb.height+16,s);
   }
-  sc.push({g:twoBars(false,'thin',false),t:op==='+'?`Wir addieren ${a}/${n} und ${b}/${m}.`+(same?' Die Teile sind gleich groß (gleichnamig).':' Die Teile sind verschieden groß (ungleichnamig) – so kann man sie nicht einfach zusammenzählen.'):`Von ${a}/${n} sollen ${b}/${m} weggenommen werden.`+(same?' Die Teile sind gleich groß (gleichnamig).':' Die Teile sind verschieden groß (ungleichnamig).'),
+  const resPic=(fills,parts,sub,style,label,cls)=>{const r=wholes(SX+20,16,SW-20,bh,gap,{parts,sub,subStyle:style,fills,r:70});return svgWrap(W,r.height+60,r.svg+T(300,r.height+38,label,cls,18))};
+  sc.push({g:twoBars(false,'thin'),t:(op==='+'?`Wir addieren ${a}/${n} und ${b}/${m}.`:`Von ${a}/${n} sollen ${b}/${m} weggenommen werden.`)+(same?' Die Teile sind gleich groß (gleichnamig).':' Die Teile sind verschieden groß (ungleichnamig) – so kann man sie nicht einfach '+(op==='+'?'zusammenzählen.':'abziehen.')),
     s:[{h:`${F(a,n,'ca')} ${O(sign)} ${F(b,m,'cb')}`}]});
   if(!same){
-    sc.push({g:twoBars(true,'new',false),t:`Gleichnamig machen: Hauptnenner ist ${N} (kleinstes gemeinsames Vielfaches von ${n} und ${m}). Der obere Streifen wird mit ${fa}, der untere mit ${fb} erweitert – jetzt sind alle Teile gleich groß.`,
+    sc.push({g:twoBars(true,'new'),t:`Gleichnamig machen: Hauptnenner ist ${N} (kleinstes gemeinsames Vielfaches von ${n} und ${m}). Das erste Ganze wird mit ${fa}, das zweite mit ${fb} erweitert – jetzt sind alle Teile gleich groß.`,
       s:[{h:`${O('=')} ${F(`${a}${K('·'+fa)}`,`${n}${K('·'+fa)}`)} ${O(sign)} ${F(`${b}${K('·'+fb)}`,`${m}${K('·'+fb)}`)}`,note:`erweitern auf den Hauptnenner ${N}`},{h:`${O('=')} ${F(A,N,'ca')} ${O(sign)} ${F(B,N,'cb')}`}]});
   }
   if(op==='+'){
     const wh=Math.max(1,Math.ceil(R/N));
-    const rr=stripes(SX+20,16,SW-20,bh,gap,{parts:n===m?N:n,sub:n===m?1:fa,subStyle:'thin',fills:fillArr(wh*N,[[A,'fA'],[B,'fB']])});
-    // Nach dem Zusammenlegen: Grobteilung = N-Teile (alle gleich)
-    const rr2=stripes(SX+20,16,SW-20,bh,gap,{parts:N,sub:1,fills:fillArr(wh*N,[[A,'fA'],[B,'fB']])});
-    sc.push({g:svgWrap(W,rr2.height+60,rr2.svg+T(300,rr2.height+38,`${A} + ${B} = ${R} Teile von je 1/${N}`,'tx',18)),t:`Jetzt die gleich großen Teile zusammenlegen: ${A} + ${B} = ${R} Teile. Der Nenner (die Teilgröße) bleibt ${N}.`,
+    sc.push({g:resPic(fillArr(wh*N,[[A,'fA'],[B,'fB']]),N,1,'thin',`${A} + ${B} = ${R} Teile von je 1/${N}`,'tx'),t:`Jetzt die gleich großen Teile zusammenlegen: ${A} + ${B} = ${R} Teile. Der Nenner (die Teilgröße) bleibt ${N}.`,
       s:[{h:`${O('=')} ${F(`${A} + ${B}`,N)} ${O('=')} ${F(R,N,'cr')}`,note:'Zähler addieren, Nenner bleibt'}]});
-    void rr;
   }else{
     const wh=Math.max(1,Math.ceil(A/N));
-    const st=stripes(SX+20,16,SW-20,bh,gap,{parts:N,sub:1,fills:fillArr(wh*N,[[A-B,'fA'],[B,'X']])});
-    sc.push({g:svgWrap(W,st.height+60,st.svg+T(300,st.height+38,`${B} von ${A} Teilen werden weggestrichen`,'tx txX',18)),t:`Von den ${A} gefärbten Teilen werden ${B} weggenommen (rot durchgestrichen).`,
+    sc.push({g:resPic(fillArr(wh*N,[[A-B,'fA'],[B,'X']]),N,1,'thin',`${B} von ${A} Teilen werden weggestrichen`,'tx txX'),t:`Von den ${A} gefärbten Teilen werden ${B} weggenommen (rot schraffiert).`,
       s:[{h:`${O('=')} ${F(`${A} − ${B}`,N)}`,note:'Zähler subtrahieren, Nenner bleibt'}]});
     const wr=Math.max(1,Math.ceil(R/N));
-    const rs=stripes(SX+20,16,SW-20,bh,gap,{parts:N,sub:1,fills:fillArr(wr*N,[[R,'fR']])});
-    sc.push({g:svgWrap(W,rs.height+60,rs.svg+T(300,rs.height+38,`Es bleiben ${R} Teile übrig`,'tx txR',18)),t:`Es bleiben ${R} von ${N} Teilen übrig: ${R}/${N}.`,s:[{h:`${O('=')} ${F(R,N,'cr')}`}]});
+    sc.push({g:resPic(fillArr(wr*N,[[R,'fR']]),N,1,'thin',`Es bleiben ${R} Teile übrig`,'tx txR'),t:`Es bleiben ${R} von ${N} Teilen übrig: ${R}/${N}.`,s:[{h:`${O('=')} ${F(R,N,'cr')}`}]});
   }
-  // Ergebnis kürzen / gemischt
   const fl=finishLines(R,N);
   if(fl.length){
     const g=gcd(R,N),d=N/g,wh=Math.max(1,Math.ceil(R/N));
-    const rs=stripes(SX+20,16,SW-20,bh,gap,{parts:d,sub:g,subStyle:g>1?'dash':'thin',fills:fillArr(wh*N,[[R,'fR']])});
-    sc.push({g:svgWrap(W,rs.height+60,rs.svg+T(300,rs.height+38,g>1?`Je ${g} kleine Teile = 1 großes Teil`:`${Math.floor(R/N)} Ganzes und ${R%N}/${N}`,'tx txR',18)),
+    sc.push({g:resPic(fillArr(wh*N,[[R,'fR']]),d,g,g>1?'dash':'thin',g>1?`Je ${g} kleine Teile = 1 großes Teil`:`${Math.floor(R/N)} Ganzes und ${R%N}/${N}`,'tx txR'),
       t:g>1?`Das Ergebnis lässt sich kürzen: Je ${g} kleine Teile ergeben ein größeres Teil.`:`Mehr als ein Ganzes: ${R}/${N} ist eine gemischte Zahl.`,s:fl});
   }
-  if(R===0){}
   return sc;
 }
 
-/* --- Multiplikation: Flächenmodell --- */
+/* --- Multiplikation: Flächenmodell (Rechteck) bzw. „Anteil vom Anteil“ (Kreis) --- */
 function scMult(p){
-  const {a,n,b,m}=p;const gx=170,gy=24,S=260,cw=S/n,rh=S/m;
-  function draw(st){
-    let s='';
+  const {a,n,b,m}=p,circ=SHAPE==='circle';
+  function drawRect(st){
+    const gx=170,gy=24,S=260,cw=S/n,rh=S/m;let s='';
     for(let c=0;c<n;c++)for(let r=0;r<m;r++){
-      const inA=c<a,inB=r<b;let f='fE';
-      if(st===0)f=inA?'fA':'fE';
-      else if(st===1)f=inA?'fA':'fE';
-      else f=inA&&inB?'fR':(inA?'fAs':'fE');
+      const inA=c<a,inB=r<b;const f=st<2?(inA?'fA':'fE'):(inA&&inB?'fR':(inA?'fAs':'fE'));
       s+=`<rect x="${gx+c*cw}" y="${gy+r*rh}" width="${cw}" height="${rh}" class="${f} ${st===2&&inA&&inB?'pop':''}"/>`;
     }
     if(st===1)s+=`<rect x="${gx}" y="${gy}" width="${S}" height="${b*rh}" fill="__HB__" opacity=".72" class="grow"/>`;
-    if(st>=1)for(let r=1;r<m;r++)s+=`<line x1="${gx}" y1="${gy+r*rh}" x2="${gx+S}" y2="${gy+r*rh}" class="thick ${st===1?'grow':''}" style="stroke-width:${st>=1?2:3}"/>`;
+    if(st>=1)for(let r=1;r<m;r++)s+=`<line x1="${gx}" y1="${gy+r*rh}" x2="${gx+S}" y2="${gy+r*rh}" class="thick ${st===1?'grow':''}" style="stroke-width:2"/>`;
     for(let c=1;c<n;c++)s+=`<line x1="${gx+c*cw}" y1="${gy}" x2="${gx+c*cw}" y2="${gy+S}" class="thick"/>`;
     s+=`<rect x="${gx}" y="${gy}" width="${S}" height="${S}" class="thick"/>`;
     s+=`<path class="br stA" d="M${gx},${gy+S+10} L${gx},${gy+S+18} L${gx+a*cw},${gy+S+18} L${gx+a*cw},${gy+S+10}"/>`+TF(gx+a*cw/2,gy+S+46,a,n,'txA',17);
@@ -421,10 +426,21 @@ function scMult(p){
     if(st>=2)s+=TF(gx+S+70,gy+S/2,a*b,n*m,'txR',24)+T(gx+S+70,gy+S/2+52,`${a*b} von ${n*m}`,'txs',14);
     return svgWrap(W,gy+S+80,s);
   }
+  function drawCirc(st){
+    const cx=260,cy=150,R=125;
+    const fills=[];for(let c=0;c<n;c++)for(let j=0;j<(st>=1?m:1);j++){
+      if(c>=a)fills.push('fE');else if(st===0)fills.push('fA');else if(st===1)fills.push(j<b?'HB':'fA');else fills.push(j<b?'fR':'fAs');}
+    let s=pie(cx,cy,R,{parts:n,sub:st>=1?m:1,subStyle:st===1?'new':'thin',fills});
+    s+=TF(cx-R-55,cy,a,n,'txA',20)+T(cx-R-55,cy+48,'blau','txs',13);
+    if(st>=1)s+=T(cx,cy+R+26,`von jedem blauen Teil ${b}/${m} schraffiert`,'tx txB',16);
+    if(st>=2)s+=TF(cx+R+80,cy,a*b,n*m,'txR',24)+T(cx+R+80,cy+52,`${a*b} von ${n*m}`,'txs',14);
+    return svgWrap(W,cy+R+44,s);
+  }
+  const draw=circ?drawCirc:drawRect,piece=circ?'Stücke':'Kästchen';
   const sc=[
-    {g:draw(0),t:`Das Quadrat ist ein Ganzes. ${a}/${n} davon sind blau gefärbt (senkrechte Streifen).`,s:[{h:`${F(a,n,'ca')} ${O('·')} ${F(b,m,'cb')}`,note:`„mal“ bedeutet hier: ${b}/${m} von ${a}/${n}`}]},
-    {g:draw(1),t:`Jetzt wird waagerecht in ${m} Streifen geteilt und ${b}/${m} davon schraffiert. Gesucht ist der Teil, der blau UND schraffiert ist.`,s:[]},
-    {g:draw(2),t:`Das Ganze hat jetzt ${n} · ${m} = ${n*m} Kästchen. Blau und schraffiert sind ${a} · ${b} = ${a*b} Kästchen. Also: Zähler mal Zähler, Nenner mal Nenner.`,s:[{h:`${O('=')} ${F(`${a} · ${b}`,`${n} · ${m}`)} ${O('=')} ${F(a*b,n*m,'cr')}`,note:'Zähler · Zähler, Nenner · Nenner'}]},
+    {g:draw(0),t:`${circ?'Der Kreis':'Das Quadrat'} ist ein Ganzes. ${a}/${n} davon sind blau gefärbt.`,s:[{h:`${F(a,n,'ca')} ${O('·')} ${F(b,m,'cb')}`,note:`„mal“ bedeutet hier: ${b}/${m} von ${a}/${n}`}]},
+    {g:draw(1),t:circ?`Jedes Teil wird in ${m} Stücke geteilt, und von jedem blauen Teil werden ${b}/${m} schraffiert. Gesucht ist der Teil, der blau UND schraffiert ist.`:`Jetzt wird waagerecht in ${m} Streifen geteilt und ${b}/${m} davon schraffiert. Gesucht ist der Teil, der blau UND schraffiert ist.`,s:[]},
+    {g:draw(2),t:`Das Ganze hat jetzt ${n} · ${m} = ${n*m} ${piece}. Blau und schraffiert sind ${a} · ${b} = ${a*b} ${piece}. Also: Zähler mal Zähler, Nenner mal Nenner.`,s:[{h:`${O('=')} ${F(`${a} · ${b}`,`${n} · ${m}`)} ${O('=')} ${F(a*b,n*m,'cr')}`,note:'Zähler · Zähler, Nenner · Nenner'}]},
   ];
   const fl=finishLines(a*b,n*m);
   if(fl.length){const g=gcd(a*b,n*m);sc.push({g:draw(2),t:`Das Ergebnis lässt sich noch kürzen (mit ${g}). Tipp: Man kann auch schon vor dem Ausmultiplizieren kürzen.`,s:fl})}
@@ -433,22 +449,31 @@ function scMult(p){
 
 /* --- Division: Messmodell „Wie oft passt …?“ --- */
 function scDiv(p){
-  const {a,n,b,m}=p,N=lcm(n,m),fa=N/n,fb=N/m,A=a*fa,B=b*fb,same=n===m;
-  const bh=60,y1=40,y2=150;
-  function draw(refined,measure,anim){
-    const sa=refined?fa:1,sb=refined?fb:1;
+  const {a,n,b,m}=p,N=lcm(n,m),fa=N/n,fb=N/m,A=a*fa,B=b*fb,same=n===m,circ=SHAPE==='circle';
+  function drawRect(refined,measure,anim){
+    const bh=60,y1=40,y2=150,sa=refined?fa:1,sb=refined?fb:1;
     let s=stripe(SX+20,y1,SW-20,bh,{parts:n,sub:sa,subStyle:anim?'new':'thin',fills:fillArr(n*sa,[[refined?A:a,'fA']])})+TF(SX-8,y1+bh/2,a,n,'txA',17);
     s+=stripe(SX+20,y2,SW-20,bh,{parts:m,sub:sb,subStyle:anim?'new':'thin',fills:fillArr(m*sb,[[refined?B:b,'fB']])})+TF(SX-8,y2+bh/2,b,m,'txB',17);
-    if(measure){
-      const cw=(SW-20)/N;let pos=0,i=1;
-      while(pos<A){const len=Math.min(B,A-pos);const x1=SX+20+pos*cw,x2=x1+len*cw;const full=len===B;
+    if(measure){const cw=(SW-20)/N;let pos=0,i=1;
+      while(pos<A){const len=Math.min(B,A-pos);const x1=SX+20+pos*cw,x2=x1+len*cw,full=len===B;
         s+=`<rect x="${x1+2}" y="${y1-30}" width="${x2-x1-4}" height="22" rx="8" class="pop" fill="${full?'var(--Bsoft)':'none'}" stroke="var(--B)" stroke-width="2.5" ${full?'':'stroke-dasharray="5 4"'} style="animation-delay:${i*.18}s"/>`;
-        s+=T((x1+x2)/2,y1-19,full?i:`${len}/${B}`,'tx txB',full?15:13);
-        pos+=len;i++;}
-      s+=T(300,y2+bh+30,'Wie oft passt der orange Streifen in den blauen?','txs',15);
-    }else s+=T(300,y2+bh+30,refined?'Jetzt sind alle Teile gleich groß.':'Wie oft passt der orange Teil in den blauen?','txs',15);
+        s+=T((x1+x2)/2,y1-19,full?i:`${len}/${B}`,'tx txB',full?15:13);pos+=len;i++;}}
+    s+=T(300,y2+bh+30,measure?'Wie oft passt der orange Teil in den blauen?':refined?'Jetzt sind alle Teile gleich groß.':'Wie oft passt der orange Teil in den blauen?','txs',15);
     return svgWrap(W,y2+bh+50,s);
   }
+  function drawCirc(refined,measure,anim){
+    const R=100,cy=150,c1=170,c2=450,sa=refined?fa:1,sb=refined?fb:1;
+    let s=pie(c1,cy,R,{parts:n,sub:sa,subStyle:anim?'new':'thin',fills:fillArr(n*sa,[[refined?A:a,'fA']])})+TF(c1,cy+R+34,a,n,'txA',18);
+    s+=pie(c2,cy,R*.8,{parts:m,sub:sb,subStyle:anim?'new':'thin',fills:fillArr(m*sb,[[refined?B:b,'fB']])})+TF(c2,cy+R+34,b,m,'txB',18);
+    s+=T(310,cy,'?','tx',30);
+    if(measure){let pos=0,i=1;
+      while(pos<A){const len=Math.min(B,A-pos),full=len===B,a0=ang(pos,N)+.06,a1=ang(pos+len,N)-.06,rr=R+12;
+        s+=`<path d="M${c1+rr*Math.cos(a0)},${cy+rr*Math.sin(a0)} A${rr},${rr} 0 ${a1-a0>Math.PI?1:0} 1 ${c1+rr*Math.cos(a1)},${cy+rr*Math.sin(a1)}" fill="none" stroke="var(--B)" stroke-width="6" stroke-linecap="round" ${full?'':'stroke-dasharray="4 7"'} class="pop" style="animation-delay:${i*.18}s"/>`;
+        const am=(a0+a1)/2;s+=T(c1+(R+30)*Math.cos(am),cy+(R+30)*Math.sin(am),full?i:`${len}/${B}`,'tx txB',full?16:13);pos+=len;i++;}}
+    s+=T(300,cy+R+78,measure?'Wie oft passt das orange Stück in das blaue?':refined?'Jetzt sind alle Teile gleich groß.':'Wie oft passt das orange Stück in das blaue?','txs',15);
+    return svgWrap(W,cy+R+96,s);
+  }
+  const draw=circ?drawCirc:drawRect;
   const q=Math.floor(A/B),r=A%B;
   const sc=[{g:draw(false,false,false),t:`Dividieren heißt hier messen: Wie oft passt ${b}/${m} in ${a}/${n}?`,s:[{h:`${F(a,n,'ca')} ${O(':')} ${F(b,m,'cb')}`}]}];
   if(!same)sc.push({g:draw(true,false,true),t:`Zum Messen müssen die Teile gleich groß sein: beide auf den Hauptnenner ${N} bringen.`,s:[{h:`${O('=')} ${F(A,N,'ca')} ${O(':')} ${F(B,N,'cb')}`,note:`erweitern auf ${N}`}]});
@@ -456,11 +481,19 @@ function scDiv(p){
     s:[{h:`${O('=')} <span class="ca">${A}</span> ${O(':')} <span class="cb">${B}</span> ${O('=')} ${B===1?`<span class="cr">${A}</span>`:F(A,B,'cr')}`,note:'bei gleichen Nennern: nur die Zähler teilen'}]});
   const fl=finishLines(A,B);
   if(fl.length&&B>1)sc.push({g:draw(!same,true,false),t:r?`Ergebnis: ${q} ganze Male und ${r}/${B}.`:'Ergebnis vereinfachen.',s:fl});
-  // Kehrwert-Kontrolle
   const kz=a*m,kn=n*b,g=gcd(kz,kn);
   sc.push({g:draw(!same,true,false),t:`Kontrolle mit der Kehrwert-Regel: Durch einen Bruch teilen = mit seinem Kehrwert malnehmen.`,
     s:[{h:`${F(a,n,'ca')} ${O(':')} ${F(b,m,'cb')} ${O('=')} ${F(a,n,'ca')} ${O('·')} ${F(m,b,'ck')} ${O('=')} ${F(kz,kn)}${g>1?` ${O('=')} ${kn/g===1?`<span class="cr">${kz/g}</span>`:F(kz/g,kn/g,'cr')}`:''}`,note:'Kehrwert-Regel (gleiches Ergebnis)'}]});
   return sc;
+}
+
+/* --- Darstellung wählen: Rechteck, Kreis oder beides --- */
+let VIEW=store.get('view','rect');
+if(['rect','circle','both'].indexOf(VIEW)<0)VIEW='rect';
+function buildScenes(t,p){
+  if(VIEW!=='both'){SHAPE=VIEW;const sc=t.build(p);SHAPE='rect';return sc}
+  SHAPE='rect';const a=t.build(p);SHAPE='circle';const b=t.build(p);SHAPE='rect';
+  return a.map((s,i)=>({...s,g:`<div class="dual"><div>${s.g}</div><div>${b[i].g}</div></div>`}));
 }
 
 /* ============ Themen ============ */
@@ -524,6 +557,17 @@ function renderKind(){
   seg.innerHTML=`<button data-k="gl" aria-pressed="${S.kind==='gl'}">gleichnamig</button><button data-k="ungl" aria-pressed="${S.kind==='ungl'}">ungleichnamig</button>`;
   seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.kind=b.dataset.k;S.ex=0;renderAll()});
 }
+function renderView(){
+  const v=$('#viewSeg');
+  v.innerHTML='<span class="vlab">Bild:</span>'+[['rect','▭ Rechteck'],['circle','◯ Kreis'],['both','beides']].map(([k,l])=>`<button data-v="${k}" aria-pressed="${VIEW===k}">${l}</button>`).join('');
+  v.querySelectorAll('button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;store.set('view',VIEW);renderView();
+    if(S.mode==='bsp')renderBsp();else if(S.mode==='labor')runLab();else refreshHelp();});
+}
+function refreshHelp(){
+  if(!helpCtl||!cur)return;const t=topic();const sc=scenesFor(t.id,cur);const i=helpCtl.i;
+  if(helpCtl.kind==='sol'){helpCtl=stepper($('#hs'),sc,{start:sc.length-1});helpCtl.kind='sol'}
+  else{const lim=Math.min(helpUsed,Math.max(0,sc.length-2));helpCtl=stepper($('#hs'),sc,{limit:lim});helpCtl.go(i);helpCtl.kind='help'}
+}
 function renderModes(){$('#modeTabs').querySelectorAll('button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.mode===S.mode);b.onclick=()=>{S.mode=b.dataset.mode;renderAll()}})}
 
 function exampleTitle(t,p){
@@ -538,7 +582,7 @@ function renderBsp(){
   m.innerHTML=`<div class="merke"><b class="tag">Merke</b><div>${t.merke}</div></div>
    <div class="exrow" id="exrow">${list.map((p,k)=>`<button class="btn ${k===S.ex?'':'ghost'} exb" data-i="${k}" style="font-size:1.1rem">Beispiel ${k+1}: ${exampleTitle(t,p)}</button>`).join('')}</div><div id="stp"></div>`;
   m.querySelectorAll('.exb').forEach(b=>b.onclick=()=>{S.ex=+b.dataset.i;renderBsp()});
-  stepper($('#stp'),t.build(list[S.ex]));
+  stepper($('#stp'),buildScenes(t,list[S.ex]));
 }
 
 /* ============ Üben ============ */
@@ -645,22 +689,22 @@ function newTask(){
 }
 function scenesFor(tid,task){
   const t=TOPICS.find(x=>x.id===tid);const p=task.p;
-  if(tid==='erweitern')return t.build({z:p.z,n:p.n,k:p.k});
-  return t.build(p);
+  if(tid==='erweitern')return buildScenes(t,{z:p.z,n:p.n,k:p.k});
+  return buildScenes(t,p);
 }
 function showHelp(){
   const t=topic();const sc=scenesFor(t.id,cur);
   const limit=Math.max(0,sc.length-2);
   const h=$('#help');
   if(!helpCtl){h.className='help show';h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--B)"></span>Bild-Hilfe – Schritt für Schritt zur Lösung</div><div id="hs"></div></div>';
-    helpCtl=stepper($('#hs'),sc,{limit:Math.min(helpUsed,limit)});helpUsed=1;}
+    helpCtl=stepper($('#hs'),sc,{limit:Math.min(helpUsed,limit)});helpUsed=1;helpCtl.kind='help';}
   else{helpUsed++;helpCtl.setLimit(Math.min(helpUsed,limit));helpCtl.go(helpUsed)}
   h.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function showSolution(){
   const t=topic();const sc=scenesFor(t.id,cur);const h=$('#help');h.className='help show';
   h.innerHTML='<div class="card" style="padding:12px"><div class="ph"><span class="dot" style="background:var(--R)"></span>Lösungsweg</div><div id="hs"></div></div>';
-  helpCtl=stepper($('#hs'),sc,{start:sc.length-1});helpUsed=99;
+  helpCtl=stepper($('#hs'),sc,{start:sc.length-1});helpCtl.kind='sol';helpUsed=99;
   if(!cur.done){cur.done=true;bump(false)}
   const fb=$('#fb');fb.className='fb show half';fb.innerHTML='Schau dir den Lösungsweg an – dann probier eine neue Aufgabe.';
   h.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -746,17 +790,17 @@ function runLab(){
     else if(t.id!=='mult'&&lcm(p.n,p.m)>24)e=`Der Hauptnenner wäre ${lcm(p.n,p.m)} – das wird zu klein zum Zeichnen. Bitte andere Nenner (Hauptnenner ≤ 24).`;
     else if(t.id==='sub'&&p.a/p.n<p.b/p.m)e='Der zweite Bruch ist größer als der erste – das Ergebnis wäre negativ.';
     else if(t.id==='div'&&(p.b<1))e='Durch 0 kann man nicht teilen.';
-    else if(t.id==='div'&&p.a/p.n>1)e='Bitte als ersten Bruch höchstens 1 Ganzes.';
+    else if(t.id==='div'&&(p.a>p.n||p.b>p.m))e='Bitte für beide Brüche höchstens 1 Ganzes.';
     else if(t.id==='add'&&p.a/p.n+p.b/p.m>3)e='Das Ergebnis bitte höchstens 3 Ganze.';
     else if(t.id==='sub'&&p.a/p.n>3)e='Erster Bruch bitte höchstens 3 Ganze.';
     else if(t.id==='div'&&p.a<1)e='Der erste Bruch ist 0 – da gibt es nichts zu messen.';}
   if(e){err.textContent=e;$('#lstp').innerHTML='';return}
   store.set('lab:'+t.id,p);
-  stepper($('#lstp'),t.build(p));
+  stepper($('#lstp'),buildScenes(t,p));
 }
 
 /* ============ Start ============ */
-function renderAll(){renderTopics();renderModes();renderKind();
+function renderAll(){renderTopics();renderModes();renderKind();renderView();
   if(S.mode==='bsp')renderBsp();else if(S.mode==='ueben')renderUeben();else renderLabor();
   const a=$('#topics [aria-pressed=true]');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest',inline:'center'});
 }
@@ -767,6 +811,7 @@ renderAll();
   { title: "Willkommen in der Bruch-Werkstatt", text: "<p>Hier siehst du Bruchrechnung zweimal: als <b>Bild</b> (ikonisch) und als <b>Rechnung</b> (symbolisch). Gleiche Farben gehören zusammen.</p>" },
   { sel: "#topics", title: "Thema wählen", text: "<p>Brüche & Größen, Erweitern, Kürzen und die vier Rechenarten. Wische, um alle Themen zu sehen.</p>" },
   { sel: "#modeTabs", title: "Drei Bereiche", text: "<p><b>Beispiele</b> zum Verstehen, <b>Üben</b> mit Aufgaben und Bild-Hilfe, <b>Eigene Brüche</b> zum Ausprobieren.</p>" },
+  { sel: "#viewSeg", title: "Rechteck oder Kreis", text: "<p>Wähle, ob die Brüche als <b>Rechteck</b>, als <b>Kreis</b> oder <b>beides</b> gezeichnet werden. Gilt für Beispiele, Bild-Hilfe und eigene Brüche.</p>" },
   { sel: ".stage", title: "Das Bild", text: "<p>Hier wird der Bruch gezeichnet – Streifen, Kreise, Münzen oder Flächen.</p>" },
   { sel: ".sym", title: "Die Rechnung", text: "<p>Parallel dazu entsteht die Rechnung Zeile für Zeile.</p>" },
   { sel: ".ctrl .next", title: "Schritt für Schritt", text: "<p>Mit <b>Weiter</b> geht es zum nächsten Schritt. Bei den Rechenarten kannst du oben zwischen <b>gleichnamig</b> und <b>ungleichnamig</b> wechseln.</p>" }
