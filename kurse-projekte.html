@@ -271,32 +271,19 @@
   .qr-modal.presenting .qr-big-code{font-size:3rem;}
   .modal-close-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
 
-  /* ---------- Druck: QR-Karten (feste A4-Seiten, nie zerschnitten) ---------- */
-  #printArea{display:none;}
-  @media print{
-    @page{size:A4 portrait;margin:10mm;}
-    html,body{background:#fff !important;}
-    body.printing > *:not(#printArea){display:none !important;}
-    body.printing #printArea{display:block !important;}
-    .pp{width:190mm;height:270mm;overflow:hidden;page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:column;font-family:Inter,-apple-system,Helvetica,Arial,sans-serif;color:#1b2433;}
-    .pp:last-child{page-break-after:auto;break-after:auto;}
-    .pp-head{height:12mm;display:flex;justify-content:space-between;align-items:flex-start;font-size:9pt;color:#555;border-bottom:0.3mm solid #ccc;margin-bottom:4mm;}
-    .pp-head b{font-size:11pt;color:#1b2433;}
-    .pp-grid{display:grid;grid-template-columns:repeat(3,60mm);grid-template-rows:repeat(3,82mm);column-gap:5mm;row-gap:4mm;}
-    .pc{border:0.35mm dashed #9aa3b2;border-radius:3mm;padding:3.5mm 3mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;overflow:hidden;page-break-inside:avoid;break-inside:avoid;}
-    .pc-name{font-weight:800;font-size:10.5pt;line-height:1.15;max-height:9mm;overflow:hidden;}
-    .pc svg{width:40mm;height:40mm;display:block;}
-    .pc-code{font-family:Menlo,Consolas,monospace;font-weight:800;font-size:15pt;letter-spacing:1.6mm;}
-    .pc-hint{font-size:6.5pt;color:#666;line-height:1.25;word-break:break-all;}
-    .pc-line{width:100%;text-align:left;font-size:8pt;border-top:0.3mm dashed #bbb;padding-top:2.5mm;display:flex;align-items:flex-end;gap:1.5mm;}
-    .pc-line span{flex:1;border-bottom:0.3mm solid #1b2433;height:4mm;}
-  }
+  /* ---------- PDF-Dialog (Drucken auf allen Geräten) ---------- */
+  .pdf-box{text-align:center;}
+  .pdf-ico{font-size:2.4rem;line-height:1;margin:4px 0 6px;}
+  .pdf-actions{display:grid;gap:8px;margin-top:14px;}
+  .pdf-actions .btn{min-height:48px;font-size:.95rem;}
+  .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--primary-soft);border-top-color:var(--primary);animation:spin .8s linear infinite;margin:10px auto;}
+  @keyframes spin{to{transform:rotate(360deg);}}
 </style>
 <script>window.TOUR = { steps: [
   { title: "Kurse & Projekte", text: "<p>Dein digitaler Klassenraum: Klassen anlegen, Lernende mit Pseudonym und Zugangscode verwalten, Projekte mit Aufgaben veröffentlichen und Fortschritt sowie Abgaben verfolgen. Es werden keine Klarnamen gespeichert.</p>" },
   { sel: "#sidebar", title: "Deine Klassen", text: "<p>Links stehen alle Klassen und Kurse. Ein Tipp öffnet den Klassenraum mit Übersicht, Lernenden, Projekten und Fortschritt.</p>" },
   { sel: "#newClassBox", title: "Neue Klasse", text: "<p>Hier legst du eine neue Klasse oder einen Kurs an.</p>" },
-  { sel: "#mainArea", title: "Klassenraum", text: "<p>Unter <b>Lernende</b> erzeugst du Zugangscodes, zeigst QR-Codes direkt an (auch einzeln für eine Person, z. B. am Beamer) und druckst sie seitenweise sauber aus.</p>" },
+  { sel: "#mainArea", title: "Klassenraum", text: "<p>Unter <b>Lernende</b> erzeugst du Zugangscodes, zeigst QR-Codes direkt an (auch einzeln für eine Person, z. B. am Beamer) und druckst sie als PDF – zusammen mit einer Namensliste, in die du die echten Namen von Hand einträgst. Drucken klappt auch am iPhone/iPad.</p>" },
   { sel: "#mainArea", title: "Projekte & Fortschritt", text: "<p>Unter <b>Projekte</b> stellst du Aufgaben mit Beschreibung und Links zusammen und veröffentlichst sie – auf Wunsch zeitlich begrenzt. Unter <b>Fortschritt</b> siehst du, wer was erledigt und abgegeben hat.</p>" }
 ]};</script>
 <script defer src="tour.js"></script>
@@ -349,8 +336,10 @@
   <div class="modal-box" id="qrModalBox"></div>
 </div>
 
-<!-- Wird nur beim Drucken der QR-Karten sichtbar -->
-<div id="printArea"></div>
+<!-- PDF fertig: öffnen, teilen (iPhone/iPad: Drucken im Teilen-Menü), speichern -->
+<div id="pdfModal" class="modal-overlay hidden" onclick="if(event.target===this) closePdf()">
+  <div class="modal-box pdf-box" id="pdfModalBox" style="max-width:420px"></div>
+</div>
 
 <script>
 /* =========================================================================
@@ -706,7 +695,8 @@ function viewOverview(cls) {
       <div class="quick">
         <button class="btn btn-ghost" onclick="setSub('students')"><span class="q-ico">🎲</span>Lernende anlegen<small>Pseudonyme &amp; Zugangscodes</small></button>
         <button class="btn btn-ghost" onclick="openQr(0)" ${st.length ? "" : "disabled"}><span class="q-ico">▦</span>QR-Codes zeigen<small>einzeln durchblättern, Beamer</small></button>
-        <button class="btn btn-ghost" onclick="printCards()" ${st.length ? "" : "disabled"}><span class="q-ico">🖨️</span>QR-Karten drucken<small>9 pro A4-Seite</small></button>
+        <button class="btn btn-ghost" onclick="printCards()" ${st.length ? "" : "disabled"}><span class="q-ico">🖨️</span>QR-Karten drucken<small>9 pro Seite + Namensliste</small></button>
+        <button class="btn btn-ghost" onclick="printNameList()" ${st.length ? "" : "disabled"}><span class="q-ico">📋</span>Namensliste drucken<small>echte Namen von Hand eintragen</small></button>
         <button class="btn btn-ghost" onclick="setSub('projects');setTimeout(()=>{const i=document.getElementById('newProjectTitle');if(i)i.focus();},50)"><span class="q-ico">＋</span>Neues Projekt<small>Aufgaben zusammenstellen</small></button>
       </div>
     </div>
@@ -811,7 +801,7 @@ function viewStudents(cls) {
         <summary>🎲 Mehrere Lernende mit zufälligen Pseudonymen anlegen</summary>
         <div class="row" style="margin-top:10px">
           <div style="width:110px"><label for="randomStudentCount" style="margin-top:0">Anzahl</label><input type="number" id="randomStudentCount" min="1" max="60" value="25"></div>
-          <label style="display:flex;align-items:center;gap:6px;margin:0 0 10px;font-weight:600;color:var(--ink)"><input type="checkbox" id="randomPrint" checked style="width:18px;height:18px"> danach QR-Karten drucken</label>
+          <label style="display:flex;align-items:center;gap:6px;margin:0 0 10px;font-weight:600;color:var(--ink)"><input type="checkbox" id="randomPrint" checked style="width:18px;height:18px"> danach QR-Karten + Namensliste drucken</label>
           <button class="btn btn-accent" id="generateRandomBtn" onclick="generateRandomStudents()">Erzeugen</button>
         </div>
         <div id="randomGenMsg"></div>
@@ -829,7 +819,8 @@ function viewStudents(cls) {
         </div>
         <div class="btn-row">
           <button class="btn btn-sm" onclick="openQr(0)" ${students.length ? "" : "disabled"}>⛶ Einzeln zeigen</button>
-          <button class="btn btn-sm btn-primary" onclick="printCards()" ${students.length ? "" : "disabled"}>🖨️ Alle QR-Karten drucken</button>
+          <button class="btn btn-sm" onclick="printNameList()" ${students.length ? "" : "disabled"}>📋 Namensliste</button>
+          <button class="btn btn-sm btn-primary" onclick="printCards()" ${students.length ? "" : "disabled"}>🖨️ QR-Karten + Liste</button>
         </div>
       </div>
       ${students.length
@@ -982,43 +973,182 @@ document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && modal.classList.contains("presenting")) { modal.classList.remove("presenting"); if (!modal.classList.contains("hidden")) renderQrModal(); }
 });
 
-/* ---------- QR-Karten drucken ----------
-   Feste A4-Seiten mit je 3 × 3 Karten in Millimeter-Maßen. Jede Seite ist
-   ein eigener Block mit Seitenumbruch danach -- dadurch kann keine Karte
-   mehr über den Seitenrand laufen und "zerschnitten" werden. Gedruckt
-   wird direkt aus dieser Seite (kein Pop-up, funktioniert auch auf dem
-   iPad); alles außer #printArea wird beim Druck ausgeblendet. */
-const CARDS_PER_PAGE = 9;
-function printCards(codes) {
+/* ---------- Drucken: alles als PDF ----------
+   window.print() funktioniert am Handy nicht zuverlässig (iPhone/iPad als
+   Home-Bildschirm-App gar nicht, Android je nach Browser). Deshalb erzeugt
+   jeder Druck-Knopf ein echtes A4-PDF (jsPDF, Maße in mm -- nichts wird
+   zerschnitten) und bietet es zum Öffnen/Drucken, Teilen (iOS: Teilen ›
+   Drucken, AirDrop) oder Speichern an. */
+const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+let jspdfPromise = null;
+function loadJsPdf() {
+  if (window.jspdf) return Promise.resolve();
+  if (!jspdfPromise) jspdfPromise = new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = JSPDF_URL;
+    sc.onload = res;
+    sc.onerror = () => { jspdfPromise = null; rej(new Error("PDF-Bibliothek konnte nicht geladen werden (Internet?)")); };
+    document.head.appendChild(sc);
+  });
+  return jspdfPromise;
+}
+function pdfText(t) { return String(t == null ? "" : t).replace(/[^ -ÿ–—‘-„•€]/g, ""); }
+function todayDe() { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`; }
+function drawQr(doc, text, x, y, size) {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount(), quiet = 1, cell = size / (n + 2 * quiet);
+  doc.setFillColor(0, 0, 0);
+  for (let r = 0; r < n; r++) {
+    let c = 0;
+    while (c < n) {
+      if (!qr.isDark(r, c)) { c++; continue; }
+      let e = c;
+      while (e + 1 < n && qr.isDark(r, e + 1)) e++;
+      doc.rect(x + (c + quiet) * cell, y + (r + quiet) * cell, (e - c + 1) * cell + 0.02, cell + 0.02, "F");
+      c = e + 1;
+    }
+  }
+}
+function pdfHeader(doc, title, sub, pageLabel) {
+  doc.setTextColor(27, 36, 51);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+  doc.text(pdfText(title), 10, 14);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(100, 110, 125);
+  doc.text(pdfText(sub), 10, 19);
+  doc.text(pageLabel, 200, 14, { align: "right" });
+  doc.setDrawColor(200, 205, 212); doc.setLineWidth(0.3); doc.setLineDashPattern([], 0);
+  doc.line(10, 21.5, 200, 21.5);
+}
+/* QR-Karten: 3 × 3 pro A4-Seite (60 × 82 mm) */
+function addCardPages(doc, cls, students) {
+  const host = lernbereichBase().replace(/^https?:\/\//, "");
+  const per = 9, pages = Math.ceil(students.length / per);
+  for (let pi = 0; pi < pages; pi++) {
+    if (doc.__used) doc.addPage(); doc.__used = true;
+    pdfHeader(doc, `${cls.name} – Zugangscodes`, "Entlang der gestrichelten Linien ausschneiden und austeilen. Echten Namen nur von Hand eintragen.", `Seite ${pi + 1} / ${pages}`);
+    students.slice(pi * per, pi * per + per).forEach((s, i) => {
+      const x = 10 + (i % 3) * 65, y = 25 + Math.floor(i / 3) * 86, w = 60, h = 82, cx = x + w / 2;
+      doc.setDrawColor(150, 160, 175); doc.setLineWidth(0.3); doc.setLineDashPattern([1.6, 1.2], 0);
+      doc.roundedRect(x, y, w, h, 3, 3, "S");
+      doc.setTextColor(27, 36, 51); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+      const nameLines = doc.splitTextToSize(pdfText(s.pseudonym), w - 6).slice(0, 2);
+      doc.text(nameLines, cx, y + 7, { align: "center" });
+      drawQr(doc, studentUrl(s.code), x + 10, y + 12, 40);
+      doc.setFont("courier", "bold"); doc.setFontSize(16);
+      doc.text(s.code.split("").join(" "), cx, y + 59, { align: "center" });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(100, 110, 125);
+      doc.text("QR scannen oder Code eingeben auf", cx, y + 64, { align: "center" });
+      doc.text(doc.splitTextToSize(host, w - 6).slice(0, 2), cx, y + 67, { align: "center" });
+      doc.setDrawColor(190, 195, 205); doc.line(x + 3, y + 71.5, x + w - 3, y + 71.5);
+      doc.setLineDashPattern([], 0); doc.setDrawColor(27, 36, 51);
+      doc.setFontSize(8); doc.setTextColor(27, 36, 51);
+      doc.text("Name:", x + 4, y + 78);
+      doc.line(x + 14, y + 78.5, x + w - 4, y + 78.5);
+    });
+  }
+}
+/* Namensliste: Pseudonym + Code mit leerer Spalte für den echten Namen
+   (bleibt nur auf Papier, wird nie digital gespeichert). */
+function addNameListPages(doc, cls, students) {
+  const per = 25, pages = Math.ceil(students.length / per);
+  const cols = [{ t: "Nr.", w: 11 }, { t: "Pseudonym", w: 58 }, { t: "Zugangscode", w: 31 }, { t: "Name (von Hand eintragen)", w: 90 }];
+  for (let pi = 0; pi < pages; pi++) {
+    if (doc.__used) doc.addPage(); doc.__used = true;
+    pdfHeader(doc, `${cls.name} – Namensliste`, `Zuordnung Pseudonym – echter Name. Nur auf Papier führen, nicht digital speichern. Stand: ${todayDe()}`, `Seite ${pi + 1} / ${pages}`);
+    let y = 27;
+    doc.setFillColor(230, 238, 248); doc.rect(10, y, 190, 8, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(30, 68, 114);
+    let x = 10;
+    cols.forEach(c => { doc.text(pdfText(c.t), x + 2, y + 5.4); x += c.w; });
+    y += 8;
+    doc.setLineDashPattern([], 0); doc.setLineWidth(0.25);
+    students.slice(pi * per, pi * per + per).forEach((s, i) => {
+      const n = pi * per + i + 1, rh = 9.6;
+      if (n % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(10, y, 190, rh, "F"); }
+      doc.setTextColor(100, 110, 125); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+      doc.text(String(n), 13, y + 6.2);
+      doc.setTextColor(27, 36, 51); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      doc.text(doc.splitTextToSize(pdfText(s.pseudonym), 54)[0], 23, y + 6.2);
+      doc.setFont("courier", "bold"); doc.setFontSize(11);
+      doc.text(s.code, 81, y + 6.3);
+      doc.setDrawColor(150, 160, 175); doc.line(114, y + 7.4, 197, y + 7.4);
+      doc.setDrawColor(215, 220, 228); doc.line(10, y + rh, 200, y + rh);
+      y += rh;
+    });
+    doc.setDrawColor(200, 205, 212); doc.rect(10, 27, 190, y - 27, "S");
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(120, 128, 140);
+    doc.text("Vertraulich – sicher aufbewahren. Lernende melden sich auf " + pdfText(lernbereichBase().replace(/^https?:\/\//, "")) + " mit ihrem Code an.", 10, 290);
+  }
+}
+let pdfFile = null, pdfUrl = null;
+async function makePdf(kind, codes) {
   const cls = currentClass();
   let students = studentsOf(ui.classId);
   if (codes) students = students.filter(s => codes.includes(s.code));
-  if (!students.length) { alert("Diese Klasse hat noch keine Lernenden."); return; }
-  if (!window.qrcode) { alert("Die QR-Code-Bibliothek lädt noch. Bitte kurz warten und erneut versuchen."); return; }
-  const host = lernbereichBase().replace(/^https?:\/\//, "");
-  const pages = [];
-  for (let i = 0; i < students.length; i += CARDS_PER_PAGE) pages.push(students.slice(i, i + CARDS_PER_PAGE));
-  document.getElementById("printArea").innerHTML = pages.map((chunk, pi) => `
-    <section class="pp">
-      <div class="pp-head">
-        <div><b>${esc(cls ? cls.name : "")} – Zugangscodes</b><br>Ausschneiden und austeilen. Echten Namen nur von Hand eintragen.</div>
-        <div>Seite ${pi + 1} / ${pages.length}</div>
-      </div>
-      <div class="pp-grid">
-        ${chunk.map(s => `
-          <div class="pc">
-            <div class="pc-name">${esc(s.pseudonym)}</div>
-            ${qrSvg(studentUrl(s.code), 4)}
-            <div class="pc-code">${s.code}</div>
-            <div class="pc-hint">QR scannen oder Code eingeben auf<br>${esc(host)}</div>
-            <div class="pc-line">Name:<span></span></div>
-          </div>`).join("")}
-      </div>
-    </section>`).join("");
-  document.body.classList.add("printing");
-  window.print();
+  if (!cls || !students.length) { alert("Diese Klasse hat noch keine Lernenden."); return; }
+  showPdfDialog(null);
+  try {
+    if (!window.qrcode) throw new Error("Die QR-Code-Bibliothek lädt noch. Bitte kurz warten und erneut versuchen.");
+    await loadJsPdf();
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    let name;
+    if (kind === "list") { addNameListPages(doc, cls, students); name = `Namensliste ${cls.name}`; }
+    else if (kind === "all") { addCardPages(doc, cls, students); addNameListPages(doc, cls, students); name = `Zugangscodes ${cls.name}`; }
+    else { addCardPages(doc, cls, students); name = students.length === 1 ? `Zugangscode ${students[0].pseudonym}` : `Zugangscodes ${cls.name}`; }
+    name = name.replace(/[\\/:*?"<>|]/g, "-") + ".pdf";
+    const blob = doc.output("blob");
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfUrl = URL.createObjectURL(blob);
+    pdfFile = new File([blob], name, { type: "application/pdf" });
+    showPdfDialog({ name, pages: doc.getNumberOfPages(), kind });
+  } catch (err) {
+    document.getElementById("pdfModalBox").innerHTML = `<div class="msg msg-error">${esc(err.message)}</div><div class="pdf-actions"><button class="btn btn-ghost" onclick="closePdf()">Schließen</button></div>`;
+  }
 }
-window.addEventListener("afterprint", () => document.body.classList.remove("printing"));
+/* Alte Aufrufe: printCards() = alle Karten + Namensliste, printCards([code]) = einzelne Karte */
+function printCards(codes) { return makePdf(codes ? "cards" : "all", codes); }
+function printNameList() { return makePdf("list"); }
+function canSharePdf() {
+  try { return !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] })); } catch (e) { return false; }
+}
+const isTouchDevice = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function showPdfDialog(info) {
+  const box = document.getElementById("pdfModalBox");
+  document.getElementById("pdfModal").classList.remove("hidden");
+  if (!info) { box.innerHTML = '<div class="spinner"></div><p class="muted">PDF wird erstellt …</p>'; return; }
+  const share = canSharePdf(), touch = isTouchDevice();
+  const note = info.kind === "all" ? "QR-Karten + Namensliste zum Eintragen" : info.kind === "list" ? "Namensliste zum Eintragen" : "QR-Karte(n)";
+  const btnShare = share ? `<button class="btn ${touch ? "btn-primary" : "btn-ghost"}" onclick="sharePdf()">📤 Teilen / Drucken${touch ? "" : " / AirDrop"}</button>` : "";
+  const btnOpen = `<button class="btn ${touch && share ? "btn-ghost" : "btn-primary"}" onclick="openPdf()">🖨️ Öffnen &amp; drucken</button>`;
+  box.innerHTML = `
+    <div class="pdf-ico">📄</div>
+    <h3 style="margin:0">PDF ist fertig</h3>
+    <p class="small muted" style="margin:4px 0 0">${esc(info.name)}<br>${info.pages} Seite${info.pages === 1 ? "" : "n"} A4 · ${note}</p>
+    <div class="pdf-actions">
+      ${touch ? btnShare + btnOpen : btnOpen + btnShare}
+      <button class="btn btn-ghost" onclick="savePdf()">⬇ Speichern</button>
+      <button class="btn btn-ghost" onclick="closePdf()">Schließen</button>
+    </div>
+    <p class="small muted" style="margin:12px 0 0">${touch ? (share ? "iPhone/iPad: „Teilen / Drucken“ und dann „Drucken“ wählen – oder in „Dateien“ sichern." : "Im geöffneten PDF über „Teilen“ › „Drucken“ drucken.") : "Im PDF-Fenster über das Drucker-Symbol oder Strg/⌘ + P drucken. Beim Druck „Tatsächliche Größe / 100 %“ wählen."}</p>`;
+}
+function sharePdf() {
+  if (!canSharePdf()) { openPdf(); return; }
+  navigator.share({ files: [pdfFile], title: pdfFile.name }).catch(err => { if (err && err.name !== "AbortError") openPdf(); });
+}
+function openPdf() {
+  if (!pdfUrl) return;
+  const w = window.open(pdfUrl, "_blank");
+  if (!w) location.href = pdfUrl; // Pop-up blockiert (z. B. Home-Bildschirm-App): im selben Fenster öffnen
+}
+function savePdf() {
+  if (!pdfUrl) return;
+  const a = document.createElement("a");
+  a.href = pdfUrl; a.download = pdfFile.name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function closePdf() { document.getElementById("pdfModal").classList.add("hidden"); }
 
 /* ---------- Projekte ---------- */
 function viewProjects(cls) {
