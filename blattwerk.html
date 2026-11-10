@@ -422,6 +422,38 @@ main#canvas{grid-area:main;overflow:auto;position:relative;min-width:0;backgroun
 /* buildspace: Platz für den Zurück-Link oben links */
 body:has(#protect-back-link) #top{padding-left:148px}
 @media (max-width:480px){body:has(#protect-back-link) #top{padding-left:66px}}
+
+/* Checkliste */
+.cl{display:flex;flex-direction:column;gap:.45em}
+.cl-title{font:600 1.15em/1.2 var(--ws-fhead),sans-serif;color:var(--ws-head)}
+.cl-gr{font:600 1em/1.25 var(--ws-fhead),sans-serif;color:var(--ws-accent);margin-top:.35em;padding-bottom:.15em;border-bottom:1.5px solid color-mix(in srgb,var(--ws-accent) 35%,#fff)}
+.cl-gr:first-child,.cl-title+.cl-gr{margin-top:0}
+.cl-list{display:grid;column-gap:1.4em}
+.cl-i{display:flex;align-items:flex-start;gap:.6em;min-width:0}
+.cl-i.sub{padding-left:1.75em;font-size:.94em}
+.cl-i.right{align-items:flex-end}
+.cl-t{flex:none;max-width:calc(100% - 2.4em);overflow-wrap:break-word}
+.cl-i:not(.right) .cl-t{flex:1}
+.cl-lead{flex:1;border-bottom:1.6px dotted #9aa6b3;margin-bottom:.32em;min-width:1em}
+.cl-n{font-weight:800;color:var(--ws-accent);margin-right:.35em}
+.cl-note{display:block;border-bottom:1.2px solid #b7c1cc;height:1.5em;margin:-.1em 0 .1em 1.85em}
+.cl-m{flex:none;position:relative;display:inline-grid;place-items:center;width:1.15em;height:1.15em;border:1.6px solid var(--ws-dark);border-radius:3px;margin-top:.15em;background:var(--ws-paper)}
+.cl-m.circle{border-radius:50%}
+.cl-m.star{border:0;background:none}
+.cl-m .cl-star{position:absolute;inset:-.12em;width:calc(100% + .24em);height:calc(100% + .24em);fill:none;stroke:var(--ws-dark);stroke-width:1.7;stroke-linejoin:round}
+.cl-m>svg:not(.cl-star){position:absolute;width:150%;height:150%;left:-8%;top:-38%;fill:none;stroke:var(--ws-accent);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.cl-tab{width:100%;border-collapse:collapse;table-layout:fixed}
+.cl-tab th,.cl-tab td{border:1.2px solid var(--ws-line);padding:var(--sp,.4em) .55em;vertical-align:middle;overflow-wrap:break-word}
+.cl-tab th{background:var(--ws-surface);font:600 1em/1.2 var(--ws-fhead),sans-serif;color:var(--ws-head);text-align:left;padding:.45em .55em}
+.cl-tab th.c{text-align:center;font-size:.9em}
+.cl-tab td.c{text-align:center}
+.cl-tab td.c .cl-m{margin-top:0}
+.cl-tab tr.cl-gr td{background:color-mix(in srgb,var(--ws-surface) 55%,#fff);font:600 .95em/1.2 var(--ws-fhead),sans-serif;color:var(--ws-accent);padding:.35em .55em}
+.cl-tab.zebra tr:not(.cl-gr):nth-child(even) td{background:#f4f6f9}
+.cl-tab td.cl-sub{padding-left:1.6em;font-size:.94em}
+.cl-dash{color:#8592a3;margin-right:.4em}
+.cl-w{display:block;border-bottom:1.2px solid #8592a3;height:1.1em;margin:0 .1em}
+.cl-title+.cl-tab{margin-top:.45em}
 </style>
 </head>
 <body>
@@ -692,6 +724,7 @@ const UI = {
   mc: '<rect x="3.5" y="4" width="5" height="5" rx="1"/><path d="M4.8 6.6l1.2 1.2 2-2.2"/><rect x="3.5" y="14.5" width="5" height="5" rx="1"/><path d="M12 6.5h8.5M12 17h8.5"/>',
   match: '<circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6.5l10 11M7 17.5l10-11"/>',
   wordsearch: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10" stroke-width="3.2" opacity=".35"/><path d="M7 12.5h.01M12 12.5h.01M17 12.5h.01M7 17h.01M12 17h.01M17 17h.01"/>',
+  checklist: '<rect x="3.5" y="4" width="5" height="5" rx="1"/><path d="M4.7 6.6l1.2 1.2 2-2.2"/><rect x="3.5" y="14.5" width="5" height="5" rx="1"/><path d="M11.5 6.5h9M11.5 9h5M11.5 17h9"/>',
   selfcheck: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14c1 1.3 2.1 2 3.5 2s2.5-.7 3.5-2M9 9.5h.01M15 9.5h.01"/>',
   arith: '<path d="M6 4v6M3 7h6M15 7h6M4 16l4 4M8 16l-4 4M15 16.5h6M15 19.5h6"/>',
   numberline: '<path d="M2 14h20M19 11l3 3-3 3M5 11.5v5M9.5 11.5v5M14 11.5v5"/>',
@@ -1056,6 +1089,52 @@ const TYPES = {
     props: () => [F.text('p.head', 'Überschrift der ersten Spalte'), F.area('p.items', 'Aussagen (eine pro Zeile)'), F.seg('p.scale', 'Skala', [['smiley3', '3 Gesichter'], ['smiley4', '4 Gesichter'], ['words', 'Wörter']], { re: 1 }), F.text('p.words', 'Wörter (mit | getrennt)', { if: e => e.p.scale === 'words' })],
   },
 
+  checklist: {
+    name: 'Checkliste', cat: 'Übungen',
+    def: () => ({ w: 680, h: 160, autoH: true, p: { title: '', items: '# Vorbereitung\nMaterial bereitgelegt\nArbeitsauftrag gelesen\n# Durchführung\nSkizze angefertigt\n- Maße eingetragen\n- Material notiert\nWerkstück gebaut', mode: 'list', head: 'Das habe ich erledigt', cols: 'Ich | Partner | Lehrkraft', marker: 'box', ncol: 1, num: false, note: false, side: 'left', sp: 0.45, zebra: false }, s: {} }),
+    render: (e, c) => {
+      const p = e.p; const items = parseChecklist(p.items);
+      const check = '<svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 6.5"/></svg>';
+      const mk = done => `<span class="cl-m ${p.marker}">${p.marker === 'star' ? '<svg class="cl-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.8L12 16.8l-5.3 2.8 1.1-5.8L3.5 9.7l5.9-.8z"/></svg>' : ''}${done ? check : ''}</span>`;
+      let n = 0;
+      const title = p.title ? `<div class="cl-title">${esc(p.title)}</div>` : '';
+      if (p.mode === 'table') {
+        const cols = String(p.cols).split('|').map(x => x.trim()).filter(Boolean).map(x => ({ write: /_$/.test(x), l: x.replace(/_$/, '').trim() }));
+        let h = `<table class="cl-tab${p.zebra ? ' zebra' : ''}"><colgroup><col>${cols.map(k => `<col style="width:${k.write ? 7.5 : 5.2}em">`).join('')}</colgroup><tr><th>${esc(p.head)}</th>${cols.map(k => `<th class="c">${esc(k.l)}</th>`).join('')}</tr>`;
+        for (const it of items) {
+          if (it.group) { h += `<tr class="cl-gr"><td colspan="${cols.length + 1}">${esc(it.t)}</td></tr>`; continue; }
+          const no = p.num && !it.sub ? `<span class="cl-n">${++n}.</span>` : '';
+          h += `<tr style="--sp:${p.sp}em"><td class="${it.sub ? 'cl-sub' : ''}">${no}${it.sub ? '<span class="cl-dash">–</span>' : ''}${esc(it.t)}</td>${cols.map((k, i) => `<td class="c">${k.write ? '<i class="cl-w"></i>' : mk(it.done && i === 0)}</td>`).join('')}</tr>`;
+        }
+        return title + h + '</table>';
+      }
+      let body = '', grid = [];
+      const flush = () => { if (grid.length) { body += `<div class="cl-list" style="grid-template-columns:repeat(${clamp(p.ncol | 0, 1, 3)},minmax(0,1fr));row-gap:${p.sp}em">${grid.join('')}</div>`; grid = []; } };
+      for (const it of items) {
+        if (it.group) { flush(); body += `<div class="cl-gr">${esc(it.t)}</div>`; continue; }
+        const no = p.num && !it.sub ? `<span class="cl-n">${++n}.</span>` : '';
+        const txt = `<span class="cl-t">${no}${esc(it.t)}</span>`;
+        const row = p.side === 'right' ? `${txt}<span class="cl-lead"></span>${mk(it.done)}` : `${mk(it.done)}${txt}`;
+        grid.push(`<div class="cl-i${it.sub ? ' sub' : ''}${p.side === 'right' ? ' right' : ''}">${row}</div>${p.note ? '<i class="cl-note"></i>' : ''}`);
+      }
+      flush();
+      return `<div class="cl">${title}${body}</div>`;
+    },
+    props: () => [
+      F.text('p.title', 'Überschrift (optional)'),
+      F.area('p.items', 'Punkte (einer pro Zeile)', { rows: 9, sub: '<code># Abschnitt</code> = Zwischenüberschrift · <code>- Text</code> = Unterpunkt · <code>* Text</code> = schon abgehakt (z. B. als Beispiel)' }),
+      F.seg('p.mode', 'Darstellung', [['list', 'Liste'], ['table', 'Tabelle mit Spalten']], { re: 1 }),
+      F.text('p.head', 'Kopf der ersten Spalte', { if: e => e.p.mode === 'table' }),
+      F.text('p.cols', 'Spalten zum Abhaken', { if: e => e.p.mode === 'table', sub: 'mit <code>|</code> trennen. Endet ein Name mit <code>_</code>, wird die Spalte ein Schreibfeld, z. B. <code>Datum_</code>' }),
+      F.seg('p.marker', 'Kästchen', [['box', 'Quadrat'], ['circle', 'Kreis'], ['star', 'Stern']]),
+      F.seg('p.side', 'Kästchen steht', [['left', 'vorne'], ['right', 'hinten mit Punktlinie']], { if: e => e.p.mode === 'list' }),
+      F.range('p.ncol', 'Spalten', 1, 3, 1, { if: e => e.p.mode === 'list' }),
+      F.range('p.sp', 'Abstand zwischen Punkten', 0.1, 1.6, 0.05, { unit: ' em' }),
+      F.row(F.chk('p.num', 'Nummerieren'), F.chk('p.note', 'Notizzeile', { if: e => e.p.mode === 'list' })),
+      F.chk('p.zebra', 'Zeilen abwechselnd tönen', { if: e => e.p.mode === 'table' }),
+    ],
+  },
+
   /* ---------------- MATHE ---------------- */
   arith: {
     name: 'Rechenpäckchen', cat: 'Mathe',
@@ -1385,7 +1464,7 @@ const TYPES = {
     props: () => [F.seg('p.style', 'Stil', [['line', 'Linie'], ['dashed', 'gestrichelt'], ['dotted', 'gepunktet'], ['double', 'doppelt'], ['scissors', 'Schnittlinie']]), F.col('p.color', 'Farbe', { auto: 1 }), F.range('p.sw', 'Stärke', .5, 5, .1)],
   },
 };
-const TYPE_ICON = { text: 'text', heading: 'heading', header: 'header', task: 'task', infobox: 'infobox', lines: 'lines', table: 'table', gap: 'gap', mc: 'mc', match: 'match', wordsearch: 'wordsearch', selfcheck: 'selfcheck', arith: 'arith', numberline: 'numberline', coord: 'coord', fraction: 'fraction', clock: 'clock', shape: 'shape', icon: 'icon', image: 'image', qr: 'qr', divider: 'divider', exam: 'exam', sticker: 'sticker' };
+const TYPE_ICON = { text: 'text', heading: 'heading', header: 'header', task: 'task', infobox: 'infobox', lines: 'lines', table: 'table', gap: 'gap', mc: 'mc', match: 'match', wordsearch: 'wordsearch', selfcheck: 'selfcheck', checklist: 'checklist', arith: 'arith', numberline: 'numberline', coord: 'coord', fraction: 'fraction', clock: 'clock', shape: 'shape', icon: 'icon', image: 'image', qr: 'qr', divider: 'divider', exam: 'exam', sticker: 'sticker' };
 const CATS = ['Text', 'Übungen', 'Mathe', 'Klassenarbeit', 'Gestaltung'];
 const STICKER_PRESETS = [
   { l: 'Viel Erfolg!', p: { text: 'Viel Erfolg!', sub: 'Du schaffst das!', shape: 'burst', icon: 'kleeblatt', fill: '#FFD34D', ink: '#1B2F4A' } },
@@ -1425,6 +1504,16 @@ function computeNumbers(doc, c) {
   Object.defineProperty(num, '_total', { value: Math.round(total * 100) / 100 });
   Object.defineProperty(num, '_bonus', { value: Math.round(bonus * 100) / 100 });
   return num;
+}
+function parseChecklist(src) {
+  return String(src || '').split('\n').map(raw => {
+    if (!raw.trim()) return null;
+    let t = raw.replace(/\s+$/, ''), sub = /^(\s{2,}|\t|\s*-\s)/.test(t); t = t.trim();
+    if (t.startsWith('#')) return { group: true, t: t.replace(/^#+\s*/, '') };
+    if (t.startsWith('- ')) t = t.slice(2).trim();
+    let done = false; if (t.startsWith('*')) { done = true; t = t.slice(1).trim(); }
+    return { t, sub, done };
+  }).filter(Boolean);
 }
 function ptHtml(p) {
   const v = String(p.points || '').trim(); if (!v) return '';
@@ -1616,6 +1705,18 @@ const TEMPLATES = [
       E('mc', 7, { q: '', opts: '* Anschreiben\n* Lebenslauf\nUrlaubsfotos\n* aktuelle Zeugnisse\nKontoauszug\n* Praktikumsbescheinigungen', cols: 2 }, { x: 9 }),
       E('task', 8, { html: 'Welcher Beruf interessiert dich am meisten? Begründe in zwei Sätzen.', icons: ['heft'] }),
       E('lines', 9, { count: 2, gap: 9, sol: 'Individuelle Antwort mit Begründung,\nz. B. Interessen, Stärken, Praktikum.' }),
+    ]],
+  },
+  {
+    id: 'checkliste', name: 'Checkliste Werkstück (Arbeitslehre)', desc: 'Projekt-Checkliste zum Abhaken mit Spalten für Ich, Partner und Lehrkraft, Sicherheits-Check vor der Arbeit und eine Liste „Vor der Abgabe“.',
+    doc: { title: 'Checkliste: Mein Werkstück', themeName: 'petrol', theme: { ...THEMES.petrol }, footer: { show: true, left: 'Arbeitslehre · Werkstatt', center: '', right: 'Seite {n} / {N}' } },
+    pages: [[
+      E('header', 0, { subject: 'Arbeitslehre', title: 'Checkliste: Mein Werkstück', no: 'Projekt', fields: 'Name, Klasse, Projektstart' }),
+      E('infobox', 1, { title: 'So geht’s', html: 'Hake jeden Schritt ab, sobald du ihn erledigt hast. Lass dir die Schritte mit <b>L</b> von deiner Lehrkraft abzeichnen, bevor du weiterarbeitest.', variant: 'warm', icon: 'haken' }),
+      E('checklist', 2, { title: 'Sicherheits-Check vor jeder Stunde', items: 'Schutzbrille aufgesetzt\nLange Haare zusammengebunden\nSchmuck und Schal abgelegt\nArbeitsplatz frei und aufgeräumt\nWerkzeug auf Schäden geprüft\nIch weiß, wo der Not-Aus ist', ncol: 2, marker: 'circle', sp: 0.5 }),
+      E('checklist', 3, { mode: 'table', head: 'Arbeitsschritt', cols: 'Ich | Partner | L | Datum_', num: true, sp: 0.42, items: '# Planung\nIdee skizziert\nMaße festgelegt und eingetragen\nMaterialliste geschrieben\n# Bau\nTeile angezeichnet\nTeile gesägt\n- Kanten gefeilt\n- Kanten geschliffen\nTeile verleimt oder verschraubt\n# Abschluss\nOberfläche behandelt\nArbeitsplatz aufgeräumt' }, { gap: 6 }),
+      E('checklist', 4, { title: 'Vor der Abgabe', items: '* Name auf dem Werkstück\nProjektmappe vollständig\nSelbsteinschätzung ausgefüllt\nFoto vom Werkstück hochgeladen', side: 'right', marker: 'box', sp: 0.55 }, { w: 130, gap: 6 }),
+      E('sticker', 4, { text: 'Geschafft!', sub: 'Gut gemacht', shape: 'badge', icon: 'daumen', fill: '#8FD3A8', ink: '#123B23' }, { x: 146, w: 34, h: 34, dy: 2 }),
     ]],
   },
   {
