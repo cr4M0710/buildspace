@@ -62,10 +62,33 @@ header p{margin:2px 0 0;color:var(--soft);font-size:.98rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow)}
 .merke{display:flex;gap:12px;align-items:flex-start;background:var(--accsoft);border:1px solid var(--line);border-radius:18px;padding:12px 16px;margin-bottom:14px}
 .merke b.tag{flex:none;background:var(--acc);color:var(--accink);border-radius:10px;padding:2px 10px;font-size:.85rem;margin-top:3px}
-.merke div{flex:1}
+.merke>div{flex:1;min-width:0}
+.mkintro{margin-bottom:8px}
+.mkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.mk{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:.95rem;line-height:1.35}
+.mk b{display:block;color:var(--acc);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 
 /* Stepper */
-.exrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.exbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+.exrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.exchip{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:4px 16px 4px 6px;border-radius:999px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:.95rem}
+.exchip .exn{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--card2);font-size:.85rem;flex:none}
+.exchip[aria-pressed=true]{border-color:var(--acc);background:var(--accsoft)}
+.exchip[aria-pressed=true] .exn{background:var(--acc);color:var(--accink)}
+.exchip .fr{font-size:.92rem}
+.tabs .tlab{align-self:center;padding:0 4px 0 12px;font-size:.75rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--soft)}
+.viewtabs button{display:inline-flex;align-items:center;gap:7px;padding:0 14px}
+.viewtabs svg{flex:none}
+.tabs button{white-space:nowrap}
+@media (max-width:600px){
+  .bar2>.tabs{width:100%;display:flex}
+  .bar2>.tabs button{flex:1 1 auto;padding:0 8px;font-size:.92rem}
+  .viewtabs .tlab{padding:0 2px 0 8px;font-size:.68rem}
+  .viewtabs button{gap:5px}
+  .merke{flex-direction:column;gap:8px}
+}
+.tabs.small{padding:3px}
+.tabs.small button{min-height:40px;padding:0 16px;font-size:.95rem}
 .split{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
 @media (max-width:780px){.split{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:var(--shadow);min-width:0}
@@ -188,7 +211,7 @@ input.wrong{border-color:var(--bad);background:var(--badbg)}
       <button data-mode="ueben" aria-pressed="false">Üben</button>
       <button data-mode="labor" aria-pressed="false">Eigene Brüche</button>
     </div>
-    <div class="row" style="gap:10px;align-items:center"><div class="seg" id="kindSeg"></div><div class="seg" id="viewSeg" role="group" aria-label="Darstellung"></div></div>
+    <div class="tabs viewtabs" id="viewSeg" role="group" aria-label="Darstellung"></div>
   </div>
 
   <div id="main"></div>
@@ -962,17 +985,26 @@ function renderTopics(){
   $('#topics').innerHTML=TOPICS.map(t=>`<button class="topic" data-t="${t.id}" aria-pressed="${t.id===S.topic}"><span class="ti">${t.ic}</span>${t.name}</button>`).join('');
   $('#topics').querySelectorAll('.topic').forEach(b=>b.onclick=()=>{S.topic=b.dataset.t;S.ex=0;store.set('topic',S.topic);renderAll()});
 }
+function kindsOf(t){return t.kinds||(t.ops?[['gl','gleichnamig'],['ungl','ungleichnamig']]:null)}
 function renderKind(){
-  const seg=$('#kindSeg');
-  const t=topic(),KS=t.kinds||(t.ops?[['gl','gleichnamig'],['ungl','ungleichnamig']]:null);
-  if(!KS||S.mode!=='bsp'){seg.innerHTML='';return}
-  if(!KS.some(k=>k[0]===S.kind))S.kind=KS[0][0];
+  const seg=document.getElementById('kindSeg');if(!seg)return;const KS=kindsOf(topic());if(!KS){seg.remove();return}
   seg.innerHTML=KS.map(([k,l])=>`<button data-k="${k}" aria-pressed="${S.kind===k}">${l}</button>`).join('');
-  seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.kind=b.dataset.k;S.ex=0;renderAll()});
+  seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.kind=b.dataset.k;S.ex=0;renderBsp()});
+}
+// Merke: mehrere „<b>Titel:</b> Text“-Teile als Kärtchen
+function merkeHTML(m){
+  const parts=m.split(/<b>([^<]+?):<\/b>/);
+  if(parts.length<5)return `<div class="merke"><b class="tag">Merke</b><div>${m}</div></div>`;
+  let items='';for(let i=1;i<parts.length;i+=2)items+=`<div class="mk"><b>${parts[i]}</b>${parts[i+1].trim()}</div>`;
+  const intro=parts[0].trim();
+  return `<div class="merke"><b class="tag">Merke</b><div>${intro?`<div class="mkintro">${intro}</div>`:''}<div class="mkgrid">${items}</div></div></div>`;
 }
 function renderView(){
   const v=$('#viewSeg');
-  v.innerHTML='<span class="vlab">Bild:</span>'+[['rect','▭ Rechteck'],['circle','◯ Kreis'],['both','beides']].map(([k,l])=>`<button data-v="${k}" aria-pressed="${VIEW===k}">${l}</button>`).join('');
+  const IC={rect:'<svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><rect x="1" y="1" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+    circle:'<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'};
+  IC.both=IC.rect.replace('width="20"','width="15"')+IC.circle.replace('width="16" height="16"','width="13" height="13"');
+  v.innerHTML='<span class="tlab">Bild</span>'+[['rect','Rechteck'],['circle','Kreis'],['both','beides']].map(([k,l])=>`<button data-v="${k}" aria-pressed="${VIEW===k}">${IC[k]}${l}</button>`).join('');
   v.querySelectorAll('button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;store.set('view',VIEW);renderView();
     if(S.mode==='bsp')renderBsp();else if(S.mode==='labor')runLab();else refreshHelp();});
 }
@@ -992,10 +1024,12 @@ function exampleTitle(t,p){
   return `${F(p.a,p.n)} ${OPSYM[t.id]} ${F(p.b,p.m)}`;
 }
 function renderBsp(){
-  const t=topic();const list=(t.ops||t.kinds)?t.ex[S.kind]:t.ex;
+  const t=topic(),KS=kindsOf(t);if(KS&&!KS.some(k=>k[0]===S.kind)){S.kind=KS[0][0];S.ex=0}
+  const list=KS?t.ex[S.kind]:t.ex;if(S.ex>=list.length)S.ex=0;
   const m=$('#main');
-  m.innerHTML=`<div class="merke"><b class="tag">Merke</b><div>${t.merke}</div></div>
-   <div class="exrow" id="exrow">${list.map((p,k)=>`<button class="btn ${k===S.ex?'':'ghost'} exb" data-i="${k}" style="font-size:1.1rem">Beispiel ${k+1}: ${exampleTitle(t,p)}</button>`).join('')}</div><div id="stp"></div><div id="slide"></div>`;
+  m.innerHTML=`${merkeHTML(t.merke)}
+   <div class="exbar">${KS?'<div class="tabs small" id="kindSeg" role="group" aria-label="Art"></div>':''}<div class="exrow" id="exrow">${list.map((p,k)=>`<button class="exchip exb" data-i="${k}" aria-pressed="${k===S.ex}" aria-label="Beispiel ${k+1}"><span class="exn">${k+1}</span>${exampleTitle(t,p)}</button>`).join('')}</div></div><div id="stp"></div><div id="slide"></div>`;
+  renderKind();
   m.querySelectorAll('.exb').forEach(b=>b.onclick=()=>{S.ex=+b.dataset.i;renderBsp()});
   stepper($('#stp'),buildScenes(t,list[S.ex]));
   if(slideKey(t.id,list[S.ex]))mountSlider($('#slide'),list[S.ex],slideKey(t.id,list[S.ex]));
