@@ -1309,4 +1309,16 @@ const posts = [
     titleEn: "Bordwerk – Car Dashboard",
     excerptEn: "Your own car dashboard for an iPhone in a mount: big GPS speedometer with speed alert, trip counter, app tiles, saved destinations that start navigation, clock, weather, calendar, a driving log and a fuel log with consumption – rearrange the widgets freely, night and day mode."
    },
+   {
+    title: "Kritzelei",
+    excerpt: "Zeichnen und Raten wie bei skribbl.io: Eine Person zeichnet, alle anderen raten. Online mit Raumcode auf mehreren iPads oder an einem Gerät am Beamer, über 1.100 Wörter in 21 Kategorien (u. a. Berufe, Arbeitswelt, Mathe, Schule) plus eigene Wortlisten.",
+    date: "2026-11-11",
+    category: "schule",
+    subcategory: "sonstiges",
+    url: "kritzelei.html",
+    emoji: "✏️",
+    tags: ["spiel", "gruppenarbeit", "mehrgeraete", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Kritzelei – Draw & Guess",
+    excerptEn: "Draw and guess like skribbl.io: one person draws, everyone else guesses. Play online with a room code on several iPads or on one device at the projector, with over 1,100 German words in 21 categories plus your own word lists."
+   },
 ];
