@@ -341,7 +341,7 @@ function wholeLabel(uk,T){
 function convLower(uk,x){
   if(Number.isInteger(Math.round(x*1e9)/1e9))return null;
   const u=UNITS[uk],us=CATS[u.cat].units;
-  for(let i=u.i-1;i>=0;i--){const v=x*u.f/us[i][2];if(Math.abs(v-Math.round(v))<1e-6){const r=Math.round(v);return `${fmt(r)} ${r===1?UNITS[us[i][0]].sing:us[i][1]}`}}
+  for(let i=u.i-1;i>=0;i--){if(['dm','cl','dl','dm2'].includes(us[i][0]))continue;const v=x*u.f/us[i][2];if(Math.abs(v-Math.round(v))<1e-6){const r=Math.round(v);return `${fmt(r)} ${r===1?UNITS[us[i][0]].sing:us[i][1]}`}}
   return null;
 }
 function scGroessen(p){
@@ -734,7 +734,49 @@ function divText(p,op,t,hide){
   return `Es passt <b class="cr">${q}</b>-mal ganz und dann noch ${F(r,B)} → ${res}`;
 }
 
+/* --- Schieberegler: Bruchteil einer Größe (teilen, dann Teile zählen) --- */
+function grPhase(p,t){return {p1:clamp01((t-.05)/.25),u:clamp01((t-.35)/.55)*p.z,p3:clamp01((t-.92)/.08)}}
+function grSVG(p,op,t,shape){
+  const u0=UNITS[p.unit],Tt=p.T,n=p.n,z=p.z,part=Tt/n,wh=Math.max(1,Math.ceil(z/n)),{p1,u,p3}=grPhase(p,t),k=Math.floor(u+1e-9);
+  const wl=wholeLabel(p.unit,Tt),labSize=n>8?12:15;let s='';
+  const counter=()=>(k>=1||p3>0)?(p3>0?T(300,0,`${z} · ${fmt(part)} ${u0.name} ${EQ(z*part)} ${fmt(z*part)} ${u0.name}`,'tx txR',20):T(300,0,`${k} · ${fmt(part)} ${u0.name} ${EQ(k*part)} ${fmt(k*part)} ${u0.name}`,'tx txA',20)):'';
+  if(shape==='circle'){
+    const r0=pies(20,40,W-40,115,{parts:1,sub:1,fills:fillArr(wh,[])}),r=r0.r,cy=r0.cy,clock=p.unit==='min'&&Tt===60;
+    s+=T(300,18,wl+(wh>1?' (je Kreis)':''),'tx',17);
+    r0.cs.forEach((cx,j)=>{
+      s+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="fE"/>`;
+      const fill=Math.min(n,Math.max(0,u-j*n));
+      if(fill>0){const d=sectorPath(cx,cy,r,ang(0,n),ang(fill,n));s+=d?`<path d="${d}" class="fA"/>`:`<circle cx="${cx}" cy="${cy}" r="${r}" class="fA"/>`}
+      if(clock)for(let i=0;i<12;i++){const a=i*Math.PI/6;s+=`<line x1="${cx+(r-8)*Math.cos(a)}" y1="${cy+(r-8)*Math.sin(a)}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="var(--cellline)" stroke-width="2"/>`}
+      if(p1>0&&n>1)for(let c=0;c<n;c++){const a=ang(c,n);s+=`<line x1="${cx}" y1="${cy}" x2="${(cx+r*p1*Math.cos(a)).toFixed(2)}" y2="${(cy+r*p1*Math.sin(a)).toFixed(2)}" class="thick"/>`}
+      if(p1>=1&&n<=12)for(let c=0;c<n;c++){const am=(ang(c,n)+ang(c+1,n))/2;s+=T(cx+r*.62*Math.cos(am),cy+r*.62*Math.sin(am),fmt(part),j*n+c<k?'tx':'txs',r<80?11:labSize)}
+      if(u>0&&u<z&&fill>0&&fill<n){const a=ang(fill,n);s+=`<line x1="${cx}" y1="${cy}" x2="${cx+(r-4)*Math.cos(a)}" y2="${cy+(r-4)*Math.sin(a)}" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="6" fill="var(--ink)"/>`}
+      s+=`<circle cx="${cx}" cy="${cy}" r="${r}" class="thick"/>`;});
+    const H=cy+r+56;return svgWrap(W,H,s+counter().replace('y="0"',`y="${H-22}"`));
+  }
+  const X=40,Wd=520,h=60,gap=26,y0=44,cw=Wd/n;
+  s+=T(300,22,wl+(wh>1?' (je Streifen)':''),'tx',17);
+  for(let j=0;j<wh;j++){const y=y0+j*(h+gap),fill=Math.min(n,Math.max(0,u-j*n));
+    s+=`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" class="fE"/>`;
+    if(fill>0)s+=`<rect x="${X}" y="${y}" width="${fill*cw}" height="${h}" class="fA"/>`;
+    if(p1>0)for(let c=1;c<n;c++)s+=`<line x1="${X+c*cw}" y1="${y}" x2="${X+c*cw}" y2="${(y+h*p1).toFixed(2)}" class="thick"/>`;
+    if(p1>=1&&n<=12)for(let c=0;c<n;c++)s+=T(X+cw*(c+.5),y+h/2,fmt(part),j*n+c<k?'tx':'txs',labSize);
+    s+=`<rect x="${X}" y="${y}" width="${Wd}" height="${h}" rx="3" class="thick"/>`;}
+  if(p1>=1&&wh===1)s+=brace(X,X+cw,y0+h+6,`${fmt(part)} ${u0.name}`,'K',true);
+  const H=y0+wh*(h+gap)+(wh===1?44:14)+20;
+  return svgWrap(W,H,s+counter().replace('y="0"',`y="${H-18}"`));
+}
+function grText(p,op,t,hide){
+  const u0=UNITS[p.unit],Tt=p.T,n=p.n,z=p.z,part=Tt/n,res=part*z,{p1,u,p3}=grPhase(p,t),k=Math.floor(u+1e-9),wl=wholeLabel(p.unit,Tt);
+  if(t<.05)return `Das Ganze: ${wl}. Gesucht sind ${F(z,n,'ca')} davon. Zieh den Regler!`;
+  if(t<.35)return `<b>Durch den Nenner teilen:</b> Das Ganze wird in ${n} gleich große Teile zerlegt – jedes Teil ist ${fmt(Tt)} ${u0.name} : ${n} ${EQ(part)} ${fmt(part)} ${u0.name}.`;
+  if(t<.92)return `<b>Mal den Zähler:</b> Teil für Teil wird gefärbt … ${k} von ${z} Teilen.`;
+  if(hide)return `Wie viel sind ${z} Teile zu je ${fmt(part)} ${u0.name} zusammen?`;
+  const cv=convLower(p.unit,res);
+  return `${F(z,n,'ca')} von ${fmt(Tt)} ${u0.name} ${EQ(res)} <b class="cr">${fmt(res)} ${u0.name}</b>`+(cv?` ${O('=')} <b class="cr">${cv}</b>`:'');
+}
 const SLIDE={
+  'gr':{svg:grSVG,text:grText,title:()=>'teilen und Teile zählen',label:p=>`${F(p.z,p.n,'ca')} von ${fmt(p.T)} ${UNITS[p.unit].name}`},
   '+':{svg:slideSVG,text:slideText,title:()=>'Teile zusammenschieben'},
   '−':{svg:slideSVG,text:slideText,title:()=>'Teile wegnehmen'},
   '·':{svg:mulSVG,text:mulText,title:()=>VIEW==='circle'?'Anteil vom Anteil färben':'Folie darüberschieben'},
@@ -751,7 +793,7 @@ function mountSlider(host,p,op,opts){
   const st=host.querySelector('.slstage'),rg=host.querySelector('.slr'),say=host.querySelector('.slsay'),play=host.querySelector('.slplay');
   const shapes=VIEW==='both'?['rect','circle']:[VIEW];
   st.className='slstage'+(shapes.length>1?' dual':'');
-  const dur=op===':'?4.5:3.2;
+  const dur=op===':'||op==='gr'?4.5:3.2;
   function draw(){const t=rg.value/1000;st.innerHTML=shapes.map(sh=>`<div>${K.svg(p,op,t,sh)}</div>`).join('');say.innerHTML=K.text(p,op,t,opts.hideRes);rg.style.setProperty('--v',(t*100)+'%')}
   let raf=null;
   const stop=()=>{if(raf){cancelAnimationFrame(raf);raf=null}};
@@ -765,7 +807,7 @@ function mountSlider(host,p,op,opts){
   rg.addEventListener('input',()=>{stop();play.textContent=+rg.value>=1000?'↺':'▶';draw()});
   draw();
 }
-const OPCH=tid=>({add:'+',sub:'−',mult:'·',div:':'})[tid]||null;
+const OPCH=tid=>({add:'+',sub:'−',mult:'·',div:':',groessen:'gr'})[tid]||null;
 
 /* ============ Vergleichen & Ordnen ============ */
 const REL={'<':'&lt;','>':'&gt;','=':'='};
