@@ -1321,4 +1321,16 @@ const posts = [
     titleEn: "Kritzelei – Draw & Guess",
     excerptEn: "Draw and guess like skribbl.io: one person draws, everyone else guesses. Play online with a room code on several iPads or on one device at the projector, with over 1,100 German words in 21 categories plus your own word lists."
    },
+   {
+    title: "Hallendienst – HSG Wettenberg",
+    excerpt: "Hallendienste für jede Mannschaft organisieren: Spieler:innen tragen sich per Link ohne Anmeldung ein, tauschen Dienste und sehen Plan und Statistik live. Die Verwaltung übernimmt Heimspiele direkt aus Anwurf – als App installierbar.",
+    date: "2026-11-12",
+    category: "handball",
+    subcategory: "hallendienst",
+    url: "hallendienst/index.html",
+    emoji: "🧹",
+    tags: ["tool"],
+    titleEn: "Hall Duty – HSG Wettenberg",
+    excerptEn: "Organise hall duties for every team: players sign up via a link without an account, swap shifts and see the schedule and stats live. Admins import home games straight from Anwurf – installable as an app."
+   },
 ];

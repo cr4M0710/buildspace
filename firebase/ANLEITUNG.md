@@ -20,7 +20,7 @@ Firebase-Konsole → Projekt **kanban-board-281da** → **Firestore Database** �
 
 ## 4. Nachher testen
 - Sicherheits-Check erneut → alles „geschützt ✓“ (Bestenliste und Aufrufzähler sind absichtlich öffentlich).
-- Kurz durchklicken: Classroom Management anmelden, Lernbereich mit einem Schüler-Code, ein Kanban-Board, Strafenkasse, Cockpit-Sync. Klappt etwas nicht mehr („Missing or insufficient permissions“), Claude Bescheid geben – oder die gesicherten alten Regeln wieder einspielen.
+- Kurz durchklicken: Classroom Management anmelden, Lernbereich mit einem Schüler-Code, ein Kanban-Board, Strafenkasse, Hallendienst, Cockpit-Sync. Klappt etwas nicht mehr („Missing or insufficient permissions“), Claude Bescheid geben – oder die gesicherten alten Regeln wieder einspielen.
 
 ## Was die Regeln absichern
 | Bereich | Wer darf lesen | Wer darf schreiben |
@@ -32,6 +32,7 @@ Firebase-Konsole → Projekt **kanban-board-281da** → **Firestore Database** �
 | Bestenlisten | alle | Eintrag mit Namen bis 16 Zeichen; löschen nur Marc |
 | Cockpit, LernWerk, Blockwerk (eigene Daten) | nur das eigene Konto | nur das eigene Konto |
 | Strafenkasse | nur eingetragene Kassenwart:innen | dito |
+| Hallendienst | alle mit dem Plan-Link (Admin-Adressen nur Admins) | eigene Einträge mit Link (Platzlimit, Frist, Sperre); Dienste & Plan nur eingetragene Admins |
 
 ## Empfohlen (einmalig, optional)
 - **Firebase › Authentication › Einstellungen › Autorisierte Domains:** prüfen, dass dort nur eigene Adressen stehen (`buildspaceos.de`, `cr4m0710.github.io`, `localhost`, die `…firebaseapp.com`/`…web.app`-Adressen des Projekts) und keine fremden.
