@@ -199,6 +199,28 @@
   #toast { position: fixed; bottom: calc(88px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; border-radius: 12px; padding: 11px 16px; font-size: .88rem; font-weight: 600; display: none; z-index: 60; box-shadow: 0 4px 16px rgba(0,0,0,.3); max-width: calc(100vw - 28px); text-align: center; }
   #toast.offen { display: block; }
 
+  /* ---------- Checkliste ---------- */
+  .ck-kopf { display: flex; align-items: center; gap: 10px; }
+  .ck-kopf .t { flex: 1; font-size: .9rem; line-height: 1.4; }
+  .ck-balken { height: 8px; background: var(--zebra); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  .ck-balken i { display: block; height: 100%; background: var(--gruen); border-radius: 6px; transition: width .2s; }
+  .ck-abschnitt { background: var(--card); border-radius: var(--radius); box-shadow: var(--schatten); margin-bottom: 12px; overflow: hidden; }
+  .ck-abschnitt > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .98rem; border-bottom: 1px solid var(--rand); }
+  .ck-abschnitt > summary::-webkit-details-marker { display: none; }
+  .ck-abschnitt > summary .z { margin-left: auto; font-size: .76rem; font-weight: 800; color: var(--muted); }
+  .ck-abschnitt > summary .z.ok { color: var(--gruen); }
+  .ck-abschnitt > summary::after { content: '▾'; color: var(--muted); font-size: .9rem; }
+  .ck-abschnitt:not([open]) > summary { border-bottom: 0; }
+  .ck-abschnitt:not([open]) > summary::after { content: '▸'; }
+  .ck-punkt { display: flex; gap: 12px; align-items: flex-start; padding: 11px 14px; cursor: pointer; font-size: .93rem; line-height: 1.42; }
+  .ck-punkt + .ck-punkt { border-top: 1px solid var(--rand); }
+  .ck-punkt input { width: 24px; height: 24px; accent-color: var(--gruen); flex-shrink: 0; margin-top: -1px; }
+  .ck-punkt.erledigt .tx { color: var(--muted); text-decoration: line-through; }
+  .ck-punkt.wichtig .tx { font-weight: 800; }
+  .ck-punkt .tx a { font-weight: 800; white-space: nowrap; }
+  .ck-platzhalter { background: var(--chip-tausch); color: var(--gelb); border-radius: 5px; padding: 0 4px; font-weight: 700; }
+  .heute-karte { border-left: 4px solid var(--rot); display: flex; align-items: center; gap: 10px; }
+  .heute-karte .t { flex: 1; font-size: .9rem; line-height: 1.4; }
   #druckbereich { display: none; }
   @media print {
     body > *:not(#druckbereich) { display: none !important; }
@@ -257,6 +279,15 @@
     <div style="text-align:center;margin:6px 0 4px"><button class="btn klein sekundaer" id="vergangen-btn" onclick="App.vergangeneUmschalten()">Vergangene Dienste zeigen</button></div>
   </section>
 
+  <!-- ============ CHECKLISTE ============ -->
+  <section id="tab-checkliste" class="tab">
+    <div class="card" id="ck-status"></div>
+    <div id="ck-liste"></div>
+    <h2>Welche Dienste stellt welche Mannschaft?</h2>
+    <div class="card" id="ck-mannschaften"></div>
+    <div class="hinweis" style="text-align:center;margin-bottom:8px">Pflichten des Hallendienstes · HSG Wettenberg (Stand 20.11.2024)</div>
+  </section>
+
   <!-- ============ ÜBERSICHT ============ -->
   <section id="tab-uebersicht" class="tab">
     <div class="kennzahlen">
@@ -309,6 +340,7 @@
 
 <nav id="nav" style="display:none">
   <button data-tab="dienste" class="aktiv"><span id="nav-ico-dienste"></span>Dienste<span class="badge" id="nav-badge" style="display:none"></span></button>
+  <button data-tab="checkliste"><span id="nav-ico-checkliste"></span>Checkliste</button>
   <button data-tab="uebersicht"><span id="nav-ico-uebersicht"></span>Übersicht</button>
   <button data-tab="statistik"><span id="nav-ico-statistik"></span>Statistik</button>
   <button data-tab="verwalten"><span id="nav-ico-verwalten"></span>Verwalten</button>
@@ -360,11 +392,77 @@ const STANDARD_VORLAGE = [
   { titel: 'Hallenabbau', art: 'abbau', off: 90, dauer: 30, plaetze: 2 },
 ];
 
+// Pflichten des Hallendienstes (HSG Wettenberg, Stand 20.11.2024).
+// Format: "## Abschnitt", "! wichtiger Punkt", sonst ein Punkt pro Zeile; [eckige Klammern] = Platzhalter.
+// Namen und Telefonnummern stehen bewusst NICHT hier (öffentliches Repo), sondern im Plan (Verwalten › Checkliste).
+const CHECKLISTE_STANDARD = `## Vor dem Dienst
+Kassen und Hallenschlüssel am Freitag vor dem Spieltag nach vorheriger telefonischer Absprache abholen bei: [Name, Telefon]
+Absprache zur Übergabe des Hallenschlüssels für den Dienst am Folgetag
+Pünktliche Hallenöffnung mind. 60 Minuten vor Anpfiff
+Kein Essen anbieten bei M1 / F1 – der Förderverein grillt (ansonsten freiwillig)
+## Zu Beginn des Dienstes
+Aufbau SK/ZN-Tisch und Mannschaftsbänke
+Laptop für nuScore vorbereiten, Mannschaftslisten einholen und Kader in nuScore eingeben
+Wischer bereitstellen und zuständige Person festlegen
+Grüne Karten, Zeitstrafenzettel, Aufsteller für Zeitstrafen bereitlegen
+Toiletten mit Papierhandtüchern, Toilettenpapier und Seifenspender ausstatten
+Kühlschränke auffüllen
+Aschenbecher aufstellen
+Stehtische nach Bedarf aufstellen
+Eintritt kassieren ab 45 Minuten vor Spielbeginn (Preise an der Wand vor dem Kiosk sind aktuell)
+## Während des Dienstes
+Toiletten mit Papierhandtüchern, Toilettenpapier und Seifenspender auffüllen
+Sekretär und Zeitnehmer gemäß Tabelle besetzen
+F1 und M1 müssen mit dem vorhandenen Equipment für den Livestream gefilmt werden
+Bei Jugendspielen (außer A-Jugend) werden SK und ZN durch die Eltern gestellt
+! Mindestalter bei Jugendspielen SK und ZN: 14 Jahre
+! Mindestalter bei Aktivenspielen SK und ZN: 16 Jahre
+Schiedsrichterdienste für E-Jugend besetzen (vorher festgelegt, von welcher Mannschaft der Schiedsrichter gestellt wird). Pfeife, gelbe und rote Karte befinden sich im HSG-Raum
+Kühlschränke nachfüllen
+Jeweils eine leere Kiste für die Flaschenrückgabe gegenüber dem Kiosk sichtbar positionieren
+Bezahlung der Schiedsrichter gegen Rechnung aus den Kassen (Rechnung in die Kasse, aus der bezahlt wurde)
+Eintritt kassieren bis Ende der 1. Halbzeit des letzten Spiels
+## Am Ende des Dienstes
+Freigabe des jeweiligen Spielberichts am Laptop durch SK und ZN
+! Kommt nach dem Spiel keine E-Mail mit dem Spielprotokoll, bitte nochmals prüfen. Notfalls anrufen: [Name, Telefon]
+Leergut auf der Tribüne und in den Kabinen einsammeln und sortieren
+Alle Mülleimer (Kiosk, Foyer, Toiletten, Tribüne, Kabinen und Toiletten in den Kabinengängen) leeren und in den Müllcontainer vor der Halle werfen (Schlüssel hängt im Kiosk). Feste Metallmülleimer vor der Halle müssen nicht geleert werden – aber keine Zigaretten am oberen Rand liegen lassen
+Vor der Halle kehren und Zigaretten vor den Türen der Kabinen auflesen
+Kabinen, Toiletten, Kiosk und Küche aufräumen
+Aschenbecher leeren und reinstellen
+Volle Kisten aus dem Kühlwagen in den Kiosk stellen
+Leergut sortieren und in den Kühlwagen räumen
+Falls am Folgetag keine Spiele sind: Stromkabel vom Kühlwagen abziehen, Adapterkabel in den Kühlwagen und Verlängerung in [bitte ergänzen]
+Abbau SK/ZN-Tisch und Mannschaftsbänke (je nach Folgetag)
+Stehtische abbauen und in die Küche stellen
+Kaffeetassen spülen
+Musikanlage am Hauptschalter links an der Wand ausschalten
+Hallenbuch eintragen: Nutzungszeit und ggf. festgestellte Mängel
+Alle Lichter im Foyer, Kiosk, Küche, Toiletten, Kabinen und Duschen ausschalten (die Hallenbeleuchtung geht automatisch aus)
+Halle, Toiletten im Foyer und HSG-Raum abschließen
+! Alle Außentüren überprüfen
+Kassen und Kassenschlüssel zurückbringen zu: [Name, Telefon]`;
+// Zu besetzende Dienste je Mannschaft (x = zu besetzen, '' = nicht, sonst Hinweis); Eintritt bei allen aktiven Mannschaften
+const MANNSCHAFT_SPALTEN = ['Kiosk 1', 'Kiosk 2', 'Essen', 'Eintritt', 'Zeitnehmer', 'Sekretär', 'Schiedsrichter', 'Filmer', 'Wischer'];
+const MANNSCHAFT_DIENSTE = [
+  ['E-Jugend 1 und 2', ['', '', '', '', '', '', 'x', '', ''], '1'],
+  ['D-Jugend', ['', '', '', '', '', '', '', '', ''], '0'],
+  ['C-Jugend', ['', '', '', '', '', '', '', '', ''], '2'],
+  ['A-Jugend', ['', '', '', '', 'x', 'x', '', '', ''], '4'],
+  ['Frauen 1', ['x', 'x', '', 'x', 'x', 'fest besetzt', '', 'x', 'x'], '6'],
+  ['Frauen 2', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '5 bis 6'],
+  ['Frauen 3', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '4 bis 5'],
+  ['Männer 1', ['x', 'x', '', 'x', 'Offizielle/r', 'x', '', 'x', 'x'], '6'],
+  ['Männer 2', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '5 bis 6'],
+  ['Männer 3', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '4 bis 5'],
+];
+
 const ICONS = {
   dienste: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>',
   uebersicht: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   statistik: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>',
   verwalten: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  checkliste: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
   teilen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>',
   sonne: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
   mond: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
@@ -477,11 +575,12 @@ const Fb = {
     toast('Weiter zu Google …');
     location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q;
   },
-  async googleRueckkehr() {
-    if (!/(^|[#&])(id_token|error)=/.test(location.hash)) return false;
-    const h = new URLSearchParams(location.hash.slice(1));
+  async googleRueckkehr(hash) {
+    hash = hash || location.hash;
+    if (!/(^|[#&])(id_token|error)=/.test(hash)) return false;
+    const h = new URLSearchParams(hash.replace(/^#/, ''));
     const saved = LS.get(K.oauth, null); LS.del(K.oauth);
-    const ziel = location.pathname + (saved && saved.plan ? '?plan=' + encodeURIComponent(saved.plan) : location.search);
+    const ziel = location.pathname + (saved && saved.plan ? '?plan=' + encodeURIComponent(saved.plan) : (location.search || '?start'));
     try { history.replaceState(null, '', ziel); } catch (e) {}
     if (saved && saved.aktion) App._nachAnmeldung = saved.aktion;
     if (h.get('error')) { toast(h.get('error') === 'access_denied' ? 'Google-Anmeldung abgebrochen.' : 'Google meldet: ' + h.get('error'), 8000); return true; }
@@ -537,7 +636,7 @@ const App = {
 
   async start() {
     this.themeAnwenden();
-    ['dienste', 'uebersicht', 'statistik', 'verwalten'].forEach(t => { $('#nav-ico-' + t).innerHTML = ICONS[t]; });
+    ['dienste', 'checkliste', 'uebersicht', 'statistik', 'verwalten'].forEach(t => { $('#nav-ico-' + t).innerHTML = ICONS[t]; });
     $('#teilen-btn').innerHTML = ICONS.teilen;
     document.querySelectorAll('nav button').forEach(b => b.onclick = () => this.tabZeigen(b.dataset.tab));
     document.querySelectorAll('#ueb-zeitraum button').forEach(b => b.onclick = () => {
@@ -548,13 +647,15 @@ const App = {
     window.addEventListener('online', () => this.renderKopf());
     window.addEventListener('offline', () => this.renderKopf());
 
-    const rueck = /(^|[#&])(id_token|error)=/.test(location.hash);
+    // Rückkehr von Google (#id_token=…) sichern, bevor planOeffnen/startZeigen die Adresse umschreibt
+    const rueckHash = location.hash;
+    const rueck = /(^|[#&])(id_token|error)=/.test(rueckHash);
     const p = new URLSearchParams(location.search).get('plan')
-      || (rueck && (LS.get(K.oauth, {}) || {}).plan)
-      || (!new URLSearchParams(location.search).has('start') && LS.get(K.letzter, null));
+      || (rueck ? (LS.get(K.oauth, {}) || {}).plan
+         : (!new URLSearchParams(location.search).has('start') && LS.get(K.letzter, null)));
     if (p) this.planOeffnen(p, { still: true }); else this.startZeigen();
     try { await Fb.laden(); } catch (e) { S.fehler = 'Keine Verbindung zur Datenbank (offline?)'; this.renderAlles(); return; }
-    if (rueck) await Fb.googleRueckkehr();
+    if (rueck) await Fb.googleRueckkehr(rueckHash);
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   },
 
@@ -618,7 +719,7 @@ const App = {
   cacheSchreiben() {
     if (!S.planId || !S.plan) return;
     LS.set(K.cache(S.planId), {
-      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage },
+      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage, checkliste: S.plan.checkliste || '' },
       dienste: S.dienste.map(({ start, erstellt, ...r }) => r),
       eintraege: S.eintraege.map(({ at, ...r }) => r),
     });
@@ -657,6 +758,7 @@ const App = {
     if (S.tab === 'uebersicht') this.renderUebersicht();
     if (S.tab === 'statistik') this.renderStatistik();
     if (S.tab === 'verwalten') this.renderVerwalten();
+    if (S.tab === 'checkliste') this.renderCheckliste();
     const tausch = S.eintraege.filter(e => e.tausch && !istMein(e) && dienstById(e.dienst) && !istVorbei(dienstById(e.dienst))).length;
     const b = $('#nav-badge'); b.style.display = tausch ? '' : 'none'; b.textContent = tausch;
   },
@@ -716,9 +818,13 @@ const App = {
       + (name ? '<b>' + esc(name) + '</b>' + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + meine.length + ' in der Saison'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>';
+    const heute = isoDatum(new Date());
+    const heuteDienste = S.dienste.filter(d => d.datum === heute);
+    const heuteMein = heuteDienste.some(d => eintraegeVon(d.id).some(istMein));
+    const heuteKarte = heuteDienste.length ? '<div class="card heute-karte"><div class="t"><b>' + (heuteMein ? 'Du hast heute Hallendienst! 💪' : 'Heute ist Hallendienst.') + '</b><br>Alles Wichtige zum Abhaken steht in der Checkliste.</div><button class="btn klein" onclick="App.tabZeigen(\'checkliste\')">Checkliste</button></div>' : '';
     const n = kommend[0];
-    $('#naechster').innerHTML = n ? '<div class="card naechster" style="font-size:.9rem;line-height:1.45"><b>Dein nächster Dienst:</b> ' + esc(tagKurz(startVon(n.d))) + ' (' + relativ(startVon(n.d)) + '), '
-      + esc(zeitText(n.d)) + ' – ' + esc(n.d.titel) + (n.d.ort ? '<br><span style="color:var(--muted)">' + esc(n.d.ort) + '</span>' : '') + '</div>' : '';
+    $('#naechster').innerHTML = heuteKarte + (n && n.d.datum === heute ? '' : (n ? '<div class="card naechster" style="font-size:.9rem;line-height:1.45"><b>Dein nächster Dienst:</b> ' + esc(tagKurz(startVon(n.d))) + ' (' + relativ(startVon(n.d)) + '), '
+      + esc(zeitText(n.d)) + ' – ' + esc(n.d.titel) + (n.d.ort ? '<br><span style="color:var(--muted)">' + esc(n.d.ort) + '</span>' : '') + '</div>' : ''));
 
     // Filter
     const sichtbar = S.dienste.filter(d => S.vergangene || !istVorbei(d));
@@ -858,6 +964,7 @@ const App = {
       k += e.tausch ? '<button class="btn sekundaer" data-a="tausch-aus">Tausch zurückziehen – ich mache es doch</button>'
         : '<button class="btn gelb" data-a="tausch">Tausch anbieten (Ersatz suchen)</button>';
       k += '<button class="btn sekundaer" data-a="ics">In meinen Kalender</button>';
+      k += '<button class="btn sekundaer" data-a="checkliste">📋 Checkliste für den Dienst</button>';
     } else if (!mein && e.tausch && !vorbei) {
       k += '<div class="hinweis" style="margin-top:0">' + esc(e.name) + ' sucht Ersatz. Übernimmst du?</div>'
         + '<label class="feld">Dein Name</label>' + this.nameFeld('m-name', meinName())
@@ -900,6 +1007,8 @@ const App = {
           await Fb.eintragRef(e.id).update({ name: n }); toast('Gespeichert.');
         } else if (a === 'entfernen') {
           await Fb.eintragRef(e.id).delete(); toast(e.name + ' entfernt.');
+        } else if (a === 'checkliste') {
+          schliesseModal(); this.tabZeigen('checkliste'); return;
         } else if (a === 'ics') {
           this.icsLaden([d], 'hallendienst-' + d.datum + '.ics'); b.disabled = false; return;
         }
@@ -918,6 +1027,71 @@ const App = {
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="m-ok">Speichern</button></div>');
     setTimeout(() => m.querySelector('#m-name').focus(), 250);
     m.querySelector('#m-ok').onclick = () => { LS.set(K.name, m.querySelector('#m-name').value.trim().replace(/\s+/g, ' ')); schliesseModal(); this.renderAlles(); };
+  },
+
+  // ---------- Tab: Checkliste ----------
+  ckSchluessel() { return 'hd-check-' + S.planId + '-' + isoDatum(new Date()); },
+  renderCheckliste() {
+    const abschnitte = checklisteParsen(checklisteText());
+    let erledigt = LS.get(this.ckSchluessel(), []);
+    const alle = abschnitte.flatMap(a => a.punkte);
+    const ids = new Set(alle.map(x => x.id));
+    erledigt = erledigt.filter(id => ids.has(id));
+    const fertig = erledigt.length, gesamt = alle.length;
+    const heute = isoDatum(new Date());
+    const heuteDienst = S.dienste.find(d => d.datum === heute);
+    $('#ck-status').innerHTML = '<div class="ck-kopf"><div class="t"><b>' + (heuteDienst ? 'Hallendienst heute, ' + esc(tagKurz(new Date())) : 'Pflichten des Hallendienstes') + '</b><br>'
+      + fertig + ' von ' + gesamt + ' erledigt' + (fertig === gesamt && gesamt ? ' – super, alles geschafft! 🎉' : '') + '</div>'
+      + (fertig ? '<button class="btn klein sekundaer" id="ck-reset">Zurücksetzen</button>' : '') + '</div>'
+      + '<div class="ck-balken"><i style="width:' + (gesamt ? Math.round(fertig / gesamt * 100) : 0) + '%"></i></div>'
+      + '<div class="hinweis">Abgehakt wird nur auf diesem Handy und nur für heute – morgen startet die Liste wieder leer. Funktioniert auch ohne Empfang.</div>';
+    const r = $('#ck-reset'); if (r) r.onclick = () => { LS.del(this.ckSchluessel()); this.renderCheckliste(); };
+    const offen = LS.get('hd-check-zu', {});
+    $('#ck-liste').innerHTML = abschnitte.map((a, ai) => {
+      const z = a.punkte.filter(x => erledigt.includes(x.id)).length;
+      const auf = offen[a.titel] !== false;
+      return '<details class="ck-abschnitt"' + (auf ? ' open' : '') + ' data-titel="' + esc(a.titel) + '"><summary>' + esc(a.titel) + '<span class="z' + (z === a.punkte.length ? ' ok' : '') + '">' + z + '/' + a.punkte.length + '</span></summary>'
+        + a.punkte.map(x => '<label class="ck-punkt' + (x.wichtig ? ' wichtig' : '') + (erledigt.includes(x.id) ? ' erledigt' : '') + '"><input type="checkbox" data-ck="' + x.id + '"' + (erledigt.includes(x.id) ? ' checked' : '') + '><span class="tx">' + ckFormat(x.text) + '</span></label>').join('')
+        + '</details>';
+    }).join('');
+    $('#ck-liste').querySelectorAll('[data-ck]').forEach(c => c.onchange = () => {
+      const l = new Set(LS.get(this.ckSchluessel(), []));
+      if (c.checked) l.add(c.dataset.ck); else l.delete(c.dataset.ck);
+      LS.set(this.ckSchluessel(), [...l]);
+      const y = window.scrollY; this.renderCheckliste(); window.scrollTo(0, y);
+      if (c.checked && navigator.vibrate) navigator.vibrate(12);
+    });
+    $('#ck-liste').querySelectorAll('details').forEach(d => d.addEventListener('toggle', () => { const o = LS.get('hd-check-zu', {}); o[d.dataset.titel] = d.open; LS.set('hd-check-zu', o); }));
+    $('#ck-liste').querySelectorAll('a[href^="tel:"]').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+    // Dienste je Mannschaft
+    const team = norm((S.plan && S.plan.team) || '').replace(/\s+/g, '');
+    const gemerkt = LS.get('hd-ck-mannschaft', null);
+    let wahl = MANNSCHAFT_DIENSTE.findIndex(m => m[0] === gemerkt);
+    if (wahl < 0) wahl = MANNSCHAFT_DIENSTE.findIndex(m => team && norm(m[0]).replace(/\s+/g, '') === team.replace('herren', 'männer'));
+    if (wahl < 0) wahl = MANNSCHAFT_DIENSTE.findIndex(m => m[0] === 'Männer 1');
+    const mz = MANNSCHAFT_DIENSTE[wahl];
+    const chips = MANNSCHAFT_SPALTEN.map((sp, i) => ({ sp, v: mz[1][i] })).filter(x => x.v);
+    $('#ck-mannschaften').innerHTML = '<select class="ein" id="ck-team">' + MANNSCHAFT_DIENSTE.map((m, i) => '<option value="' + i + '"' + (i === wahl ? ' selected' : '') + '>' + esc(m[0]) + '</option>').join('') + '</select>'
+      + '<div style="margin-top:12px;font-size:.9rem"><b>Personen: ' + esc(mz[2]) + '</b></div>'
+      + (chips.length ? '<div class="chips" style="margin-top:8px">' + chips.map(x => '<span style="background:var(--chip-mein);color:var(--text)">✓ ' + esc(x.sp) + (x.v !== 'x' ? ' <small style="color:var(--muted)">(' + esc(x.v) + ')</small>' : '') + '</span>').join('') + '</div>' : '<div class="hinweis">Keine Dienste zu besetzen.</div>')
+      + '<div class="hinweis">Eintritt wird bei allen aktiven Mannschaften kassiert. Einzelne Dienste können ggf. kombiniert werden.</div>';
+    $('#ck-team').onchange = e => { LS.set('hd-ck-mannschaft', MANNSCHAFT_DIENSTE[+e.target.value][0]); this.renderCheckliste(); };
+  },
+  checklisteModal() {
+    const m = oeffneModal('<h3>Checkliste bearbeiten</h3><div class="unter">Eine Zeile pro Punkt. <b>## Überschrift</b> beginnt einen Abschnitt, <b>!</b> am Zeilenanfang hebt einen Punkt hervor. Telefonnummern (z. B. 0170 1234567) werden zum Antippen. Ersetze die Platzhalter in [eckigen Klammern].</div>'
+      + '<textarea class="ein" id="c-text" style="min-height:52vh;margin-top:10px;font-size:.88rem">' + esc(checklisteText()) + '</textarea>'
+      + '<div class="hinweis">Sichtbar für alle mit dem Mannschafts-Link.</div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" id="c-std">Standard</button><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="c-ok">Speichern</button></div>');
+    const ta = m.querySelector('#c-text');
+    const i = ta.value.indexOf('['); if (i >= 0) setTimeout(() => { ta.focus(); ta.setSelectionRange(i, ta.value.indexOf(']', i) + 1); }, 300);
+    m.querySelector('#c-std').onclick = () => { if (confirm('Text durch die Standard-Checkliste ersetzen?')) ta.value = CHECKLISTE_STANDARD; };
+    m.querySelector('#c-ok').onclick = async () => {
+      let t = ta.value.replace(/\r/g, '').trim();
+      if (t.length > 8000) { toast('Zu lang (max. 8000 Zeichen).'); return; }
+      if (t === CHECKLISTE_STANDARD.trim()) t = '';
+      try { await this.planSpeichern({ checkliste: t }); schliesseModal(); toast('Checkliste gespeichert.'); }
+      catch (e) { toast(fehlerText(e), 6000); }
+    };
   },
 
   // ---------- Tab: Übersicht ----------
@@ -1048,6 +1222,7 @@ const App = {
       + '<div class="zeile"><div class="t">' + (p.gesperrt ? '🔒 Eintragen gesperrt' : 'Eintragen offen') + '<small>' + (p.gesperrt ? 'Spieler:innen können sich weder ein- noch austragen' : 'Spieler:innen tragen sich selbst ein') + '</small></div><button class="btn klein ' + (p.gesperrt ? '' : 'sekundaer') + '" onclick="App.sperreUmschalten()">' + (p.gesperrt ? 'Öffnen' : 'Sperren') + '</button></div>'
       + '</div>'
       + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
+      + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter offen (z. B. Name und Telefon der Kassenverantwortlichen). ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
       + '<h2>Spieltag-Vorlage</h2><div class="card"><div class="hinweis" style="margin-top:0">' + ((p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE).map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ')) + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Vorlage bearbeiten</button></div>'
       + '<h2>Admins</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
           '<div class="zeile"><div class="t">' + esc(mail) + (S.admin.ownerEmail === mail ? '<small>Besitzer:in</small>' : '') + '</div>'
@@ -1066,7 +1241,7 @@ const App = {
     const p = S.plan;
     const daten = {
       titel: p.titel, team: p.team || '', hinweis: p.hinweis || '', spieler: p.spieler || [], frist: Number.isInteger(p.frist) ? p.frist : 48,
-      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
+      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, checkliste: p.checkliste || '', erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
     };
     await Fb.planRef().set(daten);
     if (teil.titel && S.admin && teil.titel !== S.admin.titel) { try { await Fb.adminRef().update({ titel: teil.titel }); } catch (e) {} }
@@ -1324,7 +1499,7 @@ const App = {
       m.querySelector('#n-ok').disabled = true;
       try {
         await Fb.adminRef(id).set({ owner: Fb.uid(), ownerEmail: Fb.email(), members: [Fb.email()], titel, erstellt: Fb.jetzt() });
-        await Fb.planRef(id).set({ titel, team: m.querySelector('#n-team').value.trim(), hinweis: '', spieler: [], frist: 48, gesperrt: false, vorlage: STANDARD_VORLAGE, erstellt: Fb.jetzt(), aktualisiert: Fb.jetzt() });
+        await Fb.planRef(id).set({ titel, team: m.querySelector('#n-team').value.trim(), hinweis: '', spieler: [], frist: 48, gesperrt: false, vorlage: STANDARD_VORLAGE, checkliste: '', erstellt: Fb.jetzt(), aktualisiert: Fb.jetzt() });
         schliesseModal(); toast('Plan angelegt.');
         this.planOeffnen(id, { tab: 'verwalten' });
       } catch (e) { m.querySelector('#n-ok').disabled = false; toast(fehlerText(e), 8000); }
@@ -1386,6 +1561,25 @@ const App = {
   },
 };
 
+function checklisteText() { return (S.plan && S.plan.checkliste) || CHECKLISTE_STANDARD; }
+function offenePlatzhalter() { return (checklisteText().match(/\[[^\]\n]+\]/g) || []).length; }
+function ckHash(t) { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return 'c' + (h >>> 0).toString(36); }
+function checklisteParsen(text) {
+  const abschnitte = []; let akt = null;
+  String(text).split('\n').map(z => z.trim()).filter(Boolean).forEach(z => {
+    if (z.startsWith('##')) { akt = { titel: z.replace(/^#+\s*/, ''), punkte: [] }; abschnitte.push(akt); return; }
+    if (!akt) { akt = { titel: 'Checkliste', punkte: [] }; abschnitte.push(akt); }
+    const wichtig = z.startsWith('!');
+    const t = z.replace(/^[!\-•*]\s*/, '');
+    akt.punkte.push({ id: ckHash(akt.titel + '|' + t), text: t, wichtig });
+  });
+  return abschnitte.filter(a => a.punkte.length);
+}
+function ckFormat(t) {
+  return esc(t)
+    .replace(/\[([^\]]+)\]/g, '<span class="ck-platzhalter">$1</span>')
+    .replace(/(\+?\d[\d\s\/\-]{5,}\d)/g, m => '<a href="tel:' + m.replace(/[^\d+]/g, '') + '">📞 ' + m + '</a>');
+}
 function planIdAus(text) {
   text = String(text || '').trim();
   const m = /[?&]plan=([A-Za-z0-9]{16,40})/.exec(text);
