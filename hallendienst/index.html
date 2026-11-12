@@ -57,7 +57,9 @@
     position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 8px rgba(0,0,0,.25);
     display: flex; align-items: center; gap: 11px;
   }
-  .logo-badge { background: #fff; border-radius: 12px; width: 46px; height: 46px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .logo-badge { background: #fff; border-radius: 12px; width: 46px; height: 46px; padding: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.25); position: relative; }
+  .logo-badge img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-badge .eck { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid #C30606; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; }
   .kopf-text { flex: 1; min-width: 0; }
   header h1 { font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header .sub { font-size: .74rem; opacity: .88; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -241,7 +243,7 @@
 <body>
 
 <header>
-  <div class="logo-badge">🧹</div>
+  <div class="logo-badge"><img src="hsg-logo.png" alt="HSG Wettenberg"><span class="eck">🧹</span></div>
   <div class="kopf-text">
     <h1 id="kopf-titel">Hallendienst</h1>
     <div class="sub" id="kopf-sub">HSG Wettenberg</div>
@@ -283,7 +285,7 @@
   <section id="tab-checkliste" class="tab">
     <div class="card" id="ck-status"></div>
     <div id="ck-liste"></div>
-    <h2>Welche Dienste stellt welche Mannschaft?</h2>
+    <h2>Welche Dienste sind bei welchem Spiel zu besetzen?</h2>
     <div class="card" id="ck-mannschaften"></div>
     <div class="hinweis" style="text-align:center;margin-bottom:8px">Pflichten des Hallendienstes · HSG Wettenberg (Stand 20.11.2024)</div>
   </section>
@@ -381,17 +383,36 @@ const ARTEN = {
   wischer:      { e: '🧽', n: 'Wischer' },
   kuchen:       { e: '🎂', n: 'Kuchen' },
   fahrdienst:   { e: '🚗', n: 'Fahrdienst' },
+  essen:        { e: '🌭', n: 'Essen' },
+  schiedsrichter: { e: '🟨', n: 'Schiedsrichter' },
+  filmer:       { e: '🎥', n: 'Filmer' },
   sonstiges:    { e: '📋', n: 'Sonstiges' },
 };
 // Zeiten relativ zum Anwurf (Minuten), Dauer in Minuten
+// Dienste-Katalog: „key“ verbindet mit der Vereinstabelle (MANNSCHAFT_DIENSTE); Einträge ohne key = eigene Zusatzdienste
 const STANDARD_VORLAGE = [
-  { titel: 'Hallenaufbau', art: 'aufbau', off: -60, dauer: 30, plaetze: 2 },
-  { titel: 'Kasse & Einlass', art: 'kasse', off: -45, dauer: 90, plaetze: 1 },
-  { titel: 'Verkauf / Theke', art: 'theke', off: -45, dauer: 165, plaetze: 2 },
-  { titel: 'Kampfgericht (Zeitnehmer & Sekretär)', art: 'kampfgericht', off: -30, dauer: 120, plaetze: 2 },
-  { titel: 'Wischer', art: 'wischer', off: 0, dauer: 90, plaetze: 2 },
-  { titel: 'Hallenabbau', art: 'abbau', off: 90, dauer: 30, plaetze: 2 },
+  { key: 'kiosk1', titel: 'Kiosk 1', art: 'theke', off: -60, dauer: 180, plaetze: 1 },
+  { key: 'kiosk2', titel: 'Kiosk 2', art: 'theke', off: -60, dauer: 180, plaetze: 1 },
+  { key: 'essen', titel: 'Essen', art: 'essen', off: -60, dauer: 180, plaetze: 1 },
+  { key: 'eintritt', titel: 'Eintritt', art: 'kasse', off: -45, dauer: 90, plaetze: 1 },
+  { key: 'zeitnehmer', titel: 'Zeitnehmer', art: 'kampfgericht', off: -30, dauer: 120, plaetze: 1 },
+  { key: 'sekretaer', titel: 'Sekretär', art: 'kampfgericht', off: -30, dauer: 120, plaetze: 1 },
+  { key: 'schiri', titel: 'Schiedsrichter (E-Jugend)', art: 'schiedsrichter', off: -15, dauer: 75, plaetze: 1 },
+  { key: 'filmer', titel: 'Filmer (Livestream)', art: 'filmer', off: -15, dauer: 105, plaetze: 1 },
+  { key: 'wischer', titel: 'Wischer', art: 'wischer', off: 0, dauer: 90, plaetze: 1 },
 ];
+const SPALTEN_KEYS = ['kiosk1', 'kiosk2', 'essen', 'eintritt', 'zeitnehmer', 'sekretaer', 'schiri', 'filmer', 'wischer'];
+// Mannschaft aus Freitext/Anwurf-Bezeichnung ableiten („Männer II“ → „Männer 2“, „weibliche Jugend A“ → „A-Jugend“)
+function mannschaftAus(text) {
+  const t = norm(text).replace(/\b([mf])(\d)\b/g, '$1 $2');
+  if (!t) return null;
+  const jug = /jugend\s*([a-e])\b|\b([a-e])-?jugend|\b[mw]j([a-e])\b/.exec(t);
+  if (jug) { const b = (jug[1] || jug[2] || jug[3]).toUpperCase(); return b === 'E' ? 'E-Jugend 1 und 2' : (['A', 'C', 'D'].includes(b) ? b + '-Jugend' : null); }
+  const nr = /\b(iii|3)\b/.test(t) ? 3 : /\b(ii|2)\b/.test(t) ? 2 : 1;
+  if (/frauen|damen|\bf \d/.test(t)) return 'Frauen ' + nr;
+  if (/männer|herren|\bm \d/.test(t)) return 'Männer ' + nr;
+  return null;
+}
 
 // Pflichten des Hallendienstes (HSG Wettenberg, Stand 20.11.2024).
 // Format: "## Abschnitt", "! wichtiger Punkt", sonst ein Punkt pro Zeile; [eckige Klammern] = Platzhalter.
@@ -433,7 +454,7 @@ Kabinen, Toiletten, Kiosk und Küche aufräumen
 Aschenbecher leeren und reinstellen
 Volle Kisten aus dem Kühlwagen in den Kiosk stellen
 Leergut sortieren und in den Kühlwagen räumen
-Falls am Folgetag keine Spiele sind: Stromkabel vom Kühlwagen abziehen, Adapterkabel in den Kühlwagen legen und Verlängerung wegräumen
+Falls am Folgetag keine Spiele sind: Stromkabel vom Kühlwagen abziehen, Adapterkabel in den Kühlwagen und Verlängerung in die Küche beim Kiosk
 Abbau SK/ZN-Tisch und Mannschaftsbänke (je nach Folgetag)
 Stehtische abbauen und in die Küche stellen
 Kaffeetassen spülen
@@ -443,7 +464,7 @@ Alle Lichter im Foyer, Kiosk, Küche, Toiletten, Kabinen und Duschen ausschalten
 Halle, Toiletten im Foyer und HSG-Raum abschließen
 ! Alle Außentüren überprüfen
 Kassen und Kassenschlüssel an die Vereinsverantwortlichen zurückgeben`;
-// Zu besetzende Dienste je Mannschaft (x = zu besetzen, '' = nicht, sonst Hinweis); Eintritt bei allen aktiven Mannschaften
+// Bei Spielen der jeweiligen Mannschaft zu besetzende Dienste (x = zu besetzen, '' = nicht, sonst Hinweis); Eintritt bei allen aktiven Mannschaften
 const MANNSCHAFT_SPALTEN = ['Kiosk 1', 'Kiosk 2', 'Essen', 'Eintritt', 'Zeitnehmer', 'Sekretär', 'Schiedsrichter', 'Filmer', 'Wischer'];
 const MANNSCHAFT_DIENSTE = [
   ['E-Jugend 1 und 2', ['', '', '', '', '', '', 'x', '', ''], '1'],
@@ -744,6 +765,24 @@ const App = {
       }
     } catch (e) { /* kein Admin */ }
     this.renderAlles();
+    this.spielerImport();
+  },
+  // Verknüpfte Strafenkasse: neue Spieler automatisch in die Spielerliste übernehmen (jeder Name nur einmal,
+  // damit später gelöschte Namen nicht zurückkommen). Schreiben darf nur die Verwaltung – alle anderen sehen
+  // die Namen trotzdem sofort (alleSpieler()).
+  async spielerImport() {
+    if (!S.istAdmin || !S.plan || !Strafen.daten || this._importLaeuft) return;
+    const key = 'hd-sk-import-' + S.planId;
+    const schon = new Set(LS.get(key, []));
+    const vorhanden = new Set((S.plan.spieler || []).map(norm));
+    const neue = Strafen.daten.spieler.filter(x => x.aktiv !== false).map(x => String(x.name).trim()).filter(n => n && !vorhanden.has(norm(n)) && !schon.has(norm(n)));
+    if (!neue.length) return;
+    this._importLaeuft = true;
+    try {
+      await this.planSpeichern({ spieler: [...(S.plan.spieler || []), ...neue].slice(0, 80) });
+      neue.forEach(n => schon.add(norm(n))); LS.set(key, [...schon]);
+      toast(neue.length + (neue.length === 1 ? ' Spieler' : ' Spieler:innen') + ' aus der Strafenkasse übernommen.');
+    } catch (e) {} finally { this._importLaeuft = false; }
   },
   authGeaendert() {
     if (S.planId) this.adminPruefen(); else this.renderStart();
@@ -866,9 +905,15 @@ const App = {
         if ((d.gruppe || '') !== gruppe) { gruppe = d.gruppe || ''; if (gruppe) html += '<div class="gruppe">' + esc(gruppe) + '</div>'; }
         html += this.dienstHtml(d);
       });
+      if (S.istAdmin) html += '<div style="padding:4px 14px 12px"><button class="btn klein sekundaer" data-plus="' + esc(datum) + '">+ Dienst an diesem Tag ergänzen</button></div>';
       html += '</div>';
     }
     $('#dienst-liste').innerHTML = html;
+    $('#dienst-liste').querySelectorAll('[data-plus]').forEach(b => b.onclick = () => {
+      const ds = S.dienste.filter(d => d.datum === b.dataset.plus);
+      const v = ds[0] || {};
+      this.dienstModal(null, { datum: b.dataset.plus, von: v.von || '18:00', bis: v.bis || '', ort: v.ort || '', gruppe: v.gruppe || '', quelle: v.quelle || null, quelleZeit: v.quelleZeit || null });
+    });
     $('#dienst-liste').querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
       const [id, platz, eid] = b.dataset.slot.split('|');
       if (eid) this.eintragModal(eid); else this.eintragenModal(id, +platz);
@@ -897,7 +942,7 @@ const App = {
 
   // ---------- Eintragen / Austragen / Tausch ----------
   namenListe() {
-    const s = new Set((S.plan && S.plan.spieler) || []);
+    const s = new Set(alleSpieler());
     S.eintraege.forEach(e => s.add(e.name));
     return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b, 'de'));
   },
@@ -1096,9 +1141,9 @@ const App = {
     const mz = MANNSCHAFT_DIENSTE[wahl];
     const chips = MANNSCHAFT_SPALTEN.map((sp, i) => ({ sp, v: mz[1][i] })).filter(x => x.v);
     $('#ck-mannschaften').innerHTML = '<select class="ein" id="ck-team">' + MANNSCHAFT_DIENSTE.map((m, i) => '<option value="' + i + '"' + (i === wahl ? ' selected' : '') + '>' + esc(m[0]) + '</option>').join('') + '</select>'
-      + '<div style="margin-top:12px;font-size:.9rem"><b>Personen: ' + esc(mz[2]) + '</b></div>'
+      + '<div style="margin-top:12px;font-size:.9rem">Bei Spielen von <b>' + esc(mz[0]) + '</b> zu besetzen – <b>' + esc(mz[2]) + ' Person' + (mz[2] === '1' ? '' : 'en') + '</b>:</div>'
       + (chips.length ? '<div class="chips" style="margin-top:8px">' + chips.map(x => '<span style="background:var(--chip-mein);color:var(--text)">✓ ' + esc(x.sp) + (x.v !== 'x' ? ' <small style="color:var(--muted)">(' + esc(x.v) + ')</small>' : '') + '</span>').join('') + '</div>' : '<div class="hinweis">Keine Dienste zu besetzen.</div>')
-      + '<div class="hinweis">Eintritt wird bei allen aktiven Mannschaften kassiert. Einzelne Dienste können ggf. kombiniert werden.</div>';
+      + '<div class="hinweis">Die Dienste stellen die Hallendienste der Aktiven – nicht die spielende Mannschaft. Eintritt wird bei allen Spielen der aktiven Mannschaften kassiert. Einzelne Dienste können ggf. kombiniert werden.</div>';
     $('#ck-team').onchange = e => { LS.set('hd-ck-mannschaft', MANNSCHAFT_DIENSTE[+e.target.value][0]); this.renderCheckliste(); };
   },
   checklisteModal() {
@@ -1213,7 +1258,7 @@ const App = {
       '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + x.n + '</span></div>'
       + (x.kommend ? '' : '')).join('') + '<div class="hinweis" style="margin-bottom:6px">Gezählt werden alle Einträge der Saison (vergangene und kommende).</div>'
       : '<div class="leer">Noch keine Einträge.</div>';
-    const ohne = ((S.plan && S.plan.spieler) || []).filter(n => !zaehl.has(norm(n)));
+    const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)));
     $('#st-ohne').innerHTML = ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '';
     const al = [...arten.entries()].sort((a, b) => b[1] - a[1]);
     $('#st-arten').innerHTML = al.length ? al.map(([a, n]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span><span class="bar"><i style="width:' + Math.round(n / al[0][1] * 100) + '%"></i></span><span class="z">' + n + '</span></div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
@@ -1246,13 +1291,13 @@ const App = {
       + '<div class="zeile"><div class="t">Austragen bis<small>' + frist() + ' Stunden vor Dienstbeginn, danach nur Tausch</small></div><button class="btn klein sekundaer" onclick="App.planModal()">Ändern</button></div>'
       + '<div class="zeile"><div class="t">' + (p.gesperrt ? '🔒 Eintragen gesperrt' : 'Eintragen offen') + '<small>' + (p.gesperrt ? 'Spieler:innen können sich weder ein- noch austragen' : 'Spieler:innen tragen sich selbst ein') + '</small></div><button class="btn klein ' + (p.gesperrt ? '' : 'sekundaer') + '" onclick="App.sperreUmschalten()">' + (p.gesperrt ? 'Öffnen' : 'Sperren') + '</button></div>'
       + '</div>'
-      + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
+      + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.' + (p.strafenkasse ? ' Neue Spieler:innen aus der verknüpften Strafenkasse kommen automatisch dazu.' : '') + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
       + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
           ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – alle sehen bei „Dienste“ ihren offenen Strafen-Betrag und in der Übersicht die offenen Beträge.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
           : '<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch die Strafenkasse? Dann seht ihr Strafen und Dienste an einem Ort.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseModal()">Strafenkasse verknüpfen</button>')
       + '<div class="hinweis">Andersherum: Den Mannschafts-Link oben kann die Kassenwartin bzw. der Kassenwart in der Strafenkasse unter „Name &amp; PayPal ändern“ eintragen – dann zeigt auch die Strafenkasse eure Dienste.</div></div>'
       + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter in [eckigen Klammern] offen. ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
-      + '<h2>Spieltag-Vorlage</h2><div class="card"><div class="hinweis" style="margin-top:0">' + ((p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE).map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ')) + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Vorlage bearbeiten</button></div>'
+      + '<h2>Dienste-Katalog</h2><div class="card"><div class="hinweis" style="margin-top:0">' + this.katalog().map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ') + '</div><div class="hinweis">Beim Anlegen eines Spieltags werden die Dienste automatisch nach der spielenden Mannschaft vorausgewählt (Vereinsplan). Zeiten anpassen oder eigene Dienste dauerhaft ergänzen:</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Katalog bearbeiten</button></div>'
       + '<h2>Admins</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
           '<div class="zeile"><div class="t">' + esc(mail) + (S.admin.ownerEmail === mail ? '<small>Besitzer:in</small>' : '') + '</div>'
           + (S.istBesitzer && S.admin.ownerEmail !== mail ? '<button class="x-btn" data-mail="' + esc(mail) + '">✕</button>' : '') + '</div>').join('')
@@ -1308,28 +1353,28 @@ const App = {
     };
   },
   vorlageModal() {
-    let rows = ((S.plan && S.plan.vorlage && S.plan.vorlage.length) ? S.plan.vorlage : STANDARD_VORLAGE).map(v => ({ ...v }));
-    const m = oeffneModal('<h3>Spieltag-Vorlage</h3><div class="unter">Zeiten in Minuten relativ zum Anwurf (−60 = eine Stunde vorher).</div><div id="v-rows" style="margin-top:10px"></div>'
+    let rows = this.katalog().map(v => ({ ...v }));
+    const m = oeffneModal('<h3>Dienste-Katalog</h3><div class="unter">Zeiten in Minuten relativ zum Anwurf (−60 = eine Stunde vorher). Dienste aus dem Vereinsplan (🔒) bleiben erhalten, eigene kannst du ergänzen und löschen.</div><div id="v-rows" style="margin-top:10px"></div>'
       + '<button class="btn klein sekundaer" id="v-neu" style="margin-top:6px">+ Dienst</button> <button class="btn klein sekundaer" id="v-std" style="margin-top:6px">Standard</button>'
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="v-ok">Speichern</button></div>');
     const artOpt = sel => Object.entries(ARTEN).map(([k, a]) => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + a.e + '</option>').join('');
-    const lesen = () => { rows = [...m.querySelectorAll('.v-z')].map(z => ({
+    const lesen = () => { rows = [...m.querySelectorAll('.v-z')].map(z => ({ ...(z.dataset.key ? { key: z.dataset.key } : {}),
       titel: z.querySelector('.v-t').value.trim().slice(0, 60), art: z.querySelector('.v-a').value,
       off: parseInt(z.querySelector('.v-o').value, 10) || 0, dauer: Math.max(5, parseInt(z.querySelector('.v-d').value, 10) || 60),
       plaetze: Math.max(1, Math.min(20, parseInt(z.querySelector('.v-p').value, 10) || 1)) })); };
     const zeichnen = () => {
       m.querySelector('#v-rows').innerHTML = '<div class="vorlage-zeile vorlage-kopf"><span>Dienst</span><span>ab (min)</span><span>Dauer</span><span>Plätze</span><span></span></div>'
-        + rows.map((v, i) => '<div class="v-z" style="border-top:1px solid var(--rand);padding-top:6px"><div style="display:flex;gap:6px"><select class="ein v-a" style="width:62px;padding:8px 4px">' + artOpt(v.art) + '</select><input class="ein v-t" value="' + esc(v.titel) + '" placeholder="Bezeichnung"></div>'
-          + '<div class="vorlage-zeile"><span style="font-size:.78rem;color:var(--muted)">Anwurf ±</span><input class="ein v-o" type="number" inputmode="numeric" value="' + v.off + '"><input class="ein v-d" type="number" inputmode="numeric" value="' + v.dauer + '"><input class="ein v-p" type="number" inputmode="numeric" min="1" max="20" value="' + v.plaetze + '"><button class="x-btn" data-weg="' + i + '">✕</button></div></div>').join('');
+        + rows.map((v, i) => '<div class="v-z"' + (v.key ? ' data-key="' + esc(v.key) + '"' : '') + ' style="border-top:1px solid var(--rand);padding-top:6px"><div style="display:flex;gap:6px"><select class="ein v-a" style="width:62px;padding:8px 4px">' + artOpt(v.art) + '</select><input class="ein v-t" value="' + esc(v.titel) + '" placeholder="Bezeichnung"></div>'
+          + '<div class="vorlage-zeile"><span style="font-size:.78rem;color:var(--muted)">Anwurf ±</span><input class="ein v-o" type="number" inputmode="numeric" value="' + v.off + '"><input class="ein v-d" type="number" inputmode="numeric" value="' + v.dauer + '"><input class="ein v-p" type="number" inputmode="numeric" min="1" max="20" value="' + v.plaetze + '">' + (v.key ? '<span style="text-align:center">🔒</span>' : '<button class="x-btn" data-weg="' + i + '">✕</button>') + '</div></div>').join('');
       m.querySelectorAll('[data-weg]').forEach(b => b.onclick = () => { lesen(); rows.splice(+b.dataset.weg, 1); zeichnen(); });
     };
     zeichnen();
     m.querySelector('#v-neu').onclick = () => { lesen(); rows.push({ titel: '', art: 'sonstiges', off: 0, dauer: 60, plaetze: 1 }); zeichnen(); };
-    m.querySelector('#v-std').onclick = () => { rows = STANDARD_VORLAGE.map(v => ({ ...v })); zeichnen(); };
+    m.querySelector('#v-std').onclick = () => { lesen(); rows = STANDARD_VORLAGE.map(v => ({ ...v })).concat(rows.filter(x => !x.key)); zeichnen(); };
     m.querySelector('#v-ok').onclick = async () => {
-      lesen(); rows = rows.filter(r => r.titel).slice(0, 20);
+      lesen(); rows = rows.filter(r => r.titel || r.key).map(r => ({ ...r, titel: r.titel || (STANDARD_VORLAGE.find(x => x.key === r.key) || {}).titel })).slice(0, 20);
       if (!rows.length) { toast('Mindestens ein Dienst.'); return; }
-      try { await this.planSpeichern({ vorlage: rows }); schliesseModal(); toast('Vorlage gespeichert.'); }
+      try { await this.planSpeichern({ vorlage: rows }); schliesseModal(); toast('Katalog gespeichert.'); }
       catch (e) { toast(fehlerText(e), 6000); }
     };
   },
@@ -1359,8 +1404,8 @@ const App = {
       gruppe: (o.gruppe || '').slice(0, 120), quelle: o.quelle || null, quelleZeit: o.quelleZeit || null,
     };
   },
-  dienstModal(d) {
-    const neu = !d; d = d || { titel: '', art: 'aufbau', datum: isoDatum(new Date()), von: '18:00', bis: '19:00', plaetze: 2, ort: '', notiz: '', gruppe: '' };
+  dienstModal(d, vorgabe) {
+    const neu = !d; d = d || { titel: '', art: 'sonstiges', datum: isoDatum(new Date()), von: '18:00', bis: '19:00', plaetze: 1, ort: '', notiz: '', gruppe: '', ...(vorgabe || {}) };
     const es = neu ? [] : eintraegeVon(d.id);
     const m = oeffneModal('<h3>' + (neu ? 'Dienst anlegen' : 'Dienst bearbeiten') + '</h3>'
       + '<label class="feld">Art</label><select class="ein" id="d-art">' + Object.entries(ARTEN).map(([k, a]) => '<option value="' + k + '"' + (k === d.art ? ' selected' : '') + '>' + a.e + ' ' + a.n + '</option>').join('') + '</select>'
@@ -1416,31 +1461,72 @@ const App = {
       const b = Fb.db.batch(); ops.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit();
     }
   },
-  vorlage() { return (S.plan && S.plan.vorlage && S.plan.vorlage.length) ? S.plan.vorlage : STANDARD_VORLAGE; },
-  vorlageAuswahlHtml() {
-    return '<label class="feld">Dienste aus der Vorlage</label>' + this.vorlage().map((v, i) =>
-      '<label class="check"><input type="checkbox" class="vl" data-i="' + i + '" checked> ' + (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)
-      + ' <span style="color:var(--muted);font-size:.8rem">(' + (v.off >= 0 ? '+' : '') + v.off + ' min, ' + v.plaetze + ' Pl.)</span></label>').join('');
+  // Katalog = Vereinsplan-Dienste (mit Plan-Anpassungen) + eigene Zusatzdienste
+  katalog() {
+    const pv = (S.plan && Array.isArray(S.plan.vorlage)) ? S.plan.vorlage : [];
+    return STANDARD_VORLAGE.map(st => ({ ...st, ...(pv.find(v => v.key === st.key) || {}) })).concat(pv.filter(v => !v.key || !SPALTEN_KEYS.includes(v.key)));
   },
-  ausVorlage(m, anwurf, extra) {
-    const gew = [...m.querySelectorAll('.vl:checked')].map(c => this.vorlage()[+c.dataset.i]);
-    return gew.map(v => {
+  // Dienst-Auswahl: wählt je nach Mannschaft automatisch die zu besetzenden Dienste; eigene Dienste ergänzbar
+  auswahlHtml() {
+    return '<label class="feld">Spiel welcher Mannschaft?</label><select class="ein sp-team"><option value="">– keine Vorgabe, selbst auswählen –</option>'
+      + MANNSCHAFT_DIENSTE.map(md => '<option>' + esc(md[0]) + '</option>').join('') + '</select>'
+      + '<div class="hinweis sp-info"></div><label class="feld">Zu besetzende Dienste</label><div class="sp-liste"></div>'
+      + '<div class="sp-extra"></div><button class="btn klein sekundaer sp-neu" type="button" style="margin-top:6px">+ Weiteren Dienst ergänzen</button>';
+  },
+  auswahlStart(m, team) {
+    const kat = this.katalog();
+    const sel = m.querySelector('.sp-team');
+    const setzen = name => {
+      const md = MANNSCHAFT_DIENSTE.find(x => x[0] === name);
+      sel.value = md ? md[0] : '';
+      m.querySelector('.sp-info').textContent = md ? 'Bei Spielen von ' + md[0] + ' sind laut Vereinsplan ' + md[2] + ' Person' + (md[2] === '1' ? '' : 'en') + ' zu besetzen – vorausgewählt. Du kannst die Auswahl ändern.' : 'Hake die Dienste an, die besetzt werden sollen.';
+      m.querySelector('.sp-liste').innerHTML = kat.map((v, i) => {
+        const w = md && v.key ? md[1][SPALTEN_KEYS.indexOf(v.key)] : '';
+        const hin = w && w !== 'x' ? ' <span class="tag-label">' + esc(w === 'Offizielle/r' ? 'macht Offizielle/r' : w) + '</span>' : '';
+        return '<label class="check"><input type="checkbox" class="vl" data-i="' + i + '"' + (w === 'x' ? ' checked' : '') + '> ' + (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel) + hin
+          + ' <span style="color:var(--muted);font-size:.78rem">(' + (v.off >= 0 ? '+' : '') + v.off + ' min, ' + v.plaetze + ' Pl.)</span></label>';
+      }).join('');
+    };
+    sel.onchange = () => setzen(sel.value);
+    m.querySelector('.sp-neu').onclick = () => {
+      const z = document.createElement('div'); z.className = 'sp-z'; z.style.cssText = 'border-top:1px solid var(--rand);padding-top:6px;margin-top:4px';
+      z.innerHTML = '<div style="display:flex;gap:6px"><select class="ein x-a" style="width:62px;padding:8px 4px">' + Object.entries(ARTEN).map(([k, a]) => '<option value="' + k + '"' + (k === 'sonstiges' ? ' selected' : '') + '>' + a.e + '</option>').join('') + '</select><input class="ein x-t" maxlength="60" placeholder="z. B. Hallenaufbau"></div>'
+        + '<div class="vorlage-zeile vorlage-kopf" style="padding-bottom:0"><span></span><span>ab (min)</span><span>Dauer</span><span>Plätze</span><span></span></div>'
+        + '<div class="vorlage-zeile" style="padding-top:2px"><span style="font-size:.78rem;color:var(--muted)">Anwurf ±</span><input class="ein x-o" type="number" inputmode="numeric" value="-60" title="ab (min)"><input class="ein x-d" type="number" inputmode="numeric" value="60" title="Dauer (min)"><input class="ein x-p" type="number" inputmode="numeric" min="1" max="20" value="1" title="Plätze"><button class="x-btn" type="button">✕</button></div>';
+      z.querySelector('.x-btn').onclick = () => z.remove();
+      m.querySelector('.sp-extra').appendChild(z); z.querySelector('.x-t').focus();
+    };
+    setzen(team || '');
+  },
+  auswahlLesen(m) {
+    const kat = this.katalog();
+    return [...m.querySelectorAll('.vl:checked')].map(c => kat[+c.dataset.i]).concat([...m.querySelectorAll('.sp-z')].map(z => ({
+      titel: z.querySelector('.x-t').value.trim().slice(0, 60), art: z.querySelector('.x-a').value,
+      off: parseInt(z.querySelector('.x-o').value, 10) || 0, dauer: Math.max(5, parseInt(z.querySelector('.x-d').value, 10) || 60),
+      plaetze: Math.max(1, Math.min(20, parseInt(z.querySelector('.x-p').value, 10) || 1)),
+    })).filter(v => v.titel));
+  },
+  ausVorlage(defs, anwurf, extra) {
+    return defs.map(v => {
       const s = new Date(anwurf.getTime() + v.off * 60e3), e = new Date(s.getTime() + v.dauer * 60e3);
       return { ...this.dienstDaten({ titel: v.titel, art: v.art, datum: isoDatum(s), von: hhmm(s), bis: hhmm(e), plaetze: v.plaetze, ...extra }), erstellt: Fb.jetzt() };
     });
   },
   spieltagModal() {
-    const m = oeffneModal('<h3>Spieltag anlegen</h3><div class="unter">Alle Dienste werden passend zum Anwurf angelegt.</div>'
+    const m = oeffneModal('<h3>Spieltag anlegen</h3><div class="unter">Die Dienste werden je nach Mannschaft automatisch vorausgewählt und passend zum Anwurf angelegt.</div>'
       + '<div class="zwei"><div><label class="feld">Datum</label><input class="ein" id="s-datum" type="date" value="' + isoDatum(new Date()) + '"></div><div><label class="feld">Anwurf</label><input class="ein" id="s-zeit" type="time" value="18:00"></div></div>'
-      + '<label class="feld">Anlass</label><input class="ein" id="s-anlass" maxlength="100" placeholder="z. B. Heimspiel gegen TSG Münster">'
+      + '<label class="feld">Gegner / Anlass</label><input class="ein" id="s-anlass" maxlength="100" placeholder="z. B. gegen TSG Münster">'
       + '<label class="feld">Halle</label><input class="ein" id="s-ort" maxlength="120" placeholder="z. B. Sporthalle Krofdorf-Gleiberg">'
-      + this.vorlageAuswahlHtml()
+      + this.auswahlHtml()
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="s-ok">Anlegen</button></div>');
+    this.auswahlStart(m, LS.get('hd-letzte-mannschaft', ''));
     m.querySelector('#s-ok').onclick = async () => {
       const datum = m.querySelector('#s-datum').value, zeit = m.querySelector('#s-zeit').value;
       if (!datum || !zeit) { toast('Datum und Anwurf ausfüllen.'); return; }
       const anlass = m.querySelector('#s-anlass').value.trim();
-      const ds = this.ausVorlage(m, ausDatum(datum, zeit), { ort: m.querySelector('#s-ort').value.trim(), gruppe: (anlass || 'Spieltag') + ' · Anwurf ' + zeit });
+      const team = m.querySelector('.sp-team').value;
+      LS.set('hd-letzte-mannschaft', team);
+      const ds = this.ausVorlage(this.auswahlLesen(m), ausDatum(datum, zeit), { ort: m.querySelector('#s-ort').value.trim(), gruppe: (team ? 'Heimspiel ' + team + (anlass ? ' ' + anlass : '') : (anlass || 'Spieltag')) + ' · Anwurf ' + zeit });
       if (!ds.length) { toast('Mindestens einen Dienst auswählen.'); return; }
       try { const b = Fb.db.batch(); ds.forEach(x => b.set(Fb.planRef().collection('dienste').doc(), x)); await b.commit(); schliesseModal(); toast(ds.length + ' Dienste angelegt.'); this.tabZeigen('dienste'); }
       catch (e) { toast(fehlerText(e), 6000); }
@@ -1457,15 +1543,16 @@ const App = {
     (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => teams.push({ key: l.id + '|' + h.team, label: h.label + ' – ' + l.name, team: h.team, liga: l })));
     if (!teams.length) { m.querySelector('#a-status').textContent = 'Keine Mannschaften gefunden.'; return; }
     const gemerkt = LS.get('hd-anwurf-team-' + S.planId, null);
-    const vorschlag = gemerkt || (teams.find(t => S.plan && S.plan.team && norm(t.label).startsWith(norm(S.plan.team))) || teams[0]).key;
+    const vorschlag = gemerkt && teams.some(t => t.key === gemerkt) ? gemerkt : teams[0].key;
     m.querySelector('#a-status').innerHTML = 'Stand nuLiga: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '. Wähle die Mannschaft und hake nur die Spiele an, für die Dienste angelegt werden sollen.';
     m.querySelector('#a-inhalt').innerHTML = '<label class="feld">Mannschaft</label><select class="ein" id="a-team">' + teams.map(t => '<option value="' + esc(t.key) + '"' + (t.key === vorschlag ? ' selected' : '') + '>' + esc(t.label) + '</option>').join('') + '</select>'
-      + '<div id="a-spiele" style="margin-top:8px"></div>' + this.vorlageAuswahlHtml()
+      + '<div id="a-spiele" style="margin-top:8px"></div>' + this.auswahlHtml()
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="a-ok">Anlegen</button></div>';
     let spiele = [];
     const zeigen = () => {
       const t = teams.find(x => x.key === m.querySelector('#a-team').value);
       LS.set('hd-anwurf-team-' + S.planId, t.key);
+      this.auswahlStart(m, mannschaftAus(t.label.split(' – ')[0]));
       const jetzt = new Date();
       spiele = (t.liga.games || []).filter(g => g.h === t.team && g.d && new Date(g.d) > jetzt).sort((a, b) => a.d.localeCompare(b.d));
       const html = spiele.map((g, i) => {
@@ -1489,8 +1576,9 @@ const App = {
       const gew = [...m.querySelectorAll('.a-sp:checked')].map(c => spiele[+c.dataset.i]);
       if (!gew.length) { toast('Kein Spiel ausgewählt.'); return; }
       let alle = [];
-      gew.forEach(g => { const dt = new Date(g.d); alle = alle.concat(this.ausVorlage(m, dt, { ort: g.v || '', gruppe: 'Heimspiel gegen ' + g.a + ' · Anwurf ' + hhmm(dt), quelle: 'anwurf:' + g.mid, quelleZeit: g.d })); });
-      if (!alle.length) { toast('Mindestens einen Dienst aus der Vorlage auswählen.'); return; }
+      const defs = this.auswahlLesen(m), team = m.querySelector('.sp-team').value;
+      gew.forEach(g => { const dt = new Date(g.d); alle = alle.concat(this.ausVorlage(defs, dt, { ort: g.v || '', gruppe: 'Heimspiel ' + (team ? team + ' ' : '') + 'gegen ' + g.a + ' · Anwurf ' + hhmm(dt), quelle: 'anwurf:' + g.mid, quelleZeit: g.d })); });
+      if (!alle.length) { toast('Mindestens einen Dienst auswählen.'); return; }
       m.querySelector('#a-ok').disabled = true;
       try {
         for (let i = 0; i < alle.length; i += 400) { const b = Fb.db.batch(); alle.slice(i, i + 400).forEach(x => b.set(Fb.planRef().collection('dienste').doc(), x)); await b.commit(); }
@@ -1507,7 +1595,7 @@ const App = {
       const b = Fb.db.batch();
       ds.forEach(d => {
         const s = new Date(startVon(d).getTime() + delta), e = d.bis ? new Date(endeVon(d).getTime() + delta) : null;
-        b.update(Fb.dienstRef(d.id), { datum: isoDatum(s), von: hhmm(s), bis: e ? hhmm(e) : '', start: Fb.ts(s), quelleZeit: g.d, ort: g.v || d.ort || '', gruppe: 'Heimspiel gegen ' + g.a + ' · Anwurf ' + hhmm(neu) });
+        b.update(Fb.dienstRef(d.id), { datum: isoDatum(s), von: hhmm(s), bis: e ? hhmm(e) : '', start: Fb.ts(s), quelleZeit: g.d, ort: g.v || d.ort || '', gruppe: String(d.gruppe || 'Heimspiel gegen ' + g.a).replace(/ · Anwurf \d\d:\d\d$/, '') + ' · Anwurf ' + hhmm(neu) });
       });
       await b.commit(); toast('Verschoben. Sag der Mannschaft Bescheid! 📣');
     } catch (e) { toast(fehlerText(e), 6000); }
@@ -1611,7 +1699,7 @@ const Strafen = {
       if (this.token !== c.token) return;
       this._abo = Fb.db.collection('strafenkasse_ansicht').doc(c.token).onSnapshot(snap => {
         if (!snap.exists) { this.daten = null; App.renderAlles(); return; }
-        try { const d = JSON.parse(snap.data().json); this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); } catch (e) {}
+        try { const d = JSON.parse(snap.data().json); this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); App.spielerImport(); } catch (e) {}
       }, () => {});
     }).catch(() => {});
   },
@@ -1652,6 +1740,12 @@ const Strafen = {
     if (s) s.onchange = () => { LS.set('hd-sk-ich-' + this.token, s.value || null); App.renderAlles(); };
   },
 };
+function alleSpieler() {
+  const m = new Map();
+  ((S.plan && S.plan.spieler) || []).forEach(n => m.set(norm(n), n));
+  if (Strafen.cfg() && Strafen.daten) Strafen.daten.spieler.filter(x => x.aktiv !== false).forEach(x => { if (!m.has(norm(x.name))) m.set(norm(x.name), x.name); });
+  return [...m.values()];
+}
 function checklisteText() { return (S.plan && S.plan.checkliste) || CHECKLISTE_STANDARD; }
 function offenePlatzhalter() { return (checklisteText().match(/\[[^\]\n]+\]/g) || []).length; }
 function ckHash(t) { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return 'c' + (h >>> 0).toString(36); }

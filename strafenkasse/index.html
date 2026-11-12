@@ -99,6 +99,8 @@
     box-shadow: 0 1px 3px rgba(0,0,0,.25);
   }
   .logo-badge img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-badge { position: relative; }
+  .logo-badge .eck { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid #C30606; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; }
   .kopf-text { flex: 1; min-width: 0; }
   header h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header .sub { font-size: .72rem; opacity: .85; margin-top: 1px; }
@@ -381,7 +383,7 @@
 <body>
 
 <header>
-  <div class="logo-badge"><img id="kopf-logo" alt="HSG Wettenberg"></div>
+  <div class="logo-badge"><img id="kopf-logo" alt="HSG Wettenberg"><span class="eck">💶</span></div>
   <div class="kopf-text">
     <h1>Strafenkasse</h1>
     <div class="sub">HSG Wettenberg</div>
@@ -980,10 +982,25 @@ const Hallendienst = {
       if (this.id !== id) return;
       const ref = Fb.db.collection('hallendienst').doc(id);
       const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); };
-      this._abos.push(ref.onSnapshot(s => { this.plan = s.exists ? { titel: s.data().titel || 'Hallendienst' } : null; neu(); }, () => {}));
+      this._abos.push(ref.onSnapshot(s => { this.plan = s.exists ? { titel: s.data().titel || 'Hallendienst', spieler: s.data().spieler || [] } : null; neu(); this.spielerImport(); }, () => {}));
       this._abos.push(ref.collection('dienste').onSnapshot(q => { this.dienste = q.docs.map(d => { const x = d.data(); return { id: d.id, titel: x.titel, datum: x.datum, von: x.von, bis: x.bis || '', plaetze: x.plaetze, ort: x.ort || '' }; }); neu(); }, () => {}));
       this._abos.push(ref.collection('eintraege').onSnapshot(q => { this.eintraege = q.docs.map(d => { const x = d.data(); return { dienst: x.dienst, platz: x.platz, name: x.name }; }); neu(); }, () => {}));
     }).catch(() => {});
+  },
+  // Kassenwart-Ansicht: neue Namen aus der Spielerliste des Hallendienstes automatisch als Spieler anlegen
+  // (jeder Name nur einmal, damit gelöschte/ausgeblendete Spieler nicht zurückkommen)
+  spielerImport() {
+    if (nurLesen || !this.plan || !Array.isArray(this.plan.spieler)) return;
+    const key = 'sk-hd-import-' + this.id;
+    let schon; try { schon = new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch (e) { schon = new Set(); }
+    const vorhanden = new Set(daten.spieler.map(x => this.norm(x.name)));
+    const neue = this.plan.spieler.map(n => String(n).trim()).filter(n => n && !vorhanden.has(this.norm(n)) && !schon.has(this.norm(n)));
+    if (!neue.length) return;
+    neue.forEach(n => { daten.spieler.push({ id: neueId(), name: n, aktiv: true }); schon.add(this.norm(n)); });
+    daten.spielerTs = Date.now();
+    try { localStorage.setItem(key, JSON.stringify([...schon])); } catch (e) {}
+    speichern(); App.rendern();
+    App.toast(neue.length + (neue.length === 1 ? ' Spieler' : ' Spieler') + ' aus dem Hallendienst übernommen');
   },
   ende(d) { const [y, m, t] = d.datum.split('-').map(Number); const [h, mi] = (d.bis || d.von || '23:59').split(':').map(Number); return new Date(y, m - 1, t, h, mi); },
   meinName(ich) {
@@ -1631,6 +1648,7 @@ const App = {
   },
 
   rendern() {
+    if (daten.hallendienst) Hallendienst.start(daten.hallendienst); else Hallendienst.start(null);
     this.rendernKopf();
     this.renderMbBanner();
     this.rendernErfassen();
@@ -2866,7 +2884,7 @@ const App = {
       <div class="hinweis" style="margin-top:0">Mit PayPal.me-Name öffnet „Jetzt per PayPal zahlen“ in der Spieler-Ansicht PayPal direkt mit dem offenen Betrag. Deinen Namen findest du in der PayPal-App unter „PayPal.me“.</div>
       <div class="hinweis" style="margin-top:0">Erscheint im Kopf der App und in den geteilten Übersichten, Bildern und PDFs. PayPal leer lassen, wenn nicht gewünscht.</div>
       <div class="feld"><label>Hallendienst-Link (optional)</label><input type="text" id="e-hallendienst" autocapitalize="off" value="${esc(daten.hallendienst ? hallendienstLink(daten.hallendienst) : '')}" placeholder="https://buildspaceos.de/hallendienst/index.html?plan=…"></div>
-      <div class="hinweis" style="margin-top:0">Nutzt ihr auch den Hallendienst-Planer? Mannschafts-Link hier einfügen – dann sehen alle in der Spieler-Ansicht neben ihren Strafen auch ihre Hallendienste.</div>
+      <div class="hinweis" style="margin-top:0">Nutzt ihr auch den Hallendienst-Planer? Mannschafts-Link hier einfügen – dann sehen alle in der Spieler-Ansicht neben ihren Strafen auch ihre Hallendienste, und neue Spieler aus dem Hallendienst werden automatisch übernommen.</div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.einstellungenSpeichern()">Speichern</button>
