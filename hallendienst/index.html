@@ -741,7 +741,7 @@ const App = {
   cacheSchreiben() {
     if (!S.planId || !S.plan) return;
     LS.set(K.cache(S.planId), {
-      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage, checkliste: S.plan.checkliste || '', strafenkasse: S.plan.strafenkasse || '' },
+      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage, checkliste: S.plan.checkliste || '', strafenkasse: S.plan.strafenkasse || '', rollen: S.plan.rollen || {} },
       dienste: S.dienste.map(({ start, erstellt, ...r }) => r),
       eintraege: S.eintraege.map(({ at, ...r }) => r),
     });
@@ -855,7 +855,7 @@ const App = {
     const meine = S.eintraege.filter(istMein).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d);
     const kommend = meine.filter(x => !istVorbei(x.d)).sort((a, b) => startVon(a.d) - startVon(b.d));
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
-      + (name ? '<b>' + esc(name) + '</b>' + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + meine.length + ' in der Saison'
+      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + meine.length + ' in der Saison'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
       + Strafen.ichHtml();
@@ -928,7 +928,7 @@ const App = {
     let slots = '';
     for (let i = 0; i < Math.max(d.plaetze, ...es.map(e => e.platz + 1)); i++) {
       const e = es.find(x => x.platz === i);
-      if (e) slots += '<button class="slot' + (istMein(e) ? ' mein' : '') + (e.tausch ? ' tausch' : '') + '" data-slot="' + esc(d.id) + '|' + i + '|' + esc(e.id) + '">' + esc(e.name) + '</button>';
+      if (e) slots += '<button class="slot' + (istMein(e) ? ' mein' : '') + (e.tausch ? ' tausch' : '') + '" data-slot="' + esc(d.id) + '|' + i + '|' + esc(e.id) + '"' + (freigestellt(e.name) ? ' title="' + esc(rollenText(e.name)) + ' – freiwillig übernommen"' : '') + '>' + esc(e.name) + (freigestellt(e.name) ? ' ' + rollenEmoji(e.name) : '') + '</button>';
       else if (i < d.plaetze) slots += zu ? '<span class="slot frei zu">' + (vorbei ? 'nicht besetzt' : 'frei') + '</span>' : '<button class="slot frei" data-slot="' + esc(d.id) + '|' + i + '|">' + (vorbei ? '+ Nachtragen' : '+ Eintragen') + '</button>';
     }
     return '<div class="dienst' + (vorbei ? ' vergangen' : '') + '"><div class="d-kopf"><div class="d-ico">' + art.e + '</div><div class="d-txt"><b>' + esc(d.titel) + '</b><small>'
@@ -972,7 +972,7 @@ const App = {
       if (S.istAdmin && !meinName()) LS.set(K.name, n);
       m.querySelector('#m-ok').disabled = true;
       const ok = await this.eintragen(d, platz, n);
-      if (ok) { schliesseModal(); toast('✓ Eingetragen: ' + n); }
+      if (ok) { schliesseModal(); toast(freigestellt(n) ? '✓ Danke, ' + n + ' – du hilfst freiwillig aus! 🙌' : '✓ Eingetragen: ' + n); }
       else m.querySelector('#m-ok').disabled = false;
     };
   },
@@ -1077,6 +1077,31 @@ const App = {
     m.querySelector('#m-ok').onclick = () => { LS.set(K.name, m.querySelector('#m-name').value.trim().replace(/\s+/g, ' ')); schliesseModal(); this.renderAlles(); };
   },
 
+  rollenModal() {
+    const namen = alleSpieler().sort((a, b) => a.localeCompare(b, 'de'));
+    if (!namen.length) { toast('Lege zuerst die Spielerliste an.'); this.spielerModal(); return; }
+    const rollen = JSON.parse(JSON.stringify((S.plan && S.plan.rollen) || {}));
+    const m = oeffneModal('<h3>Rollen festlegen</h3><div class="unter">Antippen zum Markieren. Markierte Spieler:innen sind von Pflichtdiensten freigestellt und können freiwillig einspringen.</div>'
+      + '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);margin-top:10px">' + namen.map(n => '<div class="zeile" style="flex-wrap:wrap"><div class="t" style="flex:1 1 100%"><b>' + esc(n) + '</b></div><div class="chips">'
+        + Object.entries(ROLLEN).map(([k, r]) => '<button type="button" class="rolle-btn" data-n="' + esc(norm(n)) + '" data-k="' + k + '" style="border:1.5px solid var(--rand-stark);border-radius:9px;padding:6px 9px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;background:var(--card);color:var(--text)">' + r.e + ' ' + esc(r.n.replace(' für den Verein', '')) + '</button>').join('')
+        + '</div></div>').join('') + '</div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="r-ok">Speichern</button></div>');
+    const zeichnen = () => m.querySelectorAll('.rolle-btn').forEach(b => {
+      const an = (rollen[b.dataset.n] || []).includes(b.dataset.k);
+      b.style.background = an ? 'var(--chip-mein)' : 'var(--card)'; b.style.borderColor = an ? 'var(--gruen)' : 'var(--rand-stark)';
+    });
+    m.querySelectorAll('.rolle-btn').forEach(b => b.onclick = () => {
+      const l = new Set(rollen[b.dataset.n] || []);
+      l.has(b.dataset.k) ? l.delete(b.dataset.k) : l.add(b.dataset.k);
+      if (l.size) rollen[b.dataset.n] = [...l]; else delete rollen[b.dataset.n];
+      zeichnen();
+    });
+    zeichnen();
+    m.querySelector('#r-ok').onclick = async () => {
+      try { await this.planSpeichern({ rollen }); schliesseModal(); toast('Rollen gespeichert.'); }
+      catch (e) { toast(fehlerText(e), 6000); }
+    };
+  },
   strafenkasseModal() {
     const m = oeffneModal('<h3>Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › Cloud-Sync auf „Spieler-Ansicht teilen (nur Lesen)“ tippen und den Link hier einfügen.</div>'
       + '<label class="feld">Link der Spieler-Ansicht</label><input class="ein" id="sk-link" autocapitalize="off" placeholder="https://buildspaceos.de/strafenkasse/index.html?team=…#s=…">'
@@ -1255,11 +1280,14 @@ const App = {
     $('#st-schnitt').textContent = liste.length ? (ges / liste.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
     const max = liste.length ? liste[0].n : 1;
     $('#st-rangliste').innerHTML = liste.length ? liste.map((x, i) =>
-      '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + x.n + '</span></div>'
+      '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + x.n + '</span></div>'
       + (x.kommend ? '' : '')).join('') + '<div class="hinweis" style="margin-bottom:6px">Gezählt werden alle Einträge der Saison (vergangene und kommende).</div>'
       : '<div class="leer">Noch keine Einträge.</div>';
-    const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)));
-    $('#st-ohne').innerHTML = ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '';
+    const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)) && !freigestellt(n));
+    const frei = alleSpieler().filter(freigestellt).sort((a, b) => a.localeCompare(b, 'de'));
+    $('#st-ohne').innerHTML = (ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '')
+      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (zaehl.has(norm(n)) ? ' <small style="color:var(--gruen)">· ' + zaehl.get(norm(n)).n + '× freiwillig</small>' : '') + '</span>').join('') + '</div>'
+        + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
     const al = [...arten.entries()].sort((a, b) => b[1] - a[1]);
     $('#st-arten').innerHTML = al.length ? al.map(([a, n]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span><span class="bar"><i style="width:' + Math.round(n / al[0][1] * 100) + '%"></i></span><span class="z">' + n + '</span></div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
   },
@@ -1292,6 +1320,9 @@ const App = {
       + '<div class="zeile"><div class="t">' + (p.gesperrt ? '🔒 Eintragen gesperrt' : 'Eintragen offen') + '<small>' + (p.gesperrt ? 'Spieler:innen können sich weder ein- noch austragen' : 'Spieler:innen tragen sich selbst ein') + '</small></div><button class="btn klein ' + (p.gesperrt ? '' : 'sekundaer') + '" onclick="App.sperreUmschalten()">' + (p.gesperrt ? 'Öffnen' : 'Sperren') + '</button></div>'
       + '</div>'
       + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.' + (p.strafenkasse ? ' Neue Spieler:innen aus der verknüpften Strafenkasse kommen automatisch dazu.' : '') + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
+      + '<h2>Freigestellt (' + alleSpieler().filter(freigestellt).length + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Schiedsrichter, Zeitnehmer/Sekretär für den Verein und Trainer müssen keine Dienste machen, können aber freiwillig einspringen. Sie erscheinen nicht unter „Noch ohne Dienst“.</div>'
+      + (alleSpieler().some(freigestellt) ? '<div class="chips" style="margin-top:9px">' + alleSpieler().filter(freigestellt).map(n => '<span>' + rollenEmoji(n) + ' ' + esc(n) + '</span>').join('') + '</div>' : '')
+      + '<button class="btn sekundaer" style="margin-top:9px" onclick="App.rollenModal()">Rollen festlegen</button></div>'
       + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
           ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – alle sehen bei „Dienste“ ihren offenen Strafen-Betrag und in der Übersicht die offenen Beträge.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
           : '<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch die Strafenkasse? Dann seht ihr Strafen und Dienste an einem Ort.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseModal()">Strafenkasse verknüpfen</button>')
@@ -1315,7 +1346,7 @@ const App = {
     const p = S.plan;
     const daten = {
       titel: p.titel, team: p.team || '', hinweis: p.hinweis || '', spieler: p.spieler || [], frist: Number.isInteger(p.frist) ? p.frist : 48,
-      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, checkliste: p.checkliste || '', strafenkasse: p.strafenkasse || '', erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
+      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, checkliste: p.checkliste || '', strafenkasse: p.strafenkasse || '', rollen: p.rollen || {}, erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
     };
     await Fb.planRef().set(daten);
     if (teil.titel && S.admin && teil.titel !== S.admin.titel) { try { await Fb.adminRef().update({ titel: teil.titel }); } catch (e) {} }
@@ -1740,6 +1771,16 @@ const Strafen = {
     if (s) s.onchange = () => { LS.set('hd-sk-ich-' + this.token, s.value || null); App.renderAlles(); };
   },
 };
+// Freigestellte Rollen: diese Spieler:innen müssen keine Hallendienste machen, dürfen aber freiwillig
+const ROLLEN = {
+  schiri: { e: '🟨', n: 'Schiedsrichter' },
+  zn: { e: '⏱️', n: 'Zeitnehmer/Sekretär für den Verein' },
+  trainer: { e: '📋', n: 'Trainer' },
+};
+function rollenVon(name) { const r = (S.plan && S.plan.rollen) || {}; return (r[norm(name)] || []).filter(k => ROLLEN[k]); }
+function freigestellt(name) { return rollenVon(name).length > 0; }
+function rollenEmoji(name) { return rollenVon(name).map(k => ROLLEN[k].e).join(''); }
+function rollenText(name) { return rollenVon(name).map(k => ROLLEN[k].n).join(', '); }
 function alleSpieler() {
   const m = new Map();
   ((S.plan && S.plan.spieler) || []).forEach(n => m.set(norm(n), n));
