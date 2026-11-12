@@ -307,6 +307,7 @@
       <button data-v="alle">Ganze Saison</button>
     </div>
     <div class="card" style="padding:6px 10px" id="plan-tabelle"></div>
+    <div id="ueb-strafen"></div>
   </section>
 
   <!-- ============ STATISTIK ============ -->
@@ -394,9 +395,9 @@ const STANDARD_VORLAGE = [
 
 // Pflichten des Hallendienstes (HSG Wettenberg, Stand 20.11.2024).
 // Format: "## Abschnitt", "! wichtiger Punkt", sonst ein Punkt pro Zeile; [eckige Klammern] = Platzhalter.
-// Namen und Telefonnummern stehen bewusst NICHT hier (öffentliches Repo), sondern im Plan (Verwalten › Checkliste).
+// Ansprechpartner sind die Vereinsverantwortlichen (keine Namen/Nummern im Code).
 const CHECKLISTE_STANDARD = `## Vor dem Dienst
-Kassen und Hallenschlüssel am Freitag vor dem Spieltag nach vorheriger telefonischer Absprache abholen bei: [Name, Telefon]
+Kassen und Hallenschlüssel am Freitag vor dem Spieltag nach vorheriger telefonischer Absprache bei den Vereinsverantwortlichen abholen
 Absprache zur Übergabe des Hallenschlüssels für den Dienst am Folgetag
 Pünktliche Hallenöffnung mind. 60 Minuten vor Anpfiff
 Kein Essen anbieten bei M1 / F1 – der Förderverein grillt (ansonsten freiwillig)
@@ -424,7 +425,7 @@ Bezahlung der Schiedsrichter gegen Rechnung aus den Kassen (Rechnung in die Kass
 Eintritt kassieren bis Ende der 1. Halbzeit des letzten Spiels
 ## Am Ende des Dienstes
 Freigabe des jeweiligen Spielberichts am Laptop durch SK und ZN
-! Kommt nach dem Spiel keine E-Mail mit dem Spielprotokoll, bitte nochmals prüfen. Notfalls anrufen: [Name, Telefon]
+! Kommt nach dem Spiel keine E-Mail mit dem Spielprotokoll, bitte nochmals prüfen. Notfalls an die Vereinsverantwortlichen wenden
 Leergut auf der Tribüne und in den Kabinen einsammeln und sortieren
 Alle Mülleimer (Kiosk, Foyer, Toiletten, Tribüne, Kabinen und Toiletten in den Kabinengängen) leeren und in den Müllcontainer vor der Halle werfen (Schlüssel hängt im Kiosk). Feste Metallmülleimer vor der Halle müssen nicht geleert werden – aber keine Zigaretten am oberen Rand liegen lassen
 Vor der Halle kehren und Zigaretten vor den Türen der Kabinen auflesen
@@ -432,7 +433,7 @@ Kabinen, Toiletten, Kiosk und Küche aufräumen
 Aschenbecher leeren und reinstellen
 Volle Kisten aus dem Kühlwagen in den Kiosk stellen
 Leergut sortieren und in den Kühlwagen räumen
-Falls am Folgetag keine Spiele sind: Stromkabel vom Kühlwagen abziehen, Adapterkabel in den Kühlwagen und Verlängerung in [bitte ergänzen]
+Falls am Folgetag keine Spiele sind: Stromkabel vom Kühlwagen abziehen, Adapterkabel in den Kühlwagen legen und Verlängerung wegräumen
 Abbau SK/ZN-Tisch und Mannschaftsbänke (je nach Folgetag)
 Stehtische abbauen und in die Küche stellen
 Kaffeetassen spülen
@@ -441,7 +442,7 @@ Hallenbuch eintragen: Nutzungszeit und ggf. festgestellte Mängel
 Alle Lichter im Foyer, Kiosk, Küche, Toiletten, Kabinen und Duschen ausschalten (die Hallenbeleuchtung geht automatisch aus)
 Halle, Toiletten im Foyer und HSG-Raum abschließen
 ! Alle Außentüren überprüfen
-Kassen und Kassenschlüssel zurückbringen zu: [Name, Telefon]`;
+Kassen und Kassenschlüssel an die Vereinsverantwortlichen zurückgeben`;
 // Zu besetzende Dienste je Mannschaft (x = zu besetzen, '' = nicht, sonst Hinweis); Eintritt bei allen aktiven Mannschaften
 const MANNSCHAFT_SPALTEN = ['Kiosk 1', 'Kiosk 2', 'Essen', 'Eintritt', 'Zeitnehmer', 'Sekretär', 'Schiedsrichter', 'Filmer', 'Wischer'];
 const MANNSCHAFT_DIENSTE = [
@@ -449,7 +450,7 @@ const MANNSCHAFT_DIENSTE = [
   ['D-Jugend', ['', '', '', '', '', '', '', '', ''], '0'],
   ['C-Jugend', ['', '', '', '', '', '', '', '', ''], '2'],
   ['A-Jugend', ['', '', '', '', 'x', 'x', '', '', ''], '4'],
-  ['Frauen 1', ['x', 'x', '', 'x', 'x', 'fest besetzt', '', 'x', 'x'], '6'],
+  ['Frauen 1', ['x', 'x', '', 'x', 'x', '', '', 'x', 'x'], '6'],
   ['Frauen 2', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '5 bis 6'],
   ['Frauen 3', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '4 bis 5'],
   ['Männer 1', ['x', 'x', '', 'x', 'Offizielle/r', 'x', '', 'x', 'x'], '6'],
@@ -719,7 +720,7 @@ const App = {
   cacheSchreiben() {
     if (!S.planId || !S.plan) return;
     LS.set(K.cache(S.planId), {
-      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage, checkliste: S.plan.checkliste || '' },
+      plan: { titel: S.plan.titel, team: S.plan.team, hinweis: S.plan.hinweis, spieler: S.plan.spieler, frist: S.plan.frist, gesperrt: S.plan.gesperrt, vorlage: S.plan.vorlage, checkliste: S.plan.checkliste || '', strafenkasse: S.plan.strafenkasse || '' },
       dienste: S.dienste.map(({ start, erstellt, ...r }) => r),
       eintraege: S.eintraege.map(({ at, ...r }) => r),
     });
@@ -817,7 +818,9 @@ const App = {
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
       + (name ? '<b>' + esc(name) + '</b>' + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + meine.length + ' in der Saison'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
-      + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>';
+      + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
+      + Strafen.ichHtml();
+    Strafen.knoepfe(ich);
     const heute = isoDatum(new Date());
     const heuteDienste = S.dienste.filter(d => d.datum === heute);
     const heuteMein = heuteDienste.some(d => eintraegeVon(d.id).some(istMein));
@@ -1029,6 +1032,27 @@ const App = {
     m.querySelector('#m-ok').onclick = () => { LS.set(K.name, m.querySelector('#m-name').value.trim().replace(/\s+/g, ' ')); schliesseModal(); this.renderAlles(); };
   },
 
+  strafenkasseModal() {
+    const m = oeffneModal('<h3>Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › Cloud-Sync auf „Spieler-Ansicht teilen (nur Lesen)“ tippen und den Link hier einfügen.</div>'
+      + '<label class="feld">Link der Spieler-Ansicht</label><input class="ein" id="sk-link" autocapitalize="off" placeholder="https://buildspaceos.de/strafenkasse/index.html?team=…#s=…">'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="sk-ok">Verknüpfen</button></div>');
+    m.querySelector('#sk-ok').onclick = async () => {
+      const v = Strafen.parse(m.querySelector('#sk-link').value);
+      if (!v) { toast('Das ist kein Link einer Spieler-Ansicht (er enthält „#s=“).'); return; }
+      m.querySelector('#sk-ok').disabled = true;
+      try {
+        await Fb.laden();
+        const snap = await Fb.db.collection('strafenkasse_ansicht').doc(v.split('|')[1]).get();
+        if (!snap.exists) { toast('Diese Spieler-Ansicht gibt es nicht (mehr).'); m.querySelector('#sk-ok').disabled = false; return; }
+        await this.planSpeichern({ strafenkasse: v }); schliesseModal(); toast('Strafenkasse verknüpft.');
+      } catch (e) { m.querySelector('#sk-ok').disabled = false; toast(fehlerText(e), 6000); }
+    };
+  },
+  async strafenkasseTrennen() {
+    if (!confirm('Verknüpfung zur Strafenkasse lösen? Die Strafenkasse selbst bleibt unverändert.')) return;
+    try { await this.planSpeichern({ strafenkasse: '' }); toast('Getrennt.'); } catch (e) { toast(fehlerText(e), 6000); }
+  },
+
   // ---------- Tab: Checkliste ----------
   ckSchluessel() { return 'hd-check-' + S.planId + '-' + isoDatum(new Date()); },
   renderCheckliste() {
@@ -1078,7 +1102,7 @@ const App = {
     $('#ck-team').onchange = e => { LS.set('hd-ck-mannschaft', MANNSCHAFT_DIENSTE[+e.target.value][0]); this.renderCheckliste(); };
   },
   checklisteModal() {
-    const m = oeffneModal('<h3>Checkliste bearbeiten</h3><div class="unter">Eine Zeile pro Punkt. <b>## Überschrift</b> beginnt einen Abschnitt, <b>!</b> am Zeilenanfang hebt einen Punkt hervor. Telefonnummern (z. B. 0170 1234567) werden zum Antippen. Ersetze die Platzhalter in [eckigen Klammern].</div>'
+    const m = oeffneModal('<h3>Checkliste bearbeiten</h3><div class="unter">Eine Zeile pro Punkt. <b>## Überschrift</b> beginnt einen Abschnitt, <b>!</b> am Zeilenanfang hebt einen Punkt hervor. Telefonnummern werden zum Antippen.</div>'
       + '<textarea class="ein" id="c-text" style="min-height:52vh;margin-top:10px;font-size:.88rem">' + esc(checklisteText()) + '</textarea>'
       + '<div class="hinweis">Sichtbar für alle mit dem Mannschafts-Link.</div>'
       + '<div class="knoepfe"><button class="btn sekundaer" id="c-std">Standard</button><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="c-ok">Speichern</button></div>');
@@ -1096,6 +1120,7 @@ const App = {
 
   // ---------- Tab: Übersicht ----------
   renderUebersicht() {
+    $('#ueb-strafen').innerHTML = Strafen.uebersichtHtml(); Strafen.knoepfe($('#ueb-strafen'));
     const kommend = S.dienste.filter(d => !istVorbei(d));
     const plaetze = kommend.reduce((s, d) => s + d.plaetze, 0);
     const offen = kommend.reduce((s, d) => s + frei(d), 0);
@@ -1222,7 +1247,11 @@ const App = {
       + '<div class="zeile"><div class="t">' + (p.gesperrt ? '🔒 Eintragen gesperrt' : 'Eintragen offen') + '<small>' + (p.gesperrt ? 'Spieler:innen können sich weder ein- noch austragen' : 'Spieler:innen tragen sich selbst ein') + '</small></div><button class="btn klein ' + (p.gesperrt ? '' : 'sekundaer') + '" onclick="App.sperreUmschalten()">' + (p.gesperrt ? 'Öffnen' : 'Sperren') + '</button></div>'
       + '</div>'
       + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
-      + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter offen (z. B. Name und Telefon der Kassenverantwortlichen). ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
+      + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
+          ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – alle sehen bei „Dienste“ ihren offenen Strafen-Betrag und in der Übersicht die offenen Beträge.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
+          : '<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch die Strafenkasse? Dann seht ihr Strafen und Dienste an einem Ort.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseModal()">Strafenkasse verknüpfen</button>')
+      + '<div class="hinweis">Andersherum: Den Mannschafts-Link oben kann die Kassenwartin bzw. der Kassenwart in der Strafenkasse unter „Name &amp; PayPal ändern“ eintragen – dann zeigt auch die Strafenkasse eure Dienste.</div></div>'
+      + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter in [eckigen Klammern] offen. ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
       + '<h2>Spieltag-Vorlage</h2><div class="card"><div class="hinweis" style="margin-top:0">' + ((p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE).map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ')) + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Vorlage bearbeiten</button></div>'
       + '<h2>Admins</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
           '<div class="zeile"><div class="t">' + esc(mail) + (S.admin.ownerEmail === mail ? '<small>Besitzer:in</small>' : '') + '</div>'
@@ -1241,7 +1270,7 @@ const App = {
     const p = S.plan;
     const daten = {
       titel: p.titel, team: p.team || '', hinweis: p.hinweis || '', spieler: p.spieler || [], frist: Number.isInteger(p.frist) ? p.frist : 48,
-      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, checkliste: p.checkliste || '', erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
+      gesperrt: !!p.gesperrt, vorlage: p.vorlage && p.vorlage.length ? p.vorlage : STANDARD_VORLAGE, checkliste: p.checkliste || '', strafenkasse: p.strafenkasse || '', erstellt: p.erstellt || Fb.jetzt(), aktualisiert: Fb.jetzt(), ...teil,
     };
     await Fb.planRef().set(daten);
     if (teil.titel && S.admin && teil.titel !== S.admin.titel) { try { await Fb.adminRef().update({ titel: teil.titel }); } catch (e) {} }
@@ -1561,6 +1590,68 @@ const App = {
   },
 };
 
+// ---------------- Verknüpfung mit der Strafenkasse (optional) ----------------
+// Plan-Feld „strafenkasse“ = "<team>|<token>" der Spieler-Ansicht; gelesen wird strafenkasse_ansicht/{token} (öffentlich mit Token).
+const Strafen = {
+  daten: null, token: null, _abo: null,
+  parse(text) {
+    const t = /#s=([a-z0-9]{8,})/.exec(String(text || '')); if (!t) return null;
+    const team = /[?&]team=([A-Za-z0-9_-]+)/.exec(text);
+    return (team ? team[1] : '') + '|' + t[1];
+  },
+  cfg() { const v = S.plan && S.plan.strafenkasse; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
+  link() { const c = this.cfg(); if (!c) return ''; const u = new URL('../strafenkasse/index.html', location.href); if (c.team) u.search = '?team=' + c.team; u.hash = 's=' + c.token; return u.href; },
+  pruefen() {
+    const c = this.cfg();
+    if (!c) { if (this._abo) { this._abo(); this._abo = null; } this.daten = null; this.token = null; return; }
+    if (this.token === c.token) return;
+    if (this._abo) this._abo();
+    this.token = c.token; this.daten = LS.get('hd-sk-' + c.token, null);
+    Fb.laden().then(() => {
+      if (this.token !== c.token) return;
+      this._abo = Fb.db.collection('strafenkasse_ansicht').doc(c.token).onSnapshot(snap => {
+        if (!snap.exists) { this.daten = null; App.renderAlles(); return; }
+        try { const d = JSON.parse(snap.data().json); this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); } catch (e) {}
+      }, () => {});
+    }).catch(() => {});
+  },
+  saldo(id) { let s = 0; (this.daten ? this.daten.buchungen : []).forEach(b => { if (b.s === id) s += b.a === 'strafe' ? b.b : -b.b; }); return Math.round(s * 100) / 100; },
+  eur(n) { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); },
+  ich() {
+    if (!this.daten) return null;
+    const gewaehlt = LS.get('hd-sk-ich-' + this.token, null);
+    const sp = this.daten.spieler;
+    if (gewaehlt) { const x = sp.find(s => s.id === gewaehlt); if (x) return x; }
+    const n = norm(meinName()); if (!n) return null;
+    return sp.find(s => norm(s.name) === n)
+      || (() => { const k = sp.filter(s => norm(s.name).split(' ')[0] === n.split(' ')[0]); return k.length === 1 ? k[0] : null; })();
+  },
+  ichHtml() {
+    this.pruefen();
+    if (!this.daten) return '';
+    const ich = this.ich();
+    if (!ich) return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;font-size:.88rem">💰 <b>Strafenkasse:</b> Wähle deinen Namen, um deinen Stand zu sehen.'
+      + '<select class="ein" data-sk-ich style="margin-top:8px"><option value="">Ich bin …</option>' + this.daten.spieler.filter(s => s.aktiv !== false).sort((a, b) => a.name.localeCompare(b.name, 'de')).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('') + '</select></div>';
+    const sd = this.saldo(ich.id);
+    return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">💰 <b>Strafenkasse:</b> '
+      + (sd > 0 ? '<span style="color:var(--rot);font-weight:800">' + this.eur(sd) + ' offen</span>' : '<span style="color:var(--gruen);font-weight:800">alles bezahlt</span>' + (sd < 0 ? ' (Guthaben ' + this.eur(-sd) + ')' : ''))
+      + '</div><a class="btn klein sekundaer" style="text-decoration:none" href="' + esc(this.link()) + '">Strafen</a></div>';
+  },
+  uebersichtHtml() {
+    this.pruefen();
+    if (!this.daten) return '';
+    const liste = this.daten.spieler.map(s => ({ name: s.name, sd: this.saldo(s.id) })).filter(x => x.sd > 0).sort((a, b) => b.sd - a.sd);
+    const ges = liste.reduce((s, x) => s + x.sd, 0);
+    return '<h2>Strafenkasse – offene Beträge</h2><div class="card" style="padding:4px 14px">'
+      + (liste.length ? liste.map(x => '<div class="zeile"><div class="t">' + esc(x.name) + '</div><b style="color:var(--rot)">' + this.eur(x.sd) + '</b></div>').join('')
+        + '<div class="zeile"><div class="t"><b>Offen gesamt</b></div><b>' + this.eur(ges) + '</b></div>' : '<div class="leer">Alle Strafen bezahlt. 👍</div>')
+      + '</div><a class="btn sekundaer" style="text-decoration:none;margin-bottom:10px" href="' + esc(this.link()) + '">Zur Strafenkasse</a>';
+  },
+  knoepfe(el) {
+    const s = el && el.querySelector('[data-sk-ich]');
+    if (s) s.onchange = () => { LS.set('hd-sk-ich-' + this.token, s.value || null); App.renderAlles(); };
+  },
+};
 function checklisteText() { return (S.plan && S.plan.checkliste) || CHECKLISTE_STANDARD; }
 function offenePlatzhalter() { return (checklisteText().match(/\[[^\]\n]+\]/g) || []).length; }
 function ckHash(t) { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return 'c' + (h >>> 0).toString(36); }

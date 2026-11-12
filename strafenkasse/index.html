@@ -863,6 +863,7 @@ function normalisieren(d) {
   if (d.paypal == null) d.paypal = STD_PAYPAL;
   if (d.paypalme == null) d.paypalme = '';
   if (!Array.isArray(d.archiv)) d.archiv = [];
+  if (d.hallendienst == null) d.hallendienst = '';
   return d;
 }
 
@@ -958,6 +959,64 @@ const datumDE = iso => { const [j, m, t] = iso.split('-'); return `${t}.${m}.${j
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const monatName = iso7 => { const [j, m] = iso7.split('-'); return `${MONATE[parseInt(m, 10) - 1] || m} ${j}`; };
 const spielerName = id => (daten.spieler.find(s => s.id === id) || { name: 'Unbekannt' }).name;
+// ===== Verknüpfung mit dem Hallendienst-Planer (optional, ../hallendienst/) =====
+// daten.hallendienst = Plan-ID aus dem Mannschafts-Link; Dienste/Einträge sind mit der ID öffentlich lesbar.
+function hallendienstId(text) {
+  const t = String(text || '').trim();
+  const m = /[?&]plan=([A-Za-z0-9]{16,40})/.exec(t);
+  return m ? m[1] : (/^[A-Za-z0-9]{16,40}$/.test(t) ? t : null);
+}
+function hallendienstLink(id) { return new URL('../hallendienst/index.html?plan=' + id, location.href).href; }
+const Hallendienst = {
+  plan: null, dienste: [], eintraege: [], id: null, _abos: [], geladen: false,
+  norm(x) { return String(x || '').trim().toLowerCase().replace(/\s+/g, ' '); },
+  start(id) {
+    if (this.id === id) return;
+    this._abos.splice(0).forEach(u => u());
+    this.id = id; this.geladen = false; this.plan = null; this.dienste = []; this.eintraege = [];
+    if (!id) return;
+    try { const c = JSON.parse(localStorage.getItem('sk-hd-cache-' + id) || 'null'); if (c) { this.dienste = c.dienste; this.eintraege = c.eintraege; this.plan = c.plan; this.geladen = true; } } catch (e) {}
+    Fb.laden().then(() => {
+      if (this.id !== id) return;
+      const ref = Fb.db.collection('hallendienst').doc(id);
+      const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); };
+      this._abos.push(ref.onSnapshot(s => { this.plan = s.exists ? { titel: s.data().titel || 'Hallendienst' } : null; neu(); }, () => {}));
+      this._abos.push(ref.collection('dienste').onSnapshot(q => { this.dienste = q.docs.map(d => { const x = d.data(); return { id: d.id, titel: x.titel, datum: x.datum, von: x.von, bis: x.bis || '', plaetze: x.plaetze, ort: x.ort || '' }; }); neu(); }, () => {}));
+      this._abos.push(ref.collection('eintraege').onSnapshot(q => { this.eintraege = q.docs.map(d => { const x = d.data(); return { dienst: x.dienst, platz: x.platz, name: x.name }; }); neu(); }, () => {}));
+    }).catch(() => {});
+  },
+  ende(d) { const [y, m, t] = d.datum.split('-').map(Number); const [h, mi] = (d.bis || d.von || '23:59').split(':').map(Number); return new Date(y, m - 1, t, h, mi); },
+  meinName(ich) {
+    const gew = localStorage.getItem('sk-hd-name-' + this.id);
+    if (gew) return gew;
+    if (!ich) return null;
+    const n = this.norm(ich.name);
+    const namen = [...new Set(this.eintraege.map(e => e.name))];
+    if (namen.some(x => this.norm(x) === n)) return ich.name;
+    const k = namen.filter(x => this.norm(x).split(' ')[0] === n.split(' ')[0]);
+    return k.length === 1 ? k[0] : ich.name;
+  },
+  rendern(ich) {
+    const el = document.getElementById('hd-dienste'); if (!el) return;
+    this.start(daten.hallendienst || null);
+    if (!this.id || !this.geladen || !this.plan) { el.innerHTML = ''; return; }
+    const jetzt = new Date();
+    const kommend = this.dienste.filter(d => this.ende(d) >= jetzt).sort((a, b) => (a.datum + a.von).localeCompare(b.datum + b.von));
+    const name = this.meinName(ich);
+    const meine = name ? kommend.filter(d => this.eintraege.some(e => e.dienst === d.id && this.norm(e.name) === this.norm(name))) : [];
+    const offen = kommend.reduce((s, d) => s + Math.max(0, d.plaetze - this.eintraege.filter(e => e.dienst === d.id && e.platz < d.plaetze).length), 0);
+    // Den Namen auch dem Hallendienst-Planer vorschlagen (gleiche Website, gleiches Gerät)
+    try { if (name && !JSON.parse(localStorage.getItem('hd-name') || '""')) localStorage.setItem('hd-name', JSON.stringify(name)); } catch (e) {}
+    const tag = d => { const [y, m, t] = d.datum.split('-').map(Number); return new Date(y, m - 1, t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+    el.innerHTML = `<div style="border-top:1px solid var(--rand);margin-top:14px;padding-top:12px">
+      <div class="sync-status" style="margin-bottom:6px">🧹 Meine Hallendienste</div>
+      ${!ich ? '<div class="mein-sub" style="text-align:left">Wähle oben deinen Namen.</div>'
+        : meine.length ? meine.slice(0, 4).map(d => `<div style="font-size:.9rem;padding:4px 0"><b>${esc(tag(d))}, ${esc(d.von)}${d.bis ? '–' + esc(d.bis) : ''}</b> · ${esc(d.titel)}</div>`).join('')
+        : '<div class="mein-sub" style="text-align:left">Keine kommenden Dienste eingetragen.</div>'}
+      ${offen ? `<div class="mein-sub" style="text-align:left;margin-top:4px">Im Plan sind noch ${offen} Plätze offen.</div>` : ''}
+      <a class="btn sekundaer klein" style="width:100%;margin-top:10px;text-decoration:none" href="${esc(hallendienstLink(this.id))}">Zum Hallendienst</a></div>`;
+  },
+};
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const nachName = (a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
 // PayPal.me-Name aus Eingabe wie „paypal.me/name“, „https://www.paypal.com/paypalme/name“ oder „name“
@@ -1027,7 +1086,7 @@ function stabil(o) {
 // Spieler/Katalog: ganze Sammlung, neuerer Zeitstempel (spielerTs/katalogTs) gewinnt.
 function mergeDaten(remote, local) {
   const m = {};
-  ['titel', 'verein', 'paypal', 'paypalme'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
+  ['titel', 'verein', 'paypal', 'paypalme', 'hallendienst'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
   // Saison-Archiv: Vereinigung nach id (abgeschlossene Saisons ändern sich nicht mehr)
   const arch = {};
   [...(remote.archiv || []), ...(local.archiv || [])].forEach(a => { if (a && a.id) arch[a.id] = a; });
@@ -2596,7 +2655,8 @@ const App = {
         <button class="btn sekundaer klein" style="width:100%;margin-top:10px" onclick="App.spielerDetail('${ich.id}')">Meine Buchungen</button>`;
     }
     el.innerHTML = `<div class="sync-status" style="margin-bottom:8px">Mein Stand</div>
-      <select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>${unten}`;
+      <select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>${unten}<div id="hd-dienste"></div>`;
+    Hallendienst.rendern(ich);
   },
 
   // Spieler-Ansicht: offenen Betrag per PayPal bezahlen
@@ -2805,6 +2865,8 @@ const App = {
       <div class="feld"><label>PayPal.me-Name (optional, für „Jetzt zahlen“)</label><input type="text" id="e-paypalme" value="${esc(daten.paypalme || '')}" placeholder="z. B. nickstroh – aus paypal.me/nickstroh"></div>
       <div class="hinweis" style="margin-top:0">Mit PayPal.me-Name öffnet „Jetzt per PayPal zahlen“ in der Spieler-Ansicht PayPal direkt mit dem offenen Betrag. Deinen Namen findest du in der PayPal-App unter „PayPal.me“.</div>
       <div class="hinweis" style="margin-top:0">Erscheint im Kopf der App und in den geteilten Übersichten, Bildern und PDFs. PayPal leer lassen, wenn nicht gewünscht.</div>
+      <div class="feld"><label>Hallendienst-Link (optional)</label><input type="text" id="e-hallendienst" autocapitalize="off" value="${esc(daten.hallendienst ? hallendienstLink(daten.hallendienst) : '')}" placeholder="https://buildspaceos.de/hallendienst/index.html?plan=…"></div>
+      <div class="hinweis" style="margin-top:0">Nutzt ihr auch den Hallendienst-Planer? Mannschafts-Link hier einfügen – dann sehen alle in der Spieler-Ansicht neben ihren Strafen auch ihre Hallendienste.</div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.einstellungenSpeichern()">Speichern</button>
@@ -2818,6 +2880,10 @@ const App = {
     daten.verein = document.getElementById('e-verein').value.trim();
     daten.paypal = document.getElementById('e-paypal').value.trim();
     daten.paypalme = paypalMeName(document.getElementById('e-paypalme').value);
+    const hdRoh = document.getElementById('e-hallendienst').value.trim();
+    const hd = hallendienstId(hdRoh);
+    if (hdRoh && !hd) { this.toast('Das ist kein gültiger Hallendienst-Link.'); return; }
+    daten.hallendienst = hd || '';
     speichern();
     this.modalZu(); this.rendern();
     this.toast('Gespeichert');
