@@ -770,12 +770,12 @@ const App = {
     const art = ARTEN[d.art] || ARTEN.sonstiges;
     const es = eintraegeVon(d.id);
     const f = frei(d); const vorbei = istVorbei(d);
-    const zu = vorbei || (S.plan && S.plan.gesperrt && !S.istAdmin);
+    const zu = !S.istAdmin && (vorbei || (S.plan && S.plan.gesperrt));
     let slots = '';
     for (let i = 0; i < Math.max(d.plaetze, ...es.map(e => e.platz + 1)); i++) {
       const e = es.find(x => x.platz === i);
       if (e) slots += '<button class="slot' + (istMein(e) ? ' mein' : '') + (e.tausch ? ' tausch' : '') + '" data-slot="' + esc(d.id) + '|' + i + '|' + esc(e.id) + '">' + esc(e.name) + '</button>';
-      else if (i < d.plaetze) slots += zu ? '<span class="slot frei zu">frei</span>' : '<button class="slot frei" data-slot="' + esc(d.id) + '|' + i + '|">+ Eintragen</button>';
+      else if (i < d.plaetze) slots += zu ? '<span class="slot frei zu">' + (vorbei ? 'nicht besetzt' : 'frei') + '</span>' : '<button class="slot frei" data-slot="' + esc(d.id) + '|' + i + '|">' + (vorbei ? '+ Nachtragen' : '+ Eintragen') + '</button>';
     }
     return '<div class="dienst' + (vorbei ? ' vergangen' : '') + '"><div class="d-kopf"><div class="d-ico">' + art.e + '</div><div class="d-txt"><b>' + esc(d.titel) + '</b><small>'
       + esc(zeitText(d)) + (d.ort ? ' · ' + esc(d.ort) : '') + '</small></div>'
@@ -804,8 +804,9 @@ const App = {
       + '<div class="unter">' + esc(tagLang(startVon(d))) + ', ' + esc(zeitText(d)) + (d.ort ? '<br>' + esc(d.ort) : '') + '</div>'
       + '<label class="feld">Name</label>' + this.nameFeld('m-name', name)
       + (S.istAdmin ? '<div class="hinweis">Als Verwaltung kannst du auch andere eintragen.</div>' : '<label class="check"><input type="checkbox" id="m-merken" checked> Als meinen Namen merken</label>')
-      + '<div class="hinweis">Austragen geht bis ' + frist() + ' Stunden vorher' + (frist() ? '' : ' (also bis Dienstbeginn)') + ' – danach nur noch per Tausch.</div>'
-      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="m-ok">Eintragen</button></div>');
+      + (istVorbei(d) ? '<div class="hinweis">Dieser Dienst liegt in der Vergangenheit – der Eintrag wird nachträglich erfasst und zählt in der Statistik.</div>'
+        : '<div class="hinweis">Austragen geht bis ' + frist() + ' Stunden vorher' + (frist() ? '' : ' (also bis Dienstbeginn)') + ' – danach nur noch per Tausch.</div>')
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="m-ok">' + (istVorbei(d) ? 'Nachtragen' : 'Eintragen') + '</button></div>');
     const inp = m.querySelector('#m-name');
     if (!name) setTimeout(() => inp.focus(), 250);
     m.querySelector('#m-ok').onclick = async () => {
@@ -866,7 +867,7 @@ const App = {
         + '<button class="btn sekundaer" data-a="ics">In meinen Kalender</button>';
     }
     if (S.istAdmin) {
-      k += '<div class="hinweis" style="margin-top:14px;font-weight:700">Verwaltung</div>'
+      k += '<div class="hinweis" style="margin-top:14px;font-weight:700">Verwaltung' + (vorbei ? ' – nachträglich korrigieren' : '') + '</div>'
         + '<label class="feld" style="margin-top:4px">Name ändern</label>' + this.nameFeld('m-neu', e.name)
         + '<div class="zwei"><button class="btn sekundaer" data-a="umbenennen">Speichern</button><button class="btn gefahr" data-a="entfernen">Entfernen</button></div>'
         + (e.tausch ? '<button class="btn sekundaer" data-a="tausch-aus">Tausch-Markierung entfernen</button>' : '');
@@ -1038,9 +1039,9 @@ const App = {
     const p = S.plan || {};
     const vergangen = S.dienste.filter(istVorbei).length;
     h += '<h2>Dienste anlegen</h2><div class="card stapel">'
-      + '<button class="btn" onclick="App.anwurfModal()">⚡ Heimspiele aus Anwurf übernehmen</button>'
-      + '<div class="zwei"><button class="btn sekundaer" onclick="App.spieltagModal()">Spieltag (Vorlage)</button><button class="btn sekundaer" onclick="App.dienstModal()">Einzelner Dienst</button></div>'
-      + '<div class="hinweis">Bestehende Dienste bearbeitest du im Tab „Dienste“ über ⋯ – Namen durch Antippen.</div></div>'
+      + '<div class="zwei"><button class="btn" onclick="App.spieltagModal()">Spieltag (Vorlage)</button><button class="btn" onclick="App.dienstModal()">Einzelner Dienst</button></div>'
+      + '<button class="btn sekundaer" onclick="App.anwurfModal()">⚡ Einzelne Heimspiele aus Anwurf wählen</button>'
+      + '<div class="hinweis">Bestehende Dienste bearbeitest du im Tab „Dienste“ über ⋯ – Namen durch Antippen. Vergangene Dienste (unten „Vergangene Dienste zeigen“) kannst du nachträglich besetzen und korrigieren; auch ein Datum in der Vergangenheit ist beim Anlegen erlaubt.</div></div>'
       + '<h2>Plan</h2><div class="card">'
       + '<div class="zeile"><div class="t"><b>' + esc(p.titel || '') + '</b><small>' + esc(p.team || 'ohne Mannschaft') + '</small></div><button class="btn klein sekundaer" onclick="App.planModal()">Bearbeiten</button></div>'
       + '<div class="zeile"><div class="t">Austragen bis<small>' + frist() + ' Stunden vor Dienstbeginn, danach nur Tausch</small></div><button class="btn klein sekundaer" onclick="App.planModal()">Ändern</button></div>'
@@ -1190,6 +1191,7 @@ const App = {
           const b = Fb.db.batch();
           termine.forEach(dt => b.set(Fb.planRef().collection('dienste').doc(), { ...this.dienstDaten({ ...o, datum: dt }), erstellt: Fb.jetzt() }));
           await b.commit(); toast(termine.length === 1 ? 'Dienst angelegt.' : termine.length + ' Dienste angelegt.');
+          if (ausDatum(o.datum, o.bis || o.von) < new Date()) { S.vergangene = true; S.filter = 'alle'; this.tabZeigen('dienste'); }
         } else {
           await Fb.dienstRef(d.id).update(this.dienstDaten(o)); toast('Gespeichert.');
         }
@@ -1243,7 +1245,7 @@ const App = {
 
   // ---------- Import aus Anwurf (nuLiga-Daten auf buildspace) ----------
   async anwurfModal() {
-    const m = oeffneModal('<h3>⚡ Heimspiele aus Anwurf</h3><div class="unter" id="a-status">Lade Spielpläne …</div><div id="a-inhalt"></div>');
+    const m = oeffneModal('<h3>⚡ Heimspiele aus Anwurf wählen</h3><div class="unter" id="a-status">Lade Spielpläne …</div><div id="a-inhalt"></div>');
     let data;
     try { const r = await fetch('../anwurf/data.json', { cache: 'no-cache' }); data = await r.json(); }
     catch (e) { m.querySelector('#a-status').textContent = 'Anwurf-Daten nicht erreichbar (offline?).'; return; }
@@ -1252,7 +1254,7 @@ const App = {
     if (!teams.length) { m.querySelector('#a-status').textContent = 'Keine Mannschaften gefunden.'; return; }
     const gemerkt = LS.get('hd-anwurf-team-' + S.planId, null);
     const vorschlag = gemerkt || (teams.find(t => S.plan && S.plan.team && norm(t.label).startsWith(norm(S.plan.team))) || teams[0]).key;
-    m.querySelector('#a-status').innerHTML = 'Stand nuLiga: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '. Wähle die Mannschaft – alle kommenden Heimspiele werden angezeigt.';
+    m.querySelector('#a-status').innerHTML = 'Stand nuLiga: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '. Wähle die Mannschaft und hake nur die Spiele an, für die Dienste angelegt werden sollen.';
     m.querySelector('#a-inhalt').innerHTML = '<label class="feld">Mannschaft</label><select class="ein" id="a-team">' + teams.map(t => '<option value="' + esc(t.key) + '"' + (t.key === vorschlag ? ' selected' : '') + '>' + esc(t.label) + '</option>').join('') + '</select>'
       + '<div id="a-spiele" style="margin-top:8px"></div>' + this.vorlageAuswahlHtml()
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="a-ok">Anlegen</button></div>';
@@ -1267,7 +1269,7 @@ const App = {
         const vorhanden = S.dienste.filter(d => d.quelle === q);
         const verlegt = vorhanden.length && vorhanden[0].quelleZeit && vorhanden[0].quelleZeit !== g.d;
         const dt = new Date(g.d);
-        return '<div class="spiel"><input type="checkbox" class="a-sp" data-i="' + i + '"' + (vorhanden.length ? ' disabled' : ' checked') + '><div class="t"><b>' + esc(tagKurz(dt)) + ', ' + esc(hhmm(dt)) + '</b> gegen ' + esc(g.a)
+        return '<div class="spiel"><input type="checkbox" class="a-sp" data-i="' + i + '"' + (vorhanden.length ? ' disabled' : '') + '><div class="t"><b>' + esc(tagKurz(dt)) + ', ' + esc(hhmm(dt)) + '</b> gegen ' + esc(g.a)
           + (vorhanden.length ? (verlegt ? '<span class="tag-label warn">verlegt</span>' : '<span class="tag-label">schon angelegt</span>') : '')
           + '<small>' + esc(g.v || '') + '</small>'
           + (verlegt ? '<small style="color:var(--gelb)">Bisher ' + esc(tagKurz(new Date(vorhanden[0].quelleZeit))) + ' ' + esc(hhmm(new Date(vorhanden[0].quelleZeit))) + ' – <a href="#" data-verschieben="' + i + '">Dienste verschieben</a></small>' : '')

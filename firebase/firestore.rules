@@ -202,8 +202,18 @@ service cloud.firestore {
     // - Verwaltung: Google-Konten in hallendienst_admin/{plan}.members
     //   (für Spieler:innen unsichtbar)
     // =================================================================
+    // Eigenständige Hilfsfunktionen (Block kann einzeln eingespielt werden)
+    function hd_angemeldet() { return request.auth != null; }
+    function hd_konto() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email_verified == true;
+    }
     function hd_mail() { return request.auth.token.email.lower(); }
-    function hd_konto() { return echtesKonto() && request.auth.token.email_verified == true; }
+    function hd_neu() { return request.resource.data; }
+    function hd_alt() { return resource.data; }
+    function hd_nur(felder) { return hd_neu().keys().hasOnly(felder); }
+    function hd_geaendert() { return hd_neu().diff(hd_alt()).affectedKeys(); }
+    function hd_text(v, max) { return v is string && v.size() <= max; }
     function hd_adminDoc(plan) { return get(/databases/$(database)/documents/hallendienst_admin/$(plan)).data; }
     function hd_admin(plan) { return hd_konto() && hd_mail() in hd_adminDoc(plan).members; }
     function hd_owner(plan) { return hd_konto() && hd_adminDoc(plan).owner == request.auth.uid; }
@@ -216,32 +226,32 @@ service cloud.firestore {
       allow list: if hd_konto() && hd_mail() in resource.data.members;
       allow create: if hd_konto() && plan.size() >= 16
         && !exists(/databases/$(database)/documents/hallendienst/$(plan))
-        && nurFelder(['owner', 'ownerEmail', 'members', 'titel', 'erstellt'])
-        && neu().owner == request.auth.uid && neu().members == [hd_mail()];
-      allow update: if hd_konto() && hd_mail() in alt().members
-        && neu().owner == alt().owner && neu().ownerEmail == alt().ownerEmail
-        && neu().members is list && neu().members.size() <= 10
-        && (neu().members == alt().members || alt().owner == request.auth.uid);
-      allow delete: if hd_konto() && alt().owner == request.auth.uid;
+        && hd_nur(['owner', 'ownerEmail', 'members', 'titel', 'erstellt'])
+        && hd_neu().owner == request.auth.uid && hd_neu().members == [hd_mail()];
+      allow update: if hd_konto() && hd_mail() in hd_alt().members
+        && hd_neu().owner == hd_alt().owner && hd_neu().ownerEmail == hd_alt().ownerEmail
+        && hd_neu().members is list && hd_neu().members.size() <= 10
+        && (hd_neu().members == hd_alt().members || hd_alt().owner == request.auth.uid);
+      allow delete: if hd_konto() && hd_alt().owner == request.auth.uid;
     }
 
     match /hallendienst/{plan} {
       allow get: if true;
       allow list: if false;
       allow create, update: if hd_admin(plan)
-        && nurFelder(['titel', 'team', 'hinweis', 'spieler', 'frist', 'gesperrt', 'vorlage', 'erstellt', 'aktualisiert'])
-        && istText(neu().titel, 80) && istText(neu().team, 60) && istText(neu().hinweis, 500)
-        && neu().frist is int && neu().frist >= 0 && neu().frist <= 336
-        && neu().gesperrt is bool
-        && neu().spieler is list && neu().spieler.size() <= 80
-        && neu().vorlage is list && neu().vorlage.size() <= 20;
+        && hd_nur(['titel', 'team', 'hinweis', 'spieler', 'frist', 'gesperrt', 'vorlage', 'erstellt', 'aktualisiert'])
+        && hd_text(hd_neu().titel, 80) && hd_text(hd_neu().team, 60) && hd_text(hd_neu().hinweis, 500)
+        && hd_neu().frist is int && hd_neu().frist >= 0 && hd_neu().frist <= 336
+        && hd_neu().gesperrt is bool
+        && hd_neu().spieler is list && hd_neu().spieler.size() <= 80
+        && hd_neu().vorlage is list && hd_neu().vorlage.size() <= 20;
       allow delete: if hd_owner(plan);
 
       match /dienste/{d} {
         allow read: if true;
-        allow create, update: if hd_admin(plan) && istText(neu().titel, 60)
-          && neu().plaetze is int && neu().plaetze >= 1 && neu().plaetze <= 20
-          && neu().start is timestamp;
+        allow create, update: if hd_admin(plan) && hd_text(hd_neu().titel, 60)
+          && hd_neu().plaetze is int && hd_neu().plaetze >= 1 && hd_neu().plaetze <= 20
+          && hd_neu().start is timestamp;
         allow delete: if hd_admin(plan);
       }
 
@@ -249,27 +259,27 @@ service cloud.firestore {
       // Doppelbelegung ist dadurch ausgeschlossen.
       match /eintraege/{e} {
         allow read: if true;
-        allow create: if angemeldet()
-          && nurFelder(['dienst', 'platz', 'name', 'uid', 'tausch', 'at'])
-          && neu().dienst is string && neu().platz is int && neu().platz >= 0
-          && e == neu().dienst + '_' + string(neu().platz)
-          && neu().platz < hd_dienst(plan, neu().dienst).plaetze
-          && hd_name(neu().name) && neu().tausch == false && neu().at == request.time
-          && ((neu().uid == request.auth.uid && hd_plan(plan).gesperrt != true
-                && request.time < hd_dienst(plan, neu().dienst).start)
-              || (hd_admin(plan) && neu().uid is string));
+        allow create: if hd_angemeldet()
+          && hd_nur(['dienst', 'platz', 'name', 'uid', 'tausch', 'at'])
+          && hd_neu().dienst is string && hd_neu().platz is int && hd_neu().platz >= 0
+          && e == hd_neu().dienst + '_' + string(hd_neu().platz)
+          && hd_neu().platz < hd_dienst(plan, hd_neu().dienst).plaetze
+          && hd_name(hd_neu().name) && hd_neu().tausch == false && hd_neu().at == request.time
+          && ((hd_neu().uid == request.auth.uid && hd_plan(plan).gesperrt != true
+                && request.time < hd_dienst(plan, hd_neu().dienst).start)
+              || (hd_admin(plan) && hd_neu().uid is string));
         allow update: if
-          (hd_admin(plan) && geaendert().hasOnly(['name', 'uid', 'tausch', 'at'])
-            && hd_name(neu().name) && neu().tausch is bool)
-          || (angemeldet() && alt().uid == request.auth.uid
-            && geaendert().hasOnly(['tausch']) && neu().tausch is bool)
-          || (angemeldet() && alt().tausch == true && neu().uid == request.auth.uid
-            && geaendert().hasOnly(['name', 'uid', 'tausch', 'at']) && neu().tausch == false
-            && hd_name(neu().name) && neu().at == request.time
-            && request.time < hd_dienst(plan, alt().dienst).start);
+          (hd_admin(plan) && hd_geaendert().hasOnly(['name', 'uid', 'tausch', 'at'])
+            && hd_name(hd_neu().name) && hd_neu().tausch is bool)
+          || (hd_angemeldet() && hd_alt().uid == request.auth.uid
+            && hd_geaendert().hasOnly(['tausch']) && hd_neu().tausch is bool)
+          || (hd_angemeldet() && hd_alt().tausch == true && hd_neu().uid == request.auth.uid
+            && hd_geaendert().hasOnly(['name', 'uid', 'tausch', 'at']) && hd_neu().tausch == false
+            && hd_name(hd_neu().name) && hd_neu().at == request.time
+            && request.time < hd_dienst(plan, hd_alt().dienst).start);
         allow delete: if hd_admin(plan)
-          || (angemeldet() && alt().uid == request.auth.uid && hd_plan(plan).gesperrt != true
-            && request.time < hd_dienst(plan, alt().dienst).start
+          || (hd_angemeldet() && hd_alt().uid == request.auth.uid && hd_plan(plan).gesperrt != true
+            && request.time < hd_dienst(plan, hd_alt().dienst).start
                               - duration.value(hd_plan(plan).frist, 'h'));
       }
     }
