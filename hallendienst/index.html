@@ -1884,7 +1884,7 @@ const Strafen = {
     this.pruefen();
     if (!this.daten) return '';
     const ich = this.ich();
-    if (!ich) return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;font-size:.88rem">💰 <b>Strafenkasse:</b> Wähle deinen Namen, um deinen Stand zu sehen.'
+    if (!ich) return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;font-size:.88rem">💰 <b>Strafenkasse:</b> ' + (meinName() ? 'Wähle deinen Namen, um deinen Stand zu sehen.' : 'Oder wähle hier deinen Namen – dann kennt dich die App für Dienste und Strafen.')
       + '<select class="ein" data-sk-ich style="margin-top:8px"><option value="">Ich bin …</option>' + this.daten.spieler.filter(s => s.aktiv !== false).sort((a, b) => a.name.localeCompare(b.name, 'de')).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('') + '</select></div>';
     const sd = this.saldo(ich.id);
     return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">💰 <b>Strafenkasse:</b> '
@@ -1903,7 +1903,13 @@ const Strafen = {
   },
   knoepfe(el) {
     const s = el && el.querySelector('[data-sk-ich]');
-    if (s) s.onchange = () => { LS.set('hd-sk-ich-' + this.token, s.value || null); App.renderAlles(); };
+    if (s) s.onchange = () => {
+      LS.set('hd-sk-ich-' + this.token, s.value || null);
+      // Name nur einmal wählen: übernimmt ihn auch als „Wer bist du?“
+      const sp = this.daten && this.daten.spieler.find(x => x.id === s.value);
+      if (sp && !meinName()) LS.set(K.name, sp.name);
+      App.renderAlles();
+    };
   },
 };
 // Freigestellte Rollen: diese Spieler:innen müssen keine Hallendienste machen, dürfen aber freiwillig
