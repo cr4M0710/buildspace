@@ -529,10 +529,10 @@
         '<div class="protect-icon">' + LOCK_SVG + "</div>" +
         "<h2>Willkommen</h2>" +
         (expiredHint
-          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte anmelden oder als Gast fortfahren.</div>'
+          ? '<div class="protect-expired">Dieser Freigabe-Link ist abgelaufen. Bitte anmelden.</div>'
           : '<p class="protect-sub">Starte direkt als Gast – oder melde dich mit Passwort an.</p>') +
-        '<button type="button" class="protect-guest-btn" id="protect-guest-btn">Als Gast fortfahren</button>' +
-        '<p class="protect-guest-hint">Als Gast hast du Zugriff auf den Bereich Schule.</p>' +
+        (expiredHint ? "" : '<button type="button" class="protect-guest-btn" id="protect-guest-btn">Als Gast fortfahren</button>' +
+        '<p class="protect-guest-hint">Als Gast hast du Zugriff auf den Bereich Schule.</p>') +
         '<div class="protect-divider"><span>Mit Anmeldung bzw. Passwort anmelden</span></div>' +
         '<form id="protect-form" autocomplete="off">' +
           '<input type="password" id="protect-input" placeholder="Passwort" />' +
@@ -545,7 +545,7 @@
     const input = wrap.querySelector("#protect-input");
     const errorEl = wrap.querySelector("#protect-error");
     const guestBtn = wrap.querySelector("#protect-guest-btn");
-    setTimeout(() => guestBtn.focus({ preventScroll: true, focusVisible: false }), 30);
+    setTimeout(() => (guestBtn || input).focus({ preventScroll: true, focusVisible: false }), 30);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       const btn = form.querySelector("button[type=submit]");
@@ -564,7 +564,7 @@
         }
       });
     });
-    guestBtn.addEventListener("click", function () {
+    if (guestBtn) guestBtn.addEventListener("click", function () {
       setAccess("guest");
       closeOverlay();
       onResolved();
