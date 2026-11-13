@@ -980,7 +980,12 @@ const App = {
       if (S.istAdmin && !meinName()) LS.set(K.name, n);
       m.querySelector('#m-ok').disabled = true;
       const ok = await this.eintragen(d, platz, n);
-      if (ok) { schliesseModal(); toast(freigestellt(n) ? '✓ Danke, ' + n + ' – du hilfst freiwillig aus! 🙌' : '✓ Eingetragen: ' + n); }
+      if (ok) {
+        schliesseModal();
+        const titel = freigestellt(n) ? '✓ Danke, ' + n + ' – du hilfst freiwillig aus! 🙌' : '✓ Eingetragen: ' + n;
+        // Für sich selbst eingetragen → gleich Kalender anbieten; Verwaltung trägt oft andere ein → nur Hinweis
+        if (norm(n) === norm(meinName()) || !S.istAdmin) this.kalenderModal([d], titel); else toast(titel);
+      }
       else m.querySelector('#m-ok').disabled = false;
     };
   },
@@ -1058,7 +1063,7 @@ const App = {
           const u = await Fb.sicherAngemeldet();
           if (!meinName()) LS.set(K.name, n);
           await Fb.eintragRef(e.id).update({ uid: u.uid, name: n, tausch: false, at: Fb.jetzt() });
-          toast('✓ Übernommen – danke, ' + n + '!');
+          schliesseModal(); this.kalenderModal([d], '✓ Übernommen – danke, ' + n + '!'); return;
         } else if (a === 'umbenennen') {
           const n = m.querySelector('#m-neu').value.trim().replace(/\s+/g, ' ');
           if (!n) { b.disabled = false; return; }
@@ -1070,7 +1075,7 @@ const App = {
         } else if (a === 'checkliste') {
           schliesseModal(); this.tabZeigen('checkliste'); return;
         } else if (a === 'ics') {
-          this.icsLaden([d], 'hallendienst-' + d.datum + '.ics'); b.disabled = false; return;
+          schliesseModal(); this.kalenderModal([d]); return;
         }
         schliesseModal();
       } catch (err) { b.disabled = false; toast(fehlerText(err), 6000); }
@@ -1253,9 +1258,36 @@ const App = {
     if (!meinName() && !S.eintraege.some(e => Fb.uid() && e.uid === Fb.uid())) { toast('Leg zuerst deinen Namen fest (Tab „Dienste“).'); return; }
     const ds = S.eintraege.filter(istMein).map(e => dienstById(e.dienst)).filter(d => d && !istVorbei(d));
     if (!ds.length) { toast('Du hast keine kommenden Dienste.'); return; }
-    this.icsLaden(ds, 'meine-hallendienste.ics');
+    this.kalenderModal(ds);
   },
-  icsLaden(ds, datei) {
+  kalenderModal(ds, titel) {
+    const ERINNERUNG = [['-P1D', 'Am Vortag'], ['-PT2H', '2 Stunden vorher'], ['-PT30M', '30 Minuten vorher']];
+    const gewaehlt = new Set(LS.get('hd-erinnerung', ['-P1D', '-PT2H']));
+    const d = ds[0];
+    const m = oeffneModal('<h3>' + esc(titel || (ds.length === 1 ? '📅 In den Kalender' : '📅 ' + ds.length + ' Dienste in den Kalender')) + '</h3>'
+      + '<div class="unter">' + (ds.length === 1 ? esc(d.titel) + '<br>' + esc(tagLang(startVon(d))) + ', ' + esc(zeitText(d)) + (d.ort ? '<br>' + esc(d.ort) : '')
+        : ds.map(x => esc(tagKurz(startVon(x))) + ' ' + esc(x.von) + ' · ' + esc(x.titel)).join('<br>')) + '</div>'
+      + (titel ? '<div class="hinweis" style="font-weight:700;color:var(--text)">Damit du es nicht vergisst: Trag den Dienst in deinen Kalender ein.</div>' : '')
+      + '<label class="feld">Erinnere mich</label>' + ERINNERUNG.map(([k, t]) => '<label class="check"><input type="checkbox" class="erin" value="' + k + '"' + (gewaehlt.has(k) ? ' checked' : '') + '> ' + t + '</label>').join('')
+      + '<div class="stapel" style="margin-top:12px"><button class="btn" id="k-ics">📅 In Kalender eintragen (iPhone, iPad, Mac, Outlook)</button>'
+      + (ds.length === 1 ? '<button class="btn sekundaer" id="k-google">Google Kalender</button>' : '') + '</div>'
+      + '<div class="hinweis">iPhone: Nach dem Tippen „Hinzufügen“ wählen. Beim Google Kalender gelten die dort eingestellten Standard-Erinnerungen.</div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>' + (titel ? 'Fertig' : 'Abbrechen') + '</button></div>');
+    const lesen = () => { const l = [...m.querySelectorAll('.erin:checked')].map(c => c.value); LS.set('hd-erinnerung', l); return l; };
+    m.querySelector('#k-ics').onclick = () => { this.icsLaden(ds, ds.length === 1 ? 'hallendienst-' + d.datum + '.ics' : 'meine-hallendienste.ics', lesen()); schliesseModal(); };
+    const g = m.querySelector('#k-google');
+    if (g) g.onclick = () => { lesen(); window.open(this.googleLink(d), '_blank'); schliesseModal(); };
+  },
+  kalenderText(d) {
+    return [(S.plan && S.plan.titel) || 'Hallendienst', d.gruppe, d.notiz ? 'Aufgabe:\n' + d.notiz : '', 'Plan & Checkliste: ' + planLink()].filter(Boolean).join('\n\n');
+  },
+  googleLink(d) {
+    const f = x => x.getFullYear() + pad(x.getMonth() + 1) + pad(x.getDate()) + 'T' + pad(x.getHours()) + pad(x.getMinutes()) + '00';
+    const q = new URLSearchParams({ action: 'TEMPLATE', text: 'Hallendienst: ' + d.titel, dates: f(startVon(d)) + '/' + f(endeVon(d)), details: this.kalenderText(d), location: d.ort || '', ctz: 'Europe/Berlin' });
+    return 'https://calendar.google.com/calendar/render?' + q;
+  },
+  icsLaden(ds, datei, alarme) {
+    alarme = alarme || ['-P1D', '-PT2H'];
     const f = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
     const x = s => String(s || '').replace(/\\/g, '\\\\').replace(/[,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
     const jetzt = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
@@ -1263,15 +1295,15 @@ const App = {
     ds.forEach(d => {
       ics += 'BEGIN:VEVENT\r\nUID:hd-' + S.planId + '-' + d.id + '@buildspaceos.de\r\nDTSTAMP:' + jetzt + '\r\nDTSTART:' + f(startVon(d)) + '\r\nDTEND:' + f(endeVon(d)) + '\r\n'
         + 'SUMMARY:' + x('Hallendienst: ' + d.titel) + '\r\n' + (d.ort ? 'LOCATION:' + x(d.ort) + '\r\n' : '')
-        + 'DESCRIPTION:' + x(((S.plan && S.plan.titel) || '') + (d.gruppe ? '\n' + d.gruppe : '') + (d.notiz ? '\n' + d.notiz : '') + '\n' + planLink()) + '\r\n'
-        + 'BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:' + x('Hallendienst: ' + d.titel) + '\r\nTRIGGER:-P1D\r\nEND:VALARM\r\n'
-        + 'BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:' + x('Hallendienst: ' + d.titel) + '\r\nTRIGGER:-PT2H\r\nEND:VALARM\r\nEND:VEVENT\r\n';
+        + 'DESCRIPTION:' + x(this.kalenderText(d)) + '\r\nURL:' + planLink() + '\r\n'
+        + alarme.map(t => 'BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:' + x('Hallendienst: ' + d.titel + (d.ort ? ' (' + d.ort + ')' : '')) + '\r\nTRIGGER:' + t + '\r\nEND:VALARM\r\n').join('')
+        + 'END:VEVENT\r\n';
     });
     ics += 'END:VCALENDAR\r\n';
     const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
     const a = document.createElement('a'); a.href = url; a.download = datei; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
-    toast(ds.length === 1 ? 'Kalendereintrag mit Erinnerung erstellt.' : ds.length + ' Kalendereinträge mit Erinnerung erstellt.');
+    toast((ds.length === 1 ? 'Kalendereintrag' : ds.length + ' Kalendereinträge') + (alarme.length ? ' mit ' + (alarme.length === 1 ? 'Erinnerung' : alarme.length + ' Erinnerungen') : '') + ' erstellt.');
   },
 
   // ---------- Tab: Statistik ----------
