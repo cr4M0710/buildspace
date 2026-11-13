@@ -1333,4 +1333,16 @@ const posts = [
     titleEn: "Hall Duty – HSG Wettenberg",
     excerptEn: "Organise hall duties for every team: players sign up via a link without an account, swap shifts and see the schedule and stats live. Admins import home games straight from Anwurf – installable as an app."
    },
+   {
+    title: "Mondrakete",
+    excerpt: "3D-Knobelspiel zur Prozentrechnung: In der Rakete Luna 7 auf dem Weg zum Mond fünf Module (Kantine, Labor, Maschinenraum, Biokuppel, Cockpit) erkunden, 21 vertiefende Knobel- und Rätselaufgaben lösen und Schotts freischalten. Spielstand wird gespeichert.",
+    date: "2026-11-13",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "mondrakete.html",
+    emoji: "🚀",
+    tags: ["spiel", "prozent", "einzelarbeit", "jg7", "jg8", "jg9"],
+    titleEn: "Moon Rocket",
+    excerptEn: "3D puzzle game on percentages: travel to the Moon aboard the rocket Luna 7, explore five modules (canteen, lab, engine room, biodome, cockpit), solve 21 in-depth puzzle tasks and unlock the bulkheads. Progress is saved."
+   },
 ];
