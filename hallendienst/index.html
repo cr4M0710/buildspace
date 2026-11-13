@@ -1241,52 +1241,71 @@ const App = {
     // Helvetica kennt nur Windows-1252: Emojis u. Ä. entfernen
     const t = x => String(x == null ? '' : x).replace(/[^\n\x20-\x7E\xA0-\xFF–—‘’‚“”„•…€]/g, '').replace(/ {2,}/g, ' ').trim();
     const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
-    const L = 12, R = 198, U = 285, sp = [{ x: 12, w: 21 }, { x: 34, w: 66 }, { x: 101, w: 35 }, { x: 137, w: 61 }];
+    const L = 12, R = 198, U = 284, XD = 13, XW = 82, WW = R - XW - 1;
     const zh = pt => pt * 0.3528 * 1.22;
     let y = 16;
-    const kopfzeile = () => {
-      doc.setFillColor(238, 238, 240); doc.rect(L, y - 4, R - L, 6.5, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
-      ['Zeit', 'Dienst', 'Ort', 'Wer'].forEach((h, i) => doc.text(h, sp[i].x + 1, y));
-      y += 5;
+    const platz = h => { if (y + h > U) { doc.addPage(); y = 16; return true; } return false; };
+    const balken = (text, rgb, groesse, farbe) => {
+      doc.setFillColor(...rgb); doc.rect(L, y - 4.2, R - L, 6.6, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(groesse); doc.setTextColor(...(farbe || [30, 30, 30])); doc.text(t(text), L + 1.5, y); y += 6;
     };
+    const hinweis = (text, rgb) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...rgb);
+      const z = doc.splitTextToSize(t(text), R - L - 3); platz(z.length * zh(8.5) + 1); doc.text(z, L + 1.5, y); y += z.length * zh(8.5) + 1.2;
+    };
+    const zeile = (dienst, namen, offen) => {
+      doc.setFontSize(9);
+      const dz = doc.splitTextToSize(t(dienst), XW - XD - 3);
+      const wz = namen ? doc.splitTextToSize(t(namen), WW) : [];
+      const h = Math.max(dz.length, wz.length + (offen ? 1 : 0), 1) * zh(9) + 1.8;
+      platz(h);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(25, 25, 25); doc.text(dz, XD, y);
+      doc.setFont('helvetica', 'normal'); if (wz.length) doc.text(wz, XW, y);
+      if (offen) { doc.setFont('helvetica', 'bold'); doc.setTextColor(195, 6, 6); doc.text(t(offen), XW, y + wz.length * zh(9)); }
+      y += h; doc.setDrawColor(222, 222, 222); doc.setLineWidth(0.2); doc.line(XD, y - 3.6, R, y - 3.6);
+    };
+    const wer = d => {
+      const namen = eintraegeVon(d.id).map(e => e.name + (e.tausch ? ' (sucht Ersatz)' : '')).join(', ');
+      const f = frei(d);
+      return [namen, f ? (f === 1 ? 'noch offen' : f + '× offen') : ''];
+    };
+    // Kopf
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(195, 6, 6);
     doc.text(t((S.plan && S.plan.titel) || 'Hallendienst'), L, y); y += 6;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110, 110, 110);
-    doc.text(t('Stand ' + new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' · ' + (S.uebZeitraum === 'alle' ? 'ganze Saison' : 'kommende Dienste')), L, y); y += 4;
-    doc.setTextColor(195, 6, 6); doc.textWithLink(t('Eintragen: ' + planLink()), L, y, { url: planLink() }); y += 8;
-    kopfzeile();
-    let tag = null;
-    liste.forEach(d => {
-      const namen = eintraegeVon(d.id).map(e => t(e.name) + (typeof e.wert === 'number' && e.wert !== dienstWert(d) ? ' (' + fmtW(e.wert) + '×)' : '') + (e.tausch ? ' (sucht Ersatz)' : ''));
-      const f = frei(d);
-      doc.setFontSize(8.5);
-      const zeit = doc.splitTextToSize(t(d.von + (d.bis ? '–' + d.bis : '')), sp[0].w - 1);
-      const titel = doc.splitTextToSize(t(d.titel + (dienstWert(d) !== 1 ? ' (zählt ' + fmtW(dienstWert(d)) + '×)' : '')), sp[1].w - 1);
-      doc.setFontSize(7.5); const notiz = d.notiz ? doc.splitTextToSize(t(d.notiz), sp[1].w - 1) : [];
-      doc.setFontSize(8.5);
-      const ort = doc.splitTextToSize(t(d.ort || ''), sp[2].w - 1);
-      const wer = namen.length ? doc.splitTextToSize(namen.join(', '), sp[3].w - 1) : [];
-      const offen = f ? f + '× offen' : '';
-      const h = Math.max(zeit.length * zh(8.5), titel.length * zh(8.5) + notiz.length * zh(7.5), ort.length * zh(8.5), wer.length * zh(8.5) + (offen ? zh(8.5) : 0)) + 2.2;
-      const tagNeu = d.datum !== tag;
-      if (y + h + (tagNeu ? 7 : 0) > U) { doc.addPage(); y = 16; kopfzeile(); if (!tagNeu) tag = null; }
-      if (d.datum !== tag) {
-        tag = d.datum;
-        doc.setFillColor(246, 227, 227); doc.rect(L, y - 4, R - L, 6.5, 'F');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
-        doc.text(t(tagLang(ausDatum(d.datum, '12:00'))), L + 1, y); y += 6;
+    doc.text(t('Stand ' + new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' · ' + (S.uebZeitraum === 'alle' ? 'ganze Saison' : 'kommende Dienste') + ' · Checkliste in der App'), L, y); y += 4;
+    doc.setTextColor(195, 6, 6); doc.textWithLink(t('Eintragen & Tauschen: ' + planLink()), L, y, { url: planLink() }); y += 8;
+    // Nach Tagen, darin nach Spielen (Anwurf aus der Gruppe) – Sonderdienste/Einzeldienste getrennt
+    const katReihe = d => { const k = this.katalog().findIndex(v => v.titel === d.titel); return k < 0 ? 99 : k; };
+    const anwurfAus = d => { const m = / · Anwurf (\d\d:\d\d)$/.exec(d.gruppe || ''); return m ? m[1] : null; };
+    const plus = (hm, min) => { const [h, mi] = hm.split(':').map(Number); const x = new Date(2000, 0, 1, h, mi + min); return hhmm(x); };
+    const tage = new Map(); liste.forEach(d => { if (!tage.has(d.datum)) tage.set(d.datum, []); tage.get(d.datum).push(d); });
+    for (const [datum, ds] of tage) {
+      const spiele = new Map(), sonst = [];
+      ds.forEach(d => { const a = anwurfAus(d); if (a) { const k = d.gruppe; if (!spiele.has(k)) spiele.set(k, { anwurf: a, titel: d.gruppe.replace(/ · Anwurf \d\d:\d\d$/, ''), ort: d.ort, ds: [] }); spiele.get(k).ds.push(d); } else sonst.push(d); });
+      const sl = [...spiele.values()].sort((a, b) => a.anwurf.localeCompare(b.anwurf));
+      platz(30);
+      balken(tagLang(ausDatum(datum, '12:00')), [195, 6, 6], 10, [255, 255, 255]);
+      sl.forEach((g, i) => {
+        platz(22);
+        balken(g.anwurf + ' Uhr · ' + g.titel + (g.ort ? ' · ' + g.ort : ''), [246, 227, 227], 9);
+        hinweis(i === 0 ? 'Treffpunkt ' + plus(g.anwurf, -60) + ' Uhr (1 Stunde vorher): Halle aufschließen und aufbauen.' : 'Spätestens ' + plus(g.anwurf, -30) + ' Uhr da sein (30 Minuten vor Spielbeginn).', i === 0 ? [21, 112, 52] : [150, 90, 0]);
+        g.ds.sort((a, b) => katReihe(a) - katReihe(b) || a.von.localeCompare(b.von)).forEach(d => { const [n, o] = wer(d); zeile(d.titel, n, o); });
+        y += 1.5;
+      });
+      if (sl.length) {
+        const letzt = sl[sl.length - 1];
+        hinweis('Nach dem letzten Spiel (ca. ' + plus(letzt.anwurf, 90) + ' Uhr): Halle aufräumen (siehe Checkliste) – Schlüsselübergabe und Abschließen klären.', [195, 6, 6]);
+        y += 1.5;
       }
-      const y0 = y;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90); doc.text(zeit, sp[0].x + 1, y0);
-      doc.setTextColor(25, 25, 25); doc.setFont('helvetica', 'bold'); doc.text(titel, sp[1].x + 1, y0);
-      if (notiz.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(105, 105, 105); doc.text(notiz, sp[1].x + 1, y0 + titel.length * zh(8.5)); }
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70); doc.text(ort, sp[2].x + 1, y0);
-      doc.setTextColor(25, 25, 25); if (wer.length) doc.text(wer, sp[3].x + 1, y0);
-      if (offen) { doc.setFont('helvetica', 'bold'); doc.setTextColor(195, 6, 6); doc.text(offen, sp[3].x + 1, y0 + wer.length * zh(8.5)); }
-      y += h;
-      doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2); doc.line(L, y - 3.4, R, y - 3.4);
-    });
+      if (sonst.length) {
+        platz(16);
+        balken(sl.length ? 'Weitere Dienste' : 'Dienste', [238, 238, 240], 9);
+        sonst.sort((a, b) => a.von.localeCompare(b.von)).forEach(d => { const [n, o] = wer(d); zeile(d.von + (d.bis ? '–' + d.bis : '') + ' ' + d.titel + (d.ort ? ' (' + d.ort + ')' : ''), n, o); });
+        y += 1.5;
+      }
+      y += 3;
+    }
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(140, 140, 140); doc.text(t('HSG Wettenberg · Hallendienst · Seite ' + i + ' von ' + n), L, 292); }
     const slug = norm((S.plan && S.plan.titel) || 'plan').replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
