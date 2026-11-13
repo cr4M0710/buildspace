@@ -315,7 +315,7 @@
   <!-- ============ STATISTIK ============ -->
   <section id="tab-statistik" class="tab">
     <div class="kennzahlen">
-      <div class="kennzahl"><div class="wert" id="st-einsaetze">0</div><div class="label">Einsätze gesamt</div></div>
+      <div class="kennzahl"><div class="wert" id="st-einsaetze">0</div><div class="label">Dienste gesamt</div></div>
       <div class="kennzahl"><div class="wert" id="st-personen">0</div><div class="label">Personen</div></div>
       <div class="kennzahl"><div class="wert" id="st-schnitt">0</div><div class="label">Ø pro Person</div></div>
     </div>
@@ -386,6 +386,7 @@ const ARTEN = {
   essen:        { e: '🌭', n: 'Essen' },
   schiedsrichter: { e: '🟨', n: 'Schiedsrichter' },
   filmer:       { e: '🎥', n: 'Filmer' },
+  sonderdienst: { e: '🎉', n: 'Sonderdienst (Feier, Fest …)' },
   sonstiges:    { e: '📋', n: 'Sonstiges' },
 };
 // Zeiten relativ zum Anwurf (Minuten), Dauer in Minuten
@@ -855,7 +856,7 @@ const App = {
     const meine = S.eintraege.filter(istMein).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d);
     const kommend = meine.filter(x => !istVorbei(x.d)).sort((a, b) => startVon(a.d) - startVon(b.d));
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
-      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + meine.length + ' in der Saison'
+      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.reduce((sum, x) => sum + dienstWert(x.d), 0)) + ' in der Saison'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
       + Strafen.ichHtml();
@@ -932,7 +933,7 @@ const App = {
       else if (i < d.plaetze) slots += zu ? '<span class="slot frei zu">' + (vorbei ? 'nicht besetzt' : 'frei') + '</span>' : '<button class="slot frei" data-slot="' + esc(d.id) + '|' + i + '|">' + (vorbei ? '+ Nachtragen' : '+ Eintragen') + '</button>';
     }
     return '<div class="dienst' + (vorbei ? ' vergangen' : '') + '"><div class="d-kopf"><div class="d-ico">' + art.e + '</div><div class="d-txt"><b>' + esc(d.titel) + '</b><small>'
-      + esc(zeitText(d)) + (d.ort ? ' · ' + esc(d.ort) : '') + '</small></div>'
+      + esc(zeitText(d)) + (d.ort ? ' · ' + esc(d.ort) : '') + (dienstWert(d) !== 1 ? ' · zählt ' + fmtW(dienstWert(d)) + '×' : '') + '</small></div>'
       + '<span class="d-frei' + (f ? '' : ' ok') + '">' + (f ? f + ' frei' : '✓') + '</span>'
       + (S.istAdmin ? '<button class="d-mehr" data-edit="' + esc(d.id) + '" title="Bearbeiten">⋯</button>' : '') + '</div>'
       + (d.notiz ? '<div class="d-notiz">' + esc(d.notiz) + '</div>' : '')
@@ -1270,26 +1271,26 @@ const App = {
       const d = dienstById(e.dienst); if (!d) return;
       const k = norm(e.name);
       if (!zaehl.has(k)) zaehl.set(k, { name: e.name, n: 0, kommend: 0 });
-      const z = zaehl.get(k); z.n++; if (!istVorbei(d)) z.kommend++;
-      const a = d.art || 'sonstiges'; arten.set(a, (arten.get(a) || 0) + 1);
+      const w = dienstWert(d);
+      const z = zaehl.get(k); z.n += w; if (!istVorbei(d)) z.kommend += w;
+      const a = d.art || 'sonstiges'; arten.set(a, (arten.get(a) || 0) + w);
     });
     const liste = [...zaehl.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'de'));
     const ges = liste.reduce((s, x) => s + x.n, 0);
-    $('#st-einsaetze').textContent = ges;
+    $('#st-einsaetze').textContent = fmtW(ges);
     $('#st-personen').textContent = liste.length;
     $('#st-schnitt').textContent = liste.length ? (ges / liste.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
     const max = liste.length ? liste[0].n : 1;
     $('#st-rangliste').innerHTML = liste.length ? liste.map((x, i) =>
-      '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + x.n + '</span></div>'
-      + (x.kommend ? '' : '')).join('') + '<div class="hinweis" style="margin-bottom:6px">Gezählt werden alle Einträge der Saison (vergangene und kommende).</div>'
+      '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + fmtW(x.n) + '</span></div>').join('') + '<div class="hinweis" style="margin-bottom:6px">Gezählt wird der Umfang der Dienste (ca. 1 pro Spiel bzw. 2 Stunden), vergangene und kommende der Saison.</div>'
       : '<div class="leer">Noch keine Einträge.</div>';
     const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)) && !freigestellt(n));
     const frei = alleSpieler().filter(freigestellt).sort((a, b) => a.localeCompare(b, 'de'));
     $('#st-ohne').innerHTML = (ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '')
-      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (zaehl.has(norm(n)) ? ' <small style="color:var(--gruen)">· ' + zaehl.get(norm(n)).n + '× freiwillig</small>' : '') + '</span>').join('') + '</div>'
+      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (zaehl.has(norm(n)) ? ' <small style="color:var(--gruen)">· ' + fmtW(zaehl.get(norm(n)).n) + '× freiwillig</small>' : '') + '</span>').join('') + '</div>'
         + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
     const al = [...arten.entries()].sort((a, b) => b[1] - a[1]);
-    $('#st-arten').innerHTML = al.length ? al.map(([a, n]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span><span class="bar"><i style="width:' + Math.round(n / al[0][1] * 100) + '%"></i></span><span class="z">' + n + '</span></div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
+    $('#st-arten').innerHTML = al.length ? al.map(([a, n]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span><span class="bar"><i style="width:' + Math.round(n / al[0][1] * 100) + '%"></i></span><span class="z">' + fmtW(n) + '</span></div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
   },
 
   // ---------- Tab: Verwalten ----------
@@ -1312,6 +1313,7 @@ const App = {
     const vergangen = S.dienste.filter(istVorbei).length;
     h += '<h2>Dienste anlegen</h2><div class="card stapel">'
       + '<div class="zwei"><button class="btn" onclick="App.spieltagModal()">Spieltag (Vorlage)</button><button class="btn" onclick="App.dienstModal()">Einzelner Dienst</button></div>'
+      + '<button class="btn sekundaer" onclick="App.dienstModal(null, { art: \'sonderdienst\', titel: \'Sonderdienst\', von: \'14:00\', bis: \'18:00\', plaetze: 4 })">🎉 Sonderdienst (Feier, Fest … außerhalb der Halle)</button>'
       + '<button class="btn sekundaer" onclick="App.anwurfModal()">⚡ Einzelne Heimspiele aus Anwurf wählen</button>'
       + '<div class="hinweis">Bestehende Dienste bearbeitest du im Tab „Dienste“ über ⋯ – Namen durch Antippen. Vergangene Dienste (unten „Vergangene Dienste zeigen“) kannst du nachträglich besetzen und korrigieren; auch ein Datum in der Vergangenheit ist beim Anlegen erlaubt.</div></div>'
       + '<h2>Plan</h2><div class="card">'
@@ -1433,7 +1435,57 @@ const App = {
       titel: o.titel.slice(0, 60), art: ARTEN[o.art] ? o.art : 'sonstiges', datum: o.datum, von: o.von, bis: o.bis || '',
       start: Fb.ts(start), plaetze: o.plaetze, ort: (o.ort || '').slice(0, 120), notiz: (o.notiz || '').slice(0, 300),
       gruppe: (o.gruppe || '').slice(0, 120), quelle: o.quelle || null, quelleZeit: o.quelleZeit || null,
+      wert: typeof o.wert === 'number' && o.wert > 0 ? Math.min(20, o.wert) : wertAus(o.von, o.bis),
     };
+  },
+  // Spieler-Auswahl (Häkchen) für direkte Zuordnung
+  spielerAuswahlHtml(gewaehlt) {
+    const sel = new Set(gewaehlt.map(norm));
+    const m = new Map(); this.namenListe().concat(gewaehlt).forEach(n => { if (!m.has(norm(n))) m.set(norm(n), n); });
+    const namen = [...m.values()].sort((a, b) => a.localeCompare(b, 'de'));
+    return '<label class="feld">Spieler direkt zuordnen (optional)</label>'
+      + (namen.length ? '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);max-height:240px;overflow-y:auto">' + namen.map(n =>
+        '<label class="check"><input type="checkbox" class="zu-sp" value="' + esc(n) + '"' + (sel.has(norm(n)) ? ' checked' : '') + '> ' + esc(n) + (freigestellt(n) ? ' ' + rollenEmoji(n) : '') + '</label>').join('') + '</div>' : '')
+      + '<input class="ein zu-weitere" style="margin-top:8px" placeholder="Weitere Namen, mit Komma getrennt" autocomplete="off">'
+      + '<div class="hinweis">Zugeordnete Spieler stehen sofort im Plan – praktisch zum Nachtragen erledigter Dienste. Reichen die Plätze nicht, werden sie erhöht.</div>';
+  },
+  spielerAuswahlLesen(m) {
+    const l = [...m.querySelectorAll('.zu-sp:checked')].map(c => c.value)
+      .concat(m.querySelector('.zu-weitere').value.split(',').map(x => x.trim().replace(/\s+/g, ' ').slice(0, 40)).filter(Boolean));
+    const g = new Set(); return l.filter(n => !g.has(norm(n)) && g.add(norm(n)));
+  },
+  umfangHtml(wert) {
+    return '<label class="feld">Umfang – zählt als … Dienste</label><div class="drei">'
+      + '<div><div class="vorlage-kopf" style="margin-bottom:3px">Spiele</div><input class="ein" id="u-spiele" type="number" inputmode="numeric" min="0" step="1" placeholder="–"></div>'
+      + '<div><div class="vorlage-kopf" style="margin-bottom:3px">oder Stunden</div><input class="ein" id="u-std" type="number" inputmode="decimal" min="0" step="0.5" placeholder="–"></div>'
+      + '<div><div class="vorlage-kopf" style="margin-bottom:3px">= Dienste</div><input class="ein" id="u-wert" type="number" inputmode="decimal" min="0.5" max="20" step="0.5" value="' + wert + '" style="font-weight:800"></div></div>'
+      + '<div class="hinweis">Spiele oder Stunden eintragen – die Dienste rechnet die App aus (1 Spiel bzw. 2 Stunden ≈ 1 Dienst). Ohne Angabe zählt die Zeit von–bis.</div>';
+  },
+  umfangStart(m, manuell) {
+    const w = m.querySelector('#u-wert'), sp = m.querySelector('#u-spiele'), st = m.querySelector('#u-std');
+    let fest = !!manuell;
+    const auto = () => { if (!fest) w.value = wertAus(m.querySelector('#d-von').value, m.querySelector('#d-bis').value); };
+    m.querySelector('#d-von').addEventListener('change', auto); m.querySelector('#d-bis').addEventListener('change', auto);
+    sp.oninput = () => { st.value = ''; if (sp.value !== '') { fest = true; w.value = Math.max(0.5, +sp.value); } };
+    st.oninput = () => { sp.value = ''; if (st.value !== '') { fest = true; w.value = wertAusStunden(+String(st.value).replace(',', '.')); } };
+    w.oninput = () => { fest = true; };
+    return () => { const v = parseFloat(String(w.value).replace(',', '.')); return v > 0 ? Math.min(20, Math.round(v * 2) / 2) : wertAus(m.querySelector('#d-von').value, m.querySelector('#d-bis').value); };
+  },
+  // Zuordnung speichern: fehlende Namen eintragen, abgewählte entfernen, Plätze bei Bedarf erhöhen
+  async zuordnungSpeichern(dienstId, namen, plaetze) {
+    const es = S.eintraege.filter(e => e.dienst === dienstId);
+    const gew = new Set(namen.map(norm));
+    const weg = es.filter(e => !gew.has(norm(e.name)));
+    const bleiben = es.filter(e => gew.has(norm(e.name)));
+    const neu = namen.filter(n => !bleiben.some(e => norm(e.name) === norm(n)));
+    const belegt = new Set(bleiben.map(e => e.platz));
+    const frei = []; for (let i = 0; frei.length < neu.length && i < 40; i++) if (!belegt.has(i)) frei.push(i);
+    const noetig = Math.min(20, Math.max(plaetze, ...bleiben.map(e => e.platz + 1), ...(frei.length ? [frei[frei.length - 1] + 1] : [0])));
+    if (noetig > plaetze) await Fb.dienstRef(dienstId).update({ plaetze: noetig });
+    const b = Fb.db.batch();
+    weg.forEach(e => b.delete(Fb.eintragRef(e.id)));
+    neu.forEach((n, i) => { if (frei[i] == null || frei[i] >= 20) return; b.set(Fb.eintragRef(dienstId + '_' + frei[i]), { dienst: dienstId, platz: frei[i], name: n, uid: norm(n) === norm(meinName()) ? Fb.uid() : 'verwaltung', tausch: false, at: Fb.jetzt() }); });
+    if (weg.length || neu.length) await b.commit();
   },
   dienstModal(d, vorgabe) {
     const neu = !d; d = d || { titel: '', art: 'sonstiges', datum: isoDatum(new Date()), von: '18:00', bis: '19:00', plaetze: 1, ort: '', notiz: '', gruppe: '', ...(vorgabe || {}) };
@@ -1441,19 +1493,21 @@ const App = {
     const m = oeffneModal('<h3>' + (neu ? 'Dienst anlegen' : 'Dienst bearbeiten') + '</h3>'
       + '<label class="feld">Art</label><select class="ein" id="d-art">' + Object.entries(ARTEN).map(([k, a]) => '<option value="' + k + '"' + (k === d.art ? ' selected' : '') + '>' + a.e + ' ' + a.n + '</option>').join('') + '</select>'
       + '<label class="feld">Bezeichnung</label><input class="ein" id="d-titel" maxlength="60" value="' + esc(d.titel) + '" placeholder="z. B. Hallenaufbau">'
-      + '<div class="drei"><div><label class="feld">Datum</label><input class="ein" id="d-datum" type="date" value="' + esc(d.datum) + '"></div>'
-      + '<div><label class="feld">Von</label><input class="ein" id="d-von" type="time" value="' + esc(d.von) + '"></div>'
+      + '<label class="feld">Datum</label><input class="ein" id="d-datum" type="date" value="' + esc(d.datum) + '">'
+      + '<div class="zwei"><div><label class="feld">Von</label><input class="ein" id="d-von" type="time" value="' + esc(d.von) + '"></div>'
       + '<div><label class="feld">Bis</label><input class="ein" id="d-bis" type="time" value="' + esc(d.bis) + '"></div></div>'
       + '<div class="zwei"><div><label class="feld">Plätze</label><input class="ein" id="d-plaetze" type="number" inputmode="numeric" min="1" max="20" value="' + d.plaetze + '"></div>'
       + '<div><label class="feld">Ort</label><input class="ein" id="d-ort" maxlength="120" value="' + esc(d.ort) + '" placeholder="Halle"></div></div>'
       + '<label class="feld">Anlass / Gruppe (optional)</label><input class="ein" id="d-gruppe" maxlength="120" value="' + esc(d.gruppe) + '" placeholder="z. B. Heimspiel gegen …">'
       + '<label class="feld">Notiz (optional)</label><input class="ein" id="d-notiz" maxlength="300" value="' + esc(d.notiz) + '" placeholder="z. B. Schlüssel beim Hausmeister">'
+      + this.umfangHtml(neu ? wertAus(d.von, d.bis) : dienstWert(d))
+      + this.spielerAuswahlHtml(es.map(e => e.name))
       + (neu ? '<label class="feld">Wiederholen</label><div class="zwei"><select class="ein" id="d-wdh"><option value="0">nicht</option><option value="7">wöchentlich</option><option value="14">alle 2 Wochen</option></select><input class="ein" id="d-wdh-bis" type="date" title="bis"></div>' : '')
-      + (!neu && es.length ? '<div class="hinweis">' + es.length + ' Eintrag/Einträge bleiben erhalten.</div>' : '')
       + '<div class="knoepfe">' + (neu ? '' : '<button class="btn gefahr" id="d-weg">Löschen</button>') + '<button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="d-ok">Speichern</button></div>');
     const artSel = m.querySelector('#d-art'), titel = m.querySelector('#d-titel');
     artSel.onchange = () => { if (!titel.value.trim() || Object.values(ARTEN).some(a => a.n === titel.value)) titel.value = ARTEN[artSel.value].n; };
     if (neu && !titel.value) titel.value = ARTEN[artSel.value].n;
+    const wertLesen = this.umfangStart(m, !neu && typeof d.wert === 'number' && d.wert !== wertAus(d.von, d.bis));
     m.querySelector('#d-ok').onclick = async () => {
       const o = {
         titel: titel.value.trim(), art: artSel.value, datum: m.querySelector('#d-datum').value, von: m.querySelector('#d-von').value, bis: m.querySelector('#d-bis').value,
@@ -1462,21 +1516,31 @@ const App = {
         quelle: d.quelle || null, quelleZeit: d.quelleZeit || null,
       };
       if (!o.titel || !o.datum || !o.von) { toast('Bezeichnung, Datum und Beginn ausfüllen.'); return; }
-      if (!neu && es.some(e => e.platz >= o.plaetze) && !confirm('Es sind mehr Personen eingetragen als Plätze. Trotzdem speichern? (Überzählige bleiben sichtbar.)')) return;
+      o.wert = wertLesen();
+      const namen = this.spielerAuswahlLesen(m);
+      // Neue Namen gleich in die Spielerliste übernehmen
+      const bekannt = new Set(alleSpieler().map(norm));
+      const neueNamen = namen.filter(n => !bekannt.has(norm(n)));
+      if (neueNamen.length) { try { await this.planSpeichern({ spieler: [...((S.plan && S.plan.spieler) || []), ...neueNamen].slice(0, 80) }); } catch (e) {} }
+      if (namen.length > o.plaetze) o.plaetze = Math.min(20, namen.length);
+      m.querySelector('#d-ok').disabled = true;
       try {
         if (neu) {
           const termine = [o.datum];
           const wdh = +m.querySelector('#d-wdh').value, bis = m.querySelector('#d-wdh-bis').value;
           if (wdh && bis) { let t = ausDatum(o.datum, '12:00'); const ende = ausDatum(bis, '12:00'); while (termine.length < 60) { t = new Date(t.getTime() + wdh * 864e5); if (t > ende) break; termine.push(isoDatum(t)); } }
-          const b = Fb.db.batch();
-          termine.forEach(dt => b.set(Fb.planRef().collection('dienste').doc(), { ...this.dienstDaten({ ...o, datum: dt }), erstellt: Fb.jetzt() }));
-          await b.commit(); toast(termine.length === 1 ? 'Dienst angelegt.' : termine.length + ' Dienste angelegt.');
+          const b = Fb.db.batch(); const refs = [];
+          termine.forEach(dt => { const ref = Fb.planRef().collection('dienste').doc(); refs.push(ref); b.set(ref, { ...this.dienstDaten({ ...o, datum: dt }), erstellt: Fb.jetzt() }); });
+          await b.commit();
+          if (namen.length) for (const ref of refs) await this.zuordnungSpeichern(ref.id, namen, o.plaetze);
+          toast((termine.length === 1 ? 'Dienst angelegt' : termine.length + ' Dienste angelegt') + (namen.length ? ' – ' + namen.length + ' Spieler zugeordnet.' : '.'));
           if (ausDatum(o.datum, o.bis || o.von) < new Date()) { S.vergangene = true; S.filter = 'alle'; this.tabZeigen('dienste'); }
         } else {
-          await Fb.dienstRef(d.id).update(this.dienstDaten(o)); toast('Gespeichert.');
+          await Fb.dienstRef(d.id).update(this.dienstDaten(o));
+          await this.zuordnungSpeichern(d.id, namen, o.plaetze); toast('Gespeichert.');
         }
         schliesseModal();
-      } catch (e) { toast(fehlerText(e), 6000); }
+      } catch (e) { m.querySelector('#d-ok').disabled = false; toast(fehlerText(e), 6000); }
     };
     if (!neu) m.querySelector('#d-weg').onclick = async () => {
       if (!confirm('Dienst „' + d.titel + '“ löschen' + (es.length ? ' (' + es.length + ' Einträge werden mit gelöscht)' : '') + '?')) return;
@@ -1781,6 +1845,16 @@ function rollenVon(name) { const r = (S.plan && S.plan.rollen) || {}; return (r[
 function freigestellt(name) { return rollenVon(name).length > 0; }
 function rollenEmoji(name) { return rollenVon(name).map(k => ROLLEN[k].e).join(''); }
 function rollenText(name) { return rollenVon(name).map(k => ROLLEN[k].n).join(', '); }
+// Umfang eines Dienstes: ca. 1 Dienst pro Spiel bzw. pro 2 Stunden (in halben Diensten gerundet)
+function wertAus(von, bis) {
+  if (!von || !bis) return 1;
+  const [h1, m1] = von.split(':').map(Number), [h2, m2] = bis.split(':').map(Number);
+  let min = (h2 * 60 + m2) - (h1 * 60 + m1); if (min <= 0) min += 1440;
+  return Math.max(0.5, Math.round(min / 60) / 2);
+}
+function wertAusStunden(h) { return Math.max(0.5, Math.round(h) / 2); }
+function dienstWert(d) { return typeof d.wert === 'number' && d.wert > 0 ? d.wert : 1; }
+const fmtW = n => (Math.round(n * 10) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 function alleSpieler() {
   const m = new Map();
   ((S.plan && S.plan.spieler) || []).forEach(n => m.set(norm(n), n));
