@@ -363,19 +363,6 @@
 
   /* ---------- Druck (PDF) ---------- */
   #druckbereich { display: none; }
-  @media print {
-    body > *:not(#druckbereich) { display: none !important; }
-    body { background: #fff; padding: 0; }
-    #druckbereich { display: block; font-size: 11pt; padding: 10mm; color: #000; }
-    #druckbereich h1 { font-size: 16pt; color: #C30606; margin-bottom: 2mm; }
-    #druckbereich .datum { color: #555; margin-bottom: 6mm; font-size: 10pt; }
-    #druckbereich h2 { font-size: 12pt; color: #000; margin: 6mm 0 2mm; text-transform: none; letter-spacing: 0; }
-    #druckbereich table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
-    #druckbereich th, #druckbereich td { text-align: left; padding: 1.6mm 2mm; border-bottom: .3pt solid #bbb; font-size: 9.5pt; }
-    #druckbereich th { background: #f0f0f0; font-weight: 700; }
-    #druckbereich td.r, #druckbereich th.r { text-align: right; white-space: nowrap; }
-    #druckbereich .summe td { font-weight: 800; border-top: 1pt solid #000; }
-  }
 </style>
 <script defer data-category="handball" data-offen="1" src="../protect.js?v=20261105f"></script>
 <script defer src="../cursor.js"></script>
@@ -2032,7 +2019,7 @@ const App = {
         <tr class="summe"><td>Gezahlt</td><td></td><td class="r">−${eur(gezahlt)}</td></tr>
         <tr class="summe"><td>Offen</td><td></td><td class="r">${eur(strafen - gezahlt)}</td></tr>
       </table>`;
-    window.print();
+    this.pdfErstellen();
   },
 
   schnellzahlung(id) {
@@ -3041,7 +3028,7 @@ const App = {
           ${bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('')}
         </table>`;
       }).join('')}`;
-    window.print();
+    this.pdfErstellen();
   },
 
   // ===== Statistik teilen / exportieren =====
@@ -3103,7 +3090,7 @@ const App = {
         <tr><th>Monat</th><th class="r">Summe</th></tr>
         ${d.monate.map(m => `<tr><td>${monatName(m.m)}</td><td class="r">${eur(m.sum)}</td></tr>`).join('')}
       </table>`;
-    window.print();
+    this.pdfErstellen();
   },
 
   // ===== Saison: Übersicht, Abschluss, Archiv =====
@@ -3191,7 +3178,7 @@ const App = {
         <tr><th>Strafe</th><th class="r">Anzahl</th><th class="r">Summe</th></tr>
         ${topL.map(t => `<tr><td>${esc(t.text)}</td><td class="r">${t.anz}</td><td class="r">${eur(r2(t.sum))}</td></tr>`).join('')}
       </table>` : ''}`;
-    window.print();
+    this.pdfErstellen();
   },
   saisonAbschlussModal() {
     if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
@@ -3276,6 +3263,87 @@ const App = {
   },
 
   // ===== Modal & Toast =====
+  // ===== PDF als echte Datei (statt Druckdialog – der geht in der Homescreen-App nicht) =====
+  // Liest den vorbereiteten #druckbereich (h1, .datum, h2, table) und zeichnet ihn mit jsPDF.
+  ladeJsPDF() {
+    if (window.jspdf) return Promise.resolve();
+    if (!this._pdfLib) this._pdfLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = res; sc.onerror = () => { this._pdfLib = null; rej(new Error('jsPDF')); }; document.head.appendChild(sc); });
+    return this._pdfLib;
+  },
+  async pdfErstellen() {
+    const quelle = document.getElementById('druckbereich');
+    this.toast('PDF wird erstellt …');
+    try { await this.ladeJsPDF(); } catch (e) { this.toast('PDF-Baustein konnte nicht geladen werden (offline?)'); return; }
+    const t = x => String(x == null ? '' : x).replace(/[^\n\x20-\x7E\xA0-\xFF–—‘’‚“”„•…€−]/g, '').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    const L = 14, R = 196, W = R - L, U = 284;
+    const zh = pt => pt * 0.3528 * 1.25;
+    let y = 18;
+    const platz = h => { if (y + h > U) { doc.addPage(); y = 18; return true; } return false; };
+    let titel = 'Strafenkasse';
+    [...quelle.children].forEach(el => {
+      const tag = el.tagName;
+      if (tag === 'H1') {
+        titel = t(el.textContent);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(195, 6, 6);
+        const z = doc.splitTextToSize(titel, W); platz(z.length * zh(16)); doc.text(z, L, y); y += z.length * zh(16) + 1;
+      } else if (tag === 'H2') {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(20, 20, 20);
+        platz(16); y += 3; doc.text(t(el.textContent), L, y); y += zh(11.5) + 0.5;
+      } else if (tag === 'TABLE') {
+        const zeilen = [...el.querySelectorAll('tr')].map(tr => ({
+          kopf: !!tr.querySelector('th'), summe: tr.classList.contains('summe'),
+          zellen: [...tr.children].map(c => ({ text: t(c.textContent), rechts: c.classList.contains('r'), span: +(c.getAttribute('colspan') || 1), fett: c.tagName === 'TH' || !!c.querySelector('b') })),
+        }));
+        const spalten = Math.max(...zeilen.map(z => z.zellen.reduce((a, c) => a + c.span, 0)));
+        // Spaltenbreiten: rechtsbündige (Beträge) so breit wie nötig, Rest für Text
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+        const natur = Array(spalten).fill(8), rechts = Array(spalten).fill(false);
+        zeilen.forEach(z => { let i = 0; z.zellen.forEach(c => { if (c.span === 1) { natur[i] = Math.max(natur[i], doc.getTextWidth(c.text) + 4); if (c.rechts) rechts[i] = true; } i += c.span; }); });
+        const fest = natur.map((w, i) => rechts[i] ? Math.min(w, 40) : 0);
+        const rest = W - fest.reduce((a, b) => a + b, 0);
+        const textSp = natur.map((w, i) => rechts[i] ? 0 : w), summeText = textSp.reduce((a, b) => a + b, 0) || 1;
+        const breite = natur.map((w, i) => rechts[i] ? fest[i] : Math.max(16, rest * textSp[i] / summeText));
+        const x = [L]; breite.forEach((b, i) => x.push(x[i] + b));
+        zeilen.forEach(z => {
+          doc.setFont('helvetica', z.kopf || z.summe ? 'bold' : 'normal'); doc.setFontSize(9.5);
+          let i = 0;
+          const teile = z.zellen.map(c => { const w = x[Math.min(i + c.span, spalten)] - x[i] - 2.5; const r = { c, x0: x[i], w, z: c.rechts ? [c.text] : doc.splitTextToSize(c.text, Math.max(8, w)) }; i += c.span; return r; });
+          const h = Math.max(1, ...teile.map(p => p.z.length)) * zh(9.5) + 2.4;
+          platz(h);
+          if (z.kopf) { doc.setFillColor(240, 240, 240); doc.rect(L, y - 4, W, h, 'F'); }
+          if (z.summe) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35); doc.line(L, y - 4, R, y - 4); }
+          teile.forEach(p => {
+            doc.setFont('helvetica', z.kopf || z.summe || p.c.fett ? 'bold' : 'normal'); doc.setTextColor(25, 25, 25);
+            if (p.c.rechts) doc.text(p.z, p.x0 + p.w + 1.2, y, { align: 'right' }); else doc.text(p.z, p.x0 + 1.2, y);
+          });
+          y += h;
+          if (!z.summe) { doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2); doc.line(L, y - 4, R, y - 4); }
+        });
+        y += 3;
+      } else if (el.textContent.trim()) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(95, 95, 95);
+        const z = doc.splitTextToSize(t(el.textContent), W); platz(z.length * zh(9.5)); doc.text(z, L, y); y += z.length * zh(9.5) + 0.8;
+      }
+    });
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(140, 140, 140); doc.text(t((daten.verein || 'HSG Wettenberg') + ' · Strafenkasse · Seite ' + i + ' von ' + n), L, 291); }
+    const slug = titel.toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'strafenkasse';
+    const datei = slug + '-' + heute() + '.pdf';
+    const blob = doc.output('blob');
+    const file = new File([blob], datei, { type: 'application/pdf' });
+    if (this._pdfUrl) URL.revokeObjectURL(this._pdfUrl);
+    const url = this._pdfUrl = URL.createObjectURL(blob);
+    const teilbar = navigator.canShare && navigator.canShare({ files: [file] });
+    this.modal(`<h3>📄 PDF ist fertig</h3>
+      <div class="hinweis" style="margin-top:0">${esc(datei)} · ${n} ${n === 1 ? 'Seite' : 'Seiten'}</div>
+      ${teilbar ? '<button class="btn" id="pdf-teilen">Teilen, Sichern oder Drucken</button><div style="height:9px"></div>' : ''}
+      <a class="btn ${teilbar ? 'sekundaer' : ''}" style="text-decoration:none;display:flex" href="${url}" download="${esc(datei)}" target="_blank" rel="noopener">PDF öffnen</a>
+      ${teilbar ? '<div class="hinweis">Über „Teilen“ kannst du das PDF z. B. in WhatsApp schicken, in „Dateien“ sichern oder drucken.</div>' : ''}
+      <div class="knoepfe"><button class="btn sekundaer" onclick="App.modalZu()">Schließen</button></div>`);
+    const tb = document.getElementById('pdf-teilen');
+    if (tb) tb.onclick = async () => { try { await navigator.share({ files: [file], title: titel }); this.modalZu(); } catch (e) { if (e.name !== 'AbortError') this.toast('Teilen nicht möglich – nutze „PDF öffnen“.'); } };
+  },
   modal(html) {
     document.getElementById('modal-inhalt').innerHTML =
       '<div class="modal-kopf"><div class="modal-griff"></div><button class="modal-x" type="button" aria-label="Schließen" onclick="App.modalZu()">' + ICON.x + '</button></div>' + html;
