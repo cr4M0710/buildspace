@@ -264,6 +264,7 @@ body:not([data-mode="play"]) #joy{ opacity:.35; }
       <button class="btn primary" id="menuResume">Weiterspielen</button>
       <button class="btn" id="menuHelp">Steuerung ansehen</button>
       <button class="btn danger" id="menuRestart">Mission neu starten</button>
+      <p id="menuSeed" style="margin:.4rem 0 0;opacity:.7;font-size:.85em;text-align:center"></p>
     </div>
   </div>
 </div>
@@ -348,6 +349,8 @@ const TASK_LIST = [
          [31.5,'Du hast 150 % von 21 gerechnet. Die 21 sind aber nur 30 % der gedachten Zahl.'],
          [35,'35 sind nur 50 %. Gesucht sind 150 % (also 100 % + 50 %).'],
          [7,'7 sind erst 10 %. Finde zuerst die ganze Zahl (100 %).']]},
+
+ {id:'a4', tag:'Fehlersuche', kind:'L', who:'Küchenbot Brutzel', av:'🤖', type:'choice', q:'', opts:[], tips:['',''], sol:''},
 
  /* ---------- 2) Labor: Vergleichen und Mischen ---------- */
  {id:'l1', tag:'Prozentsatz', kind:'p', who:'Keimtablett', av:'🌱', type:'num', unit:'%', ans:85,
@@ -453,6 +456,8 @@ const TASK_LIST = [
   tips:['Unterschied der Prozentzahlen: 25 % − 20 % = 5 Prozentpunkte.','Und relativ gesehen: Der Zuwachs (5) wird mit dem alten Anteil (20) verglichen. 5 von 20 = ?'],
   sol:'25 % − 20 % = 5 Prozentpunkte. Relativ: 5 von 20 = 1/4 = 25 % mehr als vorher.'},
 
+ {id:'b5', tag:'Fehlersuche', kind:'L', who:'Gärtnerbot Flora', av:'🪴', type:'choice', q:'', opts:[], tips:['',''], sol:''},
+
  /* ---------- 5) Cockpit: Abschlussrätsel ---------- */
  {id:'c1', tag:'Mehrwertsteuer', kind:'M', who:'Cockpit-Schloss', av:'🔐', type:'num', unit:'€', ans:500,
   q:'Auf dem Display steht: Ein Ersatzbauteil kostet 595 € inklusive 19 % Mehrwertsteuer. Wie viel Euro kostet es ohne Mehrwertsteuer (Nettopreis)?',
@@ -504,6 +509,282 @@ const GENERIC = {
   C:'Löse jeden Teil einzeln, schreibe die Zwischenergebnisse auf und addiere erst am Ende.'
 };
 
+/* =====================================================================
+   ZUFALLSAUFGABEN
+   Jede Aufgabe wird beim Missionsstart aus einem Seed erzeugt (GEN[id]).
+   Zahlen, Geschichten, Fallen und Tipps passen immer zusammen.
+   Gleicher Seed = gleiche Aufgaben (Link mit ?seed=1234 für eine ganze Klasse).
+   ===================================================================== */
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619); } return h >>> 0; }
+function makeRng(seed,key){
+  const f = mulberry32((hashStr(String(key)) ^ Math.imul(seed|0, 2654435761)) >>> 0);
+  return { f, int:(a,b) => a + Math.floor(f()*(b-a+1)), pick:arr => arr[Math.floor(f()*arr.length)],
+    shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.floor(f()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; } };
+}
+/* Zahl im deutschen Format: 2 400 · 2,5 · 384 000 */
+const nf = n => { const r = Math.round(n*100)/100; let [i,d] = Math.abs(r).toFixed(2).split('.'); i = i.replace(/\B(?=(\d{3})+(?!\d))/g,' '); d = d.replace(/0+$/,''); return (r<0?'−':'') + i + (d ? ',' + d : ''); };
+const gcd = (a,b) => b ? gcd(b,a%b) : a;
+const fracTxt = (a,b) => { const g = gcd(a,b); return (a/g) + '/' + (b/g); };
+/* typische Fehlrechnungen -> Fallen-Liste (ohne Duplikate, ohne die richtige Lösung, nur positive Werte) */
+function mkTraps(ans,list){
+  const seen = new Set([+ans.toFixed(6)]), out = [];
+  list.forEach(([v,m]) => { if(!isFinite(v) || v <= 0) return; v = Math.round(v*1e6)/1e6; if(seen.has(v)) return; seen.add(v); out.push([v,m]); });
+  return out;
+}
+const rnd2 = x => Math.round(x*100)/100;
+
+const GEN = {
+ /* ---------- Kantine ---------- */
+ a1(r){
+  const T = r.pick([120,160,180,200,240,300,360,400]), p = r.pick([15,20,25,30,35,45,55,65]), ans = T*p/100;
+  const [q,unit] = r.pick([
+   [`Im Proviantschrank liegen ${nf(T)} Nahrungspakete. ${p} % davon sind vegetarisch. Wie viele vegetarische Pakete sind das?`,'Pakete'],
+   [`In der Kantine stehen ${nf(T)} Wasserflaschen. ${p} % davon sind schon gekühlt. Wie viele Flaschen sind das?`,'Flaschen'],
+   [`Im Vorratsraum lagern ${nf(T)} Packungen Trockenobst. ${p} % davon sind Bananenchips. Wie viele Packungen sind das?`,'Packungen']]);
+  return {q, ans, unit,
+   tips:[`10 % von ${nf(T)} sind ${nf(T/10)} (durch 10 teilen).`, `1 % von ${nf(T)} sind ${nf(T/100)}. Multipliziere das mit ${p}.`],
+   sol:`1 % von ${nf(T)} = ${nf(T/100)}. Dann ${p} · ${nf(T/100)} = ${nf(ans)} ${unit}.`,
+   traps: mkTraps(ans,[[p,`${p} ist der Prozentsatz – der steht schon in der Aufgabe.`],
+    [T/10,`${nf(T/10)} sind erst 10 %. Du brauchst ${p} %.`],
+    [T-ans,`${nf(T-ans)} ${unit} gehören NICHT dazu. Gesucht sind die mit den ${p} %.`],
+    [T*p,`Du hast ${nf(T)} · ${p} gerechnet. Den Prozentsatz musst du noch durch 100 teilen.`]])};
+ },
+ a2(r){
+  const G = r.pick([200,250,300,400,500,600,750,800]), p = r.pick([12,15,18,24,35,45]), part = G*p/100;
+  const [q,u] = r.pick([
+   [`Brutzel: „Von meinem Wasservorrat sind schon ${p} % verbraucht – das sind ${nf(part)} Liter. Wie viele Liter waren es am Anfang?“`,'Liter'],
+   [`Brutzel: „Mein Mehlvorrat ist schon zu ${p} % aufgebraucht – das sind ${nf(part)} kg. Wie viel kg waren es am Anfang?“`,'kg']]);
+  return {q, ans:G, unit:u,
+   tips:[`${p} % sind ${nf(part)} ${u}. Wie viel ist dann 1 %? (${nf(part)} : ${p})`, `1 % sind ${nf(G/100)} ${u}. 100 % sind 100-mal so viel.`],
+   sol:`${nf(part)} : ${p} = ${nf(G/100)} ${u} für 1 %. Dann ${nf(G/100)} · 100 = ${nf(G)} ${u}.`,
+   traps: mkTraps(G,[[part,`${nf(part)} ${u} sind nur ${p} %. Gesucht ist der ganze Vorrat (100 %).`],
+    [G/100,`${nf(G/100)} ${u} sind erst 1 %. Gesucht sind 100 %.`],
+    [part*p/100,`Du hast ${p} % von ${nf(part)} berechnet. Die ${nf(part)} sind aber schon die ${p} %.`],
+    [part*p,`Du hast ${nf(part)} · ${p} gerechnet. Aber ${p} % sind nur ein kleiner Teil – das Ganze muss größer als ${nf(part)} sein, nicht ${nf(part*p)}.`]])};
+ },
+ a3(r){
+  const N = r.pick([40,50,60,70,80,90,100,120,150,200]), p = r.pick([20,30,40,60,70]), q2 = r.pick([120,130,150,160,200,250]), part = N*p/100, ans = N*q2/100;
+  return {q:`Brutzel denkt sich eine Zahl: „${p} % meiner Zahl sind ${nf(part)}. Welche Zahl bekomme ich, wenn ich ${q2} % meiner Zahl nehme?“`, ans, unit:'',
+   tips:[`Finde zuerst die gedachte Zahl: ${p} % sind ${nf(part)}, also sind 10 % genau ${nf(N/10)}.`, `Die gedachte Zahl ist ${nf(N)} (das sind 100 %). Berechne davon ${q2} % = 100 % + ${q2-100} %.`],
+   sol:`10 % = ${nf(N/10)} → 100 % = ${nf(N)}. ${q2} % von ${nf(N)} = ${nf(N)} + ${nf(N*(q2-100)/100)} = ${nf(ans)}.`,
+   traps: mkTraps(ans,[[N,`${nf(N)} ist die gedachte Zahl (100 %). Gesucht sind ${q2} % davon.`],
+    [part*q2/100,`Du hast ${q2} % von ${nf(part)} gerechnet. Die ${nf(part)} sind aber nur ${p} % der gedachten Zahl.`],
+    [N*(q2-100)/100,`${nf(N*(q2-100)/100)} sind nur ${q2-100} %. Gesucht sind ${q2} % (also 100 % + ${q2-100} %).`],
+    [part,`${nf(part)} sind erst ${p} %. Finde zuerst die ganze Zahl (100 %).`]])};
+ },
+ /* Fehlersuche: Brutzel rechnet falsch */
+ a4(r){
+  const T = r.pick([120,160,200,240,300,400]), p = r.pick([15,20,25,35,40,45]), ans = T*p/100, kind = r.pick(['x100','div','rest']);
+  const calc = {x100:`${nf(T)} · ${p} = ${nf(T*p)}`, div:`${nf(T)} : ${p} = ${nf(T/p)}`, rest:`${100-p} % von ${nf(T)} = ${nf(T*(100-p)/100)}`}[kind];
+  const E = {
+   x100:{t:'Er hat nach dem Malnehmen nicht durch 100 geteilt.', hint:`Sein Ergebnis ist viel größer als die ${nf(T)} Pakete insgesamt – das kann bei ${p} % nicht stimmen.`},
+   div:{t:`Er hat ${nf(T)} durch ${p} geteilt, statt erst 1 % zu bestimmen.`, hint:`Durch den Prozentsatz teilt man nur, wenn man den Grundwert sucht. Hier ist der Prozentwert gesucht.`},
+   rest:{t:`Er hat ${100-p} % statt ${p} % berechnet.`, hint:`Schau auf die Prozentzahl in seiner Rechnung: Sie passt nicht zur Aufgabe.`}};
+  const opts = Object.keys(E).map(k => k === kind ? {t:E[k].t, ok:true} : {t:E[k].t, fb:`Schau genau auf Brutzels Rechnung „${calc}“. Diesen Fehler hat er dort nicht gemacht.`});
+  opts.push({t:'Die Rechnung stimmt – nur die Einheit „Pakete“ fehlt.', fb:`Rechne nach: ${p} % von ${nf(T)} sind ${nf(ans)}. Brutzels Ergebnis ist ein ganz anderes.`});
+  return {q:`Brutzel soll ausrechnen, wie viel ${p} % von ${nf(T)} Nahrungspaketen sind. Er rechnet: „${calc}“ und ist stolz auf sein Ergebnis. Was hat er falsch gemacht?`,
+   opts:r.shuffle(opts), tips:[`Rechne selbst: 1 % von ${nf(T)} sind ${nf(T/100)}, also sind ${p} % genau ${nf(ans)}.`, E[kind].hint],
+   sol:`Richtig wäre ${nf(T)} · ${p} : 100 = ${nf(ans)}. Brutzels Fehler: ${E[kind].t.charAt(0).toLowerCase() + E[kind].t.slice(1)}`};
+ },
+ /* ---------- Labor ---------- */
+ l1(r){
+  let T, pct, g; for(let n=0;n<80;n++){ T = r.pick([80,120,160,200,240,250,300]); pct = r.pick([35,45,55,65,75,85,90]); g = T*pct/100; if(Number.isInteger(g)) break; }
+  const [q,w] = r.pick([[`Auf dem Keimtablett wurden ${T} Samen ausgesät. ${g} Samen sind schon gekeimt. Wie viel Prozent der Samen sind gekeimt?`,'Samen'],
+                        [`Im Labor wurden ${T} Proben angesetzt. Bei ${g} Proben ist schon Schimmel gewachsen. Wie viel Prozent der Proben sind betroffen?`,'Proben']]);
+  return {q, ans:pct, unit:'%',
+   tips:[`Prozentsatz = Teil : Ganzes. Hier: ${g} von ${T}.`, `1 % von ${T} sind ${nf(T/100)}. Wie oft passt das in die ${g}?`],
+   sol:`1 % von ${T} = ${nf(T/100)}. ${g} : ${nf(T/100)} = ${pct} → ${pct} %. (Oder: ${g}/${T} = ${pct}/100.)`,
+   traps: mkTraps(pct,[[100-pct,`${100-pct} % der ${w} sind NICHT betroffen (${T-g} von ${T}). Gesucht ist der Anteil von ${g}.`],
+    [pct/100,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent.'],
+    [g,`${g} ist die Anzahl. Gesucht ist der Prozentsatz.`]])};
+ },
+ l2(r){
+  const tots = [8,10,12,16,20,25,40,50];
+  for(let n=0;n<300;n++){
+    const tA = r.pick(tots), tB = r.pick(tots); if(tA === tB) continue;
+    const sA = r.int(2,tA-1), sB = r.int(2,tB-1), pA = sA/tA*100, pB = sB/tB*100;
+    if(!Number.isInteger(pA) || !Number.isInteger(pB) || Math.abs(pA-pB) < 5 || (sA > sB) === (pA > pB)) continue;
+    const W = pA > pB ? 'A' : 'B', L = W === 'A' ? 'B' : 'A', S = {A:sA,B:sB}, Tt = {A:tA,B:tB}, P = {A:pA,B:pB}, absW = sA > sB ? 'A' : 'B';
+    const opts = [
+     {t:`Versuch ${absW} war besser, weil dort mehr Pflanzen angewachsen sind (${S[absW]} > ${S[absW==='A'?'B':'A']}).`, fb:`Die Gesamtzahlen sind verschieden (${tA} und ${tB}). Man darf nicht die Anzahlen vergleichen, sondern die Prozentsätze.`},
+     {t:`Versuch ${W} war besser: ${P[W]} % sind angewachsen, bei ${L} nur ${P[L]} %.`, ok:true},
+     {t:'Beide Versuche waren gleich gut.', fb:`Rechne nach: ${sA} von ${tA} und ${sB} von ${tB} – das ist nicht derselbe Prozentsatz.`},
+     {t:`Versuch ${L} war besser: ${S[L]} von ${Tt[L]} sind ${P[W]+5} %.`, fb:`Prüfe die Rechnung: 1 % von ${Tt[L]} sind ${nf(Tt[L]/100)}, und ${S[L]} : ${nf(Tt[L]/100)} = ${P[L]}. Also sind ${S[L]} von ${Tt[L]} genau ${P[L]} %.`}];
+    return {q:`Zwei Versuche mit Pflanzen: In Versuch A sind ${sA} von ${tA} Pflanzen angewachsen. In Versuch B sind ${sB} von ${tB} Pflanzen angewachsen. Welche Aussage stimmt?`,
+     opts:r.shuffle(opts), tips:['Vergleiche nicht die Anzahlen, sondern die Anteile – am besten als Prozent.', `A: ${sA} von ${tA} = ${fracTxt(sA,tA)}. B: ${sB} von ${tB} = ${fracTxt(sB,tB)}.`],
+     sol:`A: ${sA}/${tA} = ${fracTxt(sA,tA)} = ${pA} %. B: ${sB}/${tB} = ${fracTxt(sB,tB)} = ${pB} %. Versuch ${W} hat den höheren Anteil.`};
+  }
+  return null;
+ },
+ l3(r,ctx){
+  const M = r.pick([100,200,300,400,500]), p = r.pick([6,12,18,24]), Z = M*p/100, k = r.pick([1.5,2,3]), W = M*(k-1), tot = M*k, pct = Z/tot*100;
+  ctx.l = {M,p,Z,W,tot,pct};
+  return {q:`Dr. Nova mischt ${M} g Zuckerlösung an. Sie enthält ${p} % Zucker. Wie viel Gramm reiner Zucker sind in der Lösung?`, ans:Z, unit:'g',
+   tips:[`10 % von ${M} g sind ${nf(M/10)} g.`, `1 % von ${M} g sind ${nf(M/100)} g. Mal ${p} nehmen.`],
+   sol:`1 % = ${nf(M/100)} g. Also ${p} % = ${p} · ${nf(M/100)} g = ${nf(Z)} g Zucker.`,
+   traps: mkTraps(Z,[[p,`${p} ist der Prozentsatz – der steht schon in der Aufgabe.`],[M/10,`${nf(M/10)} g sind erst 10 %. Du brauchst ${p} %.`],
+    [M*p,`Du hast ${M} · ${p} gerechnet. Teile noch durch 100.`],[M-Z,`${nf(M-Z)} g ist der Rest ohne Zucker. Gesucht ist der Zucker selbst.`]])};
+ },
+ l4(r,ctx){
+  const {M,p,Z,W,tot,pct} = ctx.l;
+  return {q:`Nun gießt Dr. Nova ${nf(W)} g reines Wasser dazu. Die Lösung wiegt jetzt ${nf(tot)} g, der Zucker (${nf(Z)} g) bleibt gleich. Wie viel Prozent Zucker enthält die verdünnte Lösung?`, ans:pct, unit:'%',
+   tips:[`Der Zucker (${nf(Z)} g) ist der Teil, die ganze neue Lösung (${nf(tot)} g) ist das Ganze.`, `Teil : Ganzes = ${nf(Z)} : ${nf(tot)}. 1 % von ${nf(tot)} g sind ${nf(tot/100)} g.`],
+   sol:`1 % von ${nf(tot)} g = ${nf(tot/100)} g. ${nf(Z)} g : ${nf(tot/100)} g = ${nf(pct)} → ${nf(pct)} %.`,
+   traps: mkTraps(pct,[[p,`Durch das Wasser wird die Lösung dünner – der Zuckeranteil muss kleiner als ${p} % werden.`],
+    [Z,`${nf(Z)} ist die Zuckermenge in g. Gesucht ist der Anteil in Prozent.`],[W,`Das Ganze (100 %) ist die ganze Lösung mit ${nf(tot)} g – nicht nur das zugegebene Wasser.`],
+    [pct/100,'Das ist der Anteil als Dezimalzahl. Gesucht ist die Angabe in Prozent.']])};
+ },
+ /* ---------- Maschinenraum ---------- */
+ m1(r){
+  const C = r.pick([400,500,600,800,1000,1200]), p = r.pick([10,15,20,25,30]), leak = C*p/100, ans = C-leak;
+  return {q:`Der Treibstofftank fasst ${nf(C)} Liter (siehe Anzeige am Tank). Durch ein Leck sind ${p} % ausgelaufen. Wie viel Liter sind noch im Tank?`, ans, unit:'Liter', disp:{cap:C, leak:p},
+   tips:[`Berechne zuerst, wie viel ausgelaufen ist: 10 % von ${nf(C)} sind ${nf(C/10)}.`, `${p} % sind ${nf(leak)} Liter. Was bleibt übrig, wenn du ${nf(leak)} von ${nf(C)} abziehst?`],
+   sol:`${p} % von ${nf(C)} l = ${nf(leak)} l. Es bleiben ${nf(C)} l − ${nf(leak)} l = ${nf(ans)} l (das sind ${100-p} %).`,
+   traps: mkTraps(ans,[[leak,`${nf(leak)} Liter sind die ausgelaufene Menge. Gesucht ist, was noch im Tank ist.`],[C+leak,'Es ist etwas ausgelaufen – der Tank wird leerer, nicht voller. Du hast addiert.'],
+    [C-p,`Du hast ${p} Liter abgezogen. Aber ${p} % von ${nf(C)} Litern sind nicht ${p} Liter.`],[p,`${p} ist der Prozentsatz – der steht schon in der Aufgabe.`]])};
+ },
+ m2(r){
+  const less = r.f() < .6, p = less ? r.pick([10,20,25,30]) : r.pick([20,25,50]), old = r.pick([400,600,800,1000]), N = old*(100+(less?-p:p))/100, f = less ? 100-p : 100+p;
+  return {q:`Nach einem Umbau verbraucht das Triebwerk ${p} % ${less?'weniger':'mehr'} Treibstoff als vorher: ${less?'nur noch':'jetzt'} ${nf(N)} Liter pro Stunde. Wie viel Liter waren es vorher pro Stunde?`, ans:old, unit:'Liter',
+   tips:[`Die ${nf(N)} l sind nicht 100 %, sondern ${f} % des alten Verbrauchs (100 % ${less?'−':'+'} ${p} %).`, `${f} % sind ${nf(N)} l. Also ist 1 % genau ${nf(N/f)} l. Wie viel sind 100 %?`],
+   sol:`${f} % = ${nf(N)} l → 1 % = ${nf(N/f)} l → 100 % = ${nf(old)} l.`,
+   traps: mkTraps(old,[[N*(1+(less?1:-1)*p/100),`Du hast ${p} % von ${nf(N)} l ${less?'dazugerechnet':'abgezogen'}. Die ${p} % beziehen sich aber auf den ALTEN Verbrauch – und der ist gesucht.`],
+    [N*p/100,`${nf(N*p/100)} l sind ${p} % von ${nf(N)} l. Die ${p} % beziehen sich aber auf den alten Verbrauch (gesucht).`],[N,`${nf(N)} l ist der neue Verbrauch. Gesucht ist der alte.`],
+    [N/f,`${nf(N/f)} l sind erst 1 %. Gesucht sind 100 %.`]])};
+ },
+ m3(r){
+  const p = r.pick([10,20,30,40,50]), upFirst = r.f() < .5, loss = p*p/100, mid = upFirst ? 100+p : 100-p, res = 100-loss;
+  const opts = [{t:'Genau gleich wie am Anfang.', fb:`Die zweiten ${p} % beziehen sich auf den schon veränderten Wert (${mid}) – nicht auf 100. Rechne mit 100 Einheiten nach.`},
+   {t:`${nf(loss)} % höher als am Anfang.`, fb:`Rechne nach: 100 → ${mid}. Dann ${upFirst?'davon '+p+' % abziehen':'dazu '+p+' %'}: ${nf(res)}. Ist ${nf(res)} höher als 100?`},
+   {t:`${nf(loss)} % niedriger als am Anfang.`, ok:true},
+   {t:`${p} % niedriger als am Anfang.`, fb:`${p} % niedriger wären ${100-p}. Rechne mit 100 Einheiten nach: erst ${mid}, dann weiter bis ${nf(res)}.`}];
+  return {q:`Kira stellt den Schubregler zuerst um ${p} % ${upFirst?'höher':'niedriger'} und danach um ${p} % ${upFirst?'niedriger':'höher'}. Wie sieht der Schub am Ende aus – verglichen mit dem Anfang?`,
+   opts:r.shuffle(opts), tips:['Rechne mit einem Beispiel: Anfangsschub = 100 Einheiten.', `Erst 100 ${upFirst?'+':'−'} ${p} % = ${mid}. Dann ${mid} ${upFirst?'−':'+'} (${p} % von ${mid}) = ?`],
+   sol:`100 ${upFirst?'+':'−'} ${p} = ${mid}. ${p} % von ${mid} sind ${nf(mid*p/100)}. ${mid} ${upFirst?'−':'+'} ${nf(mid*p/100)} = ${nf(res)}. Der Schub ist am Ende ${nf(loss)} % niedriger als am Anfang.`};
+ },
+ m4(r,ctx){
+  const P = r.pick([200,400,500,600,800,1000]), r1 = r.pick([10,20,30]), r2 = r.pick([10,20,30]), p1 = rnd2(P*(100-r1)/100), ans = rnd2(p1*(100-r2)/100), tot = rnd2(100-ans/P*100);
+  ctx.m4 = {P,r1,r2,p1,ans,tot};
+  return {q:`Ein Ersatzventil kostet ${P} €. Erst gibt es ${r1} % Rabatt. Auf den neuen Preis gibt es noch einmal ${r2} % Rabatt. Wie viel Euro kostet das Ventil am Ende?`, ans, unit:'€',
+   tips:[`Rabatt 1: ${r1} % von ${P} € = ${nf(P-p1)} €. Neuer Preis: ${nf(p1)} €.`, `Rabatt 2 gilt für ${nf(p1)} € (nicht mehr für ${P} €): ${r2} % von ${nf(p1)} € = ?`],
+   sol:`${P} € − ${nf(P-p1)} € = ${nf(p1)} €. Dann ${nf(p1)} € − ${nf(p1-ans)} € = ${nf(ans)} €.`,
+   traps: mkTraps(ans,[[P*(100-r1-r2)/100,`Das wären ${r1+r2} % Rabatt auf ${P} €. Der zweite Rabatt bezieht sich aber auf den schon gesenkten Preis (${nf(p1)} €).`],
+    [p1,`${nf(p1)} € ist der Preis nach dem ersten Rabatt. Es kommt noch ein zweiter Rabatt.`],[p1-ans,`${nf(p1-ans)} € ist erst der zweite Rabatt. Gesucht ist der Endpreis.`]])};
+ },
+ m5(r,ctx){
+  const {P,r1,r2,ans,tot} = ctx.m4;
+  return {q:`Wie viel Prozent Rabatt sind das insgesamt – vom ursprünglichen Preis von ${P} € auf ${nf(ans)} €?`, ans:tot, unit:'%',
+   tips:[`Wie viel Euro hat man insgesamt gespart? ${P} € − ${nf(ans)} €.`, `Wie viel Prozent von ${P} € sind ${nf(P-ans)} €? (1 % von ${P} € sind ${nf(P/100)} €.)`],
+   sol:`${P} € − ${nf(ans)} € = ${nf(P-ans)} €. 1 % von ${P} € = ${nf(P/100)} €. ${nf(P-ans)} : ${nf(P/100)} = ${nf(tot)} → ${nf(tot)} %.`,
+   traps: mkTraps(tot,[[r1+r2,`Zwei Rabatte von ${r1} % und ${r2} % ergeben nicht ${r1+r2} %: Der zweite bezieht sich auf einen kleineren Preis.`],
+    [P-ans,`${nf(P-ans)} € ist der gesparte Betrag in Euro. Gesucht ist der Rabatt in Prozent.`],[100-tot,`${nf(100-tot)} % bezahlt man vom ursprünglichen Preis (${nf(ans)} von ${P}). Gesucht ist der Rabatt – der Rest zu 100 %.`]])};
+ },
+ /* ---------- Biokuppel ---------- */
+ b1(r){
+  const H = r.pick([20,40,50,60,80]), p = r.pick([10,20,25,35,40,50]), gr = H*p/100, ans = H+gr;
+  return {q:`Eine Tomatenpflanze ist ${H} cm hoch. In einer Woche wächst sie um ${p} %. Wie hoch ist sie danach?`, ans, unit:'cm',
+   tips:[`Berechne zuerst den Zuwachs: 10 % von ${H} cm sind ${nf(H/10)} cm.`, `${p} % sind ${nf(gr)} cm. Der Zuwachs kommt zur alten Höhe dazu.`],
+   sol:`${p} % von ${H} cm = ${nf(gr)} cm. ${H} cm + ${nf(gr)} cm = ${nf(ans)} cm.`,
+   traps: mkTraps(ans,[[gr,`${nf(gr)} cm ist der Zuwachs. Gesucht ist die neue Höhe: alte Höhe + Zuwachs.`],[H+p,`Du hast ${H} und ${p} addiert. ${p} ist ein Prozentsatz, keine Länge in cm.`],[H-gr,'Die Pflanze wächst, sie wird nicht kleiner. Du hast den Zuwachs abgezogen.']])};
+ },
+ b2(r){
+  const [p,olds] = r.pick([[25,[20,24,40,80]],[20,[20,30,40,50]],[50,[20,24,30,40]],[10,[20,30,40,50]]]), old = r.pick(olds), N = old*(100+p)/100;
+  return {q:`Der Salat im Nachbarbeet ist in einer Woche um ${p} % gewachsen und jetzt ${nf(N)} cm hoch. Wie hoch war er vor einer Woche?`, ans:old, unit:'cm',
+   tips:[`Die ${nf(N)} cm sind nicht 100 %, sondern ${100+p} % (100 % + ${p} % Zuwachs) der alten Höhe.`, `${100+p} % = ${nf(N)} cm → 1 % = ${nf(N)} : ${100+p} = ${nf(N/(100+p))} cm. Wie viel sind 100 %?`],
+   sol:`${100+p} % = ${nf(N)} cm → 1 % = ${nf(N/(100+p))} cm → 100 % = ${nf(old)} cm.`,
+   traps: mkTraps(old,[[N*(100-p)/100,`Du hast ${p} % von ${nf(N)} cm abgezogen. Die ${p} % beziehen sich aber auf die ALTE Höhe (gesucht), nicht auf ${nf(N)} cm.`],
+    [N*p/100,`${nf(N*p/100)} cm sind ${p} % von ${nf(N)} cm. Die ${p} % beziehen sich aber auf die alte Höhe.`],[N*(100+p)/100,'Der Salat war früher kleiner, nicht größer. Du hast addiert.'],[N,`${nf(N)} cm ist die jetzige Höhe. Gesucht ist die Höhe vor einer Woche.`]])};
+ },
+ b3(r){
+  const A = r.pick([20,40,60,80,100]), c = r.pick([10,20,25,50]), up = r.f() < .65, B = A*(100+(up?c:-c))/100, d = Math.abs(B-A);
+  return {q:`Flora hat eine Ranke gemessen: Sie ${up?'wuchs':'schrumpfte'} von ${A} cm auf ${nf(B)} cm. Um wie viel Prozent ist die Ranke ${up?'gewachsen':'kürzer geworden'}?`, ans:c, unit:'%',
+   tips:[`Wie viel cm ist die Ranke ${up?'gewachsen':'kürzer geworden'}? Das ist der „Teil“.`, `Die Änderung (${nf(d)} cm) wird mit der ALTEN Länge (${A} cm) verglichen: ${nf(d)} von ${A}.`],
+   sol:`Änderung: ${nf(d)} cm. ${nf(d)} cm von ${A} cm = ${fracTxt(d*100,A*100)} = ${c} %.`,
+   traps: mkTraps(c,[[d,`${nf(d)} cm ist die Änderung in cm. Gesucht ist die Änderung in Prozent.`],[d/B*100,`Du hast ${nf(d)} cm mit der NEUEN Länge (${nf(B)} cm) verglichen. Die Änderung bezieht sich auf den alten Wert (${A} cm).`],
+    [up?100+c:100-c,`${up?100+c:100-c} % ist die neue Länge im Vergleich zur alten (${nf(B)} von ${A}). Gesucht ist nur die Änderung.`],[c/100,'Das ist die Dezimalzahl. Gesucht ist die Angabe in Prozent.']])};
+ },
+ b4(r){
+  const [s,e,rel] = r.pick([[20,25,25],[10,15,50],[40,50,25],[50,60,20],[25,30,20],[20,24,20]]), d = e-s, what = r.pick(['Sauerstoffanteil','Luftfeuchtigkeit']);
+  const opts = [{t:`Der Anteil ist um ${e} Prozentpunkte gestiegen.`, fb:`Prozentpunkte sind der Unterschied der beiden Prozentzahlen. Rechne: ${e} % − ${s} % = ?`},
+   {t:`Der Anteil ist um ${rel} % gestiegen, aber nur um ${s} Prozentpunkte.`, fb:`Prozentpunkte sind der Unterschied der Prozentzahlen: ${e} % − ${s} % = ?`},
+   {t:`Der Anteil ist um ${d} Prozentpunkte gestiegen. Das sind ${d} % mehr als vorher.`, fb:`${d} Prozentpunkte stimmt. Aber „${d} % mehr als vorher“ nicht: Wie viel Prozent sind ${d} von ${s} (dem alten Anteil)?`},
+   {t:`Der Anteil ist um ${d} Prozentpunkte gestiegen. Das sind ${rel} % mehr als vorher.`, ok:true}];
+  return {q:`Der ${what} der Luft in der Biokuppel steigt von ${s} % auf ${e} %. Welche Aussage stimmt?`, opts:r.shuffle(opts),
+   tips:[`Unterschied der Prozentzahlen: ${e} % − ${s} % = ${d} Prozentpunkte.`, `Und relativ gesehen: Der Zuwachs (${d}) wird mit dem alten Anteil (${s}) verglichen. ${d} von ${s} = ?`],
+   sol:`${e} % − ${s} % = ${d} Prozentpunkte. Relativ: ${d} von ${s} = ${fracTxt(d,s)} = ${rel} % mehr als vorher.`};
+ },
+ /* Fehlersuche: Flora rechnet falsch */
+ b5(r){
+  const A = r.pick([20,40,60,80]), c = r.pick([10,20,25,50]), B = A*(100+c)/100, d = B-A, kind = r.pick(['neu','cm','quot']);
+  const calc = {neu:`${nf(d)} cm von ${nf(B)} cm = ${nf(d/B*100)} %`, cm:`${nf(B)} − ${A} = ${nf(d)} → ${nf(d)} %`, quot:`${nf(B)} : ${A} = ${nf(B/A)} = ${nf(B/A*100)} %`}[kind];
+  const E = {neu:{t:'Sie hat den Zuwachs mit der neuen Länge verglichen statt mit der alten.', hint:`Der Vergleichswert (Grundwert) ist immer der alte Wert: ${A} cm.`},
+   cm:{t:'Sie hat die Zentimeter einfach als Prozent hingeschrieben.', hint:`${nf(d)} cm sind eine Länge, kein Prozentsatz. Vergleiche den Zuwachs mit den ${A} cm.`},
+   quot:{t:'Sie hat die neue Länge in Prozent der alten angegeben – nicht den Zuwachs.', hint:`${nf(B/A*100)} % wäre die ganze neue Länge. Der Zuwachs sind nur ${nf(B/A*100)} % − 100 %.`}};
+  const opts = Object.keys(E).map(k => k === kind ? {t:E[k].t, ok:true} : {t:E[k].t, fb:`Prüfe Floras Rechnung „${calc}“ Zeile für Zeile. Diesen Fehler hat sie dort nicht gemacht.`});
+  opts.push({t:'Die Rechnung stimmt – nur das Prozentzeichen fehlt.', fb:`Rechne nach: ${nf(d)} von ${A} sind ${c} %. Floras Ergebnis ist ein anderes.`});
+  return {q:`Flora hat gemessen: Eine Ranke wuchs von ${A} cm auf ${nf(B)} cm. Sie rechnet: „${calc}“. Was ist an Floras Rechnung falsch?`, opts:r.shuffle(opts),
+   tips:[`Rechne selbst: Zuwachs ${nf(d)} cm, verglichen mit der alten Länge ${A} cm. Das ergibt ${c} %.`, E[kind].hint],
+   sol:`Richtig: ${nf(d)} cm von ${A} cm = ${c} %. Floras Fehler: ${E[kind].t.charAt(0).toLowerCase() + E[kind].t.slice(1)}`};
+ },
+ /* ---------- Cockpit ---------- */
+ c1(r){
+  const N = r.pick([200,300,400,500,800,1000]), rate = r.pick([19,19,19,7]), B = N*(100+rate)/100, tax = B-N, f = 100+rate;
+  return {q:`Auf dem Display steht: Ein Ersatzbauteil kostet ${nf(B)} € inklusive ${rate} % Mehrwertsteuer. Wie viel Euro kostet es ohne Mehrwertsteuer (Nettopreis)?`, ans:N, unit:'€', disp:{gross:B, rate},
+   hint:`Der Nettopreis ist 100 %. Der Bruttopreis (mit Mehrwertsteuer) ist ${f} % vom Nettopreis.`,
+   tips:[`Der Nettopreis ist 100 %. Mit Mehrwertsteuer sind es ${f} %.`, `${f} % sind ${nf(B)} €. Teile ${nf(B)} durch ${f}, dann hast du 1 %.`],
+   sol:`${f} % = ${nf(B)} € → 1 % = ${nf(B)} € : ${f} = ${nf(B/f)} € → 100 % = ${nf(N)} €.`,
+   traps: mkTraps(N,[[B*(100-rate)/100,`Du hast ${rate} % von ${nf(B)} € abgezogen. Die ${rate} % gehören aber zum Nettopreis (gesucht) – der Bruttopreis ist ${f} %.`],[B-rate,`Du hast ${rate} € abgezogen. ${rate} ist ein Prozentsatz, kein Euro-Betrag.`],
+    [B*rate/100,`${nf(B*rate/100)} € sind ${rate} % von ${nf(B)} €. Die Mehrwertsteuer wird aber vom Nettopreis berechnet, nicht vom Bruttopreis.`],[B*f/100,`Ohne Mehrwertsteuer muss der Preis kleiner sein als ${nf(B)} €. Du hast die Steuer dazugerechnet.`],
+    [tax,`${nf(tax)} € ist die Mehrwertsteuer (${nf(B)} € − ${nf(N)} €). Gesucht ist der Nettopreis.`]])};
+ },
+ c2(r){
+  const R = r.pick([1200,2000,2400,3000,4000,5000]), p = r.pick([40,45,55,60,65,70,75,80]), ans = R*(100-p)/100;
+  return {q:`Vega: „Für die Landung brauchen wir ${nf(R)} kg Reserve-Treibstoff. ${p} % davon sind schon im Tank. Wie viel kg fehlen noch?“`, ans, unit:'kg',
+   tips:[`Wie viel Prozent fehlen noch? 100 % − ${p} % = ?`, `${100-p} % von ${nf(R)} kg: 10 % sind ${nf(R/10)} kg, 1 % sind ${nf(R/100)} kg.`],
+   sol:`Es fehlen ${100-p} %. 1 % = ${nf(R/100)} kg → ${100-p} · ${nf(R/100)} kg = ${nf(ans)} kg.`,
+   traps: mkTraps(ans,[[R-ans,`${nf(R-ans)} kg sind schon im Tank (${p} %). Gesucht ist, was noch fehlt.`],[100-p,`${100-p} ist der fehlende Prozentsatz. Gesucht sind die kg.`],[p,`${p} ist der Prozentsatz, der schon im Tank ist. Gesucht ist die Menge, die fehlt.`]])};
+ },
+ c3(r){
+  const old = r.pick([2000,2500,4000,5000]), p = r.pick([10,12,15,20,25]), N = old*(100-p)/100, f = 100-p;
+  return {q:`Vega: „Nach einem Sparprogramm verbraucht die Kühlung ${p} % weniger Wasser als früher: nur noch ${nf(N)} Liter. Wie viel waren es früher?“`, ans:old, unit:'Liter',
+   tips:[`${nf(N)} l sind nicht 100 %, sondern ${f} % (100 % − ${p} %).`, `${f} % = ${nf(N)} l → 1 % = ${nf(N)} : ${f} = ${nf(N/f)} l. Und 100 %?`],
+   sol:`${f} % = ${nf(N)} l → 1 % = ${nf(N/f)} l → 100 % = ${nf(old)} l.`,
+   traps: mkTraps(old,[[N*(100+p)/100,`Du hast ${p} % von ${nf(N)} l dazugerechnet. Die ${p} % beziehen sich aber auf den ALTEN Wert (gesucht).`],[N*p/100,`${nf(N*p/100)} l sind ${p} % von ${nf(N)} l. Die ${p} % beziehen sich aber auf den alten Wert.`],[N/f,`${nf(N/f)} l sind erst 1 %. Gesucht sind 100 %.`]])};
+ },
+ c4(r){
+  const D = 384000, f = r.pick([20,25,40,50,60,75,80,90]), rem = D*(100-f)/100;
+  return {q:`Vega: „Am Start waren wir ${nf(D)} km vom Mond entfernt. Jetzt sind es noch ${nf(rem)} km (siehe Flugbahn-Anzeige). Wie viel Prozent der Strecke haben wir schon geschafft?“`, ans:f, unit:'%', disp:{start:D, now:rem},
+   tips:[`Wie viele km sind wir schon geflogen? ${nf(D)} km − ${nf(rem)} km.`, `1 % der Strecke sind ${nf(D/100)} km. Wie oft passt das in die geflogene Strecke (${nf(D-rem)} km)?`],
+   sol:`Geflogen: ${nf(D-rem)} km. 1 % = ${nf(D/100)} km → ${nf(D-rem)} : ${nf(D/100)} = ${f} → ${f} % geschafft.`,
+   traps: mkTraps(f,[[100-f,`${100-f} % ist die Strecke, die noch vor uns liegt. Gesucht ist die schon geflogene Strecke.`],[D-rem,`${nf(D-rem)} km ist die geflogene Strecke in km. Gesucht ist der Prozentsatz.`],[f/100,'Das ist die Dezimalzahl. Gesucht ist die Angabe in Prozent.']])};
+ },
+ c5(r){
+  const y = r.pick([150,200,250,300,400]), x = r.pick([10,20,30,40,50]), s1 = x*y/100;
+  const p2 = r.pick([25,50,20,75]), N = r.pick([40,60,80,100,120]), v = N*p2/100, s2 = N;
+  const [a,b,s3] = r.pick([[9,12,75],[12,20,60],[6,8,75],[15,20,75],[9,20,45],[7,20,35],[3,5,60],[4,5,80],[18,24,75],[21,28,75]]), ans = s1+s2+s3;
+  return {q:`Vega: „Letzte Prüfung! Der Landecode ist die Summe aus drei Zahlen: (1) ${x} % von ${y}, (2) die Zahl, von der ${p2} % genau ${nf(v)} sind, (3) der Prozentsatz, wenn ${a} von ${b} geschafft sind. Wie lautet der Landecode?“`, ans, unit:'',
+   tips:['Löse die drei Teile einzeln und schreibe sie auf: (1) Prozentwert, (2) Grundwert, (3) Prozentsatz.', `(1) ${x} % von ${y} = ${nf(s1)}. (2) ${p2} % sind ${nf(v)}: 1 % = ${nf(v/p2)}, also 100 % = ? (3) ${a} von ${b} = ${fracTxt(a,b)} = ?`],
+   sol:`(1) ${nf(s1)}. (2) ${nf(v)} : ${p2} · 100 = ${nf(s2)}. (3) ${a}/${b} = ${s3} %, also ${s3}. Summe: ${nf(s1)} + ${nf(s2)} + ${s3} = ${nf(ans)}.`,
+   traps: mkTraps(ans,[[s1+s2,'Das ist Teil (1) + Teil (2). Es fehlt noch der dritte Teil (3).'],[s1+s3,'Das ist Teil (1) + Teil (3). Es fehlt noch der zweite Teil (2).'],[s2+s3,'Das ist Teil (2) + Teil (3). Es fehlt noch der erste Teil (1).'],
+    [s1+v+s3,`Bei (2) ist die Zahl gesucht, von der ${p2} % genau ${nf(v)} sind – nicht die ${nf(v)} selbst.`]])};
+ }
+};
+
+/* Aufgaben aus dem Seed erzeugen (die Objekte in TASK_LIST bleiben dieselben) */
+const GEN_KEYS = ['q','ans','unit','tips','sol','traps','opts','disp','hint'];
+let SEED = 0, BASE = null;
+function buildTasks(seed){
+  SEED = seed; const ctx = {};
+  TASK_LIST.forEach(t => {
+    if(BASE){ GEN_KEYS.forEach(k => delete t[k]); Object.assign(t, JSON.parse(JSON.stringify(BASE[t.id]))); }
+    const g = GEN[t.id]; if(!g) return;
+    try{ const res = g(makeRng(seed,t.id), ctx); if(res) Object.assign(t, res); }catch(e){ if(window.console) console.warn('Aufgabe ' + t.id + ':', e); }
+  });
+}
+buildTasks(1);   // gültiger Ausgangszustand (und Rückfall)
+BASE = {}; TASK_LIST.forEach(t => BASE[t.id] = JSON.parse(JSON.stringify(t)));
+
 /* ---------- Hilfsfunktionen ---------- */
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -538,6 +819,18 @@ function loadProg(){
 }
 function saveProg(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(prog)); }catch(_){} }
 function clearProg(){ prog = {}; try{ localStorage.removeItem(STORE_KEY); }catch(_){} }
+/* Missions-Code (Seed): bestimmt alle Zahlen der Aufgaben. ?seed=1234 in der Adresse = gleiche Aufgaben für die ganze Klasse */
+const URL_SEED = (() => { try{ const m = /[?&]seed=(\d{1,6})(?:&|$)/.exec(location.search); return m ? Math.max(1,+m[1]) : 0; }catch(_){ return 0; } })();
+const newSeed = () => 1000 + Math.floor(Math.random()*9000);
+function initSeed(){
+  const hasProg = TASK_LIST.some(t => prog[t.id] && (prog[t.id].done || prog[t.id].wrong || prog[t.id].tips));
+  let s = prog.__seed;
+  if(URL_SEED && (!hasProg || s === URL_SEED)) s = URL_SEED;   // laufende Mission wird nie unter den Händen ausgetauscht
+  if(!s) s = newSeed();
+  prog.__seed = s; saveProg(); buildTasks(s);
+}
+function seedForNewMission(){ clearProg(); prog.__seed = URL_SEED || newSeed(); saveProg(); buildTasks(prog.__seed); refreshLive(); setSeedUI(); }
+function setSeedUI(){ const e = $('menuSeed'); if(e) e.textContent = 'Missions-Code: ' + prog.__seed; }
 const getProg = id => prog[id] || (prog[id] = {done:false, tips:0, wrong:0, sol:false});
 const taskDone = id => !!(prog[id] && prog[id].done);
 const OBJS = [];   // wird beim Bau der Welt gefüllt
@@ -809,8 +1102,14 @@ function screenPlane(cw,ch,worldW,draw,x,y,z,ry){
   const ctx = cv.getContext('2d'); draw(ctx,cw,ch);
   const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(worldW, worldW*ch/cw), new THREE.MeshBasicMaterial({map:tex, toneMapped:false}));
-  m.position.set(x,y,z); m.rotation.y = ry || 0; scene.add(m); return m;
+  m.position.set(x,y,z); m.rotation.y = ry || 0; scene.add(m);
+  m.userData.redraw = fn => { ctx.clearRect(0,0,cw,ch); fn(ctx,cw,ch); tex.needsUpdate = true; };
+  return m;
 }
+/* Bildschirme, die Zahlen der aktuellen Aufgaben zeigen (werden bei neuer Mission neu gemalt) */
+const LIVE = [];
+function liveScreen(mesh,fn){ LIVE.push(() => mesh.userData.redraw(fn)); return mesh; }
+function refreshLive(){ LIVE.forEach(f => f()); }
 let glowTex = null;
 function glow(color,size,x,y,z,parent,op){
   glowTex = glowTex || cvTex(64,64,drawGlow,{nomip:true});
@@ -1314,18 +1613,21 @@ function drawPanel(title,rows,accent,foot){
   };
 }
 function drawGauge(ctx,w,h){
+  const d = TASKS.m1.disp || {cap:800};
   ctx.fillStyle = '#0a1226'; ctx.fillRect(0,0,w,h);
   ctx.strokeStyle = '#f97316'; ctx.lineWidth = 8; ctx.strokeRect(6,6,w-12,h-12);
   ctx.fillStyle = '#fdba74'; ctx.font = `600 ${h*.11}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('TREIBSTOFF', w/2, h*.13);
-  for(let k=0;k<10;k++){ ctx.fillStyle = k<8 ? '#f97316' : '#3a2a22'; ctx.fillRect(w*.2, h*.2 + (9-k)*h*.07, w*.6, h*.05); }
-  ctx.fillStyle = '#dce8ff'; ctx.font = `600 ${h*.1}px ${FONT}`; ctx.fillText('800 l', w/2, h*.92);
+  for(let k=0;k<10;k++){ ctx.fillStyle = '#f97316'; ctx.fillRect(w*.2, h*.2 + (9-k)*h*.07, w*.6, h*.05); }
+  ctx.fillStyle = '#dce8ff'; ctx.font = `600 ${h*.1}px ${FONT}`; ctx.fillText(nf(d.cap) + ' l', w/2, h*.92);
 }
 function drawLockPad(ctx,w,h){
   ctx.fillStyle = '#0a1226'; ctx.fillRect(0,0,w,h);
   ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 8; ctx.strokeRect(6,6,w-12,h-12);
   ctx.fillStyle = '#c4b5fd'; ctx.font = `600 ${h*.1}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('LANDESCHLEUSE', w/2, h*.12);
   ctx.fillStyle = '#16213e'; rr(ctx,w*.18,h*.2,w*.64,h*.16,14); ctx.fill();
-  ctx.fillStyle = '#7ff4ff'; ctx.font = `600 ${h*.12}px ${FONT}`; ctx.fillText('_ _ _', w/2, h*.29);
+  const d = TASKS.c1.disp || {gross:595,rate:19};
+  ctx.fillStyle = '#7ff4ff'; ctx.font = `600 ${h*.085}px ${FONT}`; ctx.fillText(nf(d.gross) + ' € brutto', w/2, h*.25);
+  ctx.fillStyle = '#c4b5fd'; ctx.font = `500 ${h*.06}px ${FONT}`; ctx.fillText('inkl. ' + d.rate + ' % MwSt', w/2, h*.325);
   for(let k=0;k<9;k++){ const x = w*.2 + (k%3)*w*.21, y = h*.42 + Math.floor(k/3)*h*.15; ctx.fillStyle = '#2b3552'; rr(ctx,x,y,w*.18,h*.12,12); ctx.fill(); ctx.fillStyle = '#dce8ff'; ctx.font = `600 ${h*.08}px ${FONT}`; ctx.fillText(k+1, x+w*.09, y+h*.065); }
 }
 function drawRadar(ctx,w,h){
@@ -1336,11 +1638,14 @@ function drawRadar(ctx,w,h){
   ctx.fillStyle = '#7ff4ff'; ctx.beginPath(); ctx.arc(w*.62,h*.34,9,0,7); ctx.fill(); ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(w/2,h/2,7,0,7); ctx.fill();
 }
 function drawTraj(ctx,w,h){
+  const d = TASKS.c4.disp || {start:384000, now:96000};
   ctx.fillStyle = '#0a1226'; ctx.fillRect(0,0,w,h);
   ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 6; ctx.setLineDash([16,12]); ctx.beginPath(); ctx.moveTo(w*.1,h*.78); ctx.quadraticCurveTo(w*.45,h*.05,w*.85,h*.36); ctx.stroke(); ctx.setLineDash([]);
   ctx.fillStyle = '#4aa3ff'; ctx.beginPath(); ctx.arc(w*.1,h*.78,22,0,7); ctx.fill();
   ctx.fillStyle = '#cfcfc9'; ctx.beginPath(); ctx.arc(w*.85,h*.36,14,0,7); ctx.fill();
   ctx.fillStyle = '#dce8ff'; ctx.font = `600 ${h*.11}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('FLUGBAHN', w/2, h*.94);
+  ctx.fillStyle = '#7ff4ff'; ctx.font = `600 ${h*.095}px ${FONT}`; ctx.textAlign = 'left'; ctx.fillText('Start: ' + nf(d.start) + ' km', w*.04, h*.1);
+  ctx.textAlign = 'right'; ctx.fillText('Jetzt: ' + nf(d.now) + ' km', w*.96, h*.1);
 }
 function drawBars(ctx,w,h){
   ctx.fillStyle = '#0a1226'; ctx.fillRect(0,0,w,h);
@@ -1398,7 +1703,7 @@ function buildKantine(){
   // Brutzel
   placeChar(makeChef(),8.6,z0-6,-Math.PI/2,.85);
   addObj({id:'proviant', area:a.id, tasks:['a1'], name:'Proviantschrank', x:cx+.6,z:cz, hitR:2.2,hitH:7, markerY:8.2, labelY:9.6, padR:1.7, px:-7.4, pz:cz});
-  addObj({id:'brutzel', area:a.id, tasks:['a2','a3'], name:'Küchenbot Brutzel', x:8.6,z:z0-6, hitR:2.2,hitH:5, markerY:6.4, labelY:7.8, padR:1.7, px:5.6, pz:z0-6});
+  addObj({id:'brutzel', area:a.id, tasks:['a2','a3','a4'], name:'Küchenbot Brutzel', x:8.6,z:z0-6, hitR:2.2,hitH:5, markerY:6.4, labelY:7.8, padR:1.7, px:5.6, pz:z0-6});
 }
 
 /* ---------- Raum 2: Labor ---------- */
@@ -1454,7 +1759,7 @@ function buildMaschine(){
   sCyl(2.4,2.4,7.4,0x9aa5bb, tx,3.7,tz,{r:.3,m:.65}, 28); sSph(2.4,0x9aa5bb, tx,7.4,tz,{r:.3,m:.65,sy:.45}, 28,10); sSph(2.4,0x9aa5bb, tx,0,tz,{r:.3,m:.65,sy:.3}, 28,10);
   [1.6,3.6,5.6].forEach(y => sTor(2.45,.12,0xf97316, tx,y,tz,{r:.4,m:.4,rx:Math.PI/2}));
   sBox(.7,3,.35,0x2c3650, tx+2.35,3.5,tz,{r:.4});
-  screenPlane(256,256,2.2,drawGauge, tx+2.56,3.9,tz, Math.PI/2);
+  liveScreen(screenPlane(256,256,2.2,drawGauge, tx+2.56,3.9,tz, Math.PI/2), drawGauge);
   sCyl(.3,.3,5,0x8a97b3, tx,10.4,tz,{r:.3,m:.6});
   cCircle(tx,tz,2.7);
   // Kontrollpult für Kira
@@ -1494,7 +1799,7 @@ function buildBio(){
   boards(i);
   placeChar(makeGardener(),8.2,z0-4.5,-Math.PI/2,.86);
   addObj({id:'beet', area:a.id, tasks:['b1','b2'], name:'Tomatenbeet', x:-9.2,z:z0-2, hitR:2.6,hitH:5, markerY:6.6, labelY:8.0, padR:1.8, px:-5.8, pz:z0-2});
-  addObj({id:'flora', area:a.id, tasks:['b3','b4'], name:'Gärtnerbot Flora', x:8.2,z:z0-4.5, hitR:2.0,hitH:5, markerY:6.0, labelY:7.4, padR:1.7, px:5.4, pz:z0-4.5});
+  addObj({id:'flora', area:a.id, tasks:['b3','b4','b5'], name:'Gärtnerbot Flora', x:8.2,z:z0-4.5, hitR:2.0,hitH:5, markerY:6.0, labelY:7.4, padR:1.7, px:5.4, pz:z0-4.5});
 }
 
 /* ---------- Raum 5: Cockpit ---------- */
@@ -1504,7 +1809,7 @@ function buildCockpit(){
   const cz = SHIP.nose + 6.5;
   sBox(9,1.5,2.6,0x2b3552, 0,.75,cz,{r:.4,m:.3}); sBox(9.2,.2,2.8,0x56627f, 0,1.55,cz,{r:.3,m:.4});
   [[-6.2,.5],[6.2,-.5]].forEach(c => { sBox(3.2,1.5,2.6,0x2b3552, c[0],.75,cz+1.1,{r:.4,m:.3,ry:c[1]}); });
-  screenPlane(512,256,3.8,drawRadar, -4.2,3.4,cz-.2,.08); screenPlane(512,256,4.4,drawTraj, 0,3.6,cz-.4,0); screenPlane(512,256,3.8,drawBars, 4.2,3.4,cz-.2,-.08);
+  screenPlane(512,256,3.8,drawRadar, -4.2,3.4,cz-.2,.08); liveScreen(screenPlane(512,256,4.4,drawTraj, 0,3.6,cz-.4,0), drawTraj); screenPlane(512,256,3.8,drawBars, 4.2,3.4,cz-.2,-.08);
   [-4.2,0,4.2].forEach(x => sBox(.3,2.6,.3,0x56627f, x,2.3,cz-.7,{r:.4,m:.5}));
   cRect(0,cz,13,3.4);
   [[-2.6,0],[2.6,0]].forEach(c => { const z = z0-4.6;
@@ -1513,7 +1818,7 @@ function buildCockpit(){
   // Schloss (Pult mit Tastenfeld)
   const lx = -10.6, lz = z0-1;
   sBox(1.8,3.8,3.6,0x2b3552, lx,1.9,lz,{r:.4,m:.3}); sBox(.1,3.0,2.8,0x0a1226, lx+.92,2.3,lz,{r:.3});
-  screenPlane(256,256,2.8,drawLockPad, lx+.99,2.4,lz, Math.PI/2);
+  liveScreen(screenPlane(256,256,2.8,drawLockPad, lx+.99,2.4,lz, Math.PI/2), drawLockPad);
   sBox(.2,.2,3.8,0xa78bfa, lx+.9,4.05,lz,{b:1,ns:1}); cRect(lx,lz,2.2,4);
   // Holo-Karte bei Vega
   sCyl(1.3,1.6,.9,0x3a4560, 10.2,.45,z0+4,{r:.4,m:.5}); cCircle(10.2,z0+4,1.8);
@@ -1550,6 +1855,7 @@ function buildWorld(){
    6) SPIEL: Zustand, Eingabe, Dialog, Karte, Kamera, Hauptschleife
    ===================================================================== */
 loadProg();
+initSeed();
 buildWorld();
 OBJS.forEach(o => { o.ai = AREAS.findIndex(a => a.id === o.area); });
 
@@ -1761,7 +2067,7 @@ function checkNumeric(){
   if(eq(v,t.ans)){ solved(`${fmt(t.ans) === String(t.ans) || Number.isInteger(t.ans) ? fmt(t.ans) : String(t.ans).replace('.',',')}${t.unit ? ' ' + t.unit : ''} ist richtig. Gut gerechnet!`); return; }
   p.wrong++; saveProg();
   const trap = (t.traps || []).find(tr => eq(v,tr[0]));
-  feedback('bad', trap ? 'Fast – aber so noch nicht' : 'Noch nicht richtig', trap ? trap[1] : GENERIC[t.kind]);
+  feedback('bad', trap ? 'Fast – aber so noch nicht' : 'Noch nicht richtig', trap ? trap[1] : (t.hint || GENERIC[t.kind]));
   $('dIn').select && $('dIn').select();
 }
 function pickChoice(k,btn){
@@ -1772,7 +2078,7 @@ function pickChoice(k,btn){
     solved('Genau! ' + t.sol);
   }else{
     p.wrong++; saveProg(); btn.classList.add('no'); btn.disabled = true;
-    feedback('bad','Nicht ganz', op.fb || GENERIC[t.kind]);
+    feedback('bad','Nicht ganz', op.fb || t.hint || GENERIC[t.kind]);
   }
 }
 $('dCheck').addEventListener('click', checkNumeric);
@@ -1852,7 +2158,7 @@ $('btnMap').addEventListener('click', () => { if(mode === 'play') openMap(); });
 $('mapClose').addEventListener('click', closeMap);
 
 /* ---------- Menü, Start, Ende ---------- */
-function openMenu(){ setMode('menu'); showOv('ovMenu'); }
+function openMenu(){ setSeedUI(); setMode('menu'); showOv('ovMenu'); }
 function closeMenu(){ hideOv('ovMenu'); setMode('play'); }
 $('btnMenu').addEventListener('click', () => { if(mode === 'play') openMenu(); });
 $('menuResume').addEventListener('click', closeMenu);
@@ -1867,7 +2173,7 @@ function buildStart(){
   const has = TASK_LIST.some(t => taskDone(t.id)), box = $('startBtns'); box.innerHTML = '';
   const mk = (txt,cls,fn) => { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = txt; b.addEventListener('click', fn); box.appendChild(b); };
   mk(has ? '▶ Weiterfliegen' : '▶ Mission starten','primary', startPlay);
-  if(has) mk('Neue Mission','', () => { clearProg(); restart(true); });
+  if(has) mk('Neue Mission','', () => { restart(true); });
   mk('Steuerung','', () => { hideOv('ovStart'); prevOv = 'ovStart'; showOv('ovHelp'); });
 }
 function placeStart(){
@@ -1876,7 +2182,7 @@ function placeStart(){
 }
 function startPlay(){ hideOv('ovStart'); setMode('play'); }
 function restart(toStartScreen){
-  clearProg(); cine = null; winPending = false; winShown = false; cur = null; hintOn = false; $('hintCard').hidden = true;
+  seedForNewMission(); cine = null; winPending = false; winShown = false; cur = null; hintOn = false; $('hintCard').hidden = true;
   ['ovTask','ovMap','ovMenu','ovConfirm','ovHelp','ovWin'].forEach(hideOv);
   refreshWorld(true); refreshHUD(); placeStart(); snapCam = true;
   if(toStartScreen){ buildStart(); setMode('start'); showOv('ovStart'); } else { setMode('play'); }
