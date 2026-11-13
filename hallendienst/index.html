@@ -229,19 +229,6 @@
   .ck-platzhalter { background: var(--chip-tausch); color: var(--gelb); border-radius: 5px; padding: 0 4px; font-weight: 700; }
   .heute-karte { border-left: 4px solid var(--rot); display: flex; align-items: center; gap: 10px; }
   .heute-karte .t { flex: 1; font-size: .9rem; line-height: 1.4; }
-  #druckbereich { display: none; }
-  @media print {
-    body > *:not(#druckbereich) { display: none !important; }
-    body { background: #fff; padding: 0; }
-    #druckbereich { display: block; font-size: 10pt; padding: 8mm; color: #000; }
-    #druckbereich h1 { font-size: 15pt; color: #C30606; margin-bottom: 1mm; }
-    #druckbereich .datum { color: #555; margin-bottom: 5mm; font-size: 9pt; }
-    #druckbereich table { width: 100%; border-collapse: collapse; }
-    #druckbereich th, #druckbereich td { text-align: left; padding: 1.5mm 2mm; border-bottom: .3pt solid #bbb; font-size: 9pt; vertical-align: top; }
-    #druckbereich th { background: #f0f0f0; }
-    #druckbereich tr.tz td { background: #f6e3e3; font-weight: 700; }
-    #druckbereich .offen { color: #C30606; }
-  }
 </style>
 <script defer data-category="handball" data-offen="1" src="../protect.js?v=20261105f"></script>
 <script defer src="../cursor.js"></script>
@@ -356,7 +343,6 @@
 </nav>
 
 <div id="toast"></div>
-<div id="druckbereich"></div>
 
 <script>
 'use strict';
@@ -912,15 +898,11 @@ const App = {
         if ((d.gruppe || '') !== gruppe) { gruppe = d.gruppe || ''; if (gruppe) html += '<div class="gruppe">' + esc(gruppe) + '</div>'; }
         html += this.dienstHtml(d);
       });
-      if (S.istAdmin) html += '<div style="padding:4px 14px 12px"><button class="btn klein sekundaer" data-plus="' + esc(datum) + '">+ Dienst an diesem Tag ergänzen</button></div>';
+      if (S.istAdmin) html += '<div style="padding:4px 14px 12px"><button class="btn klein sekundaer" data-plus="' + esc(datum) + '">+ Weiteres Spiel / Dienst an diesem Tag</button></div>';
       html += '</div>';
     }
     $('#dienst-liste').innerHTML = html;
-    $('#dienst-liste').querySelectorAll('[data-plus]').forEach(b => b.onclick = () => {
-      const ds = S.dienste.filter(d => d.datum === b.dataset.plus);
-      const v = ds[0] || {};
-      this.dienstModal(null, { datum: b.dataset.plus, von: v.von || '18:00', bis: v.bis || '', ort: v.ort || '', gruppe: v.gruppe || '', quelle: v.quelle || null, quelleZeit: v.quelleZeit || null });
-    });
+    $('#dienst-liste').querySelectorAll('[data-plus]').forEach(b => b.onclick = () => this.tagErgaenzenModal(b.dataset.plus));
     $('#dienst-liste').querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
       const [id, platz, eid] = b.dataset.slot.split('|');
       if (eid) this.eintragModal(eid); else this.eintragenModal(id, +platz);
@@ -1207,6 +1189,7 @@ const App = {
 
   // ---------- Tab: Übersicht ----------
   renderUebersicht() {
+    if (!this._pdfVorgeladen) { this._pdfVorgeladen = true; setTimeout(() => this.ladeJsPDF().catch(() => {}), 800); }
     $('#ueb-strafen').innerHTML = Strafen.uebersichtHtml(); Strafen.knoepfe($('#ueb-strafen'));
     const kommend = S.dienste.filter(d => !istVorbei(d));
     const plaetze = kommend.reduce((s, d) => s + d.plaetze, 0);
@@ -1241,18 +1224,83 @@ const App = {
     text += '\n👉 Eintragen: ' + planLink();
     await teilen(text);
   },
-  planPdf() {
+  // PDF als echte Datei (funktioniert auch in der Homescreen-App, wo Drucken nicht geht)
+  ladeJsPDF() {
+    if (window.jspdf) return Promise.resolve();
+    if (!this._pdfLib) this._pdfLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = res; sc.onerror = () => { this._pdfLib = null; rej(new Error('jsPDF')); }; document.head.appendChild(sc); });
+    return this._pdfLib;
+  },
+  async planPdf() {
     const liste = S.dienste.filter(d => S.uebZeitraum === 'alle' || !istVorbei(d));
-    let rows = '', tag = null;
+    if (!liste.length) { toast('Keine Dienste für das PDF.'); return; }
+    toast('PDF wird erstellt …');
+    try { await this.ladeJsPDF(); } catch (e) { toast('PDF-Baustein konnte nicht geladen werden (offline?).'); return; }
+    // Helvetica kennt nur Windows-1252: Emojis u. Ä. entfernen
+    const t = x => String(x == null ? '' : x).replace(/[^\n\x20-\x7E\xA0-\xFF–—‘’‚“”„•…€]/g, '').replace(/ {2,}/g, ' ').trim();
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    const L = 12, R = 198, U = 285, sp = [{ x: 12, w: 21 }, { x: 34, w: 66 }, { x: 101, w: 35 }, { x: 137, w: 61 }];
+    const zh = pt => pt * 0.3528 * 1.22;
+    let y = 16;
+    const kopfzeile = () => {
+      doc.setFillColor(238, 238, 240); doc.rect(L, y - 4, R - L, 6.5, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
+      ['Zeit', 'Dienst', 'Ort', 'Wer'].forEach((h, i) => doc.text(h, sp[i].x + 1, y));
+      y += 5;
+    };
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(195, 6, 6);
+    doc.text(t((S.plan && S.plan.titel) || 'Hallendienst'), L, y); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110, 110, 110);
+    doc.text(t('Stand ' + new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' · ' + (S.uebZeitraum === 'alle' ? 'ganze Saison' : 'kommende Dienste')), L, y); y += 4;
+    doc.setTextColor(195, 6, 6); doc.textWithLink(t('Eintragen: ' + planLink()), L, y, { url: planLink() }); y += 8;
+    kopfzeile();
+    let tag = null;
     liste.forEach(d => {
-      if (d.datum !== tag) { tag = d.datum; rows += '<tr class="tz"><td colspan="4">' + esc(tagLang(ausDatum(d.datum, '12:00'))) + '</td></tr>'; }
-      const namen = eintraegeVon(d.id).map(e => esc(e.name));
+      const namen = eintraegeVon(d.id).map(e => t(e.name) + (typeof e.wert === 'number' && e.wert !== dienstWert(d) ? ' (' + fmtW(e.wert) + '×)' : '') + (e.tausch ? ' (sucht Ersatz)' : ''));
       const f = frei(d);
-      rows += '<tr><td>' + esc(d.von) + (d.bis ? '–' + esc(d.bis) : '') + '</td><td>' + esc(d.titel) + (d.notiz ? '<br><small style="color:#555;white-space:pre-wrap">' + esc(d.notiz) + '</small>' : '') + '</td><td>' + esc(d.ort || '') + '</td><td>' + namen.join(', ') + (f ? (namen.length ? ', ' : '') + '<span class="offen">' + f + '× offen</span>' : '') + '</td></tr>';
+      doc.setFontSize(8.5);
+      const zeit = doc.splitTextToSize(t(d.von + (d.bis ? '–' + d.bis : '')), sp[0].w - 1);
+      const titel = doc.splitTextToSize(t(d.titel + (dienstWert(d) !== 1 ? ' (zählt ' + fmtW(dienstWert(d)) + '×)' : '')), sp[1].w - 1);
+      doc.setFontSize(7.5); const notiz = d.notiz ? doc.splitTextToSize(t(d.notiz), sp[1].w - 1) : [];
+      doc.setFontSize(8.5);
+      const ort = doc.splitTextToSize(t(d.ort || ''), sp[2].w - 1);
+      const wer = namen.length ? doc.splitTextToSize(namen.join(', '), sp[3].w - 1) : [];
+      const offen = f ? f + '× offen' : '';
+      const h = Math.max(zeit.length * zh(8.5), titel.length * zh(8.5) + notiz.length * zh(7.5), ort.length * zh(8.5), wer.length * zh(8.5) + (offen ? zh(8.5) : 0)) + 2.2;
+      const tagNeu = d.datum !== tag;
+      if (y + h + (tagNeu ? 7 : 0) > U) { doc.addPage(); y = 16; kopfzeile(); if (!tagNeu) tag = null; }
+      if (d.datum !== tag) {
+        tag = d.datum;
+        doc.setFillColor(246, 227, 227); doc.rect(L, y - 4, R - L, 6.5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
+        doc.text(t(tagLang(ausDatum(d.datum, '12:00'))), L + 1, y); y += 6;
+      }
+      const y0 = y;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90); doc.text(zeit, sp[0].x + 1, y0);
+      doc.setTextColor(25, 25, 25); doc.setFont('helvetica', 'bold'); doc.text(titel, sp[1].x + 1, y0);
+      if (notiz.length) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(105, 105, 105); doc.text(notiz, sp[1].x + 1, y0 + titel.length * zh(8.5)); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70); doc.text(ort, sp[2].x + 1, y0);
+      doc.setTextColor(25, 25, 25); if (wer.length) doc.text(wer, sp[3].x + 1, y0);
+      if (offen) { doc.setFont('helvetica', 'bold'); doc.setTextColor(195, 6, 6); doc.text(offen, sp[3].x + 1, y0 + wer.length * zh(8.5)); }
+      y += h;
+      doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2); doc.line(L, y - 3.4, R, y - 3.4);
     });
-    $('#druckbereich').innerHTML = '<h1>' + esc((S.plan && S.plan.titel) || 'Hallendienst') + '</h1><div class="datum">Stand ' + new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' · Eintragen: ' + esc(planLink()) + '</div>'
-      + '<table><tr><th>Zeit</th><th>Dienst</th><th>Ort</th><th>Wer</th></tr>' + rows + '</table>';
-    setTimeout(() => window.print(), 50);
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(140, 140, 140); doc.text(t('HSG Wettenberg · Hallendienst · Seite ' + i + ' von ' + n), L, 292); }
+    const slug = norm((S.plan && S.plan.titel) || 'plan').replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    const datei = (slug.startsWith('hallendienst') ? '' : 'hallendienst-') + slug + '-' + isoDatum(new Date()) + '.pdf';
+    const blob = doc.output('blob');
+    const file = new File([blob], datei, { type: 'application/pdf' });
+    if (this._pdfUrl) URL.revokeObjectURL(this._pdfUrl);
+    const url = this._pdfUrl = URL.createObjectURL(blob);
+    const teilbar = navigator.canShare && navigator.canShare({ files: [file] });
+    $('#toast').classList.remove('offen');
+    const m = oeffneModal('<h3>📄 PDF ist fertig</h3><div class="unter">' + esc(datei) + ' · ' + n + (n === 1 ? ' Seite' : ' Seiten') + '</div>'
+      + '<div class="stapel" style="margin-top:14px">' + (teilbar ? '<button class="btn" id="p-teilen">Teilen, Sichern oder Drucken</button>' : '')
+      + '<a class="btn ' + (teilbar ? 'sekundaer' : '') + '" style="text-decoration:none" href="' + url + '" download="' + esc(datei) + '" target="_blank" rel="noopener">PDF öffnen</a></div>'
+      + '<div class="hinweis">' + (teilbar ? 'Über „Teilen“ kannst du das PDF z. B. in WhatsApp schicken, in „Dateien“ sichern oder drucken.' : '') + '</div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button></div>');
+    const tb = m.querySelector('#p-teilen');
+    if (tb) tb.onclick = async () => { try { await navigator.share({ files: [file], title: t((S.plan && S.plan.titel) || 'Hallendienst') }); schliesseModal(); } catch (e) { if (e.name !== 'AbortError') toast('Teilen nicht möglich – nutze „PDF öffnen“.'); } };
   },
   meineIcs() {
     if (!meinName() && !S.eintraege.some(e => Fb.uid() && e.uid === Fb.uid())) { toast('Leg zuerst deinen Namen fest (Tab „Dienste“).'); return; }
@@ -1271,7 +1319,7 @@ const App = {
       + '<label class="feld">Erinnere mich</label>' + ERINNERUNG.map(([k, t]) => '<label class="check"><input type="checkbox" class="erin" value="' + k + '"' + (gewaehlt.has(k) ? ' checked' : '') + '> ' + t + '</label>').join('')
       + '<div class="stapel" style="margin-top:12px"><button class="btn" id="k-ics">📅 In Kalender eintragen (iPhone, iPad, Mac, Outlook)</button>'
       + (ds.length === 1 ? '<button class="btn sekundaer" id="k-google">Google Kalender</button>' : '') + '</div>'
-      + '<div class="hinweis">iPhone: Nach dem Tippen „Hinzufügen“ wählen. Beim Google Kalender gelten die dort eingestellten Standard-Erinnerungen.</div>'
+      + '<div class="hinweis">' + (Fb.standalone() ? 'In der Homescreen-App öffnet sich „Teilen“ – dort „Kalender“ bzw. die Datei öffnen und „Hinzufügen“ wählen. Klappt es nicht, nimm den Google Kalender. ' : 'iPhone: Nach dem Tippen „Hinzufügen“ wählen. ') + 'Beim Google Kalender gelten die dort eingestellten Standard-Erinnerungen.</div>'
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>' + (titel ? 'Fertig' : 'Abbrechen') + '</button></div>');
     const lesen = () => { const l = [...m.querySelectorAll('.erin:checked')].map(c => c.value); LS.set('hd-erinnerung', l); return l; };
     m.querySelector('#k-ics').onclick = () => { this.icsLaden(ds, ds.length === 1 ? 'hallendienst-' + d.datum + '.ics' : 'meine-hallendienste.ics', lesen()); schliesseModal(); };
@@ -1300,7 +1348,14 @@ const App = {
         + 'END:VEVENT\r\n';
     });
     ics += 'END:VCALENDAR\r\n';
-    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const file = new File([blob], datei, { type: 'text/calendar' });
+    // Homescreen-App (iPhone): Downloads gehen dort nicht zuverlässig → über „Teilen“ (z. B. „Kalender“ oder „In Dateien sichern“)
+    if (Fb.standalone() && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Hallendienst' }).catch(e => { if (e.name !== 'AbortError') toast('Teilen nicht möglich – nutze den Google Kalender.'); });
+      return;
+    }
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = datei; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     toast((ds.length === 1 ? 'Kalendereintrag' : ds.length + ' Kalendereinträge') + (alarme.length ? ' mit ' + (alarme.length === 1 ? 'Erinnerung' : alarme.length + ' Erinnerungen') : '') + ' erstellt.');
@@ -1678,11 +1733,76 @@ const App = {
       return { ...this.dienstDaten({ titel: v.titel, art: v.art, datum: isoDatum(s), von: hhmm(s), bis: hhmm(e), plaetze: v.plaetze, ...extra }), erstellt: Fb.jetzt() };
     });
   },
-  spieltagModal() {
+  // Tag ergänzen: weitere Spiele (aus Anwurf oder von Hand) oder einzelner Dienst
+  tagErgaenzenModal(datum) {
+    const ds = S.dienste.filter(d => d.datum === datum);
+    const v = ds[0] || {};
+    const m = oeffneModal('<h3>' + esc(tagLang(ausDatum(datum, '12:00'))) + ' ergänzen</h3><div class="unter">Finden an diesem Tag weitere Spiele statt, werden deren Dienste je nach Mannschaft automatisch angelegt.</div>'
+      + '<div class="stapel" style="margin-top:14px">'
+      + '<button class="btn" id="t-anwurf">⚡ Spiele an diesem Tag aus Anwurf</button>'
+      + '<button class="btn sekundaer" id="t-spiel">🏐 Weiteres Spiel von Hand (Vorlage)</button>'
+      + '<button class="btn sekundaer" id="t-einzeln">Einzelner Dienst</button></div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button></div>');
+    m.querySelector('#t-anwurf').onclick = () => this.anwurfTagModal(datum);
+    m.querySelector('#t-spiel').onclick = () => this.spieltagModal({ datum, ort: v.ort || '' });
+    m.querySelector('#t-einzeln').onclick = () => this.dienstModal(null, { datum, von: v.von || '18:00', bis: v.bis || '', ort: v.ort || '', gruppe: v.gruppe || '', quelle: v.quelle || null, quelleZeit: v.quelleZeit || null });
+  },
+  async anwurfDaten() {
+    const r = await fetch('../anwurf/data.json', { cache: 'no-cache' }); return r.json();
+  },
+  // Dienste einer Mannschaft laut Vereinsplan (nur „x“)
+  dienstePlan(team) {
+    const md = MANNSCHAFT_DIENSTE.find(x => x[0] === team); if (!md) return [];
+    return this.katalog().filter(v => v.key && md[1][SPALTEN_KEYS.indexOf(v.key)] === 'x');
+  },
+  async anwurfTagModal(datum) {
+    const m = oeffneModal('<h3>⚡ Heimspiele am ' + esc(tagKurz(ausDatum(datum, '12:00'))) + '</h3><div class="unter" id="at-status">Lade Spielpläne …</div><div id="at-inhalt"></div>');
+    let data;
+    try { data = await this.anwurfDaten(); } catch (e) { m.querySelector('#at-status').textContent = 'Anwurf-Daten nicht erreichbar (offline?).'; return; }
+    const spiele = [];
+    (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => {
+      if (g.h === h.team && g.d && isoDatum(new Date(g.d)) === datum) spiele.push({ g, label: h.label, liga: l.name, team: mannschaftAus(h.label) });
+    })));
+    spiele.sort((a, b) => a.g.d.localeCompare(b.g.d));
+    if (!spiele.length) {
+      m.querySelector('#at-status').textContent = 'In Anwurf stehen für diesen Tag keine HSG-Heimspiele.';
+      m.querySelector('#at-inhalt').innerHTML = '<div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button><button class="btn" id="at-hand">Spiel von Hand</button></div>';
+      m.querySelector('#at-hand').onclick = () => this.spieltagModal({ datum }); return;
+    }
+    m.querySelector('#at-status').textContent = 'Hake die Spiele an, bei denen Dienst gemacht werden muss. Die Dienste kommen je Mannschaft aus dem Vereinsplan – anpassen kannst du sie danach über ⋯.';
+    const opt = sel => '<option value="">– keine Vorgabe –</option>' + MANNSCHAFT_DIENSTE.map(md => '<option' + (md[0] === sel ? ' selected' : '') + '>' + esc(md[0]) + '</option>').join('');
+    m.querySelector('#at-inhalt').innerHTML = '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);margin-top:10px">' + spiele.map((x, i) => {
+      const schon = S.dienste.some(d => d.quelle === spielQuelle(x.g));
+      const dt = new Date(x.g.d);
+      return '<div class="spiel" style="flex-wrap:wrap"><input type="checkbox" class="at-sp" data-i="' + i + '"' + (schon ? ' disabled' : ' checked') + '><div class="t" style="flex:1"><b>' + esc(hhmm(dt)) + ' · ' + esc(x.label) + '</b> gegen ' + esc(x.g.a)
+        + (schon ? '<span class="tag-label">schon angelegt</span>' : '') + '<small>' + esc(x.g.v || '') + '</small>'
+        + (schon ? '' : '<select class="ein at-team" data-i="' + i + '" style="margin-top:6px;padding:7px 9px;font-size:.85rem">' + opt(x.team) + '</select><small class="at-info" data-i="' + i + '"></small>') + '</div></div>';
+    }).join('') + '</div>'
+      + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="at-ok">Dienste anlegen</button></div>';
+    const info = i => { const sel = m.querySelector('.at-team[data-i="' + i + '"]'); if (!sel) return; const d = this.dienstePlan(sel.value); m.querySelector('.at-info[data-i="' + i + '"]').textContent = d.length ? d.map(v => v.titel).join(', ') : 'keine Dienste laut Vereinsplan'; };
+    m.querySelectorAll('.at-team').forEach(sel => { sel.onchange = () => info(sel.dataset.i); info(sel.dataset.i); });
+    m.querySelector('#at-ok').onclick = async () => {
+      const gew = [...m.querySelectorAll('.at-sp:checked')].map(c => +c.dataset.i);
+      if (!gew.length) { toast('Kein Spiel ausgewählt.'); return; }
+      let alle = [];
+      gew.forEach(i => {
+        const x = spiele[i], team = m.querySelector('.at-team[data-i="' + i + '"]').value, dt = new Date(x.g.d);
+        alle = alle.concat(this.ausVorlage(this.dienstePlan(team), dt, { ort: x.g.v || '', gruppe: 'Heimspiel ' + (team || x.label) + ' gegen ' + x.g.a + ' · Anwurf ' + hhmm(dt), quelle: spielQuelle(x.g), quelleZeit: x.g.d }));
+      });
+      if (!alle.length) { toast('Für die gewählten Spiele sind laut Vereinsplan keine Dienste vorgesehen – wähle eine Mannschaft oder lege Dienste von Hand an.'); return; }
+      m.querySelector('#at-ok').disabled = true;
+      try {
+        const b = Fb.db.batch(); alle.forEach(x => b.set(Fb.planRef().collection('dienste').doc(), x)); await b.commit();
+        schliesseModal(); toast(gew.length + (gew.length === 1 ? ' Spiel' : ' Spiele') + ' mit ' + alle.length + ' Diensten ergänzt.');
+      } catch (e) { m.querySelector('#at-ok').disabled = false; toast(fehlerText(e), 6000); }
+    };
+  },
+  spieltagModal(vorgabe) {
+    vorgabe = vorgabe || {};
     const m = oeffneModal('<h3>Spieltag anlegen</h3><div class="unter">Die Dienste werden je nach Mannschaft automatisch vorausgewählt und passend zum Anwurf angelegt.</div>'
-      + '<div class="zwei"><div><label class="feld">Datum</label><input class="ein" id="s-datum" type="date" value="' + isoDatum(new Date()) + '"></div><div><label class="feld">Anwurf</label><input class="ein" id="s-zeit" type="time" value="18:00"></div></div>'
+      + '<div class="zwei"><div><label class="feld">Datum</label><input class="ein" id="s-datum" type="date" value="' + esc(vorgabe.datum || isoDatum(new Date())) + '"></div><div><label class="feld">Anwurf</label><input class="ein" id="s-zeit" type="time" value="18:00"></div></div>'
       + '<label class="feld">Gegner / Anlass</label><input class="ein" id="s-anlass" maxlength="100" placeholder="z. B. gegen TSG Münster">'
-      + '<label class="feld">Halle</label><input class="ein" id="s-ort" maxlength="120" placeholder="z. B. Sporthalle Krofdorf-Gleiberg">'
+      + '<label class="feld">Halle</label><input class="ein" id="s-ort" maxlength="120" value="' + esc(vorgabe.ort || '') + '" placeholder="z. B. Sporthalle Krofdorf-Gleiberg">'
       + this.auswahlHtml()
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="s-ok">Anlegen</button></div>');
     this.auswahlStart(m, LS.get('hd-letzte-mannschaft', ''));
@@ -1722,7 +1842,7 @@ const App = {
       const jetzt = new Date();
       spiele = (t.liga.games || []).filter(g => g.h === t.team && g.d && new Date(g.d) > jetzt).sort((a, b) => a.d.localeCompare(b.d));
       const html = spiele.map((g, i) => {
-        const q = 'anwurf:' + g.mid;
+        const q = spielQuelle(g);
         const vorhanden = S.dienste.filter(d => d.quelle === q);
         const verlegt = vorhanden.length && vorhanden[0].quelleZeit && vorhanden[0].quelleZeit !== g.d;
         const dt = new Date(g.d);
@@ -1743,7 +1863,7 @@ const App = {
       if (!gew.length) { toast('Kein Spiel ausgewählt.'); return; }
       let alle = [];
       const defs = this.auswahlLesen(m), team = m.querySelector('.sp-team').value;
-      gew.forEach(g => { const dt = new Date(g.d); alle = alle.concat(this.ausVorlage(defs, dt, { ort: g.v || '', gruppe: 'Heimspiel ' + (team ? team + ' ' : '') + 'gegen ' + g.a + ' · Anwurf ' + hhmm(dt), quelle: 'anwurf:' + g.mid, quelleZeit: g.d })); });
+      gew.forEach(g => { const dt = new Date(g.d); alle = alle.concat(this.ausVorlage(defs, dt, { ort: g.v || '', gruppe: 'Heimspiel ' + (team ? team + ' ' : '') + 'gegen ' + g.a + ' · Anwurf ' + hhmm(dt), quelle: spielQuelle(g), quelleZeit: g.d })); });
       if (!alle.length) { toast('Mindestens einen Dienst auswählen.'); return; }
       m.querySelector('#a-ok').disabled = true;
       try {
@@ -1753,7 +1873,7 @@ const App = {
     };
   },
   async verlegtesSpiel(g) {
-    const ds = S.dienste.filter(d => d.quelle === 'anwurf:' + g.mid);
+    const ds = S.dienste.filter(d => d.quelle === spielQuelle(g));
     if (!ds.length) return;
     const alt = new Date(ds[0].quelleZeit), neu = new Date(g.d), delta = neu - alt;
     if (!confirm(ds.length + ' Dienste von ' + tagKurz(alt) + ' ' + hhmm(alt) + ' auf ' + tagKurz(neu) + ' ' + hhmm(neu) + ' verschieben? Eingetragene Namen bleiben erhalten.')) return;
@@ -1938,6 +2058,8 @@ function aufgabeHtml(t) {
   const erste = t.split('\n')[0].replace(/^[-–•*]\s*/, '');
   return '<details class="d-notiz"><summary>📝 Aufgabe: ' + esc(erste.length > 60 ? erste.slice(0, 60) + '…' : erste) + '</summary><div style="margin-top:6px">' + esc(t) + '</div></details>';
 }
+// Eindeutige Kennung eines Anwurf-Spiels (nicht alle Spiele haben eine nuLiga-Spielnummer)
+function spielQuelle(g) { return 'anwurf:' + (g.mid || norm(g.h + '|' + g.a).replace(/[^a-z0-9äöüß|]+/g, '-')); }
 function eintragWert(e, d) { return typeof e.wert === 'number' && e.wert > 0 ? e.wert : dienstWert(d || dienstById(e.dienst) || {}); }
 const fmtW = n => (Math.round(n * 10) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 function alleSpieler() {
