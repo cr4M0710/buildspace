@@ -270,6 +270,7 @@
     style.id = "protect-inline-style";
     style.textContent = [
       "html:not(.protect-ready):not(.protect-open) body { visibility: hidden; }",
+      "html.protect-expired body > *:not(#protect-overlay) { visibility: hidden !important; pointer-events: none !important; }",
       "#protect-overlay { visibility: visible !important; position: fixed; inset: 0; z-index: 999999;",
       "  display: flex; align-items: center; justify-content: center; padding: 24px;",
       "  background: radial-gradient(ellipse at 50% 30%, rgba(20,22,30,0.4), rgba(0,0,0,0.72));",
@@ -486,7 +487,7 @@
   function closeOverlay() {
     const el = document.getElementById("protect-overlay");
     if (el) el.remove();
-    document.documentElement.classList.remove("protect-open");
+    document.documentElement.classList.remove("protect-open", "protect-expired");
   }
 
   function hexToBytes_(hex) {
@@ -850,6 +851,43 @@
     });
   }
 
+  /* Zeitlich begrenzte Freigaben müssen auch ABLAUFEN, wenn die Seite schon offen ist
+     (Tab bleibt im Hintergrund, iPad schläft, Spiel läuft weiter). Deshalb nicht nur beim
+     Laden prüfen: Ein Timer genau zum Ablaufzeitpunkt plus eine Kontrolle alle 15 Sekunden
+     und beim Zurückkehren in den Tab/auf die Seite (Zeitgeber ruhender Tabs sind unzuverlässig).
+     Nach Ablauf wird die Seite ausgeblendet und die Anmeldung mit Hinweis „abgelaufen“ gezeigt. */
+  let shareWatch_ = null;
+  function stopShareWatch_() {
+    if (!shareWatch_) return;
+    clearTimeout(shareWatch_.t); clearInterval(shareWatch_.i);
+    document.removeEventListener("visibilitychange", shareWatch_.f);
+    window.removeEventListener("pageshow", shareWatch_.f);
+    window.removeEventListener("focus", shareWatch_.f);
+    shareWatch_ = null;
+  }
+  function watchShareExpiry_(s, cat, onUnlock, labelFor) {
+    if (!s || !s.exp || s.mode === "vertretung") return;
+    function check() {
+      if (nowMs() > s.exp) {
+        stopShareWatch_();
+        /* Anmeldung mit Hinweis „abgelaufen“ zeigen; ist darüber eine Anmeldung (Passwort/Gast)
+           vorhanden, bleibt die Seite offen. Sonst Tool/Spiel dahinter ausblenden. */
+        guard(cat, onUnlock, true);
+        if (document.getElementById("protect-overlay")) document.documentElement.classList.add("protect-expired");
+        return;
+      }
+      try { showBanner(labelFor({ mode: s.mode, title: s.title, exp: s.exp })); } catch (e) {}
+    }
+    shareWatch_ = {
+      t: setTimeout(check, Math.min(Math.max(0, s.exp - nowMs()) + 400, 2147000000)),
+      i: setInterval(check, 15000),
+      f: check
+    };
+    document.addEventListener("visibilitychange", shareWatch_.f);
+    window.addEventListener("pageshow", shareWatch_.f);
+    window.addEventListener("focus", shareWatch_.f);
+  }
+
   /* cat ist optional: ohne Kategorie (z. B. die Startseite) reicht
      irgendeine Anmeldung (Passwort, Kolleg:innen-Kennwort ODER Gast);
      mit Kategorie muss diese zusätzlich für die aktuelle Zugriffs-Ebene
@@ -859,16 +897,20 @@
     clearBanner();
 
     const s = shareStatus(cat);
+    stopShareWatch_();
+    document.documentElement.classList.remove("protect-expired");
     if (s.active && s.valid && s.applies) {
       document.documentElement.classList.add("share-mode");
-      const label =
-        s.mode === "vertretung"
+      const labelFor = function (st) {
+        return st.mode === "vertretung"
           ? "Vertretungsstunde — Zugriff ohne Anmeldung."
-          : s.mode === "posts"
-          ? "Kursmappe" + (s.title ? " „" + s.title + "“" : "") + " — noch " + fmtRemaining(s.exp) + " gültig."
-          : "Freigegeben zum Lernen — noch " + fmtRemaining(s.exp) + " gültig. Läuft danach automatisch ab.";
-      showBanner(label);
+          : st.mode === "posts"
+          ? "Kursmappe" + (st.title ? " „" + st.title + "“" : "") + " — noch " + fmtRemaining(st.exp) + " gültig."
+          : "Freigegeben zum Lernen — noch " + fmtRemaining(st.exp) + " gültig. Läuft danach automatisch ab.";
+      };
+      showBanner(labelFor(s));
       onUnlock();
+      watchShareExpiry_(s, cat, onUnlock, labelFor);
       return;
     }
     if (s.active && s.valid && !s.applies) {
