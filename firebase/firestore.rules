@@ -220,6 +220,8 @@ service cloud.firestore {
     function hd_plan(plan) { return get(/databases/$(database)/documents/hallendienst/$(plan)).data; }
     function hd_dienst(plan, d) { return get(/databases/$(database)/documents/hallendienst/$(plan)/dienste/$(d)).data; }
     function hd_name(n) { return n is string && n.size() >= 1 && n.size() <= 40; }
+    // persönliche Gutschrift (nur Verwaltung): fehlt oder 0,5 bis 20 Dienste
+    function hd_wertOk() { return !('wert' in hd_neu()) || (hd_neu().wert is number && hd_neu().wert > 0 && hd_neu().wert <= 20); }
 
     match /hallendienst_admin/{plan} {
       allow get: if hd_konto() && (resource == null || hd_mail() in resource.data.members);
@@ -263,17 +265,18 @@ service cloud.firestore {
       match /eintraege/{e} {
         allow read: if true;
         allow create: if hd_angemeldet()
-          && hd_nur(['dienst', 'platz', 'name', 'uid', 'tausch', 'at'])
+          && hd_nur(['dienst', 'platz', 'name', 'uid', 'tausch', 'at', 'wert'])
           && hd_neu().dienst is string && hd_neu().platz is int && hd_neu().platz >= 0
           && e == hd_neu().dienst + '_' + string(hd_neu().platz)
           && hd_neu().platz < hd_dienst(plan, hd_neu().dienst).plaetze
           && hd_name(hd_neu().name) && hd_neu().tausch == false && hd_neu().at == request.time
           && ((hd_neu().uid == request.auth.uid && hd_plan(plan).gesperrt != true
+                && !('wert' in hd_neu())
                 && request.time < hd_dienst(plan, hd_neu().dienst).start)
-              || (hd_admin(plan) && hd_neu().uid is string));
+              || (hd_admin(plan) && hd_neu().uid is string && hd_wertOk()));
         allow update: if
-          (hd_admin(plan) && hd_geaendert().hasOnly(['name', 'uid', 'tausch', 'at'])
-            && hd_name(hd_neu().name) && hd_neu().tausch is bool)
+          (hd_admin(plan) && hd_geaendert().hasOnly(['name', 'uid', 'tausch', 'at', 'wert'])
+            && hd_name(hd_neu().name) && hd_neu().tausch is bool && hd_wertOk())
           || (hd_angemeldet() && hd_alt().uid == request.auth.uid
             && hd_geaendert().hasOnly(['tausch']) && hd_neu().tausch is bool)
           || (hd_angemeldet() && hd_alt().tausch == true && hd_neu().uid == request.auth.uid

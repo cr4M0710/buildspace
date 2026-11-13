@@ -138,7 +138,13 @@
   .d-frei { font-size: .72rem; font-weight: 800; border-radius: 8px; padding: 3px 7px; background: var(--chip-frei); color: var(--rot); white-space: nowrap; }
   .d-frei.ok { background: var(--chip-mein); color: var(--gruen); }
   .d-mehr { border: 0; background: var(--zebra); color: var(--text); width: 34px; height: 34px; border-radius: 9px; font-size: 18px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
-  .d-notiz { font-size: .8rem; color: var(--muted); margin: 6px 0 0 46px; line-height: 1.4; }
+  .d-notiz { font-size: .82rem; color: var(--muted); margin: 6px 0 0 46px; line-height: 1.45; white-space: pre-wrap; }
+  details.d-notiz { color: var(--text); background: var(--zebra); border-radius: 10px; padding: 8px 10px; }
+  details.d-notiz > summary { list-style: none; cursor: pointer; font-weight: 700; white-space: normal; }
+  details.d-notiz > summary::-webkit-details-marker { display: none; }
+  details.d-notiz > summary::after { content: ' ▾'; color: var(--muted); }
+  details.d-notiz[open] > summary::after { content: ' ▴'; }
+  .aufgabe-box { background: var(--zebra); border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: .88rem; line-height: 1.5; white-space: pre-wrap; }
   .slots { display: flex; flex-wrap: wrap; gap: 7px; margin: 9px 0 0 46px; }
   .slot { border: 1.5px solid var(--rand-stark); background: var(--zebra); color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: .88rem; font-weight: 700; font-family: inherit; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .slot.frei { border-style: dashed; border-color: var(--rot); color: var(--rot); background: var(--chip-frei); }
@@ -856,7 +862,7 @@ const App = {
     const meine = S.eintraege.filter(istMein).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d);
     const kommend = meine.filter(x => !istVorbei(x.d)).sort((a, b) => startVon(a.d) - startVon(b.d));
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
-      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.reduce((sum, x) => sum + dienstWert(x.d), 0)) + ' in der Saison'
+      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' in der Saison'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
       + Strafen.ichHtml();
@@ -929,14 +935,14 @@ const App = {
     let slots = '';
     for (let i = 0; i < Math.max(d.plaetze, ...es.map(e => e.platz + 1)); i++) {
       const e = es.find(x => x.platz === i);
-      if (e) slots += '<button class="slot' + (istMein(e) ? ' mein' : '') + (e.tausch ? ' tausch' : '') + '" data-slot="' + esc(d.id) + '|' + i + '|' + esc(e.id) + '"' + (freigestellt(e.name) ? ' title="' + esc(rollenText(e.name)) + ' – freiwillig übernommen"' : '') + '>' + esc(e.name) + (freigestellt(e.name) ? ' ' + rollenEmoji(e.name) : '') + '</button>';
+      if (e) slots += '<button class="slot' + (istMein(e) ? ' mein' : '') + (e.tausch ? ' tausch' : '') + '" data-slot="' + esc(d.id) + '|' + i + '|' + esc(e.id) + '"' + (freigestellt(e.name) ? ' title="' + esc(rollenText(e.name)) + ' – freiwillig übernommen"' : '') + '>' + esc(e.name) + (freigestellt(e.name) ? ' ' + rollenEmoji(e.name) : '') + (typeof e.wert === 'number' && e.wert !== dienstWert(d) ? ' · ' + fmtW(e.wert) + '×' : '') + '</button>';
       else if (i < d.plaetze) slots += zu ? '<span class="slot frei zu">' + (vorbei ? 'nicht besetzt' : 'frei') + '</span>' : '<button class="slot frei" data-slot="' + esc(d.id) + '|' + i + '|">' + (vorbei ? '+ Nachtragen' : '+ Eintragen') + '</button>';
     }
     return '<div class="dienst' + (vorbei ? ' vergangen' : '') + '"><div class="d-kopf"><div class="d-ico">' + art.e + '</div><div class="d-txt"><b>' + esc(d.titel) + '</b><small>'
       + esc(zeitText(d)) + (d.ort ? ' · ' + esc(d.ort) : '') + (dienstWert(d) !== 1 ? ' · zählt ' + fmtW(dienstWert(d)) + '×' : '') + '</small></div>'
       + '<span class="d-frei' + (f ? '' : ' ok') + '">' + (f ? f + ' frei' : '✓') + '</span>'
       + (S.istAdmin ? '<button class="d-mehr" data-edit="' + esc(d.id) + '" title="Bearbeiten">⋯</button>' : '') + '</div>'
-      + (d.notiz ? '<div class="d-notiz">' + esc(d.notiz) + '</div>' : '')
+      + aufgabeHtml(d.notiz)
       + '<div class="slots">' + slots + '</div></div>';
   },
   vergangeneUmschalten() { S.vergangene = !S.vergangene; this.renderDienste(); },
@@ -957,6 +963,7 @@ const App = {
     const name = meinName();
     const m = oeffneModal('<h3>' + (ARTEN[d.art] || ARTEN.sonstiges).e + ' ' + esc(d.titel) + '</h3>'
       + '<div class="unter">' + esc(tagLang(startVon(d))) + ', ' + esc(zeitText(d)) + (d.ort ? '<br>' + esc(d.ort) : '') + '</div>'
+      + (d.notiz ? '<div class="aufgabe-box"><b>📝 Deine Aufgabe</b><br>' + esc(d.notiz) + '</div>' : '')
       + '<label class="feld">Name</label>' + this.nameFeld('m-name', name)
       + (S.istAdmin ? '<div class="hinweis">Als Verwaltung kannst du auch andere eintragen.</div>' : '<label class="check"><input type="checkbox" id="m-merken" checked> Als meinen Namen merken</label>')
       + (istVorbei(d) ? '<div class="hinweis">Dieser Dienst liegt in der Vergangenheit – der Eintrag wird nachträglich erfasst und zählt in der Statistik.</div>'
@@ -1025,11 +1032,13 @@ const App = {
     if (S.istAdmin) {
       k += '<div class="hinweis" style="margin-top:14px;font-weight:700">Verwaltung' + (vorbei ? ' – nachträglich korrigieren' : '') + '</div>'
         + '<label class="feld" style="margin-top:4px">Name ändern</label>' + this.nameFeld('m-neu', e.name)
+        + '<label class="feld">Gutschrift für diese Person (Dienste)</label><input class="ein" id="m-wert" type="number" inputmode="decimal" min="0.5" max="20" step="0.5" value="' + (typeof e.wert === 'number' ? e.wert : '') + '" placeholder="' + fmtW(dienstWert(d)) + ' (Umfang des Dienstes)">'
         + '<div class="zwei"><button class="btn sekundaer" data-a="umbenennen">Speichern</button><button class="btn gefahr" data-a="entfernen">Entfernen</button></div>'
         + (e.tausch ? '<button class="btn sekundaer" data-a="tausch-aus">Tausch-Markierung entfernen</button>' : '');
     }
     const m = oeffneModal('<h3>' + esc(e.name) + (e.tausch ? ' <span class="tag-label warn">sucht Ersatz</span>' : '') + '</h3>'
       + '<div class="unter">' + esc(d.titel) + '<br>' + esc(tagLang(startVon(d))) + ', ' + esc(zeitText(d)) + (d.ort ? '<br>' + esc(d.ort) : '') + '</div>'
+      + (d.notiz ? '<div class="aufgabe-box"><b>📝 Aufgabe</b><br>' + esc(d.notiz) + '</div>' : '')
       + '<div class="stapel" style="margin-top:14px">' + (k || '<div class="hinweis">Eingetragen.</div>') + '</div>'
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button></div>');
     m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
@@ -1053,7 +1062,9 @@ const App = {
         } else if (a === 'umbenennen') {
           const n = m.querySelector('#m-neu').value.trim().replace(/\s+/g, ' ');
           if (!n) { b.disabled = false; return; }
-          await Fb.eintragRef(e.id).update({ name: n }); toast('Gespeichert.');
+          const wv = parseFloat(String(m.querySelector('#m-wert').value).replace(',', '.'));
+          const wert = wv > 0 && Math.round(wv * 2) / 2 !== dienstWert(d) ? Math.min(20, Math.round(wv * 2) / 2) : null;
+          await Fb.eintragRef(e.id).update({ name: n, wert: wert == null ? firebase.firestore.FieldValue.delete() : wert }); toast('Gespeichert.');
         } else if (a === 'entfernen') {
           await Fb.eintragRef(e.id).delete(); toast(e.name + ' entfernt.');
         } else if (a === 'checkliste') {
@@ -1232,7 +1243,7 @@ const App = {
       if (d.datum !== tag) { tag = d.datum; rows += '<tr class="tz"><td colspan="4">' + esc(tagLang(ausDatum(d.datum, '12:00'))) + '</td></tr>'; }
       const namen = eintraegeVon(d.id).map(e => esc(e.name));
       const f = frei(d);
-      rows += '<tr><td>' + esc(d.von) + (d.bis ? '–' + esc(d.bis) : '') + '</td><td>' + esc(d.titel) + '</td><td>' + esc(d.ort || '') + '</td><td>' + namen.join(', ') + (f ? (namen.length ? ', ' : '') + '<span class="offen">' + f + '× offen</span>' : '') + '</td></tr>';
+      rows += '<tr><td>' + esc(d.von) + (d.bis ? '–' + esc(d.bis) : '') + '</td><td>' + esc(d.titel) + (d.notiz ? '<br><small style="color:#555;white-space:pre-wrap">' + esc(d.notiz) + '</small>' : '') + '</td><td>' + esc(d.ort || '') + '</td><td>' + namen.join(', ') + (f ? (namen.length ? ', ' : '') + '<span class="offen">' + f + '× offen</span>' : '') + '</td></tr>';
     });
     $('#druckbereich').innerHTML = '<h1>' + esc((S.plan && S.plan.titel) || 'Hallendienst') + '</h1><div class="datum">Stand ' + new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + ' · Eintragen: ' + esc(planLink()) + '</div>'
       + '<table><tr><th>Zeit</th><th>Dienst</th><th>Ort</th><th>Wer</th></tr>' + rows + '</table>';
@@ -1271,7 +1282,7 @@ const App = {
       const d = dienstById(e.dienst); if (!d) return;
       const k = norm(e.name);
       if (!zaehl.has(k)) zaehl.set(k, { name: e.name, n: 0, kommend: 0 });
-      const w = dienstWert(d);
+      const w = eintragWert(e, d);
       const z = zaehl.get(k); z.n += w; if (!istVorbei(d)) z.kommend += w;
       const a = d.art || 'sonstiges'; arten.set(a, (arten.get(a) || 0) + w);
     });
@@ -1433,21 +1444,36 @@ const App = {
     const start = ausDatum(o.datum, o.von);
     return {
       titel: o.titel.slice(0, 60), art: ARTEN[o.art] ? o.art : 'sonstiges', datum: o.datum, von: o.von, bis: o.bis || '',
-      start: Fb.ts(start), plaetze: o.plaetze, ort: (o.ort || '').slice(0, 120), notiz: (o.notiz || '').slice(0, 300),
+      start: Fb.ts(start), plaetze: o.plaetze, ort: (o.ort || '').slice(0, 120), notiz: (o.notiz || '').slice(0, 1000),
       gruppe: (o.gruppe || '').slice(0, 120), quelle: o.quelle || null, quelleZeit: o.quelleZeit || null,
       wert: typeof o.wert === 'number' && o.wert > 0 ? Math.min(20, o.wert) : wertAus(o.von, o.bis),
     };
   },
   // Spieler-Auswahl (Häkchen) für direkte Zuordnung
-  spielerAuswahlHtml(gewaehlt) {
+  spielerAuswahlHtml(gewaehlt, werte) {
+    werte = werte || {};
     const sel = new Set(gewaehlt.map(norm));
     const m = new Map(); this.namenListe().concat(gewaehlt).forEach(n => { if (!m.has(norm(n))) m.set(norm(n), n); });
     const namen = [...m.values()].sort((a, b) => a.localeCompare(b, 'de'));
     return '<label class="feld">Spieler direkt zuordnen (optional)</label>'
       + (namen.length ? '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);max-height:240px;overflow-y:auto">' + namen.map(n =>
-        '<label class="check"><input type="checkbox" class="zu-sp" value="' + esc(n) + '"' + (sel.has(norm(n)) ? ' checked' : '') + '> ' + esc(n) + (freigestellt(n) ? ' ' + rollenEmoji(n) : '') + '</label>').join('') + '</div>' : '')
+        '<div class="check" style="gap:8px"><label style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;cursor:pointer"><input type="checkbox" class="zu-sp" value="' + esc(n) + '"' + (sel.has(norm(n)) ? ' checked' : '') + '> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(n) + (freigestellt(n) ? ' ' + rollenEmoji(n) : '') + '</span></label>'
+        + '<input class="ein zu-w" data-n="' + esc(norm(n)) + '" type="number" inputmode="decimal" min="0.5" max="20" step="0.5" value="' + (werte[norm(n)] != null ? werte[norm(n)] : '') + '" style="width:64px;padding:6px 7px;font-size:.88rem;text-align:center"' + (sel.has(norm(n)) ? '' : ' disabled') + ' title="Dienste für diese Person"><span style="font-size:.78rem;color:var(--muted)">×</span></div>').join('') + '</div>' : '')
       + '<input class="ein zu-weitere" style="margin-top:8px" placeholder="Weitere Namen, mit Komma getrennt" autocomplete="off">'
-      + '<div class="hinweis">Zugeordnete Spieler stehen sofort im Plan – praktisch zum Nachtragen erledigter Dienste. Reichen die Plätze nicht, werden sie erhöht.</div>';
+      + '<div class="hinweis">Das Feld „×“ hinter dem Namen: leer = Umfang des Dienstes (oben). Hat jemand mehr oder länger geholfen, z. B. <b>2</b> eintragen – dann bekommt nur diese Person 2 Dienste gutgeschrieben. Reichen die Plätze nicht, werden sie erhöht.</div>';
+  },
+  spielerAuswahlStart(m, standard) {
+    const setzePlatzhalter = () => { const w = m.querySelector('#u-wert'); const v = w ? String(w.value).replace('.', ',') : fmtW(standard || 1); m.querySelectorAll('.zu-w').forEach(i => i.placeholder = v); };
+    m.querySelectorAll('.zu-sp').forEach(c => c.addEventListener('change', () => { const i = c.closest('.check').querySelector('.zu-w'); i.disabled = !c.checked; if (!c.checked) i.value = ''; }));
+    const w = m.querySelector('#u-wert'); if (w) w.addEventListener('input', setzePlatzhalter);
+    m.querySelectorAll('#u-spiele, #u-std, #d-von, #d-bis').forEach(x => x.addEventListener('input', () => setTimeout(setzePlatzhalter, 0)));
+    setzePlatzhalter();
+  },
+  // persönliche Gutschriften: { normName: Zahl } – nur Felder mit eigenem Wert
+  spielerWerteLesen(m) {
+    const o = {};
+    m.querySelectorAll('.zu-w').forEach(i => { if (i.disabled) return; const v = parseFloat(String(i.value).replace(',', '.')); if (v > 0) o[i.dataset.n] = Math.min(20, Math.round(v * 2) / 2); });
+    return o;
   },
   spielerAuswahlLesen(m) {
     const l = [...m.querySelectorAll('.zu-sp:checked')].map(c => c.value)
@@ -1472,7 +1498,8 @@ const App = {
     return () => { const v = parseFloat(String(w.value).replace(',', '.')); return v > 0 ? Math.min(20, Math.round(v * 2) / 2) : wertAus(m.querySelector('#d-von').value, m.querySelector('#d-bis').value); };
   },
   // Zuordnung speichern: fehlende Namen eintragen, abgewählte entfernen, Plätze bei Bedarf erhöhen
-  async zuordnungSpeichern(dienstId, namen, plaetze) {
+  async zuordnungSpeichern(dienstId, namen, plaetze, werte) {
+    werte = werte || {};
     const es = S.eintraege.filter(e => e.dienst === dienstId);
     const gew = new Set(namen.map(norm));
     const weg = es.filter(e => !gew.has(norm(e.name)));
@@ -1482,10 +1509,19 @@ const App = {
     const frei = []; for (let i = 0; frei.length < neu.length && i < 40; i++) if (!belegt.has(i)) frei.push(i);
     const noetig = Math.min(20, Math.max(plaetze, ...bleiben.map(e => e.platz + 1), ...(frei.length ? [frei[frei.length - 1] + 1] : [0])));
     if (noetig > plaetze) await Fb.dienstRef(dienstId).update({ plaetze: noetig });
-    const b = Fb.db.batch();
+    const b = Fb.db.batch(); let aenderungen = weg.length;
     weg.forEach(e => b.delete(Fb.eintragRef(e.id)));
-    neu.forEach((n, i) => { if (frei[i] == null || frei[i] >= 20) return; b.set(Fb.eintragRef(dienstId + '_' + frei[i]), { dienst: dienstId, platz: frei[i], name: n, uid: norm(n) === norm(meinName()) ? Fb.uid() : 'verwaltung', tausch: false, at: Fb.jetzt() }); });
-    if (weg.length || neu.length) await b.commit();
+    neu.forEach((n, i) => {
+      if (frei[i] == null || frei[i] >= 20) return;
+      const daten = { dienst: dienstId, platz: frei[i], name: n, uid: norm(n) === norm(meinName()) ? Fb.uid() : 'verwaltung', tausch: false, at: Fb.jetzt() };
+      if (werte[norm(n)]) daten.wert = werte[norm(n)];
+      b.set(Fb.eintragRef(dienstId + '_' + frei[i]), daten); aenderungen++;
+    });
+    bleiben.forEach(e => {
+      const soll = werte[norm(e.name)] || null, ist = typeof e.wert === 'number' ? e.wert : null;
+      if (soll !== ist) { b.update(Fb.eintragRef(e.id), { wert: soll == null ? firebase.firestore.FieldValue.delete() : soll }); aenderungen++; }
+    });
+    if (aenderungen) await b.commit();
   },
   dienstModal(d, vorgabe) {
     const neu = !d; d = d || { titel: '', art: 'sonstiges', datum: isoDatum(new Date()), von: '18:00', bis: '19:00', plaetze: 1, ort: '', notiz: '', gruppe: '', ...(vorgabe || {}) };
@@ -1499,15 +1535,16 @@ const App = {
       + '<div class="zwei"><div><label class="feld">Plätze</label><input class="ein" id="d-plaetze" type="number" inputmode="numeric" min="1" max="20" value="' + d.plaetze + '"></div>'
       + '<div><label class="feld">Ort</label><input class="ein" id="d-ort" maxlength="120" value="' + esc(d.ort) + '" placeholder="Halle"></div></div>'
       + '<label class="feld">Anlass / Gruppe (optional)</label><input class="ein" id="d-gruppe" maxlength="120" value="' + esc(d.gruppe) + '" placeholder="z. B. Heimspiel gegen …">'
-      + '<label class="feld">Notiz (optional)</label><input class="ein" id="d-notiz" maxlength="300" value="' + esc(d.notiz) + '" placeholder="z. B. Schlüssel beim Hausmeister">'
+      + '<label class="feld">Aufgabe / Beschreibung (optional)</label><textarea class="ein" id="d-notiz" maxlength="1000" style="min-height:90px" placeholder="Was genau ist zu tun? z. B.&#10;– Getränkestand aufbauen und Kühlschränke befüllen&#10;– Ausschank und Kasse&#10;– Ansprechpartner vor Ort: Vereinsverantwortliche">' + esc(d.notiz) + '</textarea>'
       + this.umfangHtml(neu ? wertAus(d.von, d.bis) : dienstWert(d))
-      + this.spielerAuswahlHtml(es.map(e => e.name))
+      + this.spielerAuswahlHtml(es.map(e => e.name), Object.fromEntries(es.filter(e => typeof e.wert === 'number').map(e => [norm(e.name), e.wert])))
       + (neu ? '<label class="feld">Wiederholen</label><div class="zwei"><select class="ein" id="d-wdh"><option value="0">nicht</option><option value="7">wöchentlich</option><option value="14">alle 2 Wochen</option></select><input class="ein" id="d-wdh-bis" type="date" title="bis"></div>' : '')
       + '<div class="knoepfe">' + (neu ? '' : '<button class="btn gefahr" id="d-weg">Löschen</button>') + '<button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="d-ok">Speichern</button></div>');
     const artSel = m.querySelector('#d-art'), titel = m.querySelector('#d-titel');
     artSel.onchange = () => { if (!titel.value.trim() || Object.values(ARTEN).some(a => a.n === titel.value)) titel.value = ARTEN[artSel.value].n; };
     if (neu && !titel.value) titel.value = ARTEN[artSel.value].n;
     const wertLesen = this.umfangStart(m, !neu && typeof d.wert === 'number' && d.wert !== wertAus(d.von, d.bis));
+    this.spielerAuswahlStart(m, neu ? wertAus(d.von, d.bis) : dienstWert(d));
     m.querySelector('#d-ok').onclick = async () => {
       const o = {
         titel: titel.value.trim(), art: artSel.value, datum: m.querySelector('#d-datum').value, von: m.querySelector('#d-von').value, bis: m.querySelector('#d-bis').value,
@@ -1518,6 +1555,8 @@ const App = {
       if (!o.titel || !o.datum || !o.von) { toast('Bezeichnung, Datum und Beginn ausfüllen.'); return; }
       o.wert = wertLesen();
       const namen = this.spielerAuswahlLesen(m);
+      const werte = this.spielerWerteLesen(m);
+      Object.keys(werte).forEach(k => { if (werte[k] === o.wert) delete werte[k]; });
       // Neue Namen gleich in die Spielerliste übernehmen
       const bekannt = new Set(alleSpieler().map(norm));
       const neueNamen = namen.filter(n => !bekannt.has(norm(n)));
@@ -1532,12 +1571,12 @@ const App = {
           const b = Fb.db.batch(); const refs = [];
           termine.forEach(dt => { const ref = Fb.planRef().collection('dienste').doc(); refs.push(ref); b.set(ref, { ...this.dienstDaten({ ...o, datum: dt }), erstellt: Fb.jetzt() }); });
           await b.commit();
-          if (namen.length) for (const ref of refs) await this.zuordnungSpeichern(ref.id, namen, o.plaetze);
+          if (namen.length) for (const ref of refs) await this.zuordnungSpeichern(ref.id, namen, o.plaetze, werte);
           toast((termine.length === 1 ? 'Dienst angelegt' : termine.length + ' Dienste angelegt') + (namen.length ? ' – ' + namen.length + ' Spieler zugeordnet.' : '.'));
           if (ausDatum(o.datum, o.bis || o.von) < new Date()) { S.vergangene = true; S.filter = 'alle'; this.tabZeigen('dienste'); }
         } else {
           await Fb.dienstRef(d.id).update(this.dienstDaten(o));
-          await this.zuordnungSpeichern(d.id, namen, o.plaetze); toast('Gespeichert.');
+          await this.zuordnungSpeichern(d.id, namen, o.plaetze, werte); toast('Gespeichert.');
         }
         schliesseModal();
       } catch (e) { m.querySelector('#d-ok').disabled = false; toast(fehlerText(e), 6000); }
@@ -1854,6 +1893,14 @@ function wertAus(von, bis) {
 }
 function wertAusStunden(h) { return Math.max(0.5, Math.round(h) / 2); }
 function dienstWert(d) { return typeof d.wert === 'number' && d.wert > 0 ? d.wert : 1; }
+// Aufgabenbeschreibung: kurz direkt, lang/mehrzeilig zum Aufklappen
+function aufgabeHtml(t) {
+  t = String(t || '').trim(); if (!t) return '';
+  if (t.length <= 110 && !t.includes('\n')) return '<div class="d-notiz">📝 ' + esc(t) + '</div>';
+  const erste = t.split('\n')[0].replace(/^[-–•*]\s*/, '');
+  return '<details class="d-notiz"><summary>📝 Aufgabe: ' + esc(erste.length > 60 ? erste.slice(0, 60) + '…' : erste) + '</summary><div style="margin-top:6px">' + esc(t) + '</div></details>';
+}
+function eintragWert(e, d) { return typeof e.wert === 'number' && e.wert > 0 ? e.wert : dienstWert(d || dienstById(e.dienst) || {}); }
 const fmtW = n => (Math.round(n * 10) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 function alleSpieler() {
   const m = new Map();
