@@ -725,6 +725,7 @@ const App = {
       if (S.planId !== id) return;
       S.dienste = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => startVon(a) - startVon(b) || String(a.titel).localeCompare(b.titel));
       this.cacheSchreiben(); this.renderAlles();
+      if (!s.metadata.hasPendingWrites) this.anwurfAbgleich();
     }, fehler));
     S.abos.push(Fb.planRef(id).collection('eintraege').onSnapshot(s => {
       if (S.planId !== id) return;
@@ -840,7 +841,7 @@ const App = {
     const p = S.plan;
     if (S.fehler && !p) { $('#dienst-liste').innerHTML = '<div class="leer">' + esc(S.fehler) + '<br><br><button class="btn klein sekundaer" onclick="App.startZeigen()">Zur Startseite</button></div>'; $('#ich-karte').style.display = 'none'; $('#filter').innerHTML = ''; $('#naechster').innerHTML = ''; $('#plan-hinweis').innerHTML = ''; return; }
     if (!p) { $('#dienst-liste').innerHTML = '<div class="leer">Lade Plan …</div>'; $('#ich-karte').style.display = 'none'; return; }
-    $('#plan-hinweis').innerHTML = (S.fehler ? '<div class="card" style="border-left:4px solid var(--gelb)">' + esc(S.fehler) + '</div>' : '')
+    $('#plan-hinweis').innerHTML = this.abgleichHtml() + (S.fehler ? '<div class="card" style="border-left:4px solid var(--gelb)">' + esc(S.fehler) + '</div>' : '')
       + (p.gesperrt ? '<div class="card" style="border-left:4px solid var(--gelb);font-size:.9rem">🔒 Eintragen und Austragen ist gerade gesperrt. Bei Fragen an die Verwaltung wenden.</div>' : '')
       + (p.hinweis ? '<div class="card" style="font-size:.9rem;line-height:1.45;white-space:pre-wrap">📌 ' + esc(p.hinweis) + '</div>' : '');
 
@@ -904,6 +905,7 @@ const App = {
       html += '</div>';
     }
     $('#dienst-liste').innerHTML = html;
+    $('#plan-hinweis').querySelectorAll('[data-ab]').forEach(b => b.onclick = () => this.abgleichAktion(b.dataset.ab, b.dataset.q));
     $('#dienst-liste').querySelectorAll('[data-plus]').forEach(b => b.onclick = () => this.tagErgaenzenModal(b.dataset.plus));
     $('#dienst-liste').querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
       const [id, platz, eid] = b.dataset.slot.split('|');
@@ -1896,19 +1898,92 @@ const App = {
       } catch (e) { m.querySelector('#a-ok').disabled = false; toast(fehlerText(e), 6000); }
     };
   },
-  async verlegtesSpiel(g) {
+  async verlegtesSpiel(g, ohneNachfrage) {
     const ds = S.dienste.filter(d => d.quelle === spielQuelle(g));
     if (!ds.length) return;
     const alt = new Date(ds[0].quelleZeit), neu = new Date(g.d), delta = neu - alt;
-    if (!confirm(ds.length + ' Dienste von ' + tagKurz(alt) + ' ' + hhmm(alt) + ' auf ' + tagKurz(neu) + ' ' + hhmm(neu) + ' verschieben? Eingetragene Namen bleiben erhalten.')) return;
+    if (!ohneNachfrage && !confirm(ds.length + ' Dienste von ' + tagKurz(alt) + ' ' + hhmm(alt) + ' auf ' + tagKurz(neu) + ' ' + hhmm(neu) + ' verschieben? Eingetragene Namen bleiben erhalten.')) return;
     try {
       const b = Fb.db.batch();
       ds.forEach(d => {
         const s = new Date(startVon(d).getTime() + delta), e = d.bis ? new Date(endeVon(d).getTime() + delta) : null;
         b.update(Fb.dienstRef(d.id), { datum: isoDatum(s), von: hhmm(s), bis: e ? hhmm(e) : '', start: Fb.ts(s), quelleZeit: g.d, ort: g.v || d.ort || '', gruppe: String(d.gruppe || 'Heimspiel gegen ' + g.a).replace(/ · Anwurf \d\d:\d\d$/, '') + ' · Anwurf ' + hhmm(neu) });
       });
-      await b.commit(); toast('Verschoben. Sag der Mannschaft Bescheid! 📣');
+      await b.commit(); if (!ohneNachfrage) toast('Verschoben. Sag der Mannschaft Bescheid! 📣');
     } catch (e) { toast(fehlerText(e), 6000); }
+  },
+
+  // ---------- Automatischer Abgleich mit Anwurf ----------
+  // Prüft beim Öffnen (höchstens alle 15 Min.), ob übernommene Heimspiele verlegt wurden oder fehlen.
+  async anwurfAbgleich(sofort) {
+    const id = S.planId;
+    const quellen = [...new Set(S.dienste.filter(d => d.quelle && String(d.quelle).startsWith('anwurf:') && !istVorbei(d)).map(d => d.quelle))];
+    if (!id || !quellen.length) { if (S.abgleich && S.abgleich.plan === id) { S.abgleich = null; this.renderAlles(); } return; }
+    if (!sofort && this._abgleichZeit && this._abgleichPlan === id && Date.now() - this._abgleichZeit < 15 * 60e3) { this.abgleichBerechnen(); return; }
+    this._abgleichZeit = Date.now(); this._abgleichPlan = id;
+    try {
+      const data = await this.anwurfDaten();
+      const spiele = new Map();
+      (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => { if (g.h === h.team && g.d) spiele.set(spielQuelle(g), { ...g, label: h.label }); })));
+      this._anwurfSpiele = spiele; this._anwurfStand = data.updatedAt;
+      if (S.planId !== id) return;
+      this.abgleichBerechnen();
+    } catch (e) { /* offline: kein Abgleich */ }
+  },
+  abgleichBerechnen() {
+    const spiele = this._anwurfSpiele; if (!spiele) return;
+    const ign = new Set(LS.get('hd-abgleich-ignoriert-' + S.planId, []));
+    const verlegt = [], fehlt = [];
+    const gesehen = new Set();
+    S.dienste.filter(d => d.quelle && String(d.quelle).startsWith('anwurf:') && !istVorbei(d)).forEach(d => {
+      if (gesehen.has(d.quelle)) return; gesehen.add(d.quelle);
+      const g = spiele.get(d.quelle);
+      const anzahl = S.dienste.filter(x => x.quelle === d.quelle).length;
+      if (!g) { if (!ign.has(d.quelle + '|fehlt')) fehlt.push({ q: d.quelle, d, anzahl }); return; }
+      const zeitAnders = d.quelleZeit && g.d !== d.quelleZeit;
+      const halleAnders = g.v && d.ort && norm(g.v) !== norm(d.ort);
+      if ((zeitAnders || halleAnders) && !ign.has(d.quelle + '|' + g.d + '|' + (g.v || ''))) verlegt.push({ q: d.quelle, d, g, zeitAnders, halleAnders, anzahl });
+    });
+    const neu = JSON.stringify([verlegt.map(x => x.q + x.g.d + x.g.v), fehlt.map(x => x.q)]);
+    const vorher = S.abgleich && S.abgleich.plan === S.planId ? S.abgleich.sig : null;
+    S.abgleich = { plan: S.planId, verlegt, fehlt, sig: neu };
+    if (neu !== vorher) this.renderAlles();
+  },
+  abgleichHtml() {
+    const a = S.abgleich; if (!a || a.plan !== S.planId || (!a.verlegt.length && !a.fehlt.length)) return '';
+    const spielName = d => String(d.gruppe || d.titel).replace(/ · Anwurf \d\d:\d\d$/, '');
+    const wann = iso => { const x = new Date(iso); return tagKurz(x) + ' ' + hhmm(x); };
+    let h = '<div class="card" style="border-left:4px solid var(--gelb)"><div style="font-weight:800;margin-bottom:6px">⚠️ Änderungen im Spielplan (Anwurf)</div>';
+    a.verlegt.forEach(x => {
+      h += '<div style="font-size:.88rem;line-height:1.45;padding:7px 0;border-top:1px solid var(--rand)"><b>' + esc(spielName(x.d)) + '</b><br>'
+        + (x.zeitAnders ? 'Verlegt: <s style="color:var(--muted)">' + esc(wann(x.d.quelleZeit)) + '</s> → <b>' + esc(wann(x.g.d)) + '</b>' : '')
+        + (x.zeitAnders && x.halleAnders ? '<br>' : '') + (x.halleAnders ? 'Neue Halle: <b>' + esc(x.g.v) + '</b>' : '')
+        + (S.istAdmin ? '<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap"><button class="btn klein" data-ab="verschieben" data-q="' + esc(x.q) + '">' + (x.anzahl === 1 ? 'Dienst' : x.anzahl + ' Dienste') + ' anpassen</button><button class="btn klein sekundaer" data-ab="ignorieren" data-q="' + esc(x.q) + '">Ignorieren</button></div>'
+          : '<div style="color:var(--muted);font-size:.8rem;margin-top:3px">Die Verwaltung passt die Dienste an – bitte deinen Eintrag prüfen.</div>') + '</div>';
+    });
+    a.fehlt.forEach(x => {
+      h += '<div style="font-size:.88rem;line-height:1.45;padding:7px 0;border-top:1px solid var(--rand)"><b>' + esc(spielName(x.d)) + '</b> (' + esc(wann(x.d.quelleZeit || (x.d.datum + 'T' + x.d.von))) + ')<br>Steht nicht mehr im Anwurf-Spielplan – evtl. abgesagt oder umbenannt.'
+        + (S.istAdmin ? '<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap"><button class="btn klein gefahr" data-ab="loeschen" data-q="' + esc(x.q) + '">' + (x.anzahl === 1 ? 'Dienst' : x.anzahl + ' Dienste') + ' löschen</button><button class="btn klein sekundaer" data-ab="ignorieren-fehlt" data-q="' + esc(x.q) + '">Ignorieren</button></div>' : '') + '</div>';
+    });
+    if (S.istAdmin && a.verlegt.length > 1) h += '<button class="btn klein" style="margin-top:8px" data-ab="alle" data-q="">Alle ' + a.verlegt.length + ' verlegten Spiele anpassen</button>';
+    return h + '</div>';
+  },
+  async abgleichAktion(aktion, q) {
+    const a = S.abgleich; if (!a) return;
+    const ign = LS.get('hd-abgleich-ignoriert-' + S.planId, []);
+    if (aktion === 'verschieben') { const x = a.verlegt.find(v => v.q === q); if (x) await this.verlegtesSpiel(x.g); }
+    else if (aktion === 'alle') {
+      if (!confirm(a.verlegt.length + ' verlegte Spiele anpassen? Eingetragene Namen bleiben erhalten.')) return;
+      for (const x of a.verlegt) await this.verlegtesSpiel(x.g, true);
+      toast('Alle verlegten Spiele angepasst. Sag der Mannschaft Bescheid! 📣');
+    } else if (aktion === 'ignorieren') { const x = a.verlegt.find(v => v.q === q); if (x) { ign.push(q + '|' + x.g.d + '|' + (x.g.v || '')); LS.set('hd-abgleich-ignoriert-' + S.planId, ign); } }
+    else if (aktion === 'ignorieren-fehlt') { ign.push(q + '|fehlt'); LS.set('hd-abgleich-ignoriert-' + S.planId, ign); }
+    else if (aktion === 'loeschen') {
+      const ids = S.dienste.filter(d => d.quelle === q).map(d => d.id);
+      if (!confirm(ids.length + ' Dienste dieses Spiels samt Einträgen löschen?')) return;
+      try { await this.diensteLoeschen(ids); toast('Gelöscht.'); } catch (e) { toast(fehlerText(e), 6000); return; }
+    }
+    this.abgleichBerechnen(); this.renderAlles();
   },
 
   // ---------- Pläne ----------
