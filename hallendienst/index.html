@@ -394,8 +394,21 @@ const STANDARD_VORLAGE = [
   { key: 'schiri', titel: 'Schiedsrichter (E-Jugend)', art: 'schiedsrichter', off: -15, dauer: 75, plaetze: 1, wert: 1 },
   { key: 'filmer', titel: 'Filmer (Livestream)', art: 'filmer', off: -15, dauer: 105, plaetze: 1, wert: 1 },
   { key: 'wischer', titel: 'Wischer', art: 'wischer', off: 0, dauer: 90, plaetze: 1, wert: 1 },
+  { key: 'kiosk2wischer', titel: 'Kiosk 2 + Wischer', art: 'theke', off: -60, dauer: 180, plaetze: 1, wert: 1, notiz: 'Kiosk 2 und Wischen (in den Pausen und bei Bedarf).' },
 ];
 const SPALTEN_KEYS = ['kiosk1', 'kiosk2', 'essen', 'eintritt', 'zeitnehmer', 'sekretaer', 'schiri', 'filmer', 'wischer'];
+// Zusammengelegte Dienste: bei Frauen-Spielen machen Kiosk 2 und Wischer eine Person
+const KOMBI = [{ teams: /^Frauen/, aus: ['kiosk2', 'wischer'], key: 'kiosk2wischer', titel: 'Kiosk 2 + Wischer' }];
+// Was ist bei Spielen dieser Mannschaft für einen Katalog-Dienst vorgesehen? 'x' = besetzen, sonst Hinweistext oder ''
+function planWert(teamName, key) {
+  const md = MANNSCHAFT_DIENSTE.find(x => x[0] === teamName); if (!md || !key) return '';
+  const spalte = k => md[1][SPALTEN_KEYS.indexOf(k)] || '';
+  const k = KOMBI.find(c => c.teams.test(md[0]) && c.aus.every(a => spalte(a) === 'x'));
+  if (k && key === k.key) return 'x';
+  if (k && k.aus.includes(key)) return 'in „' + k.titel + '“';
+  if (KOMBI.some(c => c.key === key)) return '';
+  return SPALTEN_KEYS.includes(key) ? spalte(key) : '';
+}
 // Mannschaft aus Freitext/Anwurf-Bezeichnung ableiten („Männer II“ → „Männer 2“, „weibliche Jugend A“ → „A-Jugend“)
 function mannschaftAus(text) {
   const t = norm(text).replace(/\b([mf])(\d)\b/g, '$1 $2');
@@ -459,6 +472,7 @@ Halle, Toiletten im Foyer und HSG-Raum abschließen
 ! Alle Außentüren überprüfen
 Kassen und Kassenschlüssel an die Vereinsverantwortlichen zurückgeben`;
 // Eintritt macht Kiosk 1 mit – Personenzahl daher je eine weniger als im Vereinsplan vom 20.11.2024.
+// Frauen: Kiosk 2 und Wischer zusammengelegt (Frauen 1 daher 4 Personen).
 // Bei Spielen der jeweiligen Mannschaft zu besetzende Dienste (x = zu besetzen, '' = nicht, sonst Hinweis); Eintritt bei allen aktiven Mannschaften
 const MANNSCHAFT_SPALTEN = ['Kiosk 1', 'Kiosk 2', 'Essen', 'Eintritt', 'Zeitnehmer', 'Sekretär', 'Schiedsrichter', 'Filmer', 'Wischer'];
 const MANNSCHAFT_DIENSTE = [
@@ -466,7 +480,7 @@ const MANNSCHAFT_DIENSTE = [
   ['D-Jugend', ['', '', '', '', '', '', '', '', ''], '0'],
   ['C-Jugend', ['', '', '', '', '', '', '', '', ''], '2'],
   ['A-Jugend', ['', '', '', '', 'x', 'x', '', '', ''], '4'],
-  ['Frauen 1', ['x', 'x', '', 'x', 'x', '', '', 'x', 'x'], '5'],
+  ['Frauen 1', ['x', 'x', '', 'x', 'x', '', '', 'x', 'x'], '4'],
   ['Frauen 2', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '4 bis 5'],
   ['Frauen 3', ['x', '', 'freiwillig', 'x', 'x', 'x', '', '', 'x'], '3 bis 4'],
   ['Männer 1', ['x', 'x', '', 'x', 'Offizielle/r', 'x', '', 'x', 'x'], '5'],
@@ -1168,7 +1182,9 @@ const App = {
     if (wahl < 0) wahl = MANNSCHAFT_DIENSTE.findIndex(m => m[0] === 'Männer 1');
     const mz = MANNSCHAFT_DIENSTE[wahl];
     const chips = MANNSCHAFT_SPALTEN.map((sp, i) => ({ sp, v: mz[1][i] })).filter(x => x.v && x.sp !== 'Eintritt')
-      .map(x => x.sp === 'Kiosk 1' && mz[1][MANNSCHAFT_SPALTEN.indexOf('Eintritt')] ? { ...x, sp: 'Kiosk 1 + Eintritt' } : x);
+      .map(x => x.sp === 'Kiosk 1' && mz[1][MANNSCHAFT_SPALTEN.indexOf('Eintritt')] ? { ...x, sp: 'Kiosk 1 + Eintritt' } : x)
+      .filter(x => !/^in „/.test(planWert(mz[0], SPALTEN_KEYS[MANNSCHAFT_SPALTEN.indexOf(x.sp)] || '')))
+      .concat(KOMBI.filter(c => planWert(mz[0], c.key) === 'x').map(c => ({ sp: c.titel, v: 'x' })));
     $('#ck-mannschaften').innerHTML = '<select class="ein" id="ck-team">' + MANNSCHAFT_DIENSTE.map((m, i) => '<option value="' + i + '"' + (i === wahl ? ' selected' : '') + '>' + esc(m[0]) + '</option>').join('') + '</select>'
       + '<div style="margin-top:12px;font-size:.9rem">Bei Spielen von <b>' + esc(mz[0]) + '</b> zu besetzen – <b>' + esc(mz[2]) + ' Person' + (mz[2] === '1' ? '' : 'en') + '</b>:</div>'
       + (chips.length ? '<div class="chips" style="margin-top:8px">' + chips.map(x => '<span style="background:var(--chip-mein);color:var(--text)">✓ ' + esc(x.sp) + (x.v !== 'x' ? ' <small style="color:var(--muted)">(' + esc(x.v) + ')</small>' : '') + '</span>').join('') + '</div>' : '<div class="hinweis">Keine Dienste zu besetzen.</div>')
@@ -1711,7 +1727,7 @@ const App = {
     const pv = (S.plan && Array.isArray(S.plan.vorlage)) ? S.plan.vorlage : [];
     // Vereinsplan-Dienste: Zeiten/Plätze aus dem Plan, Titel-Änderungen ja – Wert und Aufgabe vom Standard, falls nicht gesetzt
     return STANDARD_VORLAGE.map(st => { const pe = pv.find(v => v.key === st.key) || {}; return { ...st, ...pe, titel: pe.titel && !(st.key === 'kiosk1' && pe.titel === 'Kiosk 1') ? pe.titel : st.titel, wert: st.wert, notiz: pe.notiz || st.notiz }; })
-      .concat(pv.filter(v => !v.key || !SPALTEN_KEYS.includes(v.key)));
+      .concat(pv.filter(v => !v.key || (!SPALTEN_KEYS.includes(v.key) && !STANDARD_VORLAGE.some(st => st.key === v.key))));
   },
   // Dienst-Auswahl: wählt je nach Mannschaft automatisch die zu besetzenden Dienste; eigene Dienste ergänzbar
   auswahlHtml() {
@@ -1728,7 +1744,7 @@ const App = {
       sel.value = md ? md[0] : '';
       m.querySelector('.sp-info').textContent = md ? 'Bei Spielen von ' + md[0] + ' sind laut Vereinsplan ' + md[2] + ' Person' + (md[2] === '1' ? '' : 'en') + ' zu besetzen – vorausgewählt. Du kannst die Auswahl ändern.' : 'Hake die Dienste an, die besetzt werden sollen.';
       m.querySelector('.sp-liste').innerHTML = kat.map((v, i) => {
-        const w = md && v.key ? md[1][SPALTEN_KEYS.indexOf(v.key)] : '';
+        const w = md ? planWert(md[0], v.key) : '';
         const hin = w && w !== 'x' ? ' <span class="tag-label">' + esc(w === 'Offizielle/r' ? 'macht Offizielle/r' : w) + '</span>' : '';
         return '<label class="check"><input type="checkbox" class="vl" data-i="' + i + '"' + (w === 'x' ? ' checked' : '') + '> ' + (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel) + hin
           + ' <span style="color:var(--muted);font-size:.78rem">(' + (v.off >= 0 ? '+' : '') + v.off + ' min, ' + v.plaetze + ' Pl.)</span></label>';
@@ -1779,7 +1795,7 @@ const App = {
   // Dienste einer Mannschaft laut Vereinsplan (nur „x“)
   dienstePlan(team) {
     const md = MANNSCHAFT_DIENSTE.find(x => x[0] === team); if (!md) return [];
-    return this.katalog().filter(v => v.key && md[1][SPALTEN_KEYS.indexOf(v.key)] === 'x');
+    return this.katalog().filter(v => planWert(md[0], v.key) === 'x');
   },
   async anwurfTagModal(datum) {
     const m = oeffneModal('<h3>⚡ Heimspiele am ' + esc(tagKurz(ausDatum(datum, '12:00'))) + '</h3><div class="unter" id="at-status">Lade Spielpläne …</div><div id="at-inhalt"></div>');
