@@ -1433,6 +1433,7 @@ const App = {
 
   // ---------- Tab: Verwalten ----------
   renderVerwalten() {
+    if (S.istAdmin && this._archivAnzahl == null && !this._archivLaedt) { this._archivLaedt = true; this.archivLaden().then(() => { this._archivLaedt = false; if (S.tab === 'verwalten') this.renderVerwalten(); }).catch(() => { this._archivLaedt = false; this._archivAnzahl = 0; }); }
     const el = $('#verwalten-inhalt');
     let h = '<h2>Link für die Mannschaft</h2><div class="card"><div class="hinweis" style="margin-top:0;word-break:break-all">' + esc(planLink()) + '</div>'
       + '<div class="zwei" style="margin-top:10px"><button class="btn klein" onclick="App.linkTeilen()">Teilen</button><button class="btn klein sekundaer" onclick="App.linkKopieren()">Kopieren</button></div>'
@@ -1475,8 +1476,9 @@ const App = {
       + (S.istBesitzer ? '<div class="zeile"><input class="ein" id="neu-admin" type="email" placeholder="weitere Google-Adresse" autocapitalize="off"><button class="btn klein" onclick="App.adminHinzu()">Hinzu</button></div>' : '')
       + '</div><div class="hinweis">Admins melden sich mit genau dieser Google-Adresse an. ' + (S.istBesitzer ? '' : 'Admins hinzufügen kann nur die Besitzerin bzw. der Besitzer.') + '</div>'
       + '<h2>Aufräumen</h2><div class="card stapel">'
+      + '<button class="btn sekundaer" onclick="App.archivModal()">🗑️ Papierkorb' + (this._archivAnzahl ? ' (' + this._archivAnzahl + ')' : '') + ' – gelöschte Dienste wiederherstellen</button>'
       + '<button class="btn sekundaer" onclick="App.vergangeneLoeschen()"' + (vergangen ? '' : ' disabled') + '>Vergangene Dienste löschen (' + vergangen + ')</button>'
-      + '<div class="hinweis" style="margin-top:0">Tipp: Zum Saisonende erst die Statistik als Bildschirmfoto sichern – gelöschte Dienste zählen dort nicht mehr.</div>'
+      + '<div class="hinweis" style="margin-top:0">Gelöschte Dienste liegen 30 Tage im Papierkorb und zählen in dieser Zeit nicht in der Statistik. Tipp: Zum Saisonende erst die Statistik als Bildschirmfoto sichern – gelöschte Dienste zählen dort nicht mehr.</div>'
       + (S.istBesitzer ? '<button class="btn gefahr" onclick="App.planLoeschen()">Ganzen Plan löschen</button>' : '') + '</div>'
       + '<div class="hinweis">Angemeldet als ' + esc(Fb.email()) + ' · <a href="#" onclick="Fb.abmelden();return false">Abmelden</a></div>';
     el.innerHTML = h;
@@ -1710,17 +1712,84 @@ const App = {
     };
     if (!neu) m.querySelector('#d-weg').onclick = async () => {
       if (!confirm('Dienst „' + d.titel + '“ löschen' + (es.length ? ' (' + es.length + ' Einträge werden mit gelöscht)' : '') + '?')) return;
-      try { await this.diensteLoeschen([d.id]); schliesseModal(); toast('Gelöscht.'); } catch (e) { toast(fehlerText(e), 6000); }
+      try { await this.diensteLoeschen([d.id]); schliesseModal(); toast('Gelöscht – 30 Tage im Papierkorb (Verwalten).'); } catch (e) { toast(fehlerText(e), 6000); }
     };
   },
-  async diensteLoeschen(ids) {
-    const set = new Set(ids);
-    const ops = [];
-    S.eintraege.filter(e => set.has(e.dienst)).forEach(e => ops.push(Fb.eintragRef(e.id)));
-    ids.forEach(id => ops.push(Fb.dienstRef(id)));
-    for (let i = 0; i < ops.length; i += 400) {
-      const b = Fb.db.batch(); ops.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit();
+  // Löschen: Dienst samt Einträgen kommt für 30 Tage in den Papierkorb (hallendienst/{plan}/archiv/{dienstId})
+  async diensteLoeschen(ids, ohneArchiv) {
+    const ARCHIV_TAGE = 30;
+    // pro Dienst: Archiv anlegen + Einträge + Dienst löschen; in Paketen (max. 500 Schreibvorgänge pro Batch)
+    let b = Fb.db.batch(), n = 0;
+    const flush = async () => { if (n) { await b.commit(); b = Fb.db.batch(); n = 0; } };
+    for (const id of ids) {
+      const d = dienstById(id);
+      const es = S.eintraege.filter(e => e.dienst === id);
+      if (n + es.length + 2 > 450) await flush();
+      if (d && !ohneArchiv) {
+        const { id: _, ...daten } = d;
+        b.set(Fb.planRef().collection('archiv').doc(id), {
+          dienst: daten, geloescht: Fb.jetzt(), von: Fb.email() || '',
+          eintraege: es.map(e => { const x = { platz: e.platz, name: e.name, uid: e.uid || 'verwaltung' }; if (typeof e.wert === 'number') x.wert = e.wert; return x; }),
+        }); n++;
+      }
+      es.forEach(e => { b.delete(Fb.eintragRef(e.id)); n++; });
+      b.delete(Fb.dienstRef(id)); n++;
     }
+    await flush();
+    if (!ohneArchiv) this._archivAnzahl = null;
+  },
+  async archivLaden() {
+    const q = await Fb.planRef().collection('archiv').get();
+    const grenze = Date.now() - 30 * 864e5;
+    const alt = [], liste = [];
+    q.docs.forEach(doc => { const x = { id: doc.id, ...doc.data() }; const t = x.geloescht && x.geloescht.toDate ? x.geloescht.toDate().getTime() : Date.now(); x.zeit = t; (t < grenze ? alt : liste).push(x); });
+    // Älter als 30 Tage: endgültig entfernen
+    if (alt.length) { try { const b = Fb.db.batch(); alt.slice(0, 450).forEach(x => b.delete(Fb.planRef().collection('archiv').doc(x.id))); await b.commit(); } catch (e) {} }
+    this._archivAnzahl = liste.length;
+    return liste.sort((a, b) => b.zeit - a.zeit);
+  },
+  async archivModal() {
+    const m = oeffneModal('<h3>🗑️ Papierkorb</h3><div class="unter">Gelöschte Dienste bleiben 30 Tage hier und lassen sich samt eingetragener Namen wiederherstellen.</div><div id="ar-liste" style="margin-top:12px"><div class="leer">Lade …</div></div><div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button></div>');
+    let liste;
+    try { liste = await this.archivLaden(); } catch (e) { m.querySelector('#ar-liste').innerHTML = '<div class="leer">' + esc(fehlerText(e)) + '</div>'; return; }
+    const zeichnen = () => {
+      if (!liste.length) { m.querySelector('#ar-liste').innerHTML = '<div class="leer">Der Papierkorb ist leer.</div>'; return; }
+      m.querySelector('#ar-liste').innerHTML = '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand)">' + liste.map(x => {
+        const d = x.dienst || {}, rest = Math.max(0, 30 - Math.floor((Date.now() - x.zeit) / 864e5));
+        const namen = (x.eintraege || []).map(e => e.name).join(', ');
+        return '<div class="zeile" style="align-items:flex-start"><div class="t"><b>' + (ARTEN[d.art] || ARTEN.sonstiges).e + ' ' + esc(d.titel || 'Dienst') + '</b>'
+          + '<small>' + esc(d.datum ? tagKurz(ausDatum(d.datum, '12:00')) : '') + ' ' + esc(d.von || '') + (d.gruppe ? ' · ' + esc(String(d.gruppe).replace(/ · Anwurf \d\d:\d\d$/, '')) : '') + '</small>'
+          + (namen ? '<small>👤 ' + esc(namen) + '</small>' : '')
+          + '<small>Gelöscht ' + esc(new Date(x.zeit).toLocaleDateString('de-DE')) + (x.von ? ' von ' + esc(x.von) : '') + ' · noch ' + rest + (rest === 1 ? ' Tag' : ' Tage') + '</small></div>'
+          + '<button class="btn klein" data-wieder="' + esc(x.id) + '">Wiederherstellen</button></div>';
+      }).join('') + '</div>'
+        + (liste.length > 1 ? '<button class="btn sekundaer" style="margin-top:9px" id="ar-alle">Alle ' + liste.length + ' wiederherstellen</button>' : '');
+      m.querySelectorAll('[data-wieder]').forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        try { await this.archivWiederherstellen(liste.find(x => x.id === b.dataset.wieder)); liste = liste.filter(x => x.id !== b.dataset.wieder); toast('Wiederhergestellt.'); zeichnen(); }
+        catch (e) { b.disabled = false; toast(fehlerText(e), 6000); }
+      });
+      const alle = m.querySelector('#ar-alle');
+      if (alle) alle.onclick = async () => {
+        alle.disabled = true;
+        try { for (const x of liste.slice()) { await this.archivWiederherstellen(x); liste = liste.filter(y => y !== x); } toast('Alle wiederhergestellt.'); zeichnen(); }
+        catch (e) { alle.disabled = false; toast(fehlerText(e), 6000); zeichnen(); }
+      };
+    };
+    zeichnen();
+  },
+  async archivWiederherstellen(x) {
+    // 1) Dienst zurück (gleiche ID)  2) Einträge zurück + Archiv löschen (Regeln prüfen Plätze am vorhandenen Dienst)
+    await Fb.dienstRef(x.id).set(x.dienst);
+    const b = Fb.db.batch();
+    (x.eintraege || []).forEach(e => {
+      const daten = { dienst: x.id, platz: e.platz, name: e.name, uid: e.uid || 'verwaltung', tausch: false, at: Fb.jetzt() };
+      if (typeof e.wert === 'number') daten.wert = e.wert;
+      b.set(Fb.eintragRef(x.id + '_' + e.platz), daten);
+    });
+    b.delete(Fb.planRef().collection('archiv').doc(x.id));
+    await b.commit();
+    this._archivAnzahl = null;
   },
   // Katalog = Vereinsplan-Dienste (mit Plan-Anpassungen) + eigene Zusatzdienste
   katalog() {
@@ -2017,7 +2086,7 @@ const App = {
     else if (aktion === 'loeschen') {
       const ids = S.dienste.filter(d => d.quelle === q).map(d => d.id);
       if (!confirm(ids.length + ' Dienste dieses Spiels samt Einträgen löschen?')) return;
-      try { await this.diensteLoeschen(ids); toast('Gelöscht.'); } catch (e) { toast(fehlerText(e), 6000); return; }
+      try { await this.diensteLoeschen(ids); toast('Gelöscht – 30 Tage im Papierkorb (Verwalten).'); } catch (e) { toast(fehlerText(e), 6000); return; }
     }
     this.abgleichBerechnen(); this.renderAlles();
   },
@@ -2074,9 +2143,11 @@ const App = {
     if (prompt('Plan „' + t + '“ endgültig löschen? Alle Dienste und Einträge sind dann weg.\nZum Bestätigen LÖSCHEN eintippen:') !== 'LÖSCHEN') return;
     const id = S.planId;
     try {
-      await this.diensteLoeschen(S.dienste.map(d => d.id));
-      const rest = await Fb.planRef(id).collection('eintraege').get();
-      if (rest.size) { const b = Fb.db.batch(); rest.docs.forEach(d => b.delete(d.ref)); await b.commit(); }
+      await this.diensteLoeschen(S.dienste.map(d => d.id), true);
+      for (const sub of ['eintraege', 'archiv']) {
+        const rest = await Fb.planRef(id).collection(sub).get();
+        if (rest.size) { const b = Fb.db.batch(); rest.docs.forEach(d => b.delete(d.ref)); await b.commit(); }
+      }
       this.abosBeenden();
       await Fb.planRef(id).delete();
       await Fb.adminRef(id).delete();

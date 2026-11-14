@@ -260,6 +260,15 @@ service cloud.firestore {
         allow delete: if hd_admin(plan);
       }
 
+      // Papierkorb: gelöschte Dienste samt Einträgen, 30 Tage wiederherstellbar (nur Verwaltung)
+      match /archiv/{a} {
+        allow read, delete: if hd_admin(plan);
+        allow create, update: if hd_admin(plan)
+          && hd_nur(['dienst', 'eintraege', 'geloescht', 'von'])
+          && hd_neu().dienst is map && hd_neu().eintraege is list && hd_neu().eintraege.size() <= 40
+          && hd_neu().geloescht == request.time;
+      }
+
       // Ein Dokument pro belegtem Platz, ID = <dienst>_<platz>:
       // Doppelbelegung ist dadurch ausgeschlossen.
       match /eintraege/{e} {
