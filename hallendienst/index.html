@@ -1712,12 +1712,24 @@ const App = {
     };
     if (!neu) m.querySelector('#d-weg').onclick = async () => {
       if (!confirm('Dienst „' + d.titel + '“ löschen' + (es.length ? ' (' + es.length + ' Einträge werden mit gelöscht)' : '') + '?')) return;
-      try { await this.diensteLoeschen([d.id]); schliesseModal(); toast('Gelöscht – 30 Tage im Papierkorb (Verwalten).'); } catch (e) { toast(fehlerText(e), 6000); }
+      try { await this.diensteLoeschen([d.id]); schliesseModal(); toast(this._archivAus ? 'Gelöscht. (Papierkorb noch nicht aktiv – Firestore-Regel fehlt.)' : 'Gelöscht – 30 Tage im Papierkorb (Verwalten).', 5000); } catch (e) { toast(fehlerText(e), 6000); }
     };
   },
   // Löschen: Dienst samt Einträgen kommt für 30 Tage in den Papierkorb (hallendienst/{plan}/archiv/{dienstId})
   async diensteLoeschen(ids, ohneArchiv) {
-    const ARCHIV_TAGE = 30;
+    if (!ohneArchiv && !this._archivAus) {
+      try { return await this._diensteLoeschen(ids, false); }
+      catch (e) {
+        // Firestore-Regel für den Papierkorb noch nicht eingespielt → ohne Papierkorb löschen (Batch ist atomar, nichts halb gelöscht)
+        if (!/permission/i.test(e && e.code || '')) throw e;
+        this._archivAus = true;
+        await this._diensteLoeschen(ids, true);
+        return;
+      }
+    }
+    return this._diensteLoeschen(ids, true);
+  },
+  async _diensteLoeschen(ids, ohneArchiv) {
     // pro Dienst: Archiv anlegen + Einträge + Dienst löschen; in Paketen (max. 500 Schreibvorgänge pro Batch)
     let b = Fb.db.batch(), n = 0;
     const flush = async () => { if (n) { await b.commit(); b = Fb.db.batch(); n = 0; } };
@@ -2086,7 +2098,7 @@ const App = {
     else if (aktion === 'loeschen') {
       const ids = S.dienste.filter(d => d.quelle === q).map(d => d.id);
       if (!confirm(ids.length + ' Dienste dieses Spiels samt Einträgen löschen?')) return;
-      try { await this.diensteLoeschen(ids); toast('Gelöscht – 30 Tage im Papierkorb (Verwalten).'); } catch (e) { toast(fehlerText(e), 6000); return; }
+      try { await this.diensteLoeschen(ids); toast(this._archivAus ? 'Gelöscht. (Papierkorb noch nicht aktiv – Firestore-Regel fehlt.)' : 'Gelöscht – 30 Tage im Papierkorb (Verwalten).', 5000); } catch (e) { toast(fehlerText(e), 6000); return; }
     }
     this.abgleichBerechnen(); this.renderAlles();
   },
