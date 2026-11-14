@@ -1898,8 +1898,8 @@ const App = {
       } catch (e) { m.querySelector('#a-ok').disabled = false; toast(fehlerText(e), 6000); }
     };
   },
-  async verlegtesSpiel(g, ohneNachfrage) {
-    const ds = S.dienste.filter(d => d.quelle === spielQuelle(g));
+  async verlegtesSpiel(g, ohneNachfrage, alteQuelle) {
+    const ds = S.dienste.filter(d => d.quelle === spielQuelle(g) || (alteQuelle && d.quelle === alteQuelle));
     if (!ds.length) return;
     const alt = new Date(ds[0].quelleZeit), neu = new Date(g.d), delta = neu - alt;
     if (!ohneNachfrage && !confirm(ds.length + ' Dienste von ' + tagKurz(alt) + ' ' + hhmm(alt) + ' auf ' + tagKurz(neu) + ' ' + hhmm(neu) + ' verschieben? Eingetragene Namen bleiben erhalten.')) return;
@@ -1907,7 +1907,7 @@ const App = {
       const b = Fb.db.batch();
       ds.forEach(d => {
         const s = new Date(startVon(d).getTime() + delta), e = d.bis ? new Date(endeVon(d).getTime() + delta) : null;
-        b.update(Fb.dienstRef(d.id), { datum: isoDatum(s), von: hhmm(s), bis: e ? hhmm(e) : '', start: Fb.ts(s), quelleZeit: g.d, ort: g.v || d.ort || '', gruppe: String(d.gruppe || 'Heimspiel gegen ' + g.a).replace(/ · Anwurf \d\d:\d\d$/, '') + ' · Anwurf ' + hhmm(neu) });
+        b.update(Fb.dienstRef(d.id), { datum: isoDatum(s), von: hhmm(s), bis: e ? hhmm(e) : '', start: Fb.ts(s), quelle: spielQuelle(g), quelleZeit: g.d, ort: g.v || d.ort || '', gruppe: String(d.gruppe || 'Heimspiel gegen ' + g.a).replace(/ · Anwurf \d\d:\d\d$/, '') + ' · Anwurf ' + hhmm(neu) });
       });
       await b.commit(); if (!ohneNachfrage) toast('Verschoben. Sag der Mannschaft Bescheid! 📣');
     } catch (e) { toast(fehlerText(e), 6000); }
@@ -1925,7 +1925,7 @@ const App = {
       const data = await this.anwurfDaten();
       const spiele = new Map();
       (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => { if (g.h === h.team && g.d) spiele.set(spielQuelle(g), { ...g, label: h.label }); })));
-      this._anwurfSpiele = spiele; this._anwurfStand = data.updatedAt;
+      this._anwurfSpiele = spiele; this._anwurfListe = [...spiele.values()]; this._anwurfStand = data.updatedAt;
       if (S.planId !== id) return;
       this.abgleichBerechnen();
     } catch (e) { /* offline: kein Abgleich */ }
@@ -1933,24 +1933,44 @@ const App = {
   abgleichBerechnen() {
     const spiele = this._anwurfSpiele; if (!spiele) return;
     const ign = new Set(LS.get('hd-abgleich-ignoriert-' + S.planId, []));
-    const verlegt = [], fehlt = [];
+    const verlegt = [], fehlt = [], reparatur = [];
     const gesehen = new Set();
+    // Spiel wiederfinden, auch wenn die gespeicherte Kennung veraltet ist (ältere Version / nuLiga-Nummer weggefallen):
+    // 1) gleicher Gegner + gleiche Zeit/gleicher Tag  2) gleicher Gegner + gleiche Mannschaft (eindeutig) → evtl. verlegt
+    const finde = d => {
+      const g0 = spiele.get(d.quelle); if (g0) return g0;
+      const gr = norm(d.gruppe || '');
+      const gm = / gegen (.+?)(?: · anwurf \d\d:\d\d)?$/.exec(gr);
+      const kand = (this._anwurfListe || []).filter(g => g.a && (gm ? norm(g.a) === gm[1].trim() : gr.includes(norm(g.a))));
+      const z = d.quelleZeit || (d.datum + 'T' + d.von);
+      const genau = kand.filter(g => g.d === z); if (genau.length === 1) return genau[0];
+      const tag = kand.filter(g => g.d.slice(0, 10) === z.slice(0, 10)); if (tag.length === 1) return tag[0];
+      const team = kand.filter(g => { const m = mannschaftAus(g.label); return m && gr.includes(norm(m)); }); if (team.length === 1) return team[0];
+      return null;
+    };
     S.dienste.filter(d => d.quelle && String(d.quelle).startsWith('anwurf:') && !istVorbei(d)).forEach(d => {
       if (gesehen.has(d.quelle)) return; gesehen.add(d.quelle);
-      const g = spiele.get(d.quelle);
+      const g = finde(d);
+      if (g && spielQuelle(g) !== d.quelle) reparatur.push({ alt: d.quelle, neu: spielQuelle(g) });
       const anzahl = S.dienste.filter(x => x.quelle === d.quelle).length;
       if (!g) { if (!ign.has(d.quelle + '|fehlt')) fehlt.push({ q: d.quelle, d, anzahl }); return; }
       const zeitAnders = d.quelleZeit && g.d !== d.quelleZeit;
       const halleAnders = g.v && d.ort && norm(g.v) !== norm(d.ort);
       if ((zeitAnders || halleAnders) && !ign.has(d.quelle + '|' + g.d + '|' + (g.v || ''))) verlegt.push({ q: d.quelle, d, g, zeitAnders, halleAnders, anzahl });
     });
+    if (reparatur.length && S.istAdmin && !this._reparaturLaeuft) {
+      this._reparaturLaeuft = true;
+      const b = Fb.db.batch();
+      reparatur.forEach(rp => S.dienste.filter(x => x.quelle === rp.alt).forEach(x => b.update(Fb.dienstRef(x.id), { quelle: rp.neu })));
+      b.commit().catch(() => {}).finally(() => { this._reparaturLaeuft = false; });
+    }
     const neu = JSON.stringify([verlegt.map(x => x.q + x.g.d + x.g.v), fehlt.map(x => x.q)]);
     const vorher = S.abgleich && S.abgleich.plan === S.planId ? S.abgleich.sig : null;
     S.abgleich = { plan: S.planId, verlegt, fehlt, sig: neu };
     if (neu !== vorher) this.renderAlles();
   },
   abgleichHtml() {
-    const a = S.abgleich; if (!a || a.plan !== S.planId || (!a.verlegt.length && !a.fehlt.length)) return '';
+    const a = S.abgleich; if (!S.istAdmin || !a || a.plan !== S.planId || (!a.verlegt.length && !a.fehlt.length)) return '';
     const spielName = d => String(d.gruppe || d.titel).replace(/ · Anwurf \d\d:\d\d$/, '');
     const wann = iso => { const x = new Date(iso); return tagKurz(x) + ' ' + hhmm(x); };
     let h = '<div class="card" style="border-left:4px solid var(--gelb)"><div style="font-weight:800;margin-bottom:6px">⚠️ Änderungen im Spielplan (Anwurf)</div>';
@@ -1971,10 +1991,10 @@ const App = {
   async abgleichAktion(aktion, q) {
     const a = S.abgleich; if (!a) return;
     const ign = LS.get('hd-abgleich-ignoriert-' + S.planId, []);
-    if (aktion === 'verschieben') { const x = a.verlegt.find(v => v.q === q); if (x) await this.verlegtesSpiel(x.g); }
+    if (aktion === 'verschieben') { const x = a.verlegt.find(v => v.q === q); if (x) await this.verlegtesSpiel(x.g, false, x.q); }
     else if (aktion === 'alle') {
       if (!confirm(a.verlegt.length + ' verlegte Spiele anpassen? Eingetragene Namen bleiben erhalten.')) return;
-      for (const x of a.verlegt) await this.verlegtesSpiel(x.g, true);
+      for (const x of a.verlegt) await this.verlegtesSpiel(x.g, true, x.q);
       toast('Alle verlegten Spiele angepasst. Sag der Mannschaft Bescheid! 📣');
     } else if (aktion === 'ignorieren') { const x = a.verlegt.find(v => v.q === q); if (x) { ign.push(q + '|' + x.g.d + '|' + (x.g.v || '')); LS.set('hd-abgleich-ignoriert-' + S.planId, ign); } }
     else if (aktion === 'ignorieren-fehlt') { ign.push(q + '|fehlt'); LS.set('hd-abgleich-ignoriert-' + S.planId, ign); }
