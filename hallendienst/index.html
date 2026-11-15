@@ -251,7 +251,7 @@
     <div class="card">
       <div style="font-size:1.05rem;font-weight:800;margin-bottom:6px">Hallendienst organisieren</div>
       <div class="unter" style="color:var(--muted);font-size:.9rem;line-height:1.5">
-        Jede Mannschaft bekommt einen eigenen Plan mit einem Link. Wer den Link hat, trägt sich ohne Anmeldung für Dienste ein – Aufbau, Kampfgericht, Kasse, Wischer … Die Verwaltung legt Spieltage an, auf Wunsch direkt aus den Heimspielen in Anwurf.
+        Jede Mannschaft bekommt einen eigenen Plan mit einem Link. Wer den Link hat, trägt sich ohne Anmeldung für Dienste ein – Aufbau, Kampfgericht, Kasse, Wischer … Die Verwaltung legt Spieltage an, auf Wunsch direkt aus den Heimspielen im Spielplan.
       </div>
     </div>
     <h2>Link von deiner Mannschaft?</h2>
@@ -1451,10 +1451,11 @@ const App = {
     const p = S.plan || {};
     const vergangen = S.dienste.filter(istVorbei).length;
     h += '<h2>Dienste anlegen</h2><div class="card stapel">'
-      + '<div class="zwei"><button class="btn" onclick="App.spieltagModal()">Spieltag (Vorlage)</button><button class="btn" onclick="App.dienstModal()">Einzelner Dienst</button></div>'
+      + '<button class="btn" onclick="App.anwurfModal()">📋 Einzelne Heimspiele aus Spielplan auswählen</button>'
+      + '<button class="btn" onclick="App.spieltageModal()">📅 Heimspieltage aus Spielplan nach Datum</button>'
+      + '<div class="zwei"><button class="btn sekundaer" onclick="App.spieltagModal()">Spieltag von Hand (Vorlage)</button><button class="btn sekundaer" onclick="App.dienstModal()">Einzelner Dienst</button></div>'
       + '<button class="btn sekundaer" onclick="App.dienstModal(null, { art: \'sonderdienst\', titel: \'Sonderdienst\', von: \'14:00\', bis: \'18:00\', plaetze: 4 })">🎉 Sonderdienst (Feier, Fest … außerhalb der Halle)</button>'
-      + '<button class="btn sekundaer" onclick="App.abgleichJetzt()">🔄 Mit Anwurf abgleichen (alle Spiele prüfen)</button>'
-      + '<button class="btn sekundaer" onclick="App.anwurfModal()">⚡ Einzelne Heimspiele aus Anwurf wählen</button>'
+      + '<button class="btn sekundaer" onclick="App.abgleichJetzt()">🔄 Mit Spielplan abgleichen (alle Spiele prüfen)</button>'
       + '<div class="hinweis">Bestehende Dienste bearbeitest du im Tab „Dienste“ über ⋯ – Namen durch Antippen. Vergangene Dienste (unten „Vergangene Dienste zeigen“) kannst du nachträglich besetzen und korrigieren; auch ein Datum in der Vergangenheit ist beim Anlegen erlaubt.</div></div>'
       + '<h2>Plan</h2><div class="card">'
       + '<div class="zeile"><div class="t"><b>' + esc(p.titel || '') + '</b><small>' + esc(p.team || 'ohne Mannschaft') + '</small></div><button class="btn klein sekundaer" onclick="App.planModal()">Bearbeiten</button></div>'
@@ -1863,7 +1864,7 @@ const App = {
     const v = ds[0] || {};
     const m = oeffneModal('<h3>' + esc(tagLang(ausDatum(datum, '12:00'))) + ' ergänzen</h3><div class="unter">Finden an diesem Tag weitere Spiele statt, werden deren Dienste je nach Mannschaft automatisch angelegt.</div>'
       + '<div class="stapel" style="margin-top:14px">'
-      + '<button class="btn" id="t-anwurf">⚡ Spiele an diesem Tag aus Anwurf</button>'
+      + '<button class="btn" id="t-anwurf">📋 Spiele an diesem Tag aus dem Spielplan</button>'
       + '<button class="btn sekundaer" id="t-spiel">🏐 Weiteres Spiel von Hand (Vorlage)</button>'
       + '<button class="btn sekundaer" id="t-einzeln">Einzelner Dienst</button></div>'
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button></div>');
@@ -1879,17 +1880,41 @@ const App = {
     const md = MANNSCHAFT_DIENSTE.find(x => x[0] === team); if (!md) return [];
     return this.katalog().filter(v => planWert(md[0], v.key) === 'x');
   },
-  async anwurfTagModal(datum) {
-    const m = oeffneModal('<h3>⚡ Heimspiele am ' + esc(tagKurz(ausDatum(datum, '12:00'))) + '</h3><div class="unter" id="at-status">Lade Spielpläne …</div><div id="at-inhalt"></div>');
+  // Alle kommenden Heimspieltage aus dem Spielplan, nach Datum – Tag antippen → Spiele des Tages anlegen
+  async spieltageModal() {
+    const m = oeffneModal('<h3>📅 Heimspieltage aus Spielplan</h3><div class="unter" id="st-status">Lade Spielplan …</div><div id="st-inhalt"></div>');
     let data;
-    try { data = await this.anwurfDaten(); } catch (e) { m.querySelector('#at-status').textContent = 'Anwurf-Daten nicht erreichbar (offline?).'; return; }
+    try { data = await this.anwurfDaten(); } catch (e) { m.querySelector('#st-status').textContent = 'Spielplan nicht erreichbar (offline?).'; return; }
+    const tage = new Map(), jetzt = new Date();
+    (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => {
+      if (g.h !== h.team || !g.d || new Date(g.d) < jetzt) return;
+      const t = isoDatum(new Date(g.d)); if (!tage.has(t)) tage.set(t, []);
+      tage.get(t).push({ g: { ...g, lid: l.id }, label: h.label, team: mannschaftAus(h.label) });
+    })));
+    const liste = [...tage.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    if (!liste.length) { m.querySelector('#st-status').textContent = 'Im Spielplan stehen keine kommenden HSG-Heimspiele.'; return; }
+    m.querySelector('#st-status').innerHTML = 'Tippe einen Tag an, um die Dienste für die Spiele dieses Tages anzulegen. Stand Spielplan: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '.';
+    m.querySelector('#st-inhalt').innerHTML = '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);margin-top:10px">' + liste.map(([t, sp]) => {
+      sp.sort((a, b) => a.g.d.localeCompare(b.g.d));
+      // offen = noch nicht angelegt und laut Vereinsplan mit Diensten (z. B. D-Jugend ohne Dienste zählt nicht)
+      const neu = sp.filter(x => !istImportiert(x.g) && (!x.team || this.dienstePlan(x.team).length)).length;
+      return '<div class="zeile" style="align-items:flex-start;cursor:pointer" data-tag="' + t + '"><div class="t"><b>' + esc(tagLang(ausDatum(t, '12:00'))) + '</b>'
+        + '<small>' + sp.map(x => esc(hhmm(new Date(x.g.d)) + ' ' + (x.team || x.label))).join(' · ') + '</small></div>'
+        + (neu ? '<span class="d-frei" style="flex-shrink:0">' + neu + (neu === 1 ? ' Spiel' : ' Spiele') + '</span>' : '<span class="d-frei ok" style="flex-shrink:0">✓ angelegt</span>') + '</div>';
+    }).join('') + '</div><div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button></div>';
+    m.querySelectorAll('[data-tag]').forEach(z => z.onclick = () => this.anwurfTagModal(z.dataset.tag));
+  },
+  async anwurfTagModal(datum) {
+    const m = oeffneModal('<h3>📋 Heimspiele am ' + esc(tagKurz(ausDatum(datum, '12:00'))) + '</h3><div class="unter" id="at-status">Lade Spielpläne …</div><div id="at-inhalt"></div>');
+    let data;
+    try { data = await this.anwurfDaten(); } catch (e) { m.querySelector('#at-status').textContent = 'Spielplan nicht erreichbar (offline?).'; return; }
     const spiele = [];
     (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => {
       if (g.h === h.team && g.d && isoDatum(new Date(g.d)) === datum) spiele.push({ g: { ...g, lid: l.id }, label: h.label, liga: l.name, team: mannschaftAus(h.label) });
     })));
     spiele.sort((a, b) => a.g.d.localeCompare(b.g.d));
     if (!spiele.length) {
-      m.querySelector('#at-status').textContent = 'In Anwurf stehen für diesen Tag keine HSG-Heimspiele.';
+      m.querySelector('#at-status').textContent = 'Im Spielplan stehen für diesen Tag keine HSG-Heimspiele.';
       m.querySelector('#at-inhalt').innerHTML = '<div class="knoepfe"><button class="btn sekundaer" data-zu>Schließen</button><button class="btn" id="at-hand">Spiel von Hand</button></div>';
       m.querySelector('#at-hand').onclick = () => this.spieltagModal({ datum }); return;
     }
@@ -1945,16 +1970,16 @@ const App = {
 
   // ---------- Import aus Anwurf (nuLiga-Daten auf buildspace) ----------
   async anwurfModal() {
-    const m = oeffneModal('<h3>⚡ Heimspiele aus Anwurf wählen</h3><div class="unter" id="a-status">Lade Spielpläne …</div><div id="a-inhalt"></div>');
+    const m = oeffneModal('<h3>📋 Heimspiele aus Spielplan auswählen</h3><div class="unter" id="a-status">Lade Spielpläne …</div><div id="a-inhalt"></div>');
     let data;
     try { const r = await fetch('../anwurf/data.json', { cache: 'no-cache' }); data = await r.json(); }
-    catch (e) { m.querySelector('#a-status').textContent = 'Anwurf-Daten nicht erreichbar (offline?).'; return; }
+    catch (e) { m.querySelector('#a-status').textContent = 'Spielplan nicht erreichbar (offline?).'; return; }
     const teams = [];
     (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => teams.push({ key: l.id + '|' + h.team, label: h.label + ' – ' + l.name, team: h.team, liga: l })));
     if (!teams.length) { m.querySelector('#a-status').textContent = 'Keine Mannschaften gefunden.'; return; }
     const gemerkt = LS.get('hd-anwurf-team-' + S.planId, null);
     const vorschlag = gemerkt && teams.some(t => t.key === gemerkt) ? gemerkt : teams[0].key;
-    m.querySelector('#a-status').innerHTML = 'Stand nuLiga: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '. Wähle die Mannschaft und hake nur die Spiele an, für die Dienste angelegt werden sollen.';
+    m.querySelector('#a-status').innerHTML = 'Stand Spielplan: ' + esc(new Date(data.updatedAt).toLocaleDateString('de-DE')) + '. Wähle die Mannschaft und hake nur die Spiele an, für die Dienste angelegt werden sollen.';
     m.querySelector('#a-inhalt').innerHTML = '<label class="feld">Mannschaft</label><select class="ein" id="a-team">' + teams.map(t => '<option value="' + esc(t.key) + '"' + (t.key === vorschlag ? ' selected' : '') + '>' + esc(t.label) + '</option>').join('') + '</select>'
       + '<div id="a-spiele" style="margin-top:8px"></div>' + this.auswahlHtml()
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="a-ok">Anlegen</button></div>';
@@ -2030,13 +2055,13 @@ const App = {
   },
   async abgleichJetzt() {
     const n = new Set(S.dienste.filter(d => d.quelle && String(d.quelle).startsWith('anwurf:') && !istVorbei(d)).map(spielGruppe)).size;
-    if (!n) { toast('Keine aus Anwurf übernommenen kommenden Spiele.'); return; }
+    if (!n) { toast('Keine aus dem Spielplan übernommenen kommenden Spiele.'); return; }
     toast('Prüfe ' + n + ' Spiele …');
     await this.anwurfAbgleich(true);
-    if (!this._anwurfSpiele) { toast('Anwurf-Daten nicht erreichbar (offline?).'); return; }
+    if (!this._anwurfSpiele) { toast('Spielplan nicht erreichbar (offline?).'); return; }
     const a = S.abgleich || { verlegt: [], fehlt: [] };
     const k = a.verlegt.length + a.fehlt.length;
-    toast(k ? n + ' Spiele geprüft – ' + k + (k === 1 ? ' Abweichung' : ' Abweichungen') + ', siehe oben im Tab „Dienste“.' : '✓ ' + n + ' Spiele geprüft – alles stimmt mit Anwurf überein (Stand ' + new Date(this._anwurfStand).toLocaleDateString('de-DE') + ').', 6000);
+    toast(k ? n + ' Spiele geprüft – ' + k + (k === 1 ? ' Abweichung' : ' Abweichungen') + ', siehe oben im Tab „Dienste“.' : '✓ ' + n + ' Spiele geprüft – alles stimmt mit dem Spielplan überein (Stand ' + new Date(this._anwurfStand).toLocaleDateString('de-DE') + ').', 6000);
     if (k) this.tabZeigen('dienste');
   },
   abgleichBerechnen() {
@@ -2092,7 +2117,7 @@ const App = {
     const a = S.abgleich; if (!S.istAdmin || !a || a.plan !== S.planId || (!a.verlegt.length && !a.fehlt.length)) return '';
     const spielName = d => String(d.gruppe || d.titel).replace(/ · Anwurf \d\d:\d\d$/, '');
     const wann = iso => { const x = new Date(iso); return tagKurz(x) + ' ' + hhmm(x); };
-    let h = '<div class="card" style="border-left:4px solid var(--gelb)"><div style="font-weight:800;margin-bottom:6px">⚠️ Änderungen im Spielplan (Anwurf)</div>';
+    let h = '<div class="card" style="border-left:4px solid var(--gelb)"><div style="font-weight:800;margin-bottom:6px">⚠️ Änderungen im Spielplan</div>';
     a.verlegt.forEach(x => {
       h += '<div style="font-size:.88rem;line-height:1.45;padding:7px 0;border-top:1px solid var(--rand)"><b>' + esc(spielName(x.d)) + '</b><br>'
         + (x.zeitAnders ? 'Verlegt: <s style="color:var(--muted)">' + esc(wann(x.d.quelleZeit)) + '</s> → <b>' + esc(wann(x.g.d)) + '</b>' : '')
@@ -2101,7 +2126,7 @@ const App = {
           : '<div style="color:var(--muted);font-size:.8rem;margin-top:3px">Die Verwaltung passt die Dienste an – bitte deinen Eintrag prüfen.</div>') + '</div>';
     });
     a.fehlt.forEach(x => {
-      h += '<div style="font-size:.88rem;line-height:1.45;padding:7px 0;border-top:1px solid var(--rand)"><b>' + esc(spielName(x.d)) + '</b> (' + esc(wann(x.d.quelleZeit || (x.d.datum + 'T' + x.d.von))) + ')<br>Steht nicht mehr im Anwurf-Spielplan – evtl. abgesagt oder umbenannt.'
+      h += '<div style="font-size:.88rem;line-height:1.45;padding:7px 0;border-top:1px solid var(--rand)"><b>' + esc(spielName(x.d)) + '</b> (' + esc(wann(x.d.quelleZeit || (x.d.datum + 'T' + x.d.von))) + ')<br>Steht nicht mehr im Spielplan – evtl. abgesagt oder umbenannt.'
         + (S.istAdmin ? '<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap"><button class="btn klein gefahr" data-ab="loeschen" data-q="' + esc(x.q) + '">' + (x.anzahl === 1 ? 'Dienst' : x.anzahl + ' Dienste') + ' löschen</button><button class="btn klein sekundaer" data-ab="ignorieren-fehlt" data-q="' + esc(x.q) + '">Ignorieren</button></div>' : '') + '</div>';
     });
     if (S.istAdmin && a.verlegt.length > 1) h += '<button class="btn klein" style="margin-top:8px" data-ab="alle" data-q="">Alle ' + a.verlegt.length + ' verlegten Spiele anpassen</button>';

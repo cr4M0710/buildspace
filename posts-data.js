@@ -1323,7 +1323,7 @@ const posts = [
    },
    {
     title: "Hallendienst – HSG Wettenberg",
-    excerpt: "Hallendienste für jede Mannschaft organisieren: Spieler:innen tragen sich per Link ohne Anmeldung ein, tauschen Dienste und sehen Plan und Statistik live. Die Verwaltung übernimmt Heimspiele direkt aus Anwurf – als App installierbar.",
+    excerpt: "Hallendienste für jede Mannschaft organisieren: Spieler:innen tragen sich per Link ohne Anmeldung ein, tauschen Dienste und sehen Plan und Statistik live. Die Verwaltung übernimmt Heimspiele direkt aus dem Spielplan – als App installierbar.",
     date: "2026-11-12",
     category: "handball",
     subcategory: "hallendienst",
@@ -1331,7 +1331,7 @@ const posts = [
     emoji: "🧹",
     tags: ["tool"],
     titleEn: "Hall Duty – HSG Wettenberg",
-    excerptEn: "Organise hall duties for every team: players sign up via a link without an account, swap shifts and see the schedule and stats live. Admins import home games straight from Anwurf – installable as an app."
+    excerptEn: "Organise hall duties for every team: players sign up via a link without an account, swap shifts and see the schedule and stats live. Admins import home games straight from the fixture list – installable as an app."
    },
    {
     title: "Mondrakete",
