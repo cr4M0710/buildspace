@@ -1884,7 +1884,7 @@ const App = {
     try { data = await this.anwurfDaten(); } catch (e) { m.querySelector('#at-status').textContent = 'Anwurf-Daten nicht erreichbar (offline?).'; return; }
     const spiele = [];
     (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => {
-      if (g.h === h.team && g.d && isoDatum(new Date(g.d)) === datum) spiele.push({ g, label: h.label, liga: l.name, team: mannschaftAus(h.label) });
+      if (g.h === h.team && g.d && isoDatum(new Date(g.d)) === datum) spiele.push({ g: { ...g, lid: l.id }, label: h.label, liga: l.name, team: mannschaftAus(h.label) });
     })));
     spiele.sort((a, b) => a.g.d.localeCompare(b.g.d));
     if (!spiele.length) {
@@ -1895,7 +1895,7 @@ const App = {
     m.querySelector('#at-status').textContent = 'Hake die Spiele an, bei denen Dienst gemacht werden muss. Die Dienste kommen je Mannschaft aus dem Vereinsplan – anpassen kannst du sie danach über ⋯.';
     const opt = sel => '<option value="">– keine Vorgabe –</option>' + MANNSCHAFT_DIENSTE.map(md => '<option' + (md[0] === sel ? ' selected' : '') + '>' + esc(md[0]) + '</option>').join('');
     m.querySelector('#at-inhalt').innerHTML = '<div class="card" style="padding:2px 12px;box-shadow:none;border:1.5px solid var(--rand);margin-top:10px">' + spiele.map((x, i) => {
-      const schon = S.dienste.some(d => d.quelle === spielQuelle(x.g));
+      const schon = istImportiert(x.g);
       const dt = new Date(x.g.d);
       return '<div class="spiel" style="flex-wrap:wrap"><input type="checkbox" class="at-sp" data-i="' + i + '"' + (schon ? ' disabled' : ' checked') + '><div class="t" style="flex:1"><b>' + esc(hhmm(dt)) + ' · ' + esc(x.label) + '</b> gegen ' + esc(x.g.a)
         + (schon ? '<span class="tag-label">schon angelegt</span>' : '') + '<small>' + esc(x.g.v || '') + '</small>'
@@ -1963,10 +1963,10 @@ const App = {
       LS.set('hd-anwurf-team-' + S.planId, t.key);
       this.auswahlStart(m, mannschaftAus(t.label.split(' – ')[0]));
       const jetzt = new Date();
-      spiele = (t.liga.games || []).filter(g => g.h === t.team && g.d && new Date(g.d) > jetzt).sort((a, b) => a.d.localeCompare(b.d));
+      spiele = (t.liga.games || []).filter(g => g.h === t.team && g.d && new Date(g.d) > jetzt).map(g => ({ ...g, lid: t.liga.id })).sort((a, b) => a.d.localeCompare(b.d));
       const html = spiele.map((g, i) => {
         const q = spielQuelle(g);
-        const vorhanden = S.dienste.filter(d => d.quelle === q);
+        const vorhanden = S.dienste.filter(d => d.quelle === q || (d.quelle === spielQuelleAlt(g) && d.quelleZeit === g.d));
         const verlegt = vorhanden.length && vorhanden[0].quelleZeit && vorhanden[0].quelleZeit !== g.d;
         const dt = new Date(g.d);
         return '<div class="spiel"><input type="checkbox" class="a-sp" data-i="' + i + '"' + (vorhanden.length ? ' disabled' : '') + '><div class="t"><b>' + esc(tagKurz(dt)) + ', ' + esc(hhmm(dt)) + '</b> gegen ' + esc(g.a)
@@ -2021,7 +2021,7 @@ const App = {
     try {
       const data = await this.anwurfDaten();
       const spiele = new Map();
-      (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => { if (g.h === h.team && g.d) spiele.set(spielQuelle(g), { ...g, label: h.label }); })));
+      (data.leagues || []).forEach(l => (l.hsg || []).forEach(h => (l.games || []).forEach(g => { if (g.h === h.team && g.d) { const gl = { ...g, lid: l.id, label: h.label }; spiele.set(spielQuelle(gl), gl); } })));
       this._anwurfSpiele = spiele; this._anwurfListe = [...spiele.values()]; this._anwurfStand = data.updatedAt;
       if (S.planId !== id) return;
       this.abgleichBerechnen();
@@ -2277,7 +2277,11 @@ function aufgabeHtml(t) {
   return '<details class="d-notiz"><summary>📝 Aufgabe: ' + esc(erste.length > 60 ? erste.slice(0, 60) + '…' : erste) + '</summary><div style="margin-top:6px">' + esc(t) + '</div></details>';
 }
 // Eindeutige Kennung eines Anwurf-Spiels (nicht alle Spiele haben eine nuLiga-Spielnummer)
-function spielQuelle(g) { return 'anwurf:' + (g.mid || norm(g.h + '|' + g.a).replace(/[^a-z0-9äöüß|]+/g, '-')); }
+// Ohne nuLiga-Spielnummer: Liga + Heim + Gast (z. B. heißen A- und E-Jugend beide „HSG Wettenberg“)
+function spielQuelle(g) { return 'anwurf:' + (g.mid || ((g.lid ? g.lid + '|' : '') + norm(g.h + '|' + g.a).replace(/[^a-z0-9äöüß|]+/g, '-'))); }
+// Frühere Kennung ohne Liga – nur zusammen mit gleicher Anwurfzeit eindeutig
+function spielQuelleAlt(g) { return 'anwurf:' + (g.mid || norm(g.h + '|' + g.a).replace(/[^a-z0-9äöüß|]+/g, '-')); }
+function istImportiert(g) { return S.dienste.some(d => d.quelle === spielQuelle(g) || (d.quelle === spielQuelleAlt(g) && d.quelleZeit === g.d)); }
 function eintragWert(e, d) { return typeof e.wert === 'number' && e.wert > 0 ? e.wert : dienstWert(d || dienstById(e.dienst) || {}); }
 const fmtW = n => (Math.round(n * 10) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 function alleSpieler() {
