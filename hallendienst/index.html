@@ -79,6 +79,22 @@
 
   main { padding: 16px calc(14px + env(safe-area-inset-right)) 20px calc(14px + env(safe-area-inset-left)); max-width: 680px; margin: 0 auto; }
   .tab { display: none; }
+  /* Startseite (Hallendienst + Strafenkasse) */
+  .home-kopf { text-align: center; padding: 6px 0 2px; }
+  .home-kopf .gross { font-size: 1.25rem; font-weight: 800; margin-top: 8px; }
+  .home-kopf .klein { color: var(--muted); font-size: .88rem; margin-top: 3px; }
+  .kachel { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; border: 0; cursor: pointer; background: var(--card); color: var(--text); border-radius: var(--radius); box-shadow: var(--schatten); padding: 18px 16px; margin-bottom: 12px; font: inherit; }
+  .kachel:active { transform: scale(.985); }
+  .kachel .ico { font-size: 2rem; width: 54px; height: 54px; border-radius: 14px; background: var(--chip-frei); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kachel .t { flex: 1; min-width: 0; }
+  .kachel .t b { display: block; font-size: 1.12rem; }
+  .kachel .t small { display: block; color: var(--muted); font-size: .86rem; margin-top: 3px; line-height: 1.4; }
+  .kachel .pfeil { color: var(--muted); font-size: 1.4rem; }
+  /* Strafenkasse eingebettet */
+  body.sk-modus { padding-bottom: 0; }
+  body.sk-modus main { padding: 0; max-width: none; }
+  #sk-rahmen { position: fixed; left: 0; right: 0; bottom: 0; top: var(--kopf-h, 70px); background: var(--card); padding-bottom: env(safe-area-inset-bottom); }
+  #sk-rahmen iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
   .tab.aktiv { display: block; }
   h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 22px 2px 10px; }
   h2:first-child { margin-top: 4px; }
@@ -241,6 +257,7 @@
     <h1 id="kopf-titel">Hallendienst</h1>
     <div class="sub" id="kopf-sub">HSG Wettenberg</div>
   </div>
+  <button class="kopf-btn" id="home-btn" title="Start: Dienste oder Strafenkasse" onclick="App.tabZeigen('home')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></button>
   <button class="kopf-btn" id="teilen-btn" title="Link teilen" onclick="App.linkTeilen()" style="display:none"></button>
   <button class="kopf-btn" id="theme-btn" title="Hell/Dunkel" onclick="App.themeWechseln()"></button>
 </header>
@@ -263,6 +280,12 @@
     <h2>Verwaltung</h2>
     <div class="card stapel" id="start-verwaltung"></div>
   </section>
+
+  <!-- ============ START: Wer bist du? → Dienste oder Strafenkasse (nur mit verknüpfter Strafenkasse) ============ -->
+  <section id="tab-home" class="tab"><div id="home-inhalt"></div></section>
+
+  <!-- ============ STRAFENKASSE (Spieler-Ansicht eingebettet) ============ -->
+  <section id="tab-strafen" class="tab"><div id="sk-rahmen"><iframe id="sk-frame" title="Strafenkasse"></iframe></div></section>
 
   <!-- ============ DIENSTE ============ -->
   <section id="tab-dienste" class="tab">
@@ -669,7 +692,14 @@ const App = {
     this.themeAnwenden();
     ['dienste', 'checkliste', 'uebersicht', 'statistik', 'verwalten'].forEach(t => { $('#nav-ico-' + t).innerHTML = ICONS[t]; });
     $('#teilen-btn').innerHTML = ICONS.teilen;
-    document.querySelectorAll('nav button').forEach(b => b.onclick = () => this.tabZeigen(b.dataset.tab));
+    document.querySelectorAll('nav button').forEach(b => b.onclick = () => { S.ersteAnsicht = false; this.tabZeigen(b.dataset.tab); });
+    window.addEventListener('resize', () => { if (S.tab === 'strafen') document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px'); });
+    // Meldungen der eingebetteten Strafenkasse (gleiche Website): Name dort gewählt
+    window.addEventListener('message', e => {
+      if (e.origin !== location.origin || !e.data || e.data.typ !== 'sk-ich' || !Strafen.daten) return;
+      const sp = Strafen.daten.spieler.find(x => x.id === e.data.id); if (!sp) return;
+      LS.set('hd-sk-ich-' + Strafen.token, sp.id); if (!meinName()) LS.set(K.name, sp.name);
+    });
     document.querySelectorAll('#ueb-zeitraum button').forEach(b => b.onclick = () => {
       S.uebZeitraum = b.dataset.v;
       document.querySelectorAll('#ueb-zeitraum button').forEach(x => x.classList.toggle('aktiv', x === b));
@@ -703,7 +733,12 @@ const App = {
     this.renderStart();
   },
   tabZeigen(tab) {
+    if ((tab === 'home' || tab === 'strafen') && !Strafen.cfg()) tab = 'dienste';
     S.tab = tab;
+    const hub = tab === 'home' || tab === 'strafen';
+    $('#nav').style.display = hub ? 'none' : ''; document.body.classList.toggle('ohne-nav', hub);
+    document.body.classList.toggle('sk-modus', tab === 'strafen');
+    if (tab === 'strafen') document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px');
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('aktiv', t.id === 'tab-' + tab));
     document.querySelectorAll('nav button').forEach(b => b.classList.toggle('aktiv', b.dataset.tab === tab));
     window.scrollTo(0, 0);
@@ -721,7 +756,9 @@ const App = {
     if (c) { S.plan = c.plan; S.dienste = c.dienste.map(d => ({ ...d, start: null })); S.eintraege = c.eintraege; }
     $('#nav').style.display = ''; document.body.classList.remove('ohne-nav');
     $('#teilen-btn').style.display = '';
-    this.tabZeigen(opt.tab || 'dienste');
+    // Mit verknüpfter Strafenkasse startet die App auf der Startseite (Wer bist du? → Dienste / Strafenkasse)
+    S.ersteAnsicht = !opt.tab;
+    this.tabZeigen(opt.tab || (c && c.plan && c.plan.strafenkasse ? 'home' : 'dienste'));
     Fb.laden().then(() => this.abosStarten()).catch(() => {});
   },
   abosBeenden() { S.abos.splice(0).forEach(u => { try { u(); } catch (e) {} }); },
@@ -733,6 +770,7 @@ const App = {
       if (S.planId !== id) return;
       if (!s.exists) { if (!s.metadata.fromCache) { S.plan = null; S.fehler = 'Diesen Plan gibt es nicht (mehr). Prüfe den Link.'; this.renderAlles(); } return; }
       S.plan = s.data(); S.fehler = null; S.live = !s.metadata.fromCache;
+      if (S.ersteAnsicht) { S.ersteAnsicht = false; if (S.plan.strafenkasse && S.tab === 'dienste') { this.tabZeigen('home'); return; } if (!S.plan.strafenkasse && (S.tab === 'home' || S.tab === 'strafen')) { this.tabZeigen('dienste'); return; } }
       this.planMerken(id, S.plan.titel); this.cacheSchreiben(); this.renderAlles();
     }, fehler));
     S.abos.push(Fb.planRef(id).collection('dienste').onSnapshot(s => {
@@ -809,12 +847,15 @@ const App = {
     if (S.tab === 'statistik') this.renderStatistik();
     if (S.tab === 'verwalten') this.renderVerwalten();
     if (S.tab === 'checkliste') this.renderCheckliste();
+    if (S.tab === 'home') this.renderHome();
+    if (S.tab === 'strafen') this.renderStrafen();
+    $('#home-btn').style.display = Strafen.cfg() && S.tab !== 'home' ? '' : 'none';
     const tausch = S.eintraege.filter(e => e.tausch && !istMein(e) && dienstById(e.dienst) && !istVorbei(dienstById(e.dienst))).length;
     const b = $('#nav-badge'); b.style.display = tausch ? '' : 'none'; b.textContent = tausch;
   },
   renderKopf() {
     if (!S.planId) return;
-    $('#kopf-titel').textContent = (S.plan && S.plan.titel) || 'Hallendienst';
+    $('#kopf-titel').textContent = S.tab === 'strafen' ? ((Strafen.daten && Strafen.daten.titel) || 'Strafenkasse') : ((S.plan && S.plan.titel) || 'Hallendienst');
     const online = navigator.onLine !== false && S.live;
     $('#kopf-sub').innerHTML = '<span class="live-punkt' + (online ? '' : ' aus') + '"></span>' + esc(online ? 'live' : 'offline – letzter Stand') + (S.plan && S.plan.team ? ' · ' + esc(S.plan.team) : '');
   },
@@ -848,6 +889,61 @@ const App = {
         '<div class="zeile"><div class="t">' + esc(d.data().titel || 'Hallendienst') + '</div><button class="btn klein sekundaer" data-id="' + esc(d.id) + '">Öffnen</button></div>').join('');
       el.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => { schliesseModal(); this.planOeffnen(b.dataset.id, { tab: 'verwalten' }); });
     } catch (e) {}
+  },
+
+  // ---------- Startseite: Wer bist du? → Dienste oder Strafenkasse ----------
+  renderHome() {
+    const el = $('#home-inhalt'), p = S.plan;
+    if (!p) { el.innerHTML = '<div class="leer">' + esc(S.fehler || 'Lade …') + '</div>'; return; }
+    Strafen.pruefen();
+    const name = meinName();
+    const namen = alleSpieler().sort((a, b) => a.localeCompare(b, 'de'));
+    let h = '<div class="card home-kopf"><img src="hsg-logo.png" alt="" style="width:64px;height:64px;object-fit:contain">'
+      + (name ? '<div class="gross">Hallo ' + esc(name.split(' ')[0]) + '! 👋</div><div class="klein">' + esc(name) + ' · <a href="#" id="home-wechseln">nicht du?</a></div>'
+              : '<div class="gross">Wer bist du?</div><div class="klein">Wähle einmal deinen Namen – dann siehst du deine Dienste und deinen Strafen-Stand.</div>');
+    if (!name) h += '<select class="ein" id="home-name" style="margin-top:14px"><option value="">Ich bin …</option>' + namen.map(n => '<option>' + esc(n) + '</option>').join('') + '<option value="*">Mein Name fehlt …</option></select>';
+    h += '</div>';
+    // Kachel Dienste
+    const meine = S.eintraege.filter(istMein).map(e => dienstById(e.dienst)).filter(d => d && !istVorbei(d)).sort((a, b) => startVon(a) - startVon(b));
+    const offen = S.dienste.filter(d => !istVorbei(d)).reduce((n, d) => n + Math.max(0, (d.plaetze || 0) - eintraegeVon(d.id).length), 0);
+    const dTxt = meine.length ? 'Nächster Dienst: ' + tagKurz(startVon(meine[0])) + ', ' + meine[0].von + ' Uhr · ' + meine[0].titel + (meine.length > 1 ? ' (+' + (meine.length - 1) + ' weitere)' : '')
+      : (name ? 'Du bist für keinen kommenden Dienst eingetragen.' : 'Für Dienste eintragen, tauschen, Checkliste.') + (offen ? ' ' + offen + (offen === 1 ? ' Platz' : ' Plätze') + ' offen.' : '');
+    h += '<button class="kachel" id="k-dienste"><span class="ico">🧹</span><span class="t"><b>Hallendienst</b><small>' + esc(dTxt) + '</small></span><span class="pfeil">›</span></button>';
+    // Kachel Strafenkasse
+    let sTxt = 'Strafen, Stand und Bezahlen.', sFarbe = '';
+    if (Strafen.daten) {
+      const ich = Strafen.ich();
+      if (ich) { const sd = Strafen.saldo(ich.id); sTxt = sd > 0 ? Strafen.eur(sd) + ' offen' : 'Alles bezahlt 👍' + (sd < 0 ? ' (Guthaben ' + Strafen.eur(-sd) + ')' : ''); sFarbe = sd > 0 ? 'color:var(--rot);font-weight:800' : 'color:var(--gruen);font-weight:700'; }
+      else if (name) sTxt = 'Dein Name steht (noch) nicht in der Strafenkasse – dort kannst du ihn auswählen.';
+    }
+    h += '<button class="kachel" id="k-strafen"><span class="ico" style="background:var(--chip-mein)">💶</span><span class="t"><b>' + esc((Strafen.daten && Strafen.daten.titel) || 'Strafenkasse') + '</b><small style="' + sFarbe + '">' + esc(sTxt) + '</small></span><span class="pfeil">›</span></button>';
+    if (S.dienste.some(d => d.datum === isoDatum(new Date()))) h += '<button class="btn sekundaer" id="k-check">✅ Heute ist Hallendienst – zur Checkliste</button>';
+    el.innerHTML = h;
+    $('#k-dienste').onclick = () => this.tabZeigen('dienste');
+    $('#k-strafen').onclick = () => this.tabZeigen('strafen');
+    if ($('#k-check')) $('#k-check').onclick = () => this.tabZeigen('checkliste');
+    if ($('#home-wechseln')) $('#home-wechseln').onclick = e => { e.preventDefault(); LS.set(K.name, ''); if (Strafen.token) LS.set('hd-sk-ich-' + Strafen.token, null); this.renderHome(); };
+    const sel = $('#home-name');
+    if (sel) sel.onchange = () => {
+      if (sel.value === '*') { sel.value = ''; this.nameModal(); return; }
+      if (!sel.value) return;
+      LS.set(K.name, sel.value);
+      // Gleichen Namen auch in der Strafenkasse wählen
+      const sp = Strafen.daten && Strafen.daten.spieler.find(x => norm(x.name) === norm(sel.value));
+      if (Strafen.token) LS.set('hd-sk-ich-' + Strafen.token, sp ? sp.id : null);
+      this.renderHome();
+    };
+  },
+  renderStrafen() {
+    const c = Strafen.cfg(); if (!c) return;
+    Strafen.pruefen();
+    const ich = Strafen.ich();
+    const th = LS.get(K.theme, 'system');
+    const u = new URL('../strafenkasse/index.html', location.href);
+    u.search = '?' + (c.team ? 'team=' + encodeURIComponent(c.team) + '&' : '') + 'embed=1&theme=' + (th === 'system' ? 'auto' : th) + (ich ? '&ich=' + encodeURIComponent(ich.id) : '');
+    u.hash = 's=' + c.token;
+    const f = $('#sk-frame');
+    if (f.dataset.src !== u.href) { f.dataset.src = u.href; f.src = u.href; }
   },
 
   // ---------- Tab: Dienste ----------
@@ -1118,6 +1214,41 @@ const App = {
       try { await this.planSpeichern({ rollen }); schliesseModal(); toast('Rollen gespeichert.'); }
       catch (e) { toast(fehlerText(e), 6000); }
     };
+  },
+  // Kassenwart:innen der verknüpften Strafenkasse – getrennt von den Hallendienst-Admins.
+  // Sehen kann die Liste nur, wer selbst Kassenwart:in ist; ändern nur die Besitzerin bzw. der Besitzer.
+  async kassenwarteLaden() {
+    const el = $('#sk-admins'); if (!el) return;
+    const oeffnen = '<button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button>';
+    const team = Strafen.team;
+    if (!team || !Fb.google()) { el.innerHTML = '<div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen werden in der Strafenkasse selbst eingetragen (Verwalten › Cloud-Sync › Zugriff) – unabhängig von den Hallendienst-Admins.</div>' + oeffnen + '</div>'; return; }
+    let d;
+    const c = this._kw;
+    if (c && c.team === team && c.mail === Fb.email() && Date.now() - c.t < 60000) d = c.d;
+    else {
+      try { const snap = await Fb.db.collection('strafenkasse').doc(team).get(); d = snap.exists ? snap.data() : null; } catch (e) { d = null; }
+      this._kw = { team, mail: Fb.email(), d, t: Date.now() };
+    }
+    if (!$('#sk-admins')) return;
+    if (!d) { el.innerHTML = '<div class="card"><div class="hinweis" style="margin-top:0">Du (' + esc(Fb.email()) + ') bist keine Kassenwartin bzw. kein Kassenwart dieser Strafenkasse. Kassenwart:innen werden getrennt vom Hallendienst in der Strafenkasse eingetragen.</div>' + oeffnen + '</div>'; return; }
+    const besitzer = d.owner === Fb.uid();
+    el.innerHTML = '<div class="card" style="padding:4px 14px">' + (d.members || []).map(mail => '<div class="zeile"><div class="t">' + esc(mail) + (d.ownerEmail === mail ? '<small>Besitzer:in</small>' : '') + '</div>'
+        + (besitzer && d.ownerEmail !== mail ? '<button class="x-btn" data-skmail="' + esc(mail) + '">✕</button>' : '') + '</div>').join('')
+      + (besitzer ? '<div class="zeile"><input class="ein" id="neu-kw" type="email" placeholder="weitere Google-Adresse" autocapitalize="off"><button class="btn klein" id="kw-hinzu">Hinzu</button></div>' : '')
+      + '</div><div class="hinweis">Kassenwart:innen buchen Strafen und Zahlungen in der Strafenkasse. ' + (besitzer ? 'Wer hier steht, ist nicht automatisch Hallendienst-Admin – und umgekehrt.' : 'Ändern kann nur die Besitzerin bzw. der Besitzer der Strafenkasse.') + '</div>' + oeffnen;
+    const aendern = async (mail, hinzu) => {
+      const fv = firebase.firestore.FieldValue;
+      try { await Fb.db.collection('strafenkasse').doc(team).update({ members: hinzu ? fv.arrayUnion(mail) : fv.arrayRemove(mail) }); toast(hinzu ? mail + ' ist jetzt Kassenwart:in.' : 'Entfernt.'); this._kw = null; this.kassenwarteLaden(); }
+      catch (e) { toast(fehlerText(e), 6000); }
+    };
+    el.querySelectorAll('[data-skmail]').forEach(b => b.onclick = () => { if (confirm(b.dataset.skmail + ' als Kassenwart:in entfernen?')) aendern(b.dataset.skmail, false); });
+    const hz = el.querySelector('#kw-hinzu');
+    if (hz) hz.onclick = () => { const mail = el.querySelector('#neu-kw').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) { toast('Bitte eine gültige Google-Adresse eingeben.'); return; } aendern(mail, true); };
+  },
+  // Volle Strafenkasse (nicht eingebettet) zum Buchen öffnen – #bearbeiten beendet auf diesem Gerät die reine Spieler-Ansicht
+  strafenkasseVerwalten() {
+    const c = Strafen.cfg(); if (!c) return;
+    location.href = new URL('../strafenkasse/index.html' + (c.team ? '?team=' + encodeURIComponent(c.team) : '') + '#bearbeiten', location.href).href;
   },
   strafenkasseModal() {
     const m = oeffneModal('<h3>Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › Cloud-Sync auf „Spieler-Ansicht teilen (nur Lesen)“ tippen und den Link hier einfügen.</div>'
@@ -1440,12 +1571,12 @@ const App = {
       + '<div class="hinweis">Wer diesen Link hat, kann den Plan sehen und sich eintragen. Als App installieren: Link in Safari öffnen › Teilen › „Zum Home-Bildschirm“.</div></div>';
     if (!Fb.google()) {
       h += '<h2>Verwaltung</h2><div class="card stapel"><div class="hinweis" style="margin-top:0">Dienste anlegen und Namen bearbeiten dürfen nur eingetragene Admins dieses Plans. Melde dich mit dem Google-Konto an, das die Verwaltung eingetragen hat.</div>'
-        + '<button class="btn" onclick="Fb.anmelden()">Mit Google anmelden</button></div>';
+        + '<button class="btn" onclick="Fb.anmelden()">Mit Google anmelden</button></div>' + (S.plan && S.plan.strafenkasse ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
       el.innerHTML = h; return;
     }
     if (!S.istAdmin) {
       h += '<h2>Verwaltung</h2><div class="card stapel"><div class="hinweis" style="margin-top:0">Angemeldet als <b>' + esc(Fb.email()) + '</b> – du bist (noch) kein Admin dieses Plans. Bitte die Verwaltung, deine Adresse unter „Admins“ einzutragen, und lade danach neu.</div>'
-        + '<div class="zwei"><button class="btn sekundaer" onclick="App.adminPruefen()">Neu prüfen</button><button class="btn sekundaer" onclick="Fb.abmelden()">Abmelden</button></div></div>';
+        + '<div class="zwei"><button class="btn sekundaer" onclick="App.adminPruefen()">Neu prüfen</button><button class="btn sekundaer" onclick="Fb.abmelden()">Abmelden</button></div></div>' + (S.plan && S.plan.strafenkasse ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
       el.innerHTML = h; return;
     }
     const p = S.plan || {};
@@ -1467,16 +1598,17 @@ const App = {
       + (alleSpieler().some(freigestellt) ? '<div class="chips" style="margin-top:9px">' + alleSpieler().filter(freigestellt).map(n => '<span>' + rollenEmoji(n) + ' ' + esc(n) + '</span>').join('') + '</div>' : '')
       + '<button class="btn sekundaer" style="margin-top:9px" onclick="App.rollenModal()">Rollen festlegen</button></div>'
       + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
-          ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – alle sehen bei „Dienste“ ihren offenen Strafen-Betrag und in der Übersicht die offenen Beträge.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
+          ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – der Mannschafts-Link öffnet jetzt eine Startseite: Namen wählen, dann „Hallendienst“ oder „Strafenkasse“. Der bisherige Link der Strafenkasse funktioniert weiter.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
           : '<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch die Strafenkasse? Dann seht ihr Strafen und Dienste an einem Ort.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseModal()">Strafenkasse verknüpfen</button>')
       + '<div class="hinweis">Andersherum: Den Mannschafts-Link oben kann die Kassenwartin bzw. der Kassenwart in der Strafenkasse unter „Name &amp; PayPal ändern“ eintragen – dann zeigt auch die Strafenkasse eure Dienste.</div></div>'
       + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter in [eckigen Klammern] offen. ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
       + '<h2>Dienste-Katalog</h2><div class="card"><div class="hinweis" style="margin-top:0">' + this.katalog().map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ') + '</div><div class="hinweis">Beim Anlegen eines Spieltags werden die Dienste automatisch nach der spielenden Mannschaft vorausgewählt (Vereinsplan). Zeiten anpassen oder eigene Dienste dauerhaft ergänzen:</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Katalog bearbeiten</button></div>'
-      + '<h2>Admins</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
+      + '<h2>Admins Hallendienst</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
           '<div class="zeile"><div class="t">' + esc(mail) + (S.admin.ownerEmail === mail ? '<small>Besitzer:in</small>' : '') + '</div>'
           + (S.istBesitzer && S.admin.ownerEmail !== mail ? '<button class="x-btn" data-mail="' + esc(mail) + '">✕</button>' : '') + '</div>').join('')
       + (S.istBesitzer ? '<div class="zeile"><input class="ein" id="neu-admin" type="email" placeholder="weitere Google-Adresse" autocapitalize="off"><button class="btn klein" onclick="App.adminHinzu()">Hinzu</button></div>' : '')
-      + '</div><div class="hinweis">Admins melden sich mit genau dieser Google-Adresse an. ' + (S.istBesitzer ? '' : 'Admins hinzufügen kann nur die Besitzerin bzw. der Besitzer.') + '</div>'
+      + '</div><div class="hinweis">Admins melden sich mit genau dieser Google-Adresse an. ' + (S.istBesitzer ? '' : 'Admins hinzufügen kann nur die Besitzerin bzw. der Besitzer.') + (p.strafenkasse ? ' Gilt nur für den Hallendienst – die Strafenkasse hat eigene Kassenwart:innen (unten).' : '') + '</div>'
+      + (p.strafenkasse ? '<h2>Kassenwart:innen Strafenkasse</h2><div id="sk-admins"><div class="card"><div class="leer" style="padding:8px">Lade …</div></div></div>' : '')
       + '<h2>Aufräumen</h2><div class="card stapel">'
       + '<button class="btn sekundaer" onclick="App.archivModal()">🗑️ Papierkorb' + (this._archivAnzahl ? ' (' + this._archivAnzahl + ')' : '') + ' – gelöschte Dienste wiederherstellen</button>'
       + '<button class="btn sekundaer" onclick="App.vergangeneLoeschen()"' + (vergangen ? '' : ' disabled') + '>Vergangene Dienste löschen (' + vergangen + ')</button>'
@@ -1485,6 +1617,7 @@ const App = {
       + '<div class="hinweis">Angemeldet als ' + esc(Fb.email()) + ' · <a href="#" onclick="Fb.abmelden();return false">Abmelden</a></div>';
     el.innerHTML = h;
     el.querySelectorAll('[data-mail]').forEach(b => b.onclick = () => this.adminEntfernen(b.dataset.mail));
+    this.kassenwarteLaden();
   },
   async planSpeichern(teil) {
     const p = S.plan;
@@ -2226,6 +2359,7 @@ const App = {
   themeWechseln() {
     const dunkel = document.documentElement.getAttribute('data-theme') === 'dunkel' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
     LS.set(K.theme, dunkel ? 'hell' : 'dunkel'); this.themeAnwenden();
+    if (S.tab === 'strafen') this.renderStrafen();
   },
 };
 
@@ -2250,6 +2384,7 @@ const Strafen = {
       if (this.token !== c.token) return;
       this._abo = Fb.db.collection('strafenkasse_ansicht').doc(c.token).onSnapshot(snap => {
         if (!snap.exists) { this.daten = null; App.renderAlles(); return; }
+        this.team = snap.data().team || null;
         try { const d = JSON.parse(snap.data().json); this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); App.spielerImport(); } catch (e) {}
       }, () => {});
     }).catch(() => {});
@@ -2274,7 +2409,7 @@ const Strafen = {
     const sd = this.saldo(ich.id);
     return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">💰 <b>Strafenkasse:</b> '
       + (sd > 0 ? '<span style="color:var(--rot);font-weight:800">' + this.eur(sd) + ' offen</span>' : '<span style="color:var(--gruen);font-weight:800">alles bezahlt</span>' + (sd < 0 ? ' (Guthaben ' + this.eur(-sd) + ')' : ''))
-      + '</div><a class="btn klein sekundaer" style="text-decoration:none" href="' + esc(this.link()) + '">Strafen</a></div>';
+      + '</div><button class="btn klein sekundaer" onclick="App.tabZeigen(\'strafen\')">Strafen</button></div>';
   },
   uebersichtHtml() {
     this.pruefen();
@@ -2284,7 +2419,7 @@ const Strafen = {
     return '<h2>Strafenkasse – offene Beträge</h2><div class="card" style="padding:4px 14px">'
       + (liste.length ? liste.map(x => '<div class="zeile"><div class="t">' + esc(x.name) + '</div><b style="color:var(--rot)">' + this.eur(x.sd) + '</b></div>').join('')
         + '<div class="zeile"><div class="t"><b>Offen gesamt</b></div><b>' + this.eur(ges) + '</b></div>' : '<div class="leer">Alle Strafen bezahlt. 👍</div>')
-      + '</div><a class="btn sekundaer" style="text-decoration:none;margin-bottom:10px" href="' + esc(this.link()) + '">Zur Strafenkasse</a>';
+      + '</div><button class="btn sekundaer" style="margin-bottom:10px" onclick="App.tabZeigen(\'strafen\')">Zur Strafenkasse</button>';
   },
   knoepfe(el) {
     const s = el && el.querySelector('[data-sk-ich]');

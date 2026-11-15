@@ -308,6 +308,8 @@
   body.nur-lesen .zeile .aktionen .icon-btn { display: none; }
   body.nur-lesen .mb-banner { display: none !important; }
   .lese-hinweis { display: none; }
+  html.eingebettet header, html.eingebettet #hd-dienste { display: none !important; }
+  html.eingebettet .mein-name { font-size: 1.05rem; font-weight: 800; text-align: center; }
   body.nur-lesen .lese-hinweis { display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--card); border: 1px solid var(--rand); border-radius: 10px; padding: 9px 12px; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
   body.nur-lesen .lese-hinweis svg { width: 16px; height: 16px; }
 
@@ -364,6 +366,27 @@
   /* ---------- Druck (PDF) ---------- */
   #druckbereich { display: none; }
 </style>
+<script>
+// Eingebettet in den Hallendienst (?embed=1): Spieler-Ansicht ohne eigenen Kopf. Damit die eingebettete Seite
+// auf diesem Gerät nichts verstellt (aktives Team, Kassenwart-Zugang, Einstellungen), landen alle Speicherungen
+// nur im Arbeitsspeicher – außer dem Zwischenstand der Spieler-Ansicht (offline lesbar).
+(function () {
+  if (!/[?&]embed=1(&|$)/.test(location.search)) return;
+  window.__SK_EINGEBETTET = true;
+  document.documentElement.classList.add('eingebettet');
+  try {
+    var echt = window.localStorage, mem = Object.create(null);
+    var shim = {
+      getItem: function (k) { k = String(k); return k in mem ? mem[k] : echt.getItem(k); },
+      setItem: function (k, v) { k = String(k); v = String(v); mem[k] = v; if (/-ansicht-daten-v1$/.test(k)) { try { echt.setItem(k, v); } catch (e) {} } },
+      removeItem: function (k) { mem[String(k)] = null; },
+      key: function (i) { return echt.key(i); }, clear: function () {},
+      get length() { return echt.length; }
+    };
+    Object.defineProperty(window, 'localStorage', { configurable: true, get: function () { return shim; } });
+  } catch (e) {}
+})();
+</script>
 <script defer data-category="handball" data-offen="1" src="../protect.js?v=20261105f"></script>
 <script defer src="../cursor.js"></script>
 </head>
@@ -648,7 +671,7 @@ EIGENE_TEAMS.forEach(t => { PROFILE[t.id] = eigenesProfil(t); });
     const t = new URLSearchParams(location.search).get('team');
     if (t && !PROFILE[t] && TEAM_ID_MUSTER.test(t)) {
       const neu = { id: t, titel: 'Neue Mannschaft', verein: 'HSG Wettenberg', viaLink: true };
-      EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS);
+      if (!window.__SK_EINGEBETTET) { EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS); }
       PROFILE[t] = eigenesProfil(neu);
     }
   } catch (e) {}
@@ -659,6 +682,7 @@ function ermittleAktivesProfil() {
   try {
     const t = new URLSearchParams(location.search).get('team');
     if (t && PROFILE[t]) {
+      if (window.__SK_EINGEBETTET) return t; // eingebettet: aktives Team dieses Geräts nicht umstellen
       if (AUSGEBLENDET.includes(t)) { AUSGEBLENDET = AUSGEBLENDET.filter(x => x !== t); ausgeblendetSpeichern(AUSGEBLENDET); }
       try { localStorage.setItem(PROFIL_KEY, t); } catch (e) {}
       return t;
@@ -858,12 +882,18 @@ function normalisieren(d) {
 
 // ---------- UI-Einstellungen (nur lokal auf diesem Gerät) ----------
 let prefs = ladenUi();
+const EINGEBETTET = !!window.__SK_EINGEBETTET;
+if (EINGEBETTET) {
+  const q = new URLSearchParams(location.search);
+  if (['auto', 'hell', 'dunkel'].includes(q.get('theme'))) prefs.theme = q.get('theme');
+  prefs.ichBin = q.get('ich') || prefs.ichBin || '';
+}
 function ladenUi() {
   const std = { theme: 'auto', sortUeb: 'offen-ab', sortHist: 'datum-neu', filterHistTyp: 'alle', sortKat: 'name-az', nurOffen: false, mbBannerWeg: '', letzterZahlweg: 'bar', mbErinnerungAus: false };
   try { return Object.assign(std, JSON.parse(localStorage.getItem(UI_KEY) || '{}')); }
   catch (e) { return std; }
 }
-function speichernUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(prefs)); } catch (e) {} }
+function speichernUi() { if (window.__SK_EINGEBETTET) return; try { localStorage.setItem(UI_KEY, JSON.stringify(prefs)); } catch (e) {} }
 
 let nurLesen = false; // Team-Ansicht (nur Lesen, kein Schreiben)
 let daten = laden();
@@ -1001,7 +1031,7 @@ const Hallendienst = {
     return k.length === 1 ? k[0] : ich.name;
   },
   rendern(ich) {
-    const el = document.getElementById('hd-dienste'); if (!el) return;
+    const el = document.getElementById('hd-dienste'); if (!el || EINGEBETTET) return;
     this.start(daten.hallendienst || null);
     if (!this.id || !this.geladen || !this.plan) { el.innerHTML = ''; return; }
     const jetzt = new Date();
@@ -1674,7 +1704,7 @@ const App = {
     if (key === 'sortUeb' || key === 'nurOffen') this.rendernUebersicht();
     else if (key === 'sortHist' || key === 'filterHistTyp') this.rendernHistorie();
     else if (key === 'sortKat') this.rendernVerwalten();
-    else if (key === 'ichBin') this.rendernMeinStand();
+    else if (key === 'ichBin') { this.rendernMeinStand(); if (EINGEBETTET && value) try { parent.postMessage({ typ: 'sk-ich', id: value }, location.origin); } catch (e) {} }
     else if (key === 'mbErinnerungAus') { this.renderMbBanner(); this.toast(value ? 'Monats-Erinnerung aus' : 'Monats-Erinnerung an'); }
   },
 
@@ -2660,7 +2690,7 @@ const App = {
         <button class="btn sekundaer klein" style="width:100%;margin-top:10px" onclick="App.spielerDetail('${ich.id}')">Meine Buchungen</button>`;
     }
     el.innerHTML = `<div class="sync-status" style="margin-bottom:8px">Mein Stand</div>
-      <select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>${unten}<div id="hd-dienste"></div>`;
+      ${EINGEBETTET && ich ? `<div class="mein-name">${esc(ich.name)}</div>` : `<select onchange="App.uiSet('ichBin', this.value)"><option value="">Ich bin …</option>${opts}</select>`}${unten}<div id="hd-dienste"></div>`;
     Hallendienst.rendern(ich);
   },
 
@@ -3464,8 +3494,8 @@ const ANSICHT_KEY = `hsg-${PROFIL_ID}-ansicht`;
   else { try { const g = localStorage.getItem(ANSICHT_KEY); if (g && g.indexOf('s:') === 0) sToken = g.slice(2); } catch (e) {} }
   if (sToken) {
     nurLesen = true;
-    try { localStorage.setItem(ANSICHT_KEY, 's:' + sToken); } catch (e) {}
-    try {
+    if (!EINGEBETTET) try { localStorage.setItem(ANSICHT_KEY, 's:' + sToken); } catch (e) {}
+    if (!EINGEBETTET) try {
       if (h.indexOf('#s=') !== 0) history.replaceState(null, '', location.pathname + location.search + '#s=' + sToken);
       ansichtManifest();
     } catch (e) {}
@@ -3536,7 +3566,7 @@ setInterval(() => {
 }, 20000);
 
 // PWA: Service Worker registrieren (nur über http/https, nicht bei lokalem Datei-Öffnen)
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !EINGEBETTET) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 </script>
