@@ -1345,4 +1345,16 @@ const posts = [
     titleEn: "Moon Rocket",
     excerptEn: "3D puzzle game on percentages: travel to the Moon aboard the rocket Luna 7, explore five modules (canteen, lab, engine room, biodome, cockpit), solve 21 in-depth puzzle tasks and unlock the bulkheads. Progress is saved."
    },
+   {
+    title: "Rechenblick",
+    excerpt: "Mathe-Löser für Jg. 5–10: Aufgabe eintippen und den Lösungsweg Schritt für Schritt aufdecken – exakt gerechnet mit Probe, mit „Warum?“-Erklärungen und interaktiven Bildern (Waage, Bruchbalken, Flächenmodell, Graphen mit Reglern). Brüche, Terme, Gleichungen, Gleichungssysteme, Funktionen.",
+    date: "2026-11-17",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "rechenblick.html",
+    emoji: "🔍",
+    tags: ["tool", "zahlen", "bruchrechnung", "gleichungen", "funktionen", "einzelarbeit", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Rechenblick",
+    excerptEn: "Maths solver for grades 5–10: type in a task and reveal the solution step by step – calculated exactly with a check, with “why?” explanations and interactive visuals (balance, fraction bars, area model, graphs with sliders). Fractions, terms, equations, systems of equations, functions."
+   },
 ];
