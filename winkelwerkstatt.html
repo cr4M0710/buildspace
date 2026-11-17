@@ -100,13 +100,15 @@ label.lab{display:block;font-weight:700;font-size:14px;color:var(--dk);margin-bo
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .timebar{height:10px;border-radius:99px;background:rgba(255,255,255,.15);width:100%;overflow:hidden}
 .timebar>i{display:block;height:100%;background:#FFD166;width:100%}
-.halves{flex:1;display:grid;grid-template-rows:1fr 1fr;min-height:0}
+.halves{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0}
 .half{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 12px;overflow:hidden;position:relative}
 .half.p1{background:#1E4472}.half.p2{background:#7A4310}
 .half.flip{transform:rotate(180deg)}
-.half .qscene{width:min(250px,55%)}
+.half .qscene{width:min(360px,85%)}
+.half.p1{border-right:4px solid #14243A}
+.half .qprompt{font-size:clamp(18px,2.4vw,30px)}
 .half .opts{max-width:640px}
-.half .opt{min-height:52px;font-size:17px;padding:8px 10px}
+.half .opt{min-height:64px;font-size:clamp(16px,1.9vw,22px);padding:10px 12px}
 .half .score{font-family:Fredoka;font-size:22px}
 .half .flash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Fredoka;font-size:54px;pointer-events:none;opacity:0;transition:opacity .2s}
 .half .flash.on{opacity:1}
@@ -209,7 +211,7 @@ label.lab{display:block;font-weight:700;font-size:14px;color:var(--dk);margin-bo
   <div class="card toolbar"><div><label class="lab">Niveau</label><select id="g-level"><option value="basis">Basis</option><option value="profi" selected>Profi</option><option value="experte">Experte</option></select></div></div>
   <div class="modes">
     <button class="mode" style="background:linear-gradient(135deg,#2E6099,#1E4472)" id="m-solo"><span class="ico">⚡</span><h3>Solo-Blitzrunde</h3><p>60 Sekunden, so viele Winkel wie möglich. Serien geben Bonuspunkte.</p><p id="m-best" style="font-size:14px"></p></button>
-    <button class="mode" style="background:linear-gradient(135deg,#B8641A,#7A4310)" id="m-duel"><span class="ico">🤜🤛</span><h3>1 gegen 1</h3><p>Ein Tablet zwischen zwei Spielern. Wer zuerst richtig tippt, punktet. Wer 7 Punkte hat, gewinnt.</p></button>
+    <button class="mode" style="background:linear-gradient(135deg,#B8641A,#7A4310)" id="m-duel"><span class="ico">🤜🤛</span><h3>1 gegen 1</h3><p>Nebeneinander am Smartboard oder Tablet: links Blau, rechts Orange. Wer zuerst richtig tippt, punktet. Wer 7 Punkte hat, gewinnt.</p></button>
     <button class="mode" style="background:linear-gradient(135deg,#2E9E6A,#1D6B47)" id="m-quiz"><span class="ico">🏆</span><h3>Klassenquiz</h3><p>Im Kahoot-Stil am Beamer. Teams antworten mit Farbkarten, du vergibst die Punkte.</p></button>
   </div>
   <div class="card" style="margin-top:16px" id="quiz-setup" hidden>
@@ -348,9 +350,8 @@ function angleItems(items,V,L,r,a,o){o=o||{};const col=o.color||C.ink,w=o.w||.45
   items.push(IL(V[0],V[1],...add(V,U(r),L),w,col));
   if(o.second!==false)items.push(IL(V[0],V[1],...add(V,U(r+a),o.L2||L),w,o.color2||col));
   if(o.arc!==false){const R=o.arcR||Math.min(9,L*.3),ac=o.arcColor||col;
-    if(a===90){const s=R*.72,p1=add(V,U(r),s),p3=add(V,U(r+90),s),p2=add(p1,U(r+90),s);
-      items.push(IP([p1,p2,p3],{c:ac,w:.3}));const m=add(V,[ (U(r)[0]+U(r+90)[0])*.5,(U(r)[1]+U(r+90)[1])*.5],s);items.push(IC(m[0],m[1],.45,{fill:ac,w:0}));}
-    else items.push(IP(arcPts(V,R,r,a,3),{c:ac,w:.3}));
+    items.push(IP(arcPts(V,R,r,a,3),{c:ac,w:.3}));
+    if(a===90){const m=add(V,U(r+45),R*.45);items.push(IC(m[0],m[1],.5,{fill:ac,w:0}));}
     if(o.label){const lr=R+(a<30?5.5:3.4),p=add(V,U(r+a/2),lr);items.push(IT(p[0],p[1]+1.4,o.label,11,{align:'center',c:ac}));}}
   items.push(IC(V[0],V[1],.6,{fill:col,w:0}));
   if(o.S){const p=add(V,U(r+a/2+180),4.2);items.push(IT(p[0],p[1]+1.3,'S',9,{align:'center',bold:true,c:col}));}}
@@ -534,8 +535,8 @@ function sceneSVG(sc){const {V,L,r,a}=sc;let s='';const ext=sc.ext!=null?sc.ext:
   if(sc.refs){[90,180,270].forEach(d=>{const p=add(V,U(r+d),L*.92),q=add(V,U(r+d),L*.92+16);s+=`<line x1="${F(V[0])}" y1="${F(V[1])}" x2="${F(p[0])}" y2="${F(p[1])}" stroke="#9AA5B1" stroke-width="1.5" stroke-dasharray="5 5" opacity="${ext>=d?1:.45}"/><text x="${F(q[0])}" y="${F(q[1]+4)}" font-size="12" text-anchor="middle" fill="#6B7785" font-weight="700">${d}°</text>`;});}
   if(sc.prot)s+=protSVG(V,sc.prot);
   if(sc.arc!==false&&ext>0.4){const R=sc.arcR||Math.min(46,L*.3);
-    if(Math.round(ext)===90&&!sc.noSquare){const k=R*.72,p1=add(V,U(r),k),p3=add(V,U(r+90),k),p2=add(p1,U(r+90),k);s+=`<polygon points="${PP([V,p1,p2,p3])}" fill="${tc}" fill-opacity=".2" stroke="${tc}" stroke-width="2.4"/>`;const m=add(V,[(U(r)[0]+U(r+90)[0])*.5,(U(r)[1]+U(r+90)[1])*.5],k);s+=`<circle cx="${F(m[0])}" cy="${F(m[1])}" r="3" fill="${tc}"/>`;}
-    else{const pts=arcPts(V,R,r,Math.min(ext,359.9),2);s+=`<polygon points="${PP([V,...pts])}" fill="${tc}" fill-opacity=".2" stroke="none"/><polyline points="${PP(pts)}" fill="none" stroke="${tc}" stroke-width="2.6"/>`;}
+    const pts=arcPts(V,R,r,Math.min(ext,359.9),2);s+=`<polygon points="${PP([V,...pts])}" fill="${tc}" fill-opacity=".2" stroke="none"/><polyline points="${PP(pts)}" fill="none" stroke="${tc}" stroke-width="2.6"/>`;
+    if(Math.round(ext)===90){const m=add(V,U(r+45),R*.45);s+=`<circle cx="${F(m[0])}" cy="${F(m[1])}" r="3.6" fill="${tc}"/>`;}
     if(sc.label){const p=add(V,U(r+ext/2),R+(ext<35?26:17));s+=`<text x="${F(p[0])}" y="${F(p[1]+6)}" font-size="${sc.labelSize||18}" text-anchor="middle" fill="${tc}" font-family="Fredoka" font-weight="600">${sc.label}</text>`;}}
   if(sc.arc2){const b=sc.arc2,pts=arcPts(V,b.R,b.from,b.ext,2);s+=`<polyline points="${PP(pts)}" fill="none" stroke="${b.c}" stroke-width="2.4" stroke-dasharray="6 4"/>`;if(b.label){const p=add(V,U(b.from+b.ext/2),b.R+16);s+=`<text x="${F(p[0])}" y="${F(p[1]+6)}" font-size="16" text-anchor="middle" fill="${b.c}" font-family="Fredoka" font-weight="600">${b.label}</text>`;}}
   const ray=(d,c,w,dash,len)=>{const p=add(V,U(d),len||L);return `<line x1="${F(V[0])}" y1="${F(V[1])}" x2="${F(p[0])}" y2="${F(p[1])}" stroke="${c}" stroke-width="${w||4}" stroke-linecap="round"${dash?` stroke-dasharray="${dash}"`:''}/>`;};
@@ -560,8 +561,7 @@ function exDraw(){const a=EX.a,{st,sg}=exGeo(),R=176,D=t=>st+sg*t,ty=typeOf(a),O
   if(EX.refs)[90,180,270].forEach(d=>{const u=U(D(d));s+=`<line x1="0" y1="0" x2="${F(u[0]*(R-40))}" y2="${F(u[1]*(R-40))}" stroke="#7B8794" stroke-width="2" stroke-dasharray="6 6"/>`;});
   const ray=(t,c,w)=>{const u=U(D(t));return `<line x1="0" y1="0" x2="${F(u[0]*R)}" y2="${F(u[1]*R)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;};
   s+=ray(0,'#1B2F4A',5);s+=ray(a,'#1B2F4A',5);
-  if(a>0&&a<360){const Ra=46;if(a===90){const k=34,p1=add(O,U(D(0)),k),p3=add(O,U(D(90)),k),p2=add(p1,U(D(90)),k);s+=`<polygon points="${PP([O,p1,p2,p3])}" fill="none" stroke="${ty.color}" stroke-width="3"/><circle cx="${F((p2[0])/2)}" cy="${F(p2[1]/2)}" r="4" fill="${ty.color}"/>`;}
-    else s+=`<polyline points="${PP(arcPts(O,Ra,D(0),sg*a,2))}" fill="none" stroke="${ty.color}" stroke-width="3.5"/>`;
+  if(a>0&&a<360){const Ra=46;s+=`<polyline points="${PP(arcPts(O,Ra,D(0),sg*a,2))}" fill="none" stroke="${ty.color}" stroke-width="3.5"/>`;if(a===90){const m=add(O,U(D(45)),Ra*.45);s+=`<circle cx="${F(m[0])}" cy="${F(m[1])}" r="4.5" fill="${ty.color}"/>`;}
     const p=add(O,U(D(a/2)),a<30?80:68);s+=`<rect x="${F(p[0]-30)}" y="${F(p[1]-15)}" width="60" height="28" rx="14" fill="#fff" stroke="${ty.color}" stroke-width="2"/><text x="${F(p[0])}" y="${F(p[1]+6)}" font-size="17" text-anchor="middle" fill="${ty.color}" font-family="Fredoka" font-weight="600">${EX.hide?'α = ?':'α'}</text>`;}
   if(EX.comp&&a<360&&!EX.hide){const p=add(O,U(D(a+(360-a)/2)),R*.55);s+=`<text x="${F(p[0])}" y="${F(p[1]+5)}" font-size="15" text-anchor="middle" fill="#8A4B00" font-family="Fredoka" font-weight="600">${360-a}°</text>`;}
   const h=add(O,U(D(a)),R*.8);s+=`<circle cx="${F(h[0])}" cy="${F(h[1])}" r="17" fill="${ty.color}" stroke="#fff" stroke-width="4" style="cursor:grab"/>`;
@@ -716,7 +716,7 @@ function showBest(){const b=store.get('best_'+gLevel(),0);$('#m-best').textConte
 
 /* 1 gegen 1 */
 function duelStart(){const D={p:[0,0],lock:[false,false],rng:rnd(),busy:false,WIN:7};
-  ovOpen('🤜🤛 1 gegen 1',`<div class="halves"><div class="half p1 flip" id="h0"></div><div class="half p2" id="h1"></div></div>`);
+  ovOpen('🤜🤛 1 gegen 1',`<div class="halves"><div class="half p1" id="h0"></div><div class="half p2" id="h1"></div></div>`);
   const name=['Spieler Blau','Spieler Orange'];
   const render=()=>{D.lock=[false,false];D.busy=false;[0,1].forEach(k=>{const h=$('#h'+k);h.innerHTML=`<div class="score">${name[k]}: ${D.p[k]} / ${D.WIN}</div>${qHTML(D.q,true)}<div class="flash"></div>`;
     h.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(k,+b.dataset.i,b));});};
@@ -795,3 +795,4 @@ route();
 <script defer data-category="schule" src="protect.js"></script>
 </body>
 </html>
+
