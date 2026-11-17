@@ -202,6 +202,18 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
 .noai .nav{position:sticky;top:var(--hh,62px);bottom:auto;border-top:0;border-bottom:1px solid var(--line);padding:4px 6px}
 .noai .nav button{flex-direction:row;justify-content:center;gap:6px;font-size:13.5px}.noai .nav button svg{width:20px;height:20px}
 .noai .toast{bottom:150px}
+.calclist .cgroup{padding:12px 14px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.citem{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:#F7FAFE;border-radius:14px;padding:10px 12px;color:var(--hd)}
+.citem .ci{font-size:22px;flex:none;width:28px;text-align:center}.citem .cn{min-width:0;overflow-wrap:anywhere;font:700 14.5px Nunito,system-ui,sans-serif;line-height:1.25}.citem small{display:block;font-weight:600;color:#7C8CA0;font-size:12px}
+.fgrid{display:grid;gap:10px;margin-top:6px}
+.frow2{display:grid;gap:4px}.frow2 .fl{font:700 14px Nunito,system-ui,sans-serif;color:var(--dk)}.frow2 small{color:#7C8CA0;font-weight:600}
+.frow2 input,.frow2 select{font:700 18px Nunito,system-ui,sans-serif;border:2px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--hd);background:#fff;outline:none;width:100%}
+.frow2 input:focus,.frow2 select:focus{border-color:var(--ac)}
+.ferr{color:var(--bad);font-weight:800;min-height:0}
+.recog{background:#F7FAFE;border-style:dashed}.rtype{font:600 17px Fredoka,Nunito,system-ui,sans-serif;color:var(--hd);margin:2px 0 6px}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}.vchip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13.5px}
+.nav button{font-size:11.5px}
 .note{background:var(--fl);border-radius:14px;padding:10px 12px;font-size:13.5px;color:var(--dk)}
 </style>
 <meta property="og:type" content="website">
@@ -272,6 +284,12 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
     <div class="gr" id="grades"></div>
     <div id="topicList"></div>
   </section>
+  <!-- Rechner -->
+  <section class="view" id="v-calc" hidden>
+    <h2 style="font:600 20px Fredoka,Nunito,system-ui,sans-serif;color:var(--hd);margin:4px 2px 4px">Rechner nach Aufgabentyp</h2>
+    <p class="muted" style="margin:0 2px 10px">Für Textaufgaben: Typ wählen, Werte eintragen – exakt gerechnet, mit Lösungsweg und Probe.</p>
+    <div id="calcBody"></div>
+  </section>
   <!-- Verlauf -->
   <section class="view" id="v-hist" hidden>
     <h2 style="font:600 20px Fredoka;color:var(--hd);margin:4px 2px 10px">Zuletzt gelöst</h2>
@@ -284,6 +302,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
   <button data-v="cam" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Scannen</button>
   <button data-v="draw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/></svg>Schreiben</button>
   <button data-v="type"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
+  <button data-v="calc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18h8"/></svg>Rechner</button>
   <button data-v="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6z"/></svg>Themen</button>
 </div></nav>
 <script>/* Rechen-Engine: Parser, exakte Bruchrechnung, Polynome, Löser mit Schritten */
@@ -307,7 +326,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
   function fmtNum(x, digits) {
     if (!isFinite(x)) return x > 0 ? '∞' : (x < 0 ? '−∞' : '–');
     digits = digits === undefined ? 4 : digits;
-    let r = Math.round(x * 10 ** digits) / 10 ** digits;
+    let r = Math.round(x * 10 ** digits * (1 + 4 * Number.EPSILON)) / 10 ** digits;
     if (Object.is(r, -0)) r = 0;
     let s = String(r);
     if (/e/.test(s)) s = r.toPrecision(6);
@@ -350,7 +369,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
   // ---------- Eingabe vorbereiten ----------
   const FUNCS = new Set(['sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'ln', 'lg', 'abs', 'nthRoot', 'pi', 'exp', 'round']);
   function prep(s) {
-    s = String(s).trim();
+    s = String(s).trim().replace(/\s+und\s+/gi, ';');
     s = s.replace(/[−–—]/g, '-').replace(/[·×∙⋅•]/g, '*').replace(/÷/g, ':').replace(/\*\*/g, '^');
     s = s.replace(/²/g, '^2').replace(/³/g, '^3').replace(/⁴/g, '^4');
     s = s.replace(/≤/g, '<=').replace(/≥/g, '>=');
@@ -1115,11 +1134,280 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
   }
   E.srcOf = srcOf;
 
+  // ======================================================================
+  // ---------- Erweiterungen: höhere Gleichungen, Exp, Bruch, Wurzel, Betrag, Ungleichungen ----------
+  const X_ = v => `<i>${v}</i>`;
+  function coeffs(P, v) { const d = P.deg(v); const c = []; for (let e = d; e >= 0; e--) c.push(P.coef(v, e)); return c; } // höchste zuerst
+  function fromCoeffs(c, v) { let p = new Poly(); const d = c.length - 1; c.forEach((k, i) => { if (!isZero(k)) p = p.add(Poly.v(v).pow(d - i).scale(k)); }); return p; }
+  function hornerDiv(c, r) { const out = [c[0]]; for (let i = 1; i < c.length; i++) out.push(c[i].add(out[i - 1].mul(r))); return { q: out.slice(0, -1), rem: out[out.length - 1] }; }
+  function divisors(n) { n = Math.abs(n); const d = []; for (let i = 1; i * i <= n; i++) if (n % i === 0) { d.push(i); if (i * i !== n) d.push(n / i); } return d.sort((a, b) => a - b); }
+  function rootHTML(r) { return r.v ? fHTML(r.v) : '≈ ' + fmtNum(r.x, 3); }
+  function rootList(roots, v) {
+    if (!roots.length) return 'L = { } (keine reelle Lösung)';
+    const u = []; roots.forEach(r => { if (!u.some(q => Math.abs(q.x - r.x) < 1e-9)) u.push(r); });
+    u.sort((a, b) => a.x - b.x);
+    if (u.length === 1) return `${X_(v)} ${u[0].v ? '= ' + fHTML(u[0].v) : '≈ ' + fmtNum(u[0].x, 3)}`;
+    return u.map((r, i) => `${X_(v)}<sub>${i + 1}</sub> ${r.v ? '= ' + fHTML(r.v) : '≈ ' + fmtNum(r.x, 3)}`).join('; &nbsp;');
+  }
+  // Quadratische Teil-Lösung (kompakte Schritte)
+  function quadPart(a, b, c, v) {
+    const steps = [], X = X_(v);
+    const roots = [];
+    if (isZero(a)) { if (!isZero(b)) { const r = c.neg().div(b); roots.push({ v: r, x: fval(r) }); steps.push({ title: 'Lineare Gleichung', html: `${linHTML(b, c, v)} = 0 ⇒ ${X} = ${fHTML(r)}` }); } return { steps, roots }; }
+    const p = b.div(a), q = c.div(a), hp = p.div(fr(2)), D = hp.mul(hp).sub(q);
+    steps.push({ title: 'pq-Formel', html: `${linHTMLq(p, q, v)} = 0`, detail: [`${X}<sub>1,2</sub> = ${fHTML(hp.neg())} ± <span class="sq">√<span class="sqc">(${fHTML(hp)})<sup>2</sup> − ${q.s < 0 ? '(' + fHTML(q) + ')' : fHTML(q)}</span></span> = ${fHTML(hp.neg())} ± <span class="sq">√<span class="sqc">${fHTML(D)}</span></span>`], explain: `p = ${fHTML(p)}, q = ${fHTML(q)} einsetzen.${D.s < 0 && !isZero(D) ? ' Die Diskriminante ist negativ – keine weitere Lösung.' : ''}` });
+    if (D.s < 0 && !isZero(D)) return { steps, roots };
+    const r = sqrtF(D);
+    if (r) { [hp.neg().add(r), hp.neg().sub(r)].forEach(z => roots.push({ v: z, x: fval(z) })); }
+    else { const s = Math.sqrt(fval(D)); [-fval(hp) + s, -fval(hp) - s].forEach(z => roots.push({ x: z })); }
+    steps[steps.length - 1].detail.push(roots.length === 2 && Math.abs(roots[0].x - roots[1].x) < 1e-12 ? `⇒ ${X} = ${rootHTML(roots[0])}` : roots.map((z, i) => `${X}<sub>${i + 1}</sub> ${z.v ? '= ' + fHTML(z.v) : '≈ ' + fmtNum(z.x, 3)}`).join(' &nbsp; '));
+    return { steps, roots };
+  }
+  // Allgemeiner Polynom-Löser (1 Variable)
+  function polyRoots(P, v) {
+    const steps = []; const X = X_(v); let roots = [];
+    let c = coeffs(P, v);
+    // ganzzahlig machen
+    let L = 1; c.forEach(k => L = lcm(L, k.d)); c = c.map(k => k.mul(fr(L)));
+    let g = 0; c.forEach(k => g = gcd(g, k.n)); if (g > 1) c = c.map(k => k.div(fr(g)));
+    if (c[0].s < 0) c = c.map(k => k.neg());
+    if (L > 1 || g > 1) steps.push({ title: 'Vereinfachen', html: `${polyHTML(fromCoeffs(c, v))} = 0`, explain: 'Mit dem Hauptnenner multiplizieren bzw. durch den gemeinsamen Faktor teilen – das ändert die Lösungen nicht.' });
+    // x^k ausklammern
+    let k = 0; while (c.length > 1 && isZero(c[c.length - 1])) { c = c.slice(0, -1); k++; }
+    if (k > 0) {
+      roots.push({ v: ZERO, x: 0 });
+      const rest = fromCoeffs(c, v);
+      steps.push({ title: `${v} ausklammern`, html: `${X}${k > 1 ? '<sup>' + k + '</sup>' : ''} · (${polyHTML(rest)}) = 0`, explain: `Jeder Summand enthält ${X}${k > 1 ? '<sup>' + k + '</sup>' : ''}. Satz vom Nullprodukt: Ein Produkt ist 0, wenn ein Faktor 0 ist ⇒ ${X}<sub>1</sub> = 0. Weiter mit der Klammer.` });
+    }
+    let deg = c.length - 1;
+    // biquadratisch
+    if (deg === 4 && isZero(c[1]) && isZero(c[3])) {
+      steps.push({ title: 'Substitution', html: `z = ${X}² ⇒ ${polyHTML(fromCoeffs([c[0], c[2], c[4]], 'z'))} = 0`, explain: `Es kommen nur ${X}⁴ und ${X}² vor (biquadratische Gleichung). Wir ersetzen ${X}² durch z und erhalten eine quadratische Gleichung.` });
+      const qp = quadPart(c[0], c[2], c[4], 'z'); steps.push(...qp.steps);
+      const zs = qp.roots;
+      const det = [];
+      zs.forEach(z => {
+        if (z.x < -1e-12) { det.push(`z = ${rootHTML(z)} &lt; 0 ⇒ keine Lösung (${X}² kann nicht negativ sein)`); return; }
+        if (Math.abs(z.x) < 1e-12) { roots.push({ v: ZERO, x: 0 }); det.push(`z = 0 ⇒ ${X} = 0`); return; }
+        const s = z.v ? sqrtF(z.v) : null;
+        if (s) { roots.push({ v: s, x: fval(s) }, { v: s.neg(), x: -fval(s) }); det.push(`z = ${fHTML(z.v)} ⇒ ${X} = ±${fHTML(s)}`); }
+        else { const w = Math.sqrt(z.x); roots.push({ x: w }, { x: -w }); det.push(`z ${z.v ? '= ' + fHTML(z.v) : '≈ ' + fmtNum(z.x, 3)} ⇒ ${X} = ±√z ≈ ±${fmtNum(w, 3)}`); }
+      });
+      steps.push({ title: 'Rücksubstitution', html: `${X}² = z`, detail: det, explain: 'Aus jedem positiven z ergeben sich zwei Lösungen ±√z.' });
+      return { steps, roots };
+    }
+    // Rationale Nullstellen + Horner
+    let guard = 0;
+    while (deg >= 3 && guard++ < 10) {
+      const an = c[0].n, a0 = c[c.length - 1].n;
+      const cands = [];
+      divisors(a0).forEach(p => divisors(an).forEach(q => { cands.push(fr(p, q), fr(-p, q)); }));
+      cands.sort((x, y) => Math.abs(fval(x)) - Math.abs(fval(y)) || fval(y) - fval(x));
+      let found = null;
+      for (const r of cands) { if (isZero(hornerDiv(c, r).rem)) { found = r; break; } }
+      if (!found) break;
+      const { q } = hornerDiv(c, found);
+      roots.push({ v: found, x: fval(found) });
+      steps.push({ title: 'Nullstelle raten', html: `${X} = ${fHTML(found)}: &nbsp;${polyHTML(fromCoeffs(c, v))} = 0 ✓`, explain: `Ganzzahlige Lösungen sind Teiler von ${fmtInt(a0)} (der Zahl ohne ${X}). Probieren ergibt ${X} = ${fHTML(found)}.`, why: 'Ist x₀ eine Lösung, dann kann man den Linearfaktor (x − x₀) abspalten.' });
+      steps.push({ title: 'Polynomdivision', html: `(${polyHTML(fromCoeffs(c, v))}) : (${linHTML(ONE, found.neg(), v)}) = ${polyHTML(fromCoeffs(q, v))}`, explain: 'Mit dem Horner-Schema bzw. der Polynomdivision wird der Grad um 1 kleiner.', detail: [`Horner-Schema: ${c.map(fHTML).join(' | ')} &nbsp;→&nbsp; ${q.map(fHTML).join(' | ')} | Rest 0`] });
+      c = q; deg = c.length - 1;
+    }
+    if (deg === 2) { const qp = quadPart(c[0], c[1], c[2], v); steps.push(...qp.steps); roots.push(...qp.roots); }
+    else if (deg === 1) { const r = c[1].neg().div(c[0]); roots.push({ v: r, x: fval(r) }); steps.push({ title: 'Letzter Faktor', html: `${linHTML(c[0], c[1], v)} = 0 ⇒ ${X} = ${fHTML(r)}` }); }
+    else if (deg >= 3) {
+      // numerisch
+      const f = x => c.reduce((s, k) => s * x + fval(k), 0);
+      const B = 1 + Math.max(...c.slice(1).map(k => Math.abs(fval(k) / fval(c[0]))));
+      const num = []; const N = 4000; let px = -B, pv = f(-B);
+      for (let i = 1; i <= N; i++) { const x = -B + 2 * B * i / N, y = f(x); if (pv === 0) num.push(px); else if (pv * y < 0) { let a = px, b = x; for (let j = 0; j < 80; j++) { const m = (a + b) / 2; if (f(a) * f(m) <= 0) b = m; else a = m; } num.push((a + b) / 2); } px = x; pv = y; }
+      num.forEach(x => roots.push({ x }));
+      steps.push({ title: 'Näherungsweise lösen', html: `${polyHTML(fromCoeffs(c, v))} = 0`, explain: 'Es gibt keine glatte (rationale) Lösung. Die Lösungen werden mit dem Intervallhalbierungsverfahren gefunden – Vorzeichenwechsel suchen und Intervall immer weiter halbieren.', detail: num.length ? num.map(x => `${X} ≈ ${fmtNum(x, 4)}`) : ['keine reelle Lösung'] });
+    }
+    return { steps, roots };
+  }
+  function probeSteps(Lt, Rt, v, roots, opts) {
+    opts = opts || {};
+    const ok = [], bad = [];
+    const det = roots.map(r => {
+      let lv, rv;
+      try { lv = numOf(evalNum(Lt, { [v]: r.v || r.x })); rv = numOf(evalNum(Rt, { [v]: r.v || r.x })); } catch (e) { bad.push(r); return `${X_(v)} = ${rootHTML(r)}: nicht definiert ✗`; }
+      const good = isFinite(lv) && isFinite(rv) && Math.abs(lv - rv) <= 1e-6 * Math.max(1, Math.abs(lv), Math.abs(rv));
+      (good ? ok : bad).push(r);
+      return `${X_(v)} ${r.v ? '= ' + fHTML(r.v) : '≈ ' + fmtNum(r.x, 3)}: links ${fmtNum(lv, 4)}, rechts ${fmtNum(rv, 4)} ${good ? '✓' : '✗'}`;
+    });
+    return { step: { title: 'Probe', html: 'Einsetzen in die Ausgangsgleichung', detail: det, explain: bad.length && opts.extraneous ? `<b>Scheinlösung</b> fällt weg: ${bad.map(r => X_(v) + ' = ' + rootHTML(r)).join(', ')}. ${opts.extraneous}` : 'Alle Lösungen erfüllen die Gleichung.' }, ok, bad };
+  }
+  function uniq(roots) { const u = []; roots.forEach(r => { if (!u.some(q => Math.abs(q.x - r.x) < 1e-9)) u.push(r); }); return u; }
+  function graphOf(Lt, Rt, v) {
+    try { return { type: 'graph', functions: [{ expr: srcOf(Lt, v), label: 'links' }, { expr: srcOf(Rt, v), label: 'rechts' }], showIntersections: true, note: 'Die Lösungen sind die x-Werte der Schnittpunkte von linker und rechter Seite.' }; } catch (e) { return null; }
+  }
+  function solvePolyEq(Lt, Rt, v) {
+    const P = toPoly(Lt).sub(toPoly(Rt));
+    const steps = [{ title: 'Gleichung', html: eqHTML(H(Lt), H(Rt)), explain: `Eine Gleichung ${P.deg(v)}. Grades – sie kann bis zu ${P.deg(v)} Lösungen haben.` }];
+    if (!toPoly(Rt).isZero() || polyHTML(toPoly(Lt)) !== H(Lt)) steps.push({ title: 'Auf Nullform bringen', html: `${polyHTML(P)} = 0`, explain: 'Alles auf eine Seite bringen und zusammenfassen.' });
+    const pr = polyRoots(P, v); steps.push(...pr.steps);
+    const roots = uniq(pr.roots);
+    const pb = probeSteps(Lt, Rt, v, roots); if (roots.length) steps.push(pb.step);
+    const vis = { type: 'graph', functions: [{ expr: polyStr(P, v).replace(new RegExp('\\b' + v + '\\b', 'g'), 'x'), label: 'f' }], showZeros: true, showExtrema: true, note: 'Die Lösungen sind die Nullstellen des Graphen.' };
+    return { kind: 'Gleichung höheren Grades', topic: P.deg(v) === 4 && pr.steps.some(s => s.title === 'Substitution') ? 'Biquadratische Gleichungen' : 'Polynomgleichungen', answerHTML: rootList(roots, v), steps, visual: vis, check: { ok: pb.bad.length === 0, text: pb.bad.length ? 'Probe nicht bestanden!' : (roots.length ? 'Probe bestanden.' : 'Keine reelle Lösung.') }, solutions: roots.map(r => r.x), v };
+  }
+  // Knoten suchen/ersetzen
+  function findNodes(t, pred, out) { out = out || []; if (!t || typeof t !== 'object') return out; if (pred(t)) out.push(t); [t.a, t.b, t.c, ...(t.args || [])].forEach(c => findNodes(c, pred, out)); return out; }
+  function replaceNodeDeep(t, target, rep) { if (t === target) return rep; const o = Object.assign({}, t); for (const k of ['a', 'b', 'c']) if (o[k]) o[k] = replaceNodeDeep(o[k], target, rep); if (o.args) o.args = o.args.map(x => replaceNodeDeep(x, target, rep)); return o; }
+  const hasVar = (t, v) => symbols(t).has(v);
+  // Exponentialgleichung
+  function solveExpEq(Lt, Rt, v) {
+    const isExp = n => (n.k === 'op' && n.op === '^' && !hasVar(n.a, v) && hasVar(n.b, v)) || (n.k === 'fn' && n.name === 'exp' && hasVar(n.args[0], v));
+    const nodes = findNodes(Lt, isExp).concat(findNodes(Rt, isExp));
+    if (nodes.length !== 1) return null;
+    const node = nodes[0];
+    const U = { k: 'sym', name: 'U' };
+    const L2 = replaceNodeDeep(Lt, node, U), R2 = replaceNodeDeep(Rt, node, U);
+    if (hasVar(L2, v) || hasVar(R2, v)) return null;
+    let P; try { P = toPoly(L2).sub(toPoly(R2)); } catch (e) { return null; }
+    if (P.deg('U') !== 1 || P.vars().some(z => z !== 'U')) return null;
+    const u0 = P.constVal().neg().div(P.coef('U', 1));
+    const base = node.k === 'fn' ? null : evalNum(node.a);
+    const expT = node.k === 'fn' ? node.args[0] : stripPar(node.b);
+    const bHTML = node.k === 'fn' ? '<i>e</i>' : valHTML(base);
+    const steps = [{ title: 'Exponentialgleichung', html: eqHTML(H(Lt), H(Rt)), explain: `Die Variable ${X_(v)} steht im <b>Exponenten</b>. Wir isolieren die Potenz und logarithmieren.` }];
+    if (eqHTML(H(Lt), H(Rt)) !== eqHTML(H(node), fHTML(u0))) steps.push({ title: 'Potenz isolieren', html: `${H(node)} = ${fHTML(u0)}`, explain: 'Wie bei einer linearen Gleichung: alles andere auf die rechte Seite bringen.' });
+    if (u0.s <= 0 || isZero(u0)) { steps.push({ title: 'Keine Lösung', html: `${H(node)} > 0`, explain: 'Eine Potenz mit positiver Basis ist immer positiv – sie kann nicht ' + fHTML(u0) + ' werden.' }); return { kind: 'Exponentialgleichung', topic: 'Logarithmus', answerHTML: 'L = { }', steps, check: { ok: true, text: 'Logisch geprüft.' } }; }
+    let eVal = null, eNum;
+    const bNum = node.k === 'fn' ? Math.E : numOf(base);
+    if (base && base.v) for (let k = -30; k <= 30; k++) { try { if (base.v.pow(fr(k)).equals(u0)) { eVal = fr(k); break; } } catch (e) { } }
+    eNum = Math.log(fval(u0)) / Math.log(bNum);
+    if (eVal) steps.push({ title: 'Exponent ablesen', html: `${fHTML(u0)} = ${bHTML}<sup>${fHTML(eVal)}</sup> ⇒ ${H(expT)} = ${fHTML(eVal)}`, explain: `${fHTML(u0)} lässt sich als Potenz von ${bHTML} schreiben. Gleiche Basis ⇒ gleiche Exponenten.` });
+    else steps.push({ title: 'Logarithmieren', html: `${H(expT)} = log<sub>${bHTML}</sub>(${fHTML(u0)}) = ${fracHTML(`lg(${fHTML(u0)})`, `lg(${bHTML})`)} ≈ ${fmtNum(eNum, 4)}`, explain: `Der Logarithmus beantwortet die Frage: „${bHTML} hoch wie viel ergibt ${fHTML(u0)}?“`, why: 'log_b(a) = lg(a) : lg(b) – so rechnet man es mit dem Taschenrechner.' });
+    let ep; try { ep = toPoly(expT); } catch (e) { return null; }
+    if (ep.deg(v) !== 1) return null;
+    const m = ep.coef(v, 1), n = ep.constVal();
+    let roots;
+    if (eVal) { const r = eVal.sub(n).div(m); roots = [{ v: r, x: fval(r) }]; }
+    else { const r = (eNum - fval(n)) / fval(m); roots = [{ x: r }]; }
+    if (!(m.equals(ONE) && isZero(n))) steps.push({ title: `Nach ${v} auflösen`, html: `${X_(v)} ${roots[0].v ? '= ' + fHTML(roots[0].v) : '≈ ' + fmtNum(roots[0].x, 4)}` });
+    const pb = probeSteps(Lt, Rt, v, roots); steps.push(pb.step);
+    return { kind: 'Exponentialgleichung', topic: 'Logarithmus & Exponentialgleichungen', answerHTML: rootList(roots, v), steps, visual: graphOf(Lt, Rt, v), check: { ok: !pb.bad.length, text: pb.bad.length ? 'Probe nicht bestanden!' : 'Probe bestanden' + (roots[0].v ? '.' : ' (mit gerundetem Wert).') }, solutions: roots.map(r => r.x), v };
+  }
+  // Bruchgleichung
+  function toRat(t) {
+    switch (t.k) {
+      case 'num': if (!t.v) throw new Error('irrational'); return { n: Poly.c(t.v), d: Poly.c(ONE), dens: [] };
+      case 'sym': return { n: Poly.v(t.name), d: Poly.c(ONE), dens: [] };
+      case 'par': return toRat(t.c);
+      case 'neg': { const a = toRat(t.c); return { n: a.n.neg(), d: a.d, dens: a.dens }; }
+      case 'op': {
+        const A = toRat(t.a), B = toRat(t.b); const dens = A.dens.concat(B.dens);
+        switch (t.op) {
+          case '+': case '-': { const s = t.op === '+' ? 1 : -1; if (polyStr(A.d) === polyStr(B.d)) return { n: A.n.add(B.n.scale(fr(s))), d: A.d, dens }; return { n: A.n.mul(B.d).add(B.n.mul(A.d).scale(fr(s))), d: A.d.mul(B.d), dens }; }
+          case '*': return { n: A.n.mul(B.n), d: A.d.mul(B.d), dens };
+          case '/': case ':': if (B.n.isZero()) throw new Error('0'); if (!B.n.isConst()) dens.push(B.n); return { n: A.n.mul(B.d), d: A.d.mul(B.n), dens };
+          case '^': { const e = toPoly(t.b); if (!e.isConst()) throw new Error('exp'); const k = e.constVal(); if (!isInt(k) || Math.abs(k.n) > 8) throw new Error('exp'); if (k.s < 0) { if (!A.n.isConst()) dens.push(A.n); return { n: A.d.pow(k.n), d: A.n.pow(k.n), dens }; } return { n: A.n.pow(k.n), d: A.d.pow(k.n), dens }; }
+        }
+      }
+    }
+    throw new Error('kein Bruchterm');
+  }
+  function solveRationalEq(Lt, Rt, v) {
+    let A, B; try { A = toRat(Lt); B = toRat(Rt); } catch (e) { return null; }
+    const dens = []; A.dens.concat(B.dens).forEach(d => { if (!dens.some(q => polyStr(q) === polyStr(d))) dens.push(d); });
+    if (!dens.length) return null;
+    if (dens.some(d => d.vars().some(z => z !== v))) return null;
+    const steps = [{ title: 'Bruchgleichung', html: eqHTML(H(Lt), H(Rt)), explain: `${X_(v)} steht im Nenner. Zuerst klären, welche Zahlen man <b>nicht</b> einsetzen darf.` }];
+    // Definitionsmenge
+    let excl = [];
+    dens.forEach(d => { const pr = polyRoots(d, v); excl = excl.concat(pr.roots); });
+    excl = uniq(excl);
+    steps.push({ title: 'Definitionsmenge', html: `D = ℚ${excl.length ? ' \\ {' + excl.map(r => r.v ? fHTML(r.v) : fmtNum(r.x, 3)).join('; ') + '}' : ''}`, explain: `Ein Nenner darf nie 0 werden: ${dens.map(d => polyHTML(d) + ' ≠ 0').join(', ')}.` });
+    const N = A.n.mul(B.d).sub(B.n.mul(A.d));
+    steps.push({ title: 'Mit den Nennern multiplizieren', html: `${polyHTML(A.n.mul(B.d))} = ${polyHTML(B.n.mul(A.d))}`, explain: 'Beide Seiten mit allen Nennern multiplizieren (bzw. über Kreuz multiplizieren) – dann verschwinden die Brüche.' });
+    let roots = [];
+    if (N.isZero()) { steps.push({ title: 'Immer erfüllt', html: '0 = 0', explain: 'Die Gleichung gilt für alle Zahlen der Definitionsmenge.' }); return { kind: 'Bruchgleichung', topic: 'Bruchgleichungen', answerHTML: 'L = D (alle erlaubten Zahlen)', steps, check: { ok: true, text: 'Logisch geprüft.' } }; }
+    const deg = N.deg(v);
+    if (deg === 0) { steps.push({ title: 'Widerspruch', html: `${polyHTML(N)} = 0`, explain: 'Diese Aussage ist falsch – keine Lösung.' }); return { kind: 'Bruchgleichung', topic: 'Bruchgleichungen', answerHTML: 'L = { }', steps, check: { ok: true, text: 'Logisch geprüft.' } }; }
+    steps.push({ title: 'Nullform', html: `${polyHTML(N)} = 0` });
+    const pr = polyRoots(N, v); steps.push(...pr.steps);
+    roots = uniq(pr.roots);
+    const bad = roots.filter(r => excl.some(e => Math.abs(e.x - r.x) < 1e-9));
+    if (bad.length) steps.push({ title: 'Mit D vergleichen', html: bad.map(r => `${X_(v)} = ${rootHTML(r)} ∉ D`).join(', '), explain: 'Diese Zahl ist nicht erlaubt (Nenner wäre 0) und fällt weg.' });
+    roots = roots.filter(r => !bad.includes(r));
+    const pb = probeSteps(Lt, Rt, v, roots); if (roots.length) steps.push(pb.step);
+    return { kind: 'Bruchgleichung', topic: 'Bruchgleichungen', answerHTML: rootList(roots, v), steps, visual: graphOf(Lt, Rt, v), check: { ok: !pb.bad.length, text: pb.bad.length ? 'Probe nicht bestanden!' : (roots.length ? 'Probe bestanden.' : 'Keine Lösung in D.') }, solutions: roots.map(r => r.x), v };
+  }
+  // Wurzelgleichung & Betragsgleichung
+  function solveRadAbsEq(Lt, Rt, v) {
+    const isRad = n => n.k === 'fn' && (n.name === 'sqrt' || n.name === 'abs') && hasVar(n.args[0], v);
+    const nodes = findNodes(Lt, isRad).concat(findNodes(Rt, isRad));
+    if (nodes.length !== 1) return null;
+    const node = nodes[0], isAbs = node.name === 'abs';
+    const S = { k: 'sym', name: 'S' };
+    let P; try { P = toPoly(replaceNodeDeep(Lt, node, S)).sub(toPoly(replaceNodeDeep(Rt, node, S))); } catch (e) { return null; }
+    if (P.deg('S') !== 1) return null;
+    const A = P.coef('S', 1); // muss konstant sein
+    // B = P - A*S
+    const B = P.sub(Poly.v('S').scale(A));
+    if (B.vars().some(z => z !== v)) return null;
+    const rhs = B.neg().scale(ONE.div(A)); // S = rhs
+    const inner = node.args[0]; let I; try { I = toPoly(inner); } catch (e) { return null; }
+    const steps = [{ title: isAbs ? 'Betragsgleichung' : 'Wurzelgleichung', html: eqHTML(H(Lt), H(Rt)), explain: isAbs ? `Der Betrag macht jede Zahl positiv: |a| = a oder −a.` : `${X_(v)} steht unter einer Wurzel. Wir isolieren die Wurzel und quadrieren.` }];
+    if (eqHTML(H(Lt), H(Rt)) !== eqHTML(H(node), polyHTML(rhs))) steps.push({ title: isAbs ? 'Betrag isolieren' : 'Wurzel isolieren', html: `${H(node)} = ${polyHTML(rhs)}` });
+    let roots = [];
+    if (isAbs) {
+      if (!rhs.isConst()) return null;
+      const k = rhs.constVal();
+      if (k.s < 0 && !isZero(k)) { steps.push({ title: 'Keine Lösung', html: `|…| = ${fHTML(k)} &lt; 0`, explain: 'Ein Betrag ist nie negativ.' }); return { kind: 'Betragsgleichung', topic: 'Betragsgleichungen', answerHTML: 'L = { }', steps, check: { ok: true, text: 'Logisch geprüft.' } }; }
+      const cases = isZero(k) ? [k] : [k, k.neg()];
+      cases.forEach((kk, i) => { const pr = polyRoots(I.sub(Poly.c(kk)), v); steps.push({ title: `Fall ${i + 1}`, html: `${polyHTML(I)} = ${fHTML(kk)}`, detail: pr.roots.map(r => `${X_(v)} = ${rootHTML(r)}`) }); roots = roots.concat(pr.roots); });
+    } else {
+      steps.push({ title: 'Quadrieren', html: `${polyHTML(I)} = (${polyHTML(rhs)})²`, explain: 'Beide Seiten quadrieren. Achtung: Dabei können <b>Scheinlösungen</b> entstehen – die Probe ist Pflicht!' });
+      const Q = I.sub(rhs.mul(rhs));
+      steps.push({ title: 'Nullform', html: `${polyHTML(Q)} = 0` });
+      const pr = polyRoots(Q, v); steps.push(...pr.steps); roots = pr.roots;
+    }
+    roots = uniq(roots);
+    const pb = probeSteps(Lt, Rt, v, roots, { extraneous: isAbs ? '' : 'Durch das Quadrieren ist eine falsche Lösung entstanden.' });
+    if (roots.length) steps.push(pb.step);
+    const sol = pb.ok;
+    return { kind: isAbs ? 'Betragsgleichung' : 'Wurzelgleichung', topic: isAbs ? 'Betragsgleichungen' : 'Wurzelgleichungen', answerHTML: rootList(sol, v), steps, visual: graphOf(Lt, Rt, v), check: { ok: true, text: sol.length ? 'Probe bestanden – nur echte Lösungen angegeben.' : 'Probe: keine echte Lösung.' }, solutions: sol.map(r => r.x), v };
+  }
+  // Lineare Ungleichung
+  function solveIneq(Lt, op, Rt, v) {
+    const P = toPoly(Lt).sub(toPoly(Rt));
+    if (P.deg(v) > 1 || P.vars().some(z => z !== v)) return null;
+    const a = P.coef(v, 1), b = P.constVal();
+    const OPH = { '<': '&lt;', '>': '&gt;', '<=': '≤', '>=': '≥' };
+    const flip = { '<': '>', '>': '<', '<=': '>=', '>=': '<=' };
+    const steps = [{ title: 'Ungleichung', html: `${H(Lt)} ${OPH[op]} ${H(Rt)}`, explain: 'Umformen wie bei einer Gleichung – mit einer Ausnahme: Beim Multiplizieren oder Dividieren mit einer <b>negativen</b> Zahl dreht sich das Zeichen um.' }];
+    steps.push({ title: 'Ordnen', html: `${linHTML(a, ZERO, v)} ${OPH[op]} ${fHTML(b.neg())}`, explain: `${X_(v)}-Terme nach links, Zahlen nach rechts.` });
+    if (isZero(a)) { const tv = ({ '<': 0 < -fval(b), '>': 0 > -fval(b), '<=': 0 <= -fval(b), '>=': 0 >= -fval(b) })[op]; steps.push({ title: tv ? 'Immer wahr' : 'Nie wahr', html: `0 ${OPH[op]} ${fHTML(b.neg())}` }); return { kind: 'Ungleichung', topic: 'Ungleichungen', answerHTML: tv ? 'L = ℚ' : 'L = { }', steps, check: { ok: true, text: 'Logisch geprüft.' } }; }
+    const r = b.neg().div(a); const nop = a.s < 0 ? flip[op] : op;
+    steps.push({ title: a.s < 0 ? 'Teilen – Zeichen umdrehen!' : 'Teilen', html: `${X_(v)} ${OPH[nop]} ${fHTML(r)}`, note: ': ' + (a.s < 0 ? '(' + fHTML(a) + ')' : fHTML(a)), explain: a.s < 0 ? `Wir teilen durch die negative Zahl ${fHTML(a)} – deshalb wird aus „${OPH[op]}“ ein „${OPH[nop]}“.` : `Beide Seiten durch ${fHTML(a)} teilen.` });
+    // Probe: Testwerte
+    const t1 = fval(r) + (nop.includes('>') ? 1 : -1), t2 = fval(r) + (nop.includes('>') ? -1 : 1);
+    const test = x => { const l = numOf(evalNum(Lt, { [v]: x })), rr = numOf(evalNum(Rt, { [v]: x })); return ({ '<': l < rr, '>': l > rr, '<=': l <= rr + 1e-12, '>=': l >= rr - 1e-12 })[op]; };
+    const ok = test(t1) && !test(t2);
+    steps.push({ title: 'Probe mit Testwerten', html: `${X_(v)} = ${fmtNum(t1)}: ${test(t1) ? 'wahr ✓' : 'falsch ✗'} &nbsp; ${X_(v)} = ${fmtNum(t2)}: ${test(t2) ? 'wahr ✗' : 'falsch ✓'}`, explain: 'Eine Zahl aus der Lösungsmenge muss passen, eine außerhalb nicht.' });
+    const vis = { type: 'numberline', min: Math.floor(fval(r) - 5), max: Math.ceil(fval(r) + 5), points: [{ v: fval(r), label: fmtNum(fval(r)) }], jumps: [{ from: fval(r), to: fval(r) + (nop.includes('>') ? 4 : -4), label: nop.includes('=') ? 'Lösungen (mit Grenze)' : 'Lösungen' }] };
+    return { kind: 'Ungleichung', topic: 'Ungleichungen', answerHTML: `${X_(v)} ${OPH[nop]} ${fHTML(r)} &nbsp; L = {${X_(v)} | ${X_(v)} ${OPH[nop]} ${fHTML(r)}}`, steps, visual: vis, check: { ok, text: ok ? 'Mit Testwerten geprüft.' : 'Testwerte passen nicht!' } };
+  }
+  function solveSpecial(Lt, Rt, v) {
+    let P = null; try { P = toPoly(Lt).sub(toPoly(Rt)); } catch (e) { }
+    if (P) return P.deg(v) >= 3 ? solvePolyEq(Lt, Rt, v) : null;
+    return solveExpEq(Lt, Rt, v) || solveRadAbsEq(Lt, Rt, v) || solveRationalEq(Lt, Rt, v);
+  }
+  E.solveSpecial = solveSpecial;
+
   // ---------- Hauptfunktion ----------
   E.solveLocal = function (input) {
     const s0 = prep(input);
     if (!s0) return { error: 'Leer' };
-    if (hasWords(s0) || /[<>]/.test(s0) || /%/.test(s0)) return { route: 'ai', reason: 'text' };
+    if (hasWords(s0) || /%/.test(s0)) return { route: 'ai', reason: 'text' };
+    const im = s0.match(/^([^<>=]+)(<=|>=|<|>)([^<>=]+)$/);
+    if (im) {
+      try { const Lt = parseExpr(im[1]), Rt = parseExpr(im[3]); const vs = [...symbols(Lt, symbols(Rt))]; if (vs.length === 1) { const r = solveIneq(Lt, im[2], Rt, vs[0]); if (r) { r.problemHTML = r.steps[0].html; return r; } } } catch (e) { }
+      return { route: 'ai', reason: 'ineq' };
+    }
+    if (/[<>]/.test(s0)) return { route: 'ai', reason: 'ineq' };
     const parts = s0.split(/[;\n]|\|\|/).map(x => x.trim()).filter(Boolean);
     try {
       if (parts.length >= 2) {
@@ -1143,13 +1431,12 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
         }
         if (vs.length === 1) {
           const v = vs[0];
-          let P;
-          try { P = toPoly(Lt).sub(toPoly(Rt)); } catch (e) { return { route: 'ai', reason: 'nonpoly' }; }
-          const dg = P.deg(v);
+          let P = null;
+          try { P = toPoly(Lt).sub(toPoly(Rt)); } catch (e) { }
           let r;
-          if (dg <= 1) r = solveLinear(Lt, Rt, v, s);
-          else if (dg === 2) r = solveQuadratic(Lt, Rt, v, s);
-          else return { route: 'ai', reason: 'deg' };
+          if (!P || P.deg(v) >= 3) { r = solveSpecial(Lt, Rt, v); if (!r) return { route: 'ai', reason: 'nonpoly' }; }
+          else if (P.deg(v) <= 1) r = solveLinear(Lt, Rt, v, s);
+          else r = solveQuadratic(Lt, Rt, v, s);
           r.problemHTML = eqHTML(H(Lt), H(Rt));
           return r;
         }
@@ -1158,7 +1445,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
       const t = parseExpr(s);
       const vs = symbols(t);
       if (vs.size === 0) { const r = solveArithmetic(t, s); r.problemHTML = H(t, { dec: hasDec(t) }); return r; }
-      try { toPoly(t); } catch (e) { return { route: 'ai', reason: 'nonpoly-term' }; }
+      try { toPoly(t); } catch (e) { if (vs.size === 1) { const v = [...vs][0]; const r = analyzeFunction('f', v, t); r.problemHTML = H(t); r.steps[0].html = `f(<i>${v}</i>) = ${H(t)}`; return r; } return { route: 'ai', reason: 'nonpoly-term' }; }
       const r = simplifyTerm(t); r.problemHTML = H(t); return r;
     } catch (e) {
       if (/Division durch 0|keine|nicht definiert|negativen/.test(e.message)) return { error: e.message };
@@ -1522,11 +1809,11 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
       g += `<rect x="${ox}" y="${oy - 12}" width="12" height="12" fill="none" stroke="#1E4472"/><circle cx="${ox + 6}" cy="${oy - 6}" r="1.6" fill="#1E4472"/>`;
       if (!sq) {
         g += `<text x="${ox + b * sc / 2}" y="${oy + 17}" class="tl">${lb.b} = ${fmt(b)} (Ankathete von α)</text>`;
-        g += `<text x="${ox - 4}" y="${oy - a * sc / 2}" class="tl" text-anchor="end">${lb.a} = ${fmt(a)}</text>`;
-        g += `<text x="${(Ap[0] + Bp[0]) / 2 + 8}" y="${(Ap[1] + Bp[1]) / 2 - 6}" class="tl" text-anchor="start">${lb.c} = ${fmt(c)}</text>`;
+        g += `<text x="${ox - 4}" y="${oy - a * sc / 2}" class="tl" style="text-anchor:end">${lb.a} = ${fmt(a)}</text>`;
+        g += `<text x="${(Ap[0] + Bp[0]) / 2 + 8}" y="${(Ap[1] + Bp[1]) / 2 - 6}" class="tl" style="text-anchor:start">${lb.c} = ${fmt(c)}</text>`;
         g += `<path d="M${Bp[0] - 28} ${Bp[1]} A28 28 0 0 1 ${Bp[0] - 28 * b / c} ${Bp[1] - 28 * a / c}" fill="none" stroke="#D9822B" stroke-width="2"/><text x="${Bp[0] - 42}" y="${Bp[1] - 6}" class="ang">α</text><text x="${Ap[0] + 6}" y="${Ap[1] + 26}" class="ang">β</text>`;
       } else {
-        g += `<text x="${ox + b * sc / 2}" y="${oy - 4}" class="tl">${lb.b}</text><text x="${ox + 5}" y="${oy - a * sc / 2}" class="tl" text-anchor="start">${lb.a}</text>`;
+        g += `<text x="${ox + b * sc / 2}" y="${oy - 4}" class="tl">${lb.b}</text><text x="${ox + 5}" y="${oy - a * sc / 2}" class="tl" style="text-anchor:start">${lb.a}</text>`;
       }
       g += '</svg>';
       box.innerHTML = g;
@@ -1598,7 +1885,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
         const a = v.a * s, b = (v.b ?? v.a) * s * 0.5, h = (v.h ?? v.a) * s; const x = 40, y = 190;
         g += `<polygon points="${x},${y} ${x + a},${y} ${x + a},${y - h} ${x},${y - h}" ${st}/><polygon points="${x},${y - h} ${x + b},${y - h - b} ${x + a + b},${y - h - b} ${x + a},${y - h}" ${st}/><polygon points="${x + a},${y} ${x + a + b},${y - b} ${x + a + b},${y - h - b} ${x + a},${y - h}" ${st}/>`;
         g += `<polyline points="${x},${y} ${x + b},${y - b} ${x + a + b},${y - b}" ${hid}/><line x1="${x + b}" y1="${y - b}" x2="${x + b}" y2="${y - h - b}" ${hid}/>`;
-        g += `<text x="${x + a / 2}" y="${y + 14}" class="tl">a = ${fmt(v.a)}</text>` + (v.b !== undefined ? `<text x="${x + a + b / 2 + 14}" y="${y - b / 2 + 6}" class="tl">b = ${fmt(v.b)}</text>` : '') + (v.h !== undefined ? `<text x="${x - 6}" y="${y - h / 2}" class="tl" text-anchor="end">h = ${fmt(v.h)}</text>` : '');
+        g += `<text x="${x + a / 2}" y="${y + 14}" class="tl">a = ${fmt(v.a)}</text>` + (v.b !== undefined ? `<text x="${x + a + b / 2 + 14}" y="${y - b / 2 + 6}" class="tl">b = ${fmt(v.b)}</text>` : '') + (v.h !== undefined ? `<text x="${x - 6}" y="${y - h / 2}" class="tl" style="text-anchor:end">h = ${fmt(v.h)}</text>` : '');
         const a_ = v.a, b_ = v.b ?? v.a, h_ = v.h ?? v.a;
         txt = `Volumen V = a · b · h = ${fmt(a_)} · ${fmt(b_)} · ${fmt(h_)} = <b>${fmt(a_ * b_ * h_)}</b><br>Oberfläche O = 2·(ab + ah + bh) = <b>${fmt(2 * (a_ * b_ + a_ * h_ + b_ * h_))}</b>`;
       } else if (kind === 'zylinder' || kind === 'kegel') {
@@ -1611,12 +1898,12 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
           g += `<path d="M${cx - r} ${y} L${cx} ${y - h} L${cx + r} ${y} A${r} ${ry} 0 0 1 ${cx - r} ${y} Z" ${st}/><path d="M${cx - r} ${y} A${r} ${ry} 0 0 1 ${cx + r} ${y}" ${hid}/><line x1="${cx}" y1="${y}" x2="${cx}" y2="${y - h}" ${hid}/>`;
           txt = `Volumen V = ⅓ · π · r² · h ≈ <b>${fmt(pi * v.r ** 2 * v.h / 3)}</b><br>Mantellinie s = √(r² + h²) ≈ ${fmt(sl_)}<br>Oberfläche O = πr² + πrs ≈ <b>${fmt(pi * v.r ** 2 + pi * v.r * sl_)}</b>`;
         }
-        g += `<line x1="${cx}" y1="${y}" x2="${cx + r}" y2="${y}" stroke="#D9822B" stroke-width="2"/><text x="${cx + r / 2}" y="${y + 16}" class="tl">r = ${fmt(v.r)}</text><text x="${cx - r - 6}" y="${y - h / 2}" class="tl" text-anchor="end">h = ${fmt(v.h)}</text>`;
+        g += `<line x1="${cx}" y1="${y}" x2="${cx + r}" y2="${y}" stroke="#D9822B" stroke-width="2"/><text x="${cx + r / 2}" y="${y + 16}" class="tl">r = ${fmt(v.r)}</text><text x="${cx - r - 6}" y="${y - h / 2}" class="tl" style="text-anchor:end">h = ${fmt(v.h)}</text>`;
       } else if (kind === 'pyramide') {
         const a = v.a * s, d = a * 0.4, h = v.h * s, x = 50, y = 185;
         const top = [x + a / 2 + d / 2, y - d / 2 - h];
         g += `<polygon points="${x},${y} ${x + a},${y} ${top}" ${st}/><polygon points="${x + a},${y} ${x + a + d},${y - d} ${top}" ${st}/><polyline points="${x},${y} ${x + d},${y - d} ${x + a + d},${y - d}" ${hid}/><line x1="${x + d}" y1="${y - d}" x2="${top[0]}" y2="${top[1]}" ${hid}/><line x1="${top[0]}" y1="${top[1]}" x2="${top[0]}" y2="${y - d / 2}" ${hid}/>`;
-        g += `<text x="${x + a / 2}" y="${y + 14}" class="tl">a = ${fmt(v.a)}</text><text x="${top[0] + 6}" y="${(top[1] + y) / 2}" class="tl" text-anchor="start">h = ${fmt(v.h)}</text>`;
+        g += `<text x="${x + a / 2}" y="${y + 14}" class="tl">a = ${fmt(v.a)}</text><text x="${top[0] + 6}" y="${(top[1] + y) / 2}" class="tl" style="text-anchor:start">h = ${fmt(v.h)}</text>`;
         const hs = Math.hypot(v.h, v.a / 2);
         txt = `Volumen V = ⅓ · a² · h = ⅓ · ${fmt(v.a)}² · ${fmt(v.h)} ≈ <b>${fmt(v.a ** 2 * v.h / 3)}</b><br>Höhe der Seitenfläche h<sub>s</sub> = √(h² + (a/2)²) ≈ ${fmt(hs)}<br>Oberfläche O = a² + 2·a·h<sub>s</sub> ≈ <b>${fmt(v.a ** 2 + 2 * v.a * hs)}</b>`;
       } else {
@@ -1641,7 +1928,7 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
     let g = `<svg viewBox="0 0 ${W} ${H + 30}" class="barsvg"><line x1="20" y1="${H}" x2="${W}" y2="${H}" stroke="#1E4472"/>`;
     vals.forEach((v, i) => { const x = 25 + (W - 30) / n * (i + 0.5) - bw / 2, h = v / mx * (H - 20); g += `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" rx="3" fill="${COLORS[0]}" class="bar"><title>${v}</title></rect><text x="${x + bw / 2}" y="${H - h - 4}" class="bl">${fmt(v)}</text><text x="${x + bw / 2}" y="${H + 14}" class="bl">${labs[i]}</text>`; });
     const my = H - mean / mx * (H - 20);
-    g += `<line x1="20" y1="${my}" x2="${W}" y2="${my}" stroke="#D9822B" stroke-dasharray="5 4" stroke-width="2"/><text x="${W - 4}" y="${my - 4}" class="bl" text-anchor="end" fill="#8A4B00">Mittelwert ${fmt(mean)}</text></svg>`;
+    g += `<line x1="20" y1="${my}" x2="${W}" y2="${my}" stroke="#D9822B" stroke-dasharray="5 4" stroke-width="2"/><text x="${W - 4}" y="${my - 4}" class="bl" style="text-anchor:end" fill="#8A4B00">Mittelwert ${fmt(mean)}</text></svg>`;
     const cnt = {}; vals.forEach(v => cnt[v] = (cnt[v] || 0) + 1); const mc = Math.max(...Object.values(cnt)); const modes = Object.keys(cnt).filter(k => cnt[k] === mc);
     wrap.innerHTML = (spec.title ? `<div class="vtitle">${ME.esc(spec.title)}</div>` : '') + g + `<div class="pout">Mittelwert = ${frac('Summe', 'Anzahl')} = ${frac(fmt(vals.reduce((a, b) => a + b, 0)), n)} ≈ <b>${fmt(mean)}</b><br>Median (Zentralwert) = <b>${fmt(med)}</b> &nbsp;·&nbsp; Spannweite = ${fmt(sorted[n - 1])} − ${fmt(sorted[0])} = <b>${fmt(sorted[n - 1] - sorted[0])}</b>${mc > 1 ? ` &nbsp;·&nbsp; Modalwert ${modes.map(Number).map(x => fmt(x)).join(', ')}` : ''}<br><small>Geordnet: ${sorted.map(x => fmt(x)).join(' · ')}</small></div>`;
     return wrap;
@@ -1701,8 +1988,8 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
     lay(spec.branches || [], 0, 20, null, math.fraction(1), []);
     H = 20 + leafIdx * 34;
     let g = `<svg viewBox="0 0 ${W} ${H}" class="treesvg">`;
-    lines.forEach(l => { const mx = (l.x1 + l.x2) / 2, my = (l.y1 + l.y2) / 2; g += `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2 - 4}" y2="${l.y2}" stroke="#9FB3CC" stroke-width="2"/><text x="${mx}" y="${my - 4}" class="bl" fill="#8A4B00">${ME.esc(String(l.p))}</text><text x="${l.x2 + 2}" y="${l.y2 + 4}" class="tl" text-anchor="start">${ME.esc(l.label)}</text>`; });
-    leaves.forEach(L => { if (L.prob) g += `<text x="${W - 4}" y="${L.y + 4}" class="bl" text-anchor="end">${L.prob.toFraction()}</text>`; });
+    lines.forEach(l => { const mx = (l.x1 + l.x2) / 2, my = (l.y1 + l.y2) / 2; g += `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2 - 4}" y2="${l.y2}" stroke="#9FB3CC" stroke-width="2"/><text x="${mx}" y="${my - 4}" class="bl" fill="#8A4B00">${ME.esc(String(l.p))}</text><text x="${l.x2 + 2}" y="${l.y2 + 4}" class="tl" style="text-anchor:start">${ME.esc(l.label)}</text>`; });
+    leaves.forEach(L => { if (L.prob) g += `<text x="${W - 4}" y="${L.y + 4}" class="bl" style="text-anchor:end">${L.prob.toFraction()}</text>`; });
     g += '</svg>';
     wrap.innerHTML = g + '<div class="vnote">Pfadregel: Wahrscheinlichkeiten entlang eines Pfades <b>multiplizieren</b>. Summenregel: Pfade, die zum Ereignis gehören, <b>addieren</b>.</div>';
     return wrap;
@@ -1718,6 +2005,826 @@ i{font-family:Georgia,"Times New Roman",serif;font-weight:600}
     }
   };
 })();
+</script>
+<script>/* Rechner pro Aufgabentyp + Erkennung von Standardformulierungen (ohne KI) */
+(function (root) {
+  const ME = root.MathEngine || require('./engine.js');
+  const math = root.math || require('mathjs');
+  const RAD = Math.PI / 180;
+  // ---------- Hilfen ----------
+  const f = (x, d) => ME.fmtNum(x, d === undefined ? 2 : d);
+  const eur = x => (Math.round(x * 100) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+  const fr = (n, d) => `<span class="fr"><span class="nu">${n}</span><span class="de">${d}</span></span>`;
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const lcm = (a, b) => a / gcd(a, b) * b;
+  const close = (a, b, tol) => Math.abs(a - b) <= (tol || 1e-9) * Math.max(1, Math.abs(a), Math.abs(b));
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const U = u => u ? '&thinsp;' + esc(u) : '';
+  function fracOf(x) { try { const q = math.fraction(x); return q; } catch (e) { return null; } }
+  function niceFrac(n, d) { const g = gcd(n, d) || 1; n /= g; d /= g; return d === 1 ? String(n) : fr(n, d); }
+  function parseNum(s) {
+    if (s === undefined || s === null) return null;
+    if (typeof s === 'number') return isFinite(s) ? s : null;
+    s = String(s).trim().replace(/[−–]/g, '-').replace(/\s+/g, '').replace(/[€%°]|cm|m$/g, '');
+    if (!s) return null;
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '');
+    s = s.replace(',', '.');
+    if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    const v = ME.independentEval(ME.prep(s).replace(/\.\//g, '/'));
+    return v === null ? null : v;
+  }
+  function R(o) { return Object.assign({ source: 'local', steps: [], check: null }, o); }
+  const st = (title, html, explain, why, extra) => Object.assign({ title, html, explain, why }, extra || {});
+
+  // ---------- Einheiten ----------
+  const UNITS = {
+    'Länge': { mm: 0.001, cm: 0.01, dm: 0.1, m: 1, km: 1000 },
+    'Fläche': { 'mm²': 1e-6, 'cm²': 1e-4, 'dm²': 1e-2, 'm²': 1, a: 100, ha: 1e4, 'km²': 1e6 },
+    'Volumen': { 'mm³': 1e-9, 'cm³': 1e-6, ml: 1e-6, 'dm³': 1e-3, l: 1e-3, hl: 0.1, 'm³': 1 },
+    'Masse': { mg: 1e-6, g: 1e-3, kg: 1, t: 1000 },
+    'Zeit': { s: 1, min: 60, h: 3600, d: 86400 },
+    'Geld': { ct: 0.01, '€': 1 },
+  };
+  const UNIT_ALIAS = { sek: 's', sekunde: 's', sekunden: 's', minute: 'min', minuten: 'min', stunde: 'h', stunden: 'h', std: 'h', tag: 'd', tage: 'd', tagen: 'd', liter: 'l', milliliter: 'ml', gramm: 'g', kilogramm: 'kg', tonne: 't', tonnen: 't', milligramm: 'mg', meter: 'm', kilometer: 'km', zentimeter: 'cm', millimeter: 'mm', dezimeter: 'dm', cent: 'ct', euro: '€', hektar: 'ha', ar: 'a', qm: 'm²', m2: 'm²', cm2: 'cm²', mm2: 'mm²', dm2: 'dm²', km2: 'km²', m3: 'm³', cm3: 'cm³', dm3: 'dm³', mm3: 'mm³' };
+  function normUnit(u) { if (!u) return null; u = u.toLowerCase().replace(/\^2/, '²').replace(/\^3/, '³'); u = UNIT_ALIAS[u] || u; for (const g in UNITS) if (u in UNITS[g]) return u; return null; }
+  function unitGroup(u) { for (const g in UNITS) if (u in UNITS[g]) return g; return null; }
+
+  // ---------- Primfaktoren ----------
+  function pf(n) { const r = {}; let x = Math.abs(n), p = 2; while (x > 1 && p * p <= x) { while (x % p === 0) { r[p] = (r[p] || 0) + 1; x /= p; } p++; } if (x > 1) r[x] = (r[x] || 0) + 1; return r; }
+  const pfHTML = o => Object.keys(o).map(Number).sort((a, b) => a - b).map(p => o[p] > 1 ? `${p}<sup>${o[p]}</sup>` : String(p)).join(' · ') || '1';
+
+  // ---------- Rechner ----------
+  const C = {};
+  function def(id, o) { o.id = id; C[id] = o; }
+  const SEL = (k, label, options, dflt) => ({ k, label, type: 'select', options, dflt: dflt ?? options[0] });
+  const NUM = (k, label, unit, ph) => ({ k, label, unit, ph });
+
+  // Prozent – Grundaufgaben
+  def('prozent', {
+    name: 'Prozentrechnung', group: 'Prozent & Zinsen', grades: [7], icon: '%',
+    hint: 'Zwei Werte eintragen, das dritte Feld leer lassen.',
+    fields: [NUM('G', 'Grundwert G (das Ganze)', '', 'z. B. 240'), NUM('p', 'Prozentsatz p', '%', 'z. B. 15'), NUM('W', 'Prozentwert W (der Anteil)', '', 'leer = gesucht'), { k: 'unit', label: 'Einheit (optional)', type: 'text', ph: '€, kg, Schüler …' }],
+    solve(v) {
+      const u = v.unit || '';
+      const g = ['G', 'p', 'W'].filter(k => v[k] === null);
+      if (g.length !== 1) throw new Error('Bitte genau zwei der drei Werte G, p und W eintragen.');
+      let { G, p, W } = v; const steps = [];
+      steps.push(st('Formel', `W = G · ${fr('p', '100')}`, 'G = Grundwert (100 %), p = Prozentsatz, W = Prozentwert (der Anteil).'));
+      if (g[0] === 'W') {
+        W = G * p / 100;
+        steps.push(st('Einsetzen', `W = ${f(G)}${U(u)} · ${fr(f(p), '100')} = <b>${f(W, 4)}${U(u)}</b>`, null, 'Prozent heißt „von Hundert“: p % = p/100.'));
+        steps.push(st('Mit Dreisatz', `100 % ≙ ${f(G)}${U(u)}`, null, null, { detail: [`1 % ≙ ${f(G)} : 100 = ${f(G / 100, 4)}${U(u)}`, `${f(p)} % ≙ ${f(G / 100, 4)} · ${f(p)} = ${f(W, 4)}${U(u)}`], explain: 'Derselbe Weg mit dem Dreisatz – erst auf 1 %, dann auf p %.' }));
+      } else if (g[0] === 'p') {
+        if (G === 0) throw new Error('Der Grundwert darf nicht 0 sein.');
+        p = W / G * 100;
+        steps.push(st('Nach p umstellen', `p = ${fr('W', 'G')} · 100`, 'Gesucht ist der Prozentsatz.'));
+        steps.push(st('Einsetzen', `p = ${fr(f(W) + U(u), f(G) + U(u))} · 100 = ${f(W / G, 4)} · 100 = <b>${f(p, 4)} %</b>`, 'Erst den Anteil W/G als Dezimalzahl berechnen, dann mal 100.'));
+      } else {
+        if (p === 0) throw new Error('Der Prozentsatz darf nicht 0 sein.');
+        G = W * 100 / p;
+        steps.push(st('Nach G umstellen', `G = ${fr('W · 100', 'p')}`, 'Gesucht ist der Grundwert (das Ganze).'));
+        steps.push(st('Einsetzen', `G = ${fr(f(W) + ' · 100', f(p))} = <b>${f(G, 4)}${U(u)}</b>`, null, null, { detail: [`Dreisatz: ${f(p)} % ≙ ${f(W)}${U(u)} → 1 % ≙ ${f(W / p, 4)}${U(u)} → 100 % ≙ ${f(G, 4)}${U(u)}`] }));
+      }
+      const ok = close(W, G * p / 100, 1e-9) && close(G / 100 * p, W, 1e-9);
+      const ans = g[0] === 'W' ? `W = ${f(W, 4)}${U(u)}` : g[0] === 'p' ? `p = ${f(p, 4)} %` : `G = ${f(G, 4)}${U(u)}`;
+      return R({ kind: 'Prozentrechnung', topic: 'Prozentrechnung', grade: '7', problemHTML: `G = ${g[0] === 'G' ? '?' : f(G) + U(u)}, p = ${g[0] === 'p' ? '?' : f(p) + ' %'}, W = ${g[0] === 'W' ? '?' : f(W) + U(u)}`, answerHTML: ans, steps, visual: { type: 'percent', G, p }, check: { ok, text: ok ? 'Geprüft: Formel und Dreisatz ergeben dasselbe.' : 'Gegenprobe weicht ab!' }, numeric: g[0] === 'W' ? W : g[0] === 'p' ? p : G });
+    },
+    gen() { const G = [40, 60, 80, 120, 200, 240, 250, 360, 400, 500][Math.floor(Math.random() * 10)], p = [5, 10, 15, 20, 25, 30, 40, 50, 75][Math.floor(Math.random() * 9)]; return [{ G, p, W: null, unit: '€' }, `Wie viel sind ${p} % von ${G} €?`]; },
+  });
+
+  // Vermehrter/verminderter Grundwert
+  def('veraendert', {
+    name: 'Rabatt, Aufschlag & MwSt', group: 'Prozent & Zinsen', grades: [7, 8], icon: '🏷️',
+    hint: 'Zwei der drei Zahlen eintragen. Mehrwertsteuer = Aufschlag von 19 %.',
+    fields: [NUM('G', 'Ursprünglicher Wert', '', 'z. B. 240'), NUM('p', 'Prozentsatz', '%', 'z. B. 15'), SEL('art', 'Art', ['Rabatt / Abnahme', 'Aufschlag / Zunahme']), NUM('E', 'Neuer Wert', '', 'leer = gesucht'), { k: 'unit', label: 'Einheit', type: 'text', dflt: '€' }],
+    solve(v) {
+      const u = v.unit ?? '€', up = /Aufschlag/.test(v.art);
+      const g = ['G', 'p', 'E'].filter(k => v[k] === null);
+      if (g.length !== 1) throw new Error('Bitte genau zwei der drei Werte eintragen.');
+      let { G, p, E } = v; const steps = [];
+      if (g[0] !== 'p') {
+        const q = 1 + (up ? 1 : -1) * p / 100;
+        steps.push(st('Neuer Prozentsatz', `${up ? '100 % + ' : '100 % − '}${f(p)} % = ${f(100 + (up ? p : -p))} %`, up ? 'Nach dem Aufschlag zahlt man mehr als 100 %.' : 'Nach dem Rabatt zahlt man nur noch den Rest.'));
+        steps.push(st('Wachstumsfaktor', `q = ${f(q, 4)}`, `${f(100 + (up ? p : -p))} % als Dezimalzahl.`));
+        if (g[0] === 'E') {
+          E = G * q;
+          steps.push(st('Neuen Wert berechnen', `${f(G)}${U(u)} · ${f(q, 4)} = <b>${u === '€' ? eur(E) : f(E, 4) + U(u)}</b>`, null, null, { detail: [`Anderer Weg: ${up ? 'Aufschlag' : 'Rabatt'} = ${f(G)} · ${fr(f(p), 100)} = ${f(G * p / 100, 4)}${U(u)}; ${f(G)} ${up ? '+' : '−'} ${f(G * p / 100, 4)} = ${f(E, 4)}${U(u)}`] }));
+        } else {
+          G = E / q;
+          steps.push(st('Rückwärts rechnen', `G = ${fr(f(E) + U(u), f(q, 4))} = <b>${u === '€' ? eur(G) : f(G, 4) + U(u)}</b>`, `Der neue Wert entspricht ${f(100 + (up ? p : -p))} %. Also durch q teilen.`, 'Achtung, typischer Fehler: Man darf NICHT einfach die Prozente vom neuen Wert abziehen bzw. addieren!'));
+        }
+      } else {
+        const q = E / G; p = Math.abs(q - 1) * 100; const isUp = q > 1;
+        steps.push(st('Faktor bestimmen', `q = ${fr(f(E), f(G))} = ${f(q, 4)}`, 'Neuer Wert geteilt durch alten Wert.'));
+        steps.push(st('Prozentsatz ablesen', `${f(q * 100, 4)} % ⇒ ${isUp ? 'Zunahme' : 'Abnahme'} um <b>${f(p, 4)} %</b>`, `Vergleich mit 100 %.`));
+      }
+      const q2 = E / G; const ok = close(q2, 1 + (/Aufschlag/.test(v.art) || g[0] === 'p' ? 1 : -1) * (g[0] === 'p' ? (E > G ? 1 : -1) * p : p) / 100, 1e-9) || g[0] === 'p';
+      const ans = g[0] === 'E' ? `Neuer Wert: ${u === '€' ? eur(E) : f(E, 4) + U(u)}` : g[0] === 'G' ? `Ursprünglicher Wert: ${u === '€' ? eur(G) : f(G, 4) + U(u)}` : `${E > G ? 'Zunahme' : 'Abnahme'} um ${f(p, 4)} %`;
+      return R({ kind: 'Veränderter Grundwert', topic: 'Prozentrechnung', grade: '7', problemHTML: `${g[0] === 'G' ? '?' : f(G) + U(u)} ${up ? '+' : '−'} ${g[0] === 'p' ? '?' : f(p)} % → ${g[0] === 'E' ? '?' : f(E) + U(u)}`, answerHTML: ans, steps, visual: { type: 'percent', G, p, rabatt: !up }, check: { ok: true, text: `Geprüft: ${f(G, 4)} · ${f(E / G, 4)} = ${f(E, 4)}` }, numeric: g[0] === 'E' ? E : g[0] === 'G' ? G : p });
+    },
+    gen() { const G = [40, 60, 80, 120, 150, 200, 240, 300][Math.floor(Math.random() * 8)], p = [10, 15, 20, 25, 30][Math.floor(Math.random() * 5)]; return [{ G, p, art: 'Rabatt / Abnahme', E: null, unit: '€' }, `Eine Jacke kostet ${G} €. Es gibt ${p} % Rabatt. Wie viel kostet sie jetzt?`]; },
+  });
+
+  // Zinsen
+  def('zinsen', {
+    name: 'Zinsrechnung', group: 'Prozent & Zinsen', grades: [7, 8], icon: '🏦',
+    hint: 'Ein Feld leer lassen. Bankjahr: 1 Jahr = 12 Monate = 360 Tage.',
+    fields: [NUM('K', 'Kapital K', '€'), NUM('p', 'Zinssatz p', '% pro Jahr'), NUM('t', 'Zeit', '', 'z. B. 1'), SEL('tu', 'Zeiteinheit', ['Jahre', 'Monate', 'Tage']), NUM('Z', 'Zinsen Z', '€', 'leer = gesucht')],
+    solve(v) {
+      const g = ['K', 'p', 't', 'Z'].filter(k => v[k] === null);
+      if (g.length !== 1) throw new Error('Bitte genau ein Feld leer lassen.');
+      let { K, p, t, Z } = v; const tu = v.tu || 'Jahre';
+      const fac = tu === 'Monate' ? 1 / 12 : tu === 'Tage' ? 1 / 360 : 1;
+      const tf = tu === 'Monate' ? fr('t', '12') : tu === 'Tage' ? fr('t', '360') : 't';
+      const steps = [st('Formel', `Z = K · ${fr('p', '100')} · ${tf}`, `Jahreszinsen sind K · p/100.${tu !== 'Jahre' ? ` Bei ${tu}n rechnen wir nur den passenden Teil eines Jahres (Bankjahr: ${tu === 'Monate' ? '12 Monate' : '360 Tage'}).` : ''}`)];
+      if (g[0] === 'Z') { Z = K * p / 100 * t * fac; steps.push(st('Einsetzen', `Z = ${eur(K)} · ${fr(f(p), 100)} · ${tu === 'Jahre' ? f(t) : fr(f(t), tu === 'Monate' ? 12 : 360)} = <b>${eur(Z)}</b>`, null, null, { detail: [`Jahreszinsen: ${eur(K * p / 100)}`] })); }
+      else if (g[0] === 'K') { K = Z * 100 / (p * t * fac); steps.push(st('Nach K umstellen', `K = ${fr('Z · 100', 'p · ' + (tu === 'Jahre' ? 't' : tf))} = <b>${eur(K)}</b>`)); }
+      else if (g[0] === 'p') { p = Z * 100 / (K * t * fac); steps.push(st('Nach p umstellen', `p = ${fr('Z · 100', 'K · ' + (tu === 'Jahre' ? 't' : tf))} = <b>${f(p, 3)} %</b>`)); }
+      else { t = Z * 100 / (K * p * fac); steps.push(st('Nach t umstellen', `t = ${fr('Z · 100', 'K · p')}${tu !== 'Jahre' ? ' · ' + (tu === 'Monate' ? 12 : 360) : ''} = <b>${f(t, 2)} ${tu}</b>`)); }
+      const ok = close(Z, K * p / 100 * t * fac, 1e-9);
+      const ans = { Z: `Zinsen: ${eur(Z)}`, K: `Kapital: ${eur(K)}`, p: `Zinssatz: ${f(p, 3)} %`, t: `Zeit: ${f(t, 2)} ${tu}` }[g[0]];
+      return R({ kind: 'Zinsrechnung', topic: 'Zinsrechnung', grade: '7–8', problemHTML: `K = ${g[0] === 'K' ? '?' : eur(K)}, p = ${g[0] === 'p' ? '?' : f(p) + ' %'}, t = ${g[0] === 't' ? '?' : f(t) + ' ' + tu}, Z = ${g[0] === 'Z' ? '?' : eur(Z)}`, answerHTML: ans, steps, check: { ok, text: ok ? 'Geprüft: Werte in die Zinsformel eingesetzt.' : 'Gegenprobe weicht ab!' }, numeric: { Z, K, p, t }[g[0]], visual: { type: 'percent', G: K, p } });
+    },
+    gen() { const K = [500, 800, 1000, 1200, 1500, 2000, 2500][Math.floor(Math.random() * 7)], p = [1, 1.5, 2, 2.5, 3, 4][Math.floor(Math.random() * 6)]; return [{ K, p, t: 1, tu: 'Jahre', Z: null }, `Wie viele Zinsen bringen ${K} € bei ${f(p)} % in einem Jahr?`]; },
+  });
+
+  // Exponentielles Wachstum / Zinseszins
+  def('wachstum', {
+    name: 'Zinseszins & exponentielles Wachstum', group: 'Prozent & Zinsen', grades: [10], icon: '📈',
+    hint: 'Genau ein Feld leer lassen.',
+    fields: [NUM('K0', 'Anfangswert', '', 'z. B. 2000'), NUM('p', 'Prozentsatz pro Zeitschritt', '%'), SEL('art', 'Art', ['Zunahme', 'Abnahme']), NUM('n', 'Anzahl Zeitschritte (z. B. Jahre)', ''), NUM('Kn', 'Endwert', '', 'leer = gesucht')],
+    solve(v) {
+      const g = ['K0', 'p', 'n', 'Kn'].filter(k => v[k] === null);
+      if (g.length !== 1) throw new Error('Bitte genau ein Feld leer lassen.');
+      let { K0, p, n, Kn } = v; const up = v.art !== 'Abnahme';
+      const steps = [];
+      let q = p !== null ? 1 + (up ? 1 : -1) * p / 100 : null;
+      if (q !== null) steps.push(st('Wachstumsfaktor', `q = 1 ${up ? '+' : '−'} ${fr(f(p), 100)} = ${f(q, 4)}`, `Jeder Zeitschritt multipliziert den Wert mit q (${up ? 'Zunahme' : 'Abnahme'} um ${f(p)} %).`));
+      steps.push(st('Formel', `K<sub>n</sub> = K<sub>0</sub> · q<sup>n</sup>`, 'Exponentielles Wachstum: n-mal hintereinander mit q multiplizieren.'));
+      if (g[0] === 'Kn') { Kn = K0 * q ** n; steps.push(st('Einsetzen', `K<sub>${f(n)}</sub> = ${f(K0)} · ${f(q, 4)}<sup>${f(n)}</sup> = <b>${f(Kn, 2)}</b>`, null, null, { detail: [0, 1, 2, 3].filter(i => i <= n).map(i => `nach ${i}: ${f(K0 * q ** i, 2)}`).concat(n > 3 ? ['…'] : []) })); }
+      else if (g[0] === 'K0') { K0 = Kn / q ** n; steps.push(st('Nach K₀ umstellen', `K<sub>0</sub> = ${fr('K<sub>n</sub>', 'q<sup>n</sup>')} = ${fr(f(Kn), f(q, 4) + '<sup>' + f(n) + '</sup>')} = <b>${f(K0, 2)}</b>`)); }
+      else if (g[0] === 'n') { n = Math.log(Kn / K0) / Math.log(q); steps.push(st('Gleichung', `${f(K0)} · ${f(q, 4)}<sup>n</sup> = ${f(Kn)} ⇒ ${f(q, 4)}<sup>n</sup> = ${f(Kn / K0, 4)}`, 'Durch den Anfangswert teilen.')); steps.push(st('Logarithmieren', `n = log<sub>${f(q, 4)}</sub>(${f(Kn / K0, 4)}) = ${fr('lg(' + f(Kn / K0, 4) + ')', 'lg(' + f(q, 4) + ')')} ≈ <b>${f(n, 2)}</b>`, 'Der Logarithmus findet den Exponenten.', null, { detail: [`Nach ${Math.ceil(n - 1e-9)} vollen Zeitschritten ist der Endwert erreicht${up ? ' bzw. überschritten' : ''}.`] })); }
+      else { q = (Kn / K0) ** (1 / n); p = Math.abs(q - 1) * 100; steps.push(st('Faktor bestimmen', `q = <span class="sq"><sup class="ix">${f(n)}</sup>√<span class="sqc">${fr(f(Kn), f(K0))}</span></span> ≈ ${f(q, 5)}`, 'n-te Wurzel ziehen.')); steps.push(st('Prozentsatz', `${q > 1 ? 'Zunahme' : 'Abnahme'} um <b>${f(p, 3)} %</b> pro Schritt`)); }
+      if (q === null) q = 1 + (up ? 1 : -1) * p / 100;
+      const ok = close(Kn, K0 * q ** n, 1e-6);
+      const ans = { Kn: `Endwert ≈ ${f(Kn, 2)}`, K0: `Anfangswert ≈ ${f(K0, 2)}`, n: `n ≈ ${f(n, 2)}`, p: `p ≈ ${f(p, 3)} %` }[g[0]];
+      const vis = { type: 'graph', functions: [{ expr: `K*q^x`, label: 'K' }], params: [{ name: 'K', value: Math.round(K0 * 100) / 100, min: 0, max: Math.max(10, Math.ceil(K0 * 2)), step: Math.max(0.5, Math.round(K0 / 100)) }, { name: 'q', value: Math.round(q * 1000) / 1000, min: 0.5, max: 1.5, step: 0.005 }], xmin: 0, xmax: Math.max(5, Math.ceil(n * 1.3)), ymin: 0, ymax: Math.max(K0, Kn) * 1.3, points: [{ x: 0, y: K0, label: 'Start' }, { x: Math.round(n * 100) / 100, y: Kn, label: 'Ende' }], note: 'Verändere den Faktor q: q > 1 Wachstum, q < 1 Abnahme.' };
+      return R({ kind: 'Exponentielles Wachstum', topic: 'Exponentielles Wachstum', grade: '10', problemHTML: `K<sub>0</sub> = ${g[0] === 'K0' ? '?' : f(K0)}, p = ${g[0] === 'p' ? '?' : f(p) + ' % ' + (up ? 'Zunahme' : 'Abnahme')}, n = ${g[0] === 'n' ? '?' : f(n)}, K<sub>n</sub> = ${g[0] === 'Kn' ? '?' : f(Kn)}`, answerHTML: ans, steps, visual: vis, check: { ok, text: ok ? 'Geprüft: Werte in K₀ · qⁿ eingesetzt.' : 'Gegenprobe weicht ab!' }, numeric: { Kn, K0, n, p }[g[0]] });
+    },
+    gen() { const K0 = [1000, 2000, 5000][Math.floor(Math.random() * 3)], p = [2, 3, 4, 5][Math.floor(Math.random() * 4)], n = [3, 5, 10][Math.floor(Math.random() * 3)]; return [{ K0, p, art: 'Zunahme', n, Kn: null }, `${K0} € werden ${n} Jahre lang mit ${p} % jährlich verzinst (Zinseszins). Wie hoch ist der Endbetrag? (auf 2 Stellen runden)`]; },
+  });
+
+  // Dreisatz
+  def('dreisatz', {
+    name: 'Dreisatz (Zuordnungen)', group: 'Zuordnungen', grades: [7], icon: '↔️',
+    hint: 'Proportional: je mehr, desto mehr. Antiproportional: je mehr, desto weniger.',
+    fields: [NUM('a1', 'Menge 1', ''), { k: 'ua', label: 'Einheit Menge', type: 'text', ph: 'kg, Arbeiter …' }, NUM('b1', 'gehört zu Wert 1', ''), { k: 'ub', label: 'Einheit Wert', type: 'text', ph: '€, Tage …' }, NUM('a2', 'Neue Menge 2', ''), SEL('art', 'Zuordnung', ['proportional', 'antiproportional'])],
+    solve(v) {
+      const { a1, b1, a2 } = v; if ([a1, b1, a2].some(x => x === null)) throw new Error('Bitte alle drei Zahlen eintragen.');
+      if (a1 === 0) throw new Error('Menge 1 darf nicht 0 sein.');
+      const anti = v.art === 'antiproportional', ua = v.ua || '', ub = v.ub || '';
+      const one = anti ? b1 * a1 : b1 / a1; const b2 = anti ? one / a2 : one * a2;
+      const steps = [st('Zuordnung erkennen', anti ? 'antiproportional: doppelt so viel ⇒ halb so viel' : 'proportional: doppelt so viel ⇒ doppelt so viel', anti ? 'Das Produkt bleibt gleich.' : 'Der Quotient bleibt gleich.')];
+      steps.push(st('Gegeben', `${f(a1)}${U(ua)} ≙ ${f(b1)}${U(ub)}`));
+      steps.push(st('Auf 1 rechnen', `1${U(ua)} ≙ ${f(b1)} ${anti ? '·' : ':'} ${f(a1)} = ${f(one, 4)}${U(ub)}`, anti ? `Weniger ${ua || 'Menge'} ⇒ mehr ${ub || 'Wert'}: malnehmen.` : `Durch ${f(a1)} teilen.`));
+      steps.push(st('Auf die neue Menge', `${f(a2)}${U(ua)} ≙ ${f(one, 4)} ${anti ? ':' : '·'} ${f(a2)} = <b>${f(b2, 4)}${U(ub)}</b>`));
+      const ok = anti ? close(a1 * b1, a2 * b2) : close(b1 / a1, b2 / a2);
+      const vis = { type: 'graph', functions: [{ expr: anti ? `${a1 * b1}/x` : `${b1 / a1}*x`, label: 'y' }], xmin: 0, xmax: Math.max(a1, a2) * 1.4, ymin: 0, ymax: Math.max(b1, b2) * 1.4, points: [{ x: a1, y: b1, label: 'gegeben' }, { x: a2, y: b2, label: 'gesucht' }], note: anti ? 'Antiproportional: Der Graph ist eine Hyperbel.' : 'Proportional: Der Graph ist eine Ursprungsgerade.' };
+      return R({ kind: 'Dreisatz', topic: anti ? 'Antiproportionale Zuordnung' : 'Proportionale Zuordnung', grade: '7', problemHTML: `${f(a1)}${U(ua)} ≙ ${f(b1)}${U(ub)}; &nbsp;${f(a2)}${U(ua)} ≙ ?`, answerHTML: `${f(a2)}${U(ua)} ≙ ${f(b2, 4)}${U(ub)}`, steps, visual: vis, check: { ok, text: ok ? (anti ? 'Geprüft: Das Produkt ist gleich geblieben.' : 'Geprüft: Der Quotient ist gleich geblieben.') : 'Gegenprobe weicht ab!' }, numeric: b2 });
+    },
+    gen() { const a1 = [2, 3, 4, 5][Math.floor(Math.random() * 4)], pr = [1.5, 2, 2.5, 3, 4][Math.floor(Math.random() * 5)], a2 = [6, 7, 8, 9, 10][Math.floor(Math.random() * 5)]; return [{ a1, ua: 'kg', b1: a1 * pr, ub: '€', a2, art: 'proportional' }, `${a1} kg kosten ${f(a1 * pr)} €. Was kosten ${a2} kg?`]; },
+  });
+
+  // ggT/kgV
+  def('ggtkgv', {
+    name: 'ggT & kgV', group: 'Zahlen', grades: [5, 6], icon: '🔢',
+    fields: [{ k: 'list', label: 'Zahlen (mit Komma oder Leerzeichen trennen)', type: 'text', ph: '24, 36' }],
+    solve(v) {
+      const L = String(v.list || '').split(/[;,\s]+|und/).map(s => parseInt(s, 10)).filter(x => Number.isInteger(x) && x > 0);
+      if (L.length < 2) throw new Error('Bitte mindestens zwei natürliche Zahlen eingeben.');
+      if (L.some(x => x > 1e9)) throw new Error('Die Zahlen sind zu groß.');
+      const fs = L.map(pf), all = [...new Set(fs.flatMap(o => Object.keys(o).map(Number)))].sort((a, b) => a - b);
+      const gg = all.reduce((s, p) => s * p ** Math.min(...fs.map(o => o[p] || 0)), 1);
+      const kg = all.reduce((s, p) => s * p ** Math.max(...fs.map(o => o[p] || 0)), 1);
+      const steps = [st('Primfaktorzerlegung', L.map((x, i) => `${x} = ${pfHTML(fs[i])}`).join('<br>'), 'Jede Zahl in Primfaktoren zerlegen (immer wieder durch die kleinste passende Primzahl teilen).')];
+      steps.push(st('ggT', `ggT = ${all.filter(p => Math.min(...fs.map(o => o[p] || 0)) > 0).map(p => { const e = Math.min(...fs.map(o => o[p] || 0)); return e > 1 ? `${p}<sup>${e}</sup>` : p; }).join(' · ') || '1'} = <b>${gg}</b>`, 'Gemeinsame Primfaktoren – jeweils mit der <b>kleinsten</b> Hochzahl.', 'Der größte gemeinsame Teiler steckt in allen Zahlen.'));
+      steps.push(st('kgV', `kgV = ${all.map(p => { const e = Math.max(...fs.map(o => o[p] || 0)); return e > 1 ? `${p}<sup>${e}</sup>` : p; }).join(' · ')} = <b>${kg}</b>`, 'Alle Primfaktoren – jeweils mit der <b>größten</b> Hochzahl.', 'Das kleinste gemeinsame Vielfache braucht man z. B. als Hauptnenner.'));
+      if (L.length === 2) { const ev = []; let a = Math.max(...L), b = Math.min(...L); while (b) { ev.push(`${a} = ${Math.floor(a / b)} · ${b} + ${a % b}`); [a, b] = [b, a % b]; } steps.push(st('Kontrolle (Euklid)', 'Teilen mit Rest, bis der Rest 0 ist', null, null, { detail: ev.concat([`⇒ ggT = ${a}; &nbsp; ggT · kgV = ${gg} · ${kg} = ${gg * kg} = ${L[0]} · ${L[1]} ✓`]) })); }
+      const ok = L.every(x => x % gg === 0 && kg % x === 0) && (L.length !== 2 || gg * kg === L[0] * L[1]);
+      return R({ kind: 'ggT & kgV', topic: 'Teilbarkeit', grade: '5–6', problemHTML: `ggT und kgV von ${L.join(', ')}`, answerHTML: `ggT = ${gg}; &nbsp;kgV = ${kg}`, steps, check: { ok, text: ok ? 'Geprüft: ggT teilt alle Zahlen, alle teilen das kgV.' : 'Gegenprobe weicht ab!' }, numeric: gg, values: { ggT: gg, kgV: kg } });
+    },
+    gen() { const g = [2, 3, 4, 6, 8, 12][Math.floor(Math.random() * 6)], a = g * [2, 3, 5][Math.floor(Math.random() * 3)], b = g * [3, 4, 7][Math.floor(Math.random() * 3)]; return [{ list: `${a}, ${b}` }, `Bestimme den ggT von ${a} und ${b}.`]; },
+  });
+
+  // Primfaktoren & Teiler
+  def('primfaktoren', {
+    name: 'Primfaktoren & Teiler', group: 'Zahlen', grades: [5, 6], icon: '🧱',
+    fields: [NUM('n', 'Natürliche Zahl', '', 'z. B. 360')],
+    solve(v) {
+      const n = v.n; if (!Number.isInteger(n) || n < 2 || n > 1e10) throw new Error('Bitte eine natürliche Zahl ≥ 2 eingeben.');
+      const o = pf(n); const ps = []; let x = n; const rows = [];
+      Object.keys(o).map(Number).sort((a, b) => a - b).forEach(p => { for (let i = 0; i < o[p]; i++) { rows.push(`${x} : ${p} = ${x / p}`); x /= p; ps.push(p); } });
+      const prime = ps.length === 1;
+      const divs = []; if (n <= 1e7) for (let i = 1; i * i <= n; i++) if (n % i === 0) { divs.push(i); if (i * i !== n) divs.push(n / i); }
+      divs.sort((a, b) => a - b);
+      const steps = [st('Fortlaufend teilen', 'Immer durch die kleinste Primzahl, die aufgeht', null, 'Primzahlen: 2, 3, 5, 7, 11, 13, … – sie haben genau zwei Teiler.', { detail: rows })];
+      steps.push(st('Primfaktorzerlegung', `${n} = ${pfHTML(o)}`));
+      if (divs.length) steps.push(st('Teilermenge', `T<sub>${n}</sub> = {${divs.join(', ')}}`, `${n} hat ${divs.length} Teiler.`, 'Teiler findet man paarweise: 1 · n, 2 · …'));
+      const ok = ps.reduce((a, b) => a * b, 1) === n;
+      return R({ kind: 'Primfaktorzerlegung', topic: 'Teilbarkeit', grade: '5–6', problemHTML: `Zerlege ${n}`, answerHTML: prime ? `${n} ist eine <b>Primzahl</b>` : `${n} = ${pfHTML(o)}`, steps, check: { ok, text: ok ? 'Geprüft: Das Produkt der Faktoren ergibt wieder ' + n + '.' : 'Gegenprobe weicht ab!' }, numeric: divs.length });
+    },
+  });
+
+  // Einheiten
+  const ALLU = Object.values(UNITS).flatMap(o => Object.keys(o));
+  def('einheiten', {
+    name: 'Einheiten umrechnen', group: 'Größen', grades: [5, 6], icon: '📏',
+    fields: [NUM('x', 'Wert', ''), SEL('von', 'von', ALLU, 'km'), SEL('nach', 'nach', ALLU, 'm')],
+    solve(v) {
+      const { x } = v; const a = v.von, b = v.nach; const ga = unitGroup(a), gb = unitGroup(b);
+      if (x === null) throw new Error('Bitte einen Wert eingeben.');
+      if (!ga || ga !== gb) throw new Error(`${a} und ${b} passen nicht zusammen (verschiedene Größenarten).`);
+      const fa = UNITS[ga][a], fb = UNITS[ga][b]; const k = fa / fb; const y = x * k;
+      const kk = k >= 1 ? f(k, 6) : f(1 / k, 6);
+      const steps = [st('Umrechnungszahl', `1 ${esc(a)} = ${f(k, 9)} ${esc(b)}`, k >= 1 ? `Von der größeren in die kleinere Einheit: mit ${kk} <b>multiplizieren</b>.` : `Von der kleineren in die größere Einheit: durch ${kk} <b>teilen</b>.`, ga === 'Fläche' ? 'Bei Flächen ist die Umrechnungszahl 100 (außer bei a, ha), bei Volumen 1000, bei Längen 10.' : ga === 'Zeit' ? '1 h = 60 min, 1 min = 60 s, 1 d = 24 h.' : null)];
+      steps.push(st('Umrechnen', `${f(x, 6)} ${esc(a)} ${k >= 1 ? '·' : ':'} ${kk} = <b>${f(y, 6)} ${esc(b)}</b>`));
+      const sub = { min: ['s', 60], h: ['min', 60], d: ['h', 24] }[b];
+      if (ga === 'Zeit' && sub && y % 1) { const w = Math.floor(y); steps.push(st('In gemischter Form', `${w} ${b} ${f((y - w) * sub[1], 2)} ${sub[0]}`)); }
+      const ok = close(y * fb / fa, x, 1e-12);
+      return R({ kind: 'Einheiten', topic: 'Größen & Einheiten', grade: '5–6', problemHTML: `${f(x, 6)} ${esc(a)} = ? ${esc(b)}`, answerHTML: `${f(x, 6)} ${esc(a)} = ${f(y, 6)} ${esc(b)}`, steps, check: { ok, text: ok ? 'Geprüft: Zurückgerechnet ergibt sich wieder der Ausgangswert.' : 'Gegenprobe weicht ab!' }, numeric: y });
+    },
+    gen() { const opts = [['km', 'm', 3.5], ['m', 'cm', 2.4], ['kg', 'g', 1.25], ['h', 'min', 2.5], ['m²', 'cm²', 3], ['l', 'ml', 0.75]]; const [a, b, x] = opts[Math.floor(Math.random() * opts.length)]; return [{ x, von: a, nach: b }, `Rechne ${f(x)} ${a} in ${b} um.`]; },
+  });
+
+  // Bruch – Dezimal – Prozent
+  def('umwandeln', {
+    name: 'Bruch ↔ Dezimalzahl ↔ Prozent', group: 'Zahlen', grades: [6, 7], icon: '🔁',
+    fields: [{ k: 'x', label: 'Zahl (z. B. 3/8, 0,375 oder 37,5 %)', type: 'text', ph: '3/8' }],
+    solve(v) {
+      let s = String(v.x || '').trim(); const isP = /%/.test(s); s = s.replace('%', '').replace(',', '.').replace(/\s+/g, '');
+      let q = null;
+      try { if (s.includes('/')) { const [a, b] = s.split('/').map(z => parseInt(z, 10)); if (b) q = math.fraction(a, b); } else if (/^-?\d+(\.\d+)?$/.test(s)) q = math.fraction(s); } catch (e) { q = null; }
+      if (!q) throw new Error('Bitte einen Bruch (3/8), eine Dezimalzahl (0,375) oder Prozent (37,5 %) eingeben.');
+      if (isP) q = q.div(100);
+      const val = q.s * q.n / q.d;
+      const decStr = q.toString().replace('.', ',').replace('-', '−');
+      const steps = [];
+      const fh = (q.s < 0 ? '−' : '') + (q.d === 1 ? q.n : fr(q.n, q.d));
+      steps.push(st('Als Bruch', fh, isP ? 'Prozent heißt „von Hundert“: p % = p/100, dann kürzen.' : (s.includes('/') ? 'Vollständig gekürzt.' : 'Die Nachkommastellen geben den Nenner an (Zehntel, Hundertstel, Tausendstel …), dann kürzen.')));
+      steps.push(st('Als Dezimalzahl', decStr.replace(/\((\d+)\)/, '<span style="text-decoration:overline">$1</span>'), q.d !== 1 ? `Zähler durch Nenner teilen: ${q.n} : ${q.d}.${/\(/.test(decStr) ? ' Die Ziffern unter dem Strich wiederholen sich (Periode).' : ''}` : null));
+      steps.push(st('In Prozent', `${f(val * 100, 4)} %`, 'Dezimalzahl mal 100.'));
+      return R({ kind: 'Umwandeln', topic: 'Brüche, Dezimalzahlen & Prozente', grade: '6–7', problemHTML: esc(v.x), answerHTML: `${fh} = ${decStr.replace(/\((\d+)\)/, '<span style="text-decoration:overline">$1</span>')} = ${f(val * 100, 4)} %`, steps, visual: q.d <= 24 && q.n <= 3 * q.d ? { type: 'fraction', fractions: [{ n: q.s * q.n, d: q.d }] } : null, check: { ok: true, text: 'Exakt mit Brüchen gerechnet.' }, numeric: val });
+    },
+  });
+
+  // ---- Geometrie 2D ----
+  function geo(id, name, grades, icon, fields, calc, vis) {
+    def(id, { name, group: 'Flächen', grades, icon, fields: fields.map(([k, l]) => NUM(k, l, '', '')).concat([{ k: 'unit', label: 'Längeneinheit', type: 'text', dflt: 'cm' }]), solve: calc, vis });
+  }
+  const u2 = u => u ? '&thinsp;' + esc(u) + '²' : '', u3 = u => u ? '&thinsp;' + esc(u) + '³' : '', u1 = u => u ? '&thinsp;' + esc(u) : '';
+  geo('rechteck', 'Rechteck & Quadrat', [5, 6], '▭', [['a', 'Länge a'], ['b', 'Breite b (leer bei Quadrat)'], ['A', 'Flächeninhalt A (optional)'], ['U', 'Umfang u (optional)']], function (v) {
+    let { a, b, A, U: Um } = v; const u = v.unit ?? 'cm'; const steps = [];
+    if (a === null) throw new Error('Bitte die Länge a eintragen.');
+    if (b === null && A !== null) { b = A / a; steps.push(st('Breite aus der Fläche', `b = A : a = ${f(A)} : ${f(a)} = ${f(b, 4)}${u1(u)}`)); }
+    else if (b === null && Um !== null) { b = Um / 2 - a; steps.push(st('Breite aus dem Umfang', `b = u : 2 − a = ${f(Um)} : 2 − ${f(a)} = ${f(b, 4)}${u1(u)}`)); }
+    const sq = b === null || b === a; if (b === null) b = a;
+    const Ar = a * b, Uu = 2 * (a + b);
+    steps.push(st('Flächeninhalt', sq ? `A = a · a = ${f(a)}${u1(u)} · ${f(a)}${u1(u)} = <b>${f(Ar, 4)}${u2(u)}</b>` : `A = a · b = ${f(a)}${u1(u)} · ${f(b)}${u1(u)} = <b>${f(Ar, 4)}${u2(u)}</b>`, 'Wie viele Einheitsquadrate passen hinein? Länge mal Breite.'));
+    steps.push(st('Umfang', sq ? `u = 4 · a = 4 · ${f(a)}${u1(u)} = <b>${f(Uu, 4)}${u1(u)}</b>` : `u = 2 · (a + b) = 2 · (${f(a)} + ${f(b)})${u1(u)} = <b>${f(Uu, 4)}${u1(u)}</b>`, 'Einmal ganz außen herum: alle Seiten addieren.'));
+    return R({ kind: sq ? 'Quadrat' : 'Rechteck', topic: 'Flächen & Umfang', grade: '5', problemHTML: `${sq ? 'Quadrat' : 'Rechteck'}: a = ${f(a)}${u1(u)}${sq ? '' : ', b = ' + f(b) + u1(u)}`, answerHTML: `A = ${f(Ar, 4)}${u2(u)}; &nbsp;u = ${f(Uu, 4)}${u1(u)}`, steps, visual: { type: 'area', rows: [`${f(b)}${u1(u)}`], cols: [`${f(a)}${u1(u)}`], cells: [[`A = ${f(Ar, 4)}${u2(u)}`]], factor: 1 }, check: { ok: close(Ar / a, b), text: 'Geprüft: A : a ergibt wieder b.' }, numeric: Ar, values: { A: Ar, u: Uu } });
+  });
+  geo('dreieck', 'Dreieck (Fläche & Umfang)', [6, 7], '△', [['g', 'Grundseite g'], ['h', 'Höhe h (auf g)'], ['a', 'Seite a (für Umfang, optional)'], ['b', 'Seite b (optional)'], ['c', 'Seite c (optional)']], function (v) {
+    const { g, h, a, b, c } = v; const u = v.unit ?? 'cm'; const steps = []; let A = null, Uu = null;
+    if (g !== null && h !== null) { A = g * h / 2; steps.push(st('Flächeninhalt', `A = ${fr('g · h', 2)} = ${fr(f(g) + ' · ' + f(h), 2)} = <b>${f(A, 4)}${u2(u)}</b>`, 'Ein Dreieck ist die Hälfte eines Parallelogramms mit gleicher Grundseite und Höhe.')); }
+    if (a !== null && b !== null && c !== null) {
+      if (a + b <= c || a + c <= b || b + c <= a) throw new Error('Mit diesen Seiten gibt es kein Dreieck (Dreiecksungleichung).');
+      Uu = a + b + c; steps.push(st('Umfang', `u = a + b + c = ${f(a)} + ${f(b)} + ${f(c)} = <b>${f(Uu, 4)}${u1(u)}</b>`));
+      if (A === null) { const s = Uu / 2; A = Math.sqrt(s * (s - a) * (s - b) * (s - c)); steps.push(st('Fläche (Satz des Heron)', `s = ${f(s)}; A = √(s(s−a)(s−b)(s−c)) ≈ <b>${f(A, 3)}${u2(u)}</b>`, 'Ohne Höhe hilft die Formel von Heron.')); }
+    }
+    if (A === null && Uu === null) throw new Error('Bitte g und h (für die Fläche) und/oder alle drei Seiten eintragen.');
+    return R({ kind: 'Dreieck', topic: 'Flächen & Umfang', grade: '6–7', problemHTML: 'Dreieck: ' + ['g', 'h', 'a', 'b', 'c'].filter(k => v[k] !== null).map(k => `${k} = ${f(v[k])}${u1(u)}`).join(', '), answerHTML: [A !== null ? `A = ${f(A, 4)}${u2(u)}` : '', Uu !== null ? `u = ${f(Uu, 4)}${u1(u)}` : ''].filter(Boolean).join('; &nbsp;'), steps, check: { ok: true, text: 'Mit der Formel berechnet.' }, numeric: A ?? Uu });
+  });
+  geo('parallelogramm', 'Parallelogramm & Trapez', [7, 8], '▱', [['g', 'Grundseite g bzw. a'], ['c', 'Gegenseite c (nur Trapez)'], ['h', 'Höhe h']], function (v) {
+    const { g, c, h } = v; const u = v.unit ?? 'cm';
+    if (g === null || h === null) throw new Error('Bitte Grundseite und Höhe eintragen.');
+    let A, steps;
+    if (c !== null) { A = (g + c) / 2 * h; steps = [st('Trapez', `A = ${fr('a + c', 2)} · h = ${fr(f(g) + ' + ' + f(c), 2)} · ${f(h)} = <b>${f(A, 4)}${u2(u)}</b>`, 'Mittellinie (Durchschnitt der parallelen Seiten) mal Höhe.')]; }
+    else { A = g * h; steps = [st('Parallelogramm', `A = g · h = ${f(g)} · ${f(h)} = <b>${f(A, 4)}${u2(u)}</b>`, 'Ein Dreieck abschneiden und auf der anderen Seite anlegen – es entsteht ein Rechteck.')]; }
+    return R({ kind: c !== null ? 'Trapez' : 'Parallelogramm', topic: 'Flächen', grade: '7', problemHTML: `${c !== null ? 'Trapez: a = ' + f(g) + ', c = ' + f(c) : 'Parallelogramm: g = ' + f(g)}, h = ${f(h)}${u1(u)}`, answerHTML: `A = ${f(A, 4)}${u2(u)}`, steps, check: { ok: true, text: 'Mit der Formel berechnet.' }, numeric: A });
+  });
+  geo('kreis', 'Kreis', [8], '◯', [['r', 'Radius r'], ['d', 'Durchmesser d'], ['U', 'Umfang u'], ['A', 'Flächeninhalt A']], function (v) {
+    let { r, d, U: Um, A } = v; const u = v.unit ?? 'cm'; const steps = [];
+    if (r === null) {
+      if (d !== null) { r = d / 2; steps.push(st('Radius', `r = d : 2 = ${f(d)} : 2 = ${f(r, 4)}${u1(u)}`)); }
+      else if (Um !== null) { r = Um / (2 * Math.PI); steps.push(st('Radius aus dem Umfang', `r = ${fr('u', '2π')} = ${fr(f(Um), '2π')} ≈ ${f(r, 4)}${u1(u)}`)); }
+      else if (A !== null) { r = Math.sqrt(A / Math.PI); steps.push(st('Radius aus der Fläche', `r = <span class="sq">√<span class="sqc">${fr('A', 'π')}</span></span> ≈ ${f(r, 4)}${u1(u)}`)); }
+      else throw new Error('Bitte einen Wert (r, d, u oder A) eintragen.');
+    }
+    const UU = 2 * Math.PI * r, AA = Math.PI * r * r;
+    steps.push(st('Umfang', `u = 2 · π · r = 2 · π · ${f(r)} ≈ <b>${f(UU, 2)}${u1(u)}</b>`, 'π ≈ 3,14159 – der Umfang ist gut 3-mal so lang wie der Durchmesser.'));
+    steps.push(st('Flächeninhalt', `A = π · r² = π · ${f(r)}² ≈ <b>${f(AA, 2)}${u2(u)}</b>`));
+    return R({ kind: 'Kreis', topic: 'Kreis', grade: '8', problemHTML: `Kreis mit r = ${f(r, 4)}${u1(u)}`, answerHTML: `${v.r === null ? `r ${Number.isInteger(r) ? '=' : '≈'} ${f(r, 3)}${u1(u)}; &nbsp;` : ''}u ≈ ${f(UU, 2)}${u1(u)}; &nbsp;A ≈ ${f(AA, 2)}${u2(u)}`, answerAlt: [], steps, visual: { type: 'circle', r }, check: { ok: close(UU * UU / (4 * Math.PI), AA, 1e-9), text: 'Geprüft: u²/(4π) = A.' }, numeric: AA, values: { u: UU, A: AA } });
+  });
+
+  // Winkel
+  def('winkelsumme', {
+    name: 'Winkelsumme', group: 'Winkel', grades: [7], icon: '∠',
+    fields: [SEL('fig', 'Figur', ['Dreieck', 'Viereck']), NUM('w1', 'α', '°'), NUM('w2', 'β', '°'), NUM('w3', 'γ (Viereck)', '°')],
+    solve(v) {
+      const tri = v.fig !== 'Viereck', S = tri ? 180 : 360; const ws = [v.w1, v.w2, v.w3].filter(x => x !== null);
+      if (ws.length !== (tri ? 2 : 3)) throw new Error(tri ? 'Bitte zwei Winkel eintragen.' : 'Bitte drei Winkel eintragen.');
+      const x = S - ws.reduce((a, b) => a + b, 0); if (x <= 0) throw new Error('Die Winkel sind zusammen schon zu groß.');
+      const names = ['α', 'β', 'γ', 'δ'];
+      const steps = [st('Winkelsumme', `Im ${tri ? 'Dreieck' : 'Viereck'} gilt: Summe = ${S}°`, tri ? 'Die drei Winkel eines Dreiecks ergeben zusammen immer 180° (gestreckter Winkel).' : 'Ein Viereck lässt sich in zwei Dreiecke zerlegen: 2 · 180° = 360°.')];
+      steps.push(st('Fehlenden Winkel berechnen', `${names[ws.length]} = ${S}° − ${ws.map(w => f(w) + '°').join(' − ')} = <b>${f(x)}°</b>`));
+      return R({ kind: 'Winkelsumme', topic: 'Winkel', grade: '7', problemHTML: `${v.fig}: ${ws.map((w, i) => names[i] + ' = ' + f(w) + '°').join(', ')}`, answerHTML: `${names[ws.length]} = ${f(x)}°`, steps, visual: { type: 'angle', deg: Math.round(x) }, check: { ok: close(ws.reduce((a, b) => a + b, 0) + x, S), text: `Geprüft: Summe ${S}°.` }, numeric: x });
+    },
+    gen() { const a = 30 + Math.floor(Math.random() * 60), b = 30 + Math.floor(Math.random() * 60); return [{ fig: 'Dreieck', w1: a, w2: b, w3: null }, `Im Dreieck ist α = ${a}° und β = ${b}°. Berechne γ.`]; },
+  });
+  def('winkelart', {
+    name: 'Winkelarten', group: 'Winkel', grades: [5], icon: '📐',
+    fields: [NUM('w', 'Winkel', '°')],
+    solve(v) {
+      const d = v.w; if (d === null || d < 0 || d > 360) throw new Error('Bitte einen Winkel zwischen 0° und 360° eingeben.');
+      const k = d === 0 ? 'Nullwinkel' : d < 90 ? 'spitzer Winkel' : d === 90 ? 'rechter Winkel' : d < 180 ? 'stumpfer Winkel' : d === 180 ? 'gestreckter Winkel' : d < 360 ? 'überstumpfer Winkel' : 'Vollwinkel';
+      const steps = [st('Einordnen', `${f(d)}° ist ein <b>${k}</b>`, 'spitz: unter 90° · recht: 90° · stumpf: zwischen 90° und 180° · gestreckt: 180° · überstumpf: über 180°')];
+      if (d < 180) steps.push(st('Nebenwinkel', `180° − ${f(d)}° = ${f(180 - d)}°`, 'Nebenwinkel ergänzen sich zu 180°. Scheitelwinkel sind gleich groß.'));
+      return R({ kind: 'Winkelart', topic: 'Winkel', grade: '5', problemHTML: `Winkel ${f(d)}°`, answerHTML: k, steps, visual: { type: 'angle', deg: Math.round(d) }, check: { ok: true, text: 'Nach Definition eingeordnet.' } });
+    },
+  });
+
+  // ---- Körper ----
+  function solidDef(id, name, grades, icon, fields, fn) { def(id, { name, group: 'Körper', grades, icon, fields: fields.map(([k, l]) => NUM(k, l, '', '')).concat([{ k: 'unit', label: 'Längeneinheit', type: 'text', dflt: 'cm' }]), solve: fn }); }
+  function solidRes(kind, grade, prob, V, O, steps, vis, u, check) { return R({ kind, topic: 'Körper', grade, problemHTML: prob, answerHTML: `V ${Number.isInteger(V) ? '=' : '≈'} ${f(V, 2)}${u3(u)}${O !== null ? `; &nbsp;O ${Number.isInteger(O) ? '=' : '≈'} ${f(O, 2)}${u2(u)}` : ''}`, answerAlt: /cm|dm|m/.test(u) ? [`${f(V, 2)}${u3(u)} = ${f(V * { cm: 0.001, dm: 1, m: 1000, mm: 1e-6 }[u] || V, 4)} l`].filter(() => ['cm', 'dm', 'm', 'mm'].includes(u)) : [], steps, visual: vis, check, numeric: V, values: { V, O } }); }
+  solidDef('quader', 'Quader & Würfel', [6], '📦', [['a', 'Länge a'], ['b', 'Breite b (leer bei Würfel)'], ['c', 'Höhe c (leer bei Würfel)']], function (v) {
+    let { a, b, c } = v; const u = v.unit ?? 'cm'; if (a === null) throw new Error('Bitte mindestens a eintragen.');
+    const cube = b === null && c === null; if (b === null) b = a; if (c === null) c = a;
+    const V = a * b * c, O = 2 * (a * b + a * c + b * c);
+    const steps = [st('Volumen', cube ? `V = a³ = ${f(a)}³ = <b>${f(V, 4)}${u3(u)}</b>` : `V = a · b · c = ${f(a)} · ${f(b)} · ${f(c)} = <b>${f(V, 4)}${u3(u)}</b>`, 'Wie viele Einheitswürfel passen hinein? Grundfläche mal Höhe.'), st('Oberfläche', cube ? `O = 6 · a² = 6 · ${f(a * a)} = <b>${f(O, 4)}${u2(u)}</b>` : `O = 2 · (ab + ac + bc) = 2 · (${f(a * b)} + ${f(a * c)} + ${f(b * c)}) = <b>${f(O, 4)}${u2(u)}</b>`, 'Alle Seitenflächen zusammen – je zwei sind gleich groß (Netz!).')];
+    return solidRes(cube ? 'Würfel' : 'Quader', '6', cube ? `Würfel a = ${f(a)}${u1(u)}` : `Quader ${f(a)} × ${f(b)} × ${f(c)}${u1(u)}`, V, O, steps, { type: 'solid', kind: cube ? 'wuerfel' : 'quader', a, b, h: c }, u, { ok: close(V / (a * b), c), text: 'Geprüft: V : (a · b) ergibt die Höhe.' });
+  });
+  solidDef('zylinder', 'Zylinder', [8, 9], '🥫', [['r', 'Radius r'], ['h', 'Höhe h']], function (v) {
+    const { r, h } = v; const u = v.unit ?? 'cm'; if (r === null || h === null) throw new Error('Bitte r und h eintragen.');
+    const G = Math.PI * r * r, M = 2 * Math.PI * r * h, V = G * h, O = 2 * G + M;
+    const steps = [st('Grundfläche', `G = π · r² ≈ ${f(G, 3)}${u2(u)}`), st('Volumen', `V = G · h ≈ ${f(G, 3)} · ${f(h)} ≈ <b>${f(V, 2)}${u3(u)}</b>`, 'Prismen und Zylinder: Grundfläche mal Höhe.'), st('Mantel', `M = 2 · π · r · h ≈ ${f(M, 3)}${u2(u)}`, 'Abgerollt ist der Mantel ein Rechteck: Kreisumfang mal Höhe.'), st('Oberfläche', `O = 2 · G + M ≈ <b>${f(O, 2)}${u2(u)}</b>`)];
+    return solidRes('Zylinder', '9', `Zylinder r = ${f(r)}${u1(u)}, h = ${f(h)}${u1(u)}`, V, O, steps, { type: 'solid', kind: 'zylinder', r, h }, u, { ok: close(V, Math.PI * r * r * h), text: 'Mit der Formel berechnet.' });
+  });
+  solidDef('kegel', 'Kegel', [9], '🍦', [['r', 'Radius r'], ['h', 'Höhe h']], function (v) {
+    const { r, h } = v; const u = v.unit ?? 'cm'; if (r === null || h === null) throw new Error('Bitte r und h eintragen.');
+    const s = Math.hypot(r, h), V = Math.PI * r * r * h / 3, O = Math.PI * r * r + Math.PI * r * s;
+    const steps = [st('Volumen', `V = ⅓ · π · r² · h ≈ <b>${f(V, 2)}${u3(u)}</b>`, 'Ein Kegel ist ein Drittel des Zylinders mit gleicher Grundfläche und Höhe.'), st('Mantellinie', `s = √(r² + h²) = √(${f(r * r)} + ${f(h * h)}) ≈ ${f(s, 3)}${u1(u)}`, 'Pythagoras im Achsenschnitt.'), st('Oberfläche', `O = π · r² + π · r · s ≈ <b>${f(O, 2)}${u2(u)}</b>`)];
+    return solidRes('Kegel', '9', `Kegel r = ${f(r)}${u1(u)}, h = ${f(h)}${u1(u)}`, V, O, steps, { type: 'solid', kind: 'kegel', r, h }, u, { ok: true, text: 'Mit der Formel berechnet.' });
+  });
+  solidDef('pyramide', 'Quadratische Pyramide', [9], '🔺', [['a', 'Grundkante a'], ['h', 'Höhe h']], function (v) {
+    const { a, h } = v; const u = v.unit ?? 'cm'; if (a === null || h === null) throw new Error('Bitte a und h eintragen.');
+    const hs = Math.hypot(h, a / 2), V = a * a * h / 3, O = a * a + 2 * a * hs;
+    const steps = [st('Volumen', `V = ⅓ · a² · h = ⅓ · ${f(a * a)} · ${f(h)} ≈ <b>${f(V, 2)}${u3(u)}</b>`, 'Eine Pyramide ist ein Drittel des Prismas mit gleicher Grundfläche und Höhe.'), st('Höhe der Seitenfläche', `h<sub>s</sub> = √(h² + (a/2)²) ≈ ${f(hs, 3)}${u1(u)}`, 'Pythagoras im Inneren der Pyramide.'), st('Oberfläche', `O = a² + 4 · ${fr('a · h<sub>s</sub>', 2)} ≈ <b>${f(O, 2)}${u2(u)}</b>`, 'Grundfläche plus vier Dreiecke.')];
+    return solidRes('Pyramide', '9', `Pyramide a = ${f(a)}${u1(u)}, h = ${f(h)}${u1(u)}`, V, O, steps, { type: 'solid', kind: 'pyramide', a, h }, u, { ok: true, text: 'Mit der Formel berechnet.' });
+  });
+  solidDef('kugel', 'Kugel', [9], '⚽', [['r', 'Radius r'], ['d', 'oder Durchmesser d']], function (v) {
+    let { r, d } = v; const u = v.unit ?? 'cm'; if (r === null && d !== null) r = d / 2; if (r === null) throw new Error('Bitte r oder d eintragen.');
+    const V = 4 / 3 * Math.PI * r ** 3, O = 4 * Math.PI * r * r;
+    const steps = [st('Volumen', `V = ⁴⁄₃ · π · r³ = ⁴⁄₃ · π · ${f(r)}³ ≈ <b>${f(V, 2)}${u3(u)}</b>`), st('Oberfläche', `O = 4 · π · r² ≈ <b>${f(O, 2)}${u2(u)}</b>`, 'So groß wie vier Kreise mit demselben Radius.')];
+    return solidRes('Kugel', '9', `Kugel r = ${f(r)}${u1(u)}`, V, O, steps, { type: 'solid', kind: 'kugel', r }, u, { ok: close(V, O * r / 3), text: 'Geprüft: V = O · r / 3.' });
+  });
+  solidDef('prisma', 'Dreiecksprisma', [8], '🔷', [['g', 'Grundseite g des Dreiecks'], ['hg', 'Höhe h_g des Dreiecks'], ['h', 'Körperhöhe h'], ['u', 'Umfang des Dreiecks (für O, optional)']], function (v) {
+    const { g, hg, h } = v, uu = v.u; const u = v.unit ?? 'cm'; if ([g, hg, h].some(x => x === null)) throw new Error('Bitte g, h_g und h eintragen.');
+    const G = g * hg / 2, V = G * h, O = uu !== null ? 2 * G + uu * h : null;
+    const steps = [st('Grundfläche', `G = ${fr('g · h<sub>g</sub>', 2)} = ${f(G, 3)}${u2(u)}`), st('Volumen', `V = G · h = ${f(G, 3)} · ${f(h)} = <b>${f(V, 3)}${u3(u)}</b>`, 'Jedes Prisma: Grundfläche mal Höhe.')];
+    if (O !== null) steps.push(st('Oberfläche', `O = 2 · G + u · h = <b>${f(O, 3)}${u2(u)}</b>`, 'Zwei Grundflächen plus Mantel (Rechteck aus Umfang und Höhe).'));
+    return solidRes('Prisma', '8', `Prisma: g = ${f(g)}, h<sub>g</sub> = ${f(hg)}, h = ${f(h)}${u1(u)}`, V, O, steps, null, u, { ok: true, text: 'Mit der Formel berechnet.' });
+  });
+
+  // Pythagoras
+  def('pythagoras', {
+    name: 'Satz des Pythagoras', group: 'Dreiecke', grades: [9], icon: '📐',
+    hint: 'Rechter Winkel bei C: c ist die Hypotenuse (längste Seite). Eine Seite leer lassen.',
+    fields: [NUM('a', 'Kathete a'), NUM('b', 'Kathete b'), NUM('c', 'Hypotenuse c'), { k: 'unit', label: 'Einheit', type: 'text', dflt: 'cm' }],
+    solve(v) {
+      let { a, b, c } = v; const u = v.unit ?? 'cm';
+      const g = ['a', 'b', 'c'].filter(k => v[k] === null); if (g.length !== 1) throw new Error('Bitte genau zwei Seiten eintragen.');
+      const steps = [st('Satz des Pythagoras', 'a² + b² = c²', 'Im rechtwinkligen Dreieck: Die Quadrate über den Katheten haben zusammen die Fläche des Quadrats über der Hypotenuse.')];
+      if (g[0] === 'c') { c = Math.hypot(a, b); steps.push(st('Einsetzen', `c² = ${f(a)}² + ${f(b)}² = ${f(a * a)} + ${f(b * b)} = ${f(a * a + b * b, 4)}`), st('Wurzel ziehen', `c = √${f(a * a + b * b, 4)} ${Number.isInteger(c) ? '=' : '≈'} <b>${f(c, 2)}${u1(u)}</b>`)); }
+      else { const k = g[0] === 'a' ? b : a; if (c <= k) throw new Error('Die Hypotenuse c muss die längste Seite sein.'); const x = Math.sqrt(c * c - k * k); if (g[0] === 'a') a = x; else b = x; steps.push(st('Umstellen', `${g[0]}² = c² − ${g[0] === 'a' ? 'b' : 'a'}² = ${f(c * c)} − ${f(k * k)} = ${f(c * c - k * k, 4)}`, 'Für eine Kathete: Hypotenusenquadrat minus das andere Kathetenquadrat.'), st('Wurzel ziehen', `${g[0]} = √${f(c * c - k * k, 4)} ${Number.isInteger(x) ? '=' : '≈'} <b>${f(x, 2)}${u1(u)}</b>`)); }
+      const ok = close(a * a + b * b, c * c, 1e-9);
+      const x = { a, b, c }[g[0]];
+      return R({ kind: 'Pythagoras', topic: 'Satz des Pythagoras', grade: '9', problemHTML: `a = ${g[0] === 'a' ? '?' : f(a)}, b = ${g[0] === 'b' ? '?' : f(b)}, c = ${g[0] === 'c' ? '?' : f(c)}${u1(u)}`, answerHTML: `${g[0]} ${Number.isInteger(x) ? '=' : '≈'} ${f(x, 2)}${u1(u)}`, steps, visual: { type: 'triangle', a, b, mode: 'pythagoras' }, check: { ok, text: ok ? `Geprüft: ${f(a * a, 3)} + ${f(b * b, 3)} = ${f(c * c, 3)}` : 'Gegenprobe weicht ab!' }, numeric: x });
+    },
+    gen() { const t = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15]][Math.floor(Math.random() * 5)]; return [{ a: t[0], b: t[1], c: null, unit: 'cm' }, `Rechtwinkliges Dreieck: a = ${t[0]} cm, b = ${t[1]} cm. Berechne die Hypotenuse c.`]; },
+  });
+
+  // Trigonometrie
+  def('trigo', {
+    name: 'Trigonometrie (rechtwinklig)', group: 'Dreiecke', grades: [10], icon: '📐',
+    hint: 'Rechter Winkel bei C. Zwei Werte eintragen, davon mindestens eine Seite.',
+    fields: [NUM('a', 'Seite a (Gegenkathete von α)'), NUM('b', 'Seite b (Ankathete von α)'), NUM('c', 'Hypotenuse c'), NUM('al', 'Winkel α', '°'), NUM('be', 'Winkel β', '°'), { k: 'unit', label: 'Einheit', type: 'text', dflt: 'cm' }],
+    solve(v) {
+      let { a, b, c, al, be } = v; const u = v.unit ?? 'cm';
+      if (al === null && be !== null) al = 90 - be;
+      const steps = [st('Bezeichnungen', 'Von α aus: a = Gegenkathete, b = Ankathete, c = Hypotenuse', 'sin α = a/c · cos α = b/c · tan α = a/b')];
+      const given = ['a', 'b', 'c'].filter(k => v[k] !== null);
+      if (given.length + (al !== null ? 1 : 0) < 2 || !given.length) throw new Error('Bitte zwei Werte eintragen, davon mindestens eine Seite.');
+      if (al !== null && (al <= 0 || al >= 90)) throw new Error('α muss zwischen 0° und 90° liegen.');
+      const s = Math.sin(al * RAD), co = Math.cos(al * RAD), t = Math.tan(al * RAD);
+      if (al !== null) {
+        if (c !== null) { a = c * s; b = c * co; steps.push(st('Mit Sinus', `a = c · sin α = ${f(c)} · sin(${f(al)}°) ≈ <b>${f(a, 2)}</b>`, 'sin α = a/c ⇒ a = c · sin α'), st('Mit Kosinus', `b = c · cos α = ${f(c)} · cos(${f(al)}°) ≈ <b>${f(b, 2)}</b>`, 'cos α = b/c ⇒ b = c · cos α')); }
+        else if (a !== null) { c = a / s; b = a / t; steps.push(st('Mit Sinus', `c = ${fr('a', 'sin α')} = ${fr(f(a), 'sin(' + f(al) + '°)')} ≈ <b>${f(c, 2)}</b>`), st('Mit Tangens', `b = ${fr('a', 'tan α')} ≈ <b>${f(b, 2)}</b>`)); }
+        else { c = b / co; a = b * t; steps.push(st('Mit Kosinus', `c = ${fr('b', 'cos α')} = ${fr(f(b), 'cos(' + f(al) + '°)')} ≈ <b>${f(c, 2)}</b>`), st('Mit Tangens', `a = b · tan α ≈ <b>${f(a, 2)}</b>`)); }
+      } else {
+        if (a !== null && b !== null) { c = Math.hypot(a, b); al = Math.atan(a / b) / RAD; steps.push(st('Winkel mit Tangens', `tan α = ${fr(f(a), f(b))} ⇒ α = tan⁻¹(${f(a / b, 4)}) ≈ <b>${f(al, 1)}°</b>`, 'Mit der Umkehrfunktion (SHIFT tan) den Winkel bestimmen.'), st('Hypotenuse (Pythagoras)', `c = √(a² + b²) ≈ <b>${f(c, 2)}</b>`)); }
+        else if (a !== null && c !== null) { if (a >= c) throw new Error('Die Hypotenuse muss länger als a sein.'); b = Math.sqrt(c * c - a * a); al = Math.asin(a / c) / RAD; steps.push(st('Winkel mit Sinus', `sin α = ${fr(f(a), f(c))} ⇒ α ≈ <b>${f(al, 1)}°</b>`), st('Pythagoras', `b = √(c² − a²) ≈ <b>${f(b, 2)}</b>`)); }
+        else if (b !== null && c !== null) { if (b >= c) throw new Error('Die Hypotenuse muss länger als b sein.'); a = Math.sqrt(c * c - b * b); al = Math.acos(b / c) / RAD; steps.push(st('Winkel mit Kosinus', `cos α = ${fr(f(b), f(c))} ⇒ α ≈ <b>${f(al, 1)}°</b>`), st('Pythagoras', `a = √(c² − b²) ≈ <b>${f(a, 2)}</b>`)); }
+        else throw new Error('Bitte zwei Werte eintragen.');
+      }
+      steps.push(st('Dritter Winkel', `β = 90° − α ≈ ${f(90 - al, 1)}°`, 'Winkelsumme im Dreieck: 180°, davon 90° am rechten Winkel.'));
+      const ok = close(a * a + b * b, c * c, 1e-9) && close(Math.sin(al * RAD), a / c, 1e-9);
+      return R({ kind: 'Trigonometrie', topic: 'Trigonometrie', grade: '10', problemHTML: ['a', 'b', 'c'].filter(k => v[k] !== null).map(k => `${k} = ${f(v[k])}${u1(u)}`).concat(v.al !== null ? [`α = ${f(v.al)}°`] : v.be !== null ? [`β = ${f(v.be)}°`] : []).join(', '), answerHTML: `a ≈ ${f(a, 2)}; b ≈ ${f(b, 2)}; c ≈ ${f(c, 2)}${u1(u)}; α ≈ ${f(al, 1)}°; β ≈ ${f(90 - al, 1)}°`, steps, visual: { type: 'triangle', a, b, mode: 'trig' }, check: { ok, text: ok ? 'Geprüft mit Pythagoras und Sinus.' : 'Gegenprobe weicht ab!' }, numeric: given.includes('a') ? (given.includes('b') || given.includes('c') ? al : c) : a, values: { a, b, c, al } });
+    },
+  });
+
+  // Strahlensatz
+  def('strahlensatz', {
+    gen() { const a1 = 1 + Math.floor(Math.random() * 3), b1 = [0.5, 1, 1.5, 2][Math.floor(Math.random() * 4)], k = 4 + Math.floor(Math.random() * 8); return [{ a1, b1, b2: b1 * k, unit: 'm' }, `Ein ${a1} m hoher Stab wirft einen ${f(b1)} m langen Schatten, ein Baum zur gleichen Zeit einen ${f(b1 * k)} m langen. Wie hoch ist der Baum?`]; },
+    name: 'Strahlensatz / Ähnlichkeit', group: 'Dreiecke', grades: [9], icon: '🌳',
+    hint: 'Gleiche Verhältnisse: a₁ : b₁ = a₂ : b₂ (z. B. Höhe : Schatten).',
+    fields: [NUM('a1', 'Größe 1 (z. B. Höhe Stab)'), NUM('b1', 'zugehörig 1 (z. B. Schatten Stab)'), NUM('b2', 'zugehörig 2 (z. B. Schatten Baum)'), { k: 'unit', label: 'Einheit', type: 'text', dflt: 'm' }],
+    solve(v) {
+      const { a1, b1, b2 } = v; const u = v.unit ?? 'm'; if ([a1, b1, b2].some(x => x === null)) throw new Error('Bitte alle drei Werte eintragen.');
+      const a2 = a1 * b2 / b1;
+      const steps = [st('Verhältnisgleichung', `${fr('a<sub>2</sub>', 'b<sub>2</sub>')} = ${fr('a<sub>1</sub>', 'b<sub>1</sub>')}`, 'Ähnliche Dreiecke (gleiche Sonnenstrahlen) ⇒ gleiche Verhältnisse. Das ist der Strahlensatz.'), st('Einsetzen', `${fr('a<sub>2</sub>', f(b2))} = ${fr(f(a1), f(b1))}`), st('Auflösen', `a<sub>2</sub> = ${fr(f(a1) + ' · ' + f(b2), f(b1))} = <b>${f(a2, 3)}${u1(u)}</b>`, 'Mit dem Nenner auf der linken Seite multiplizieren.')];
+      return R({ kind: 'Strahlensatz', topic: 'Strahlensätze & Ähnlichkeit', grade: '9', problemHTML: `${f(a1)} : ${f(b1)} = a<sub>2</sub> : ${f(b2)}`, answerHTML: `a<sub>2</sub> = ${f(a2, 3)}${u1(u)}`, steps, check: { ok: close(a2 / b2, a1 / b1), text: 'Geprüft: Beide Verhältnisse sind gleich.' }, numeric: a2 });
+    },
+  });
+
+  // Statistik
+  def('statistik', {
+    name: 'Mittelwert, Median & Co.', group: 'Daten', grades: [6, 7, 10], icon: '📊',
+    fields: [{ k: 'list', label: 'Werte (mit Komma/Semikolon/Leerzeichen trennen)', type: 'text', ph: '3; 2; 4; 1; 2; 5' }],
+    solve(v) {
+      const raw = String(v.list || '').replace(/(\d),(\d)/g, '$1.$2').split(/[;\s,]+/).map(s => s.trim()).filter(Boolean).map(Number).filter(x => isFinite(x));
+      if (raw.length < 2) throw new Error('Bitte mindestens zwei Werte eingeben (Dezimalkomma geht, dann mit Semikolon trennen).');
+      const n = raw.length, sum = raw.reduce((a, b) => a + b, 0), mean = sum / n;
+      const s = raw.slice().sort((a, b) => a - b); const med = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+      const cnt = {}; raw.forEach(x => cnt[x] = (cnt[x] || 0) + 1); const mc = Math.max(...Object.values(cnt)); const modes = Object.keys(cnt).filter(k => cnt[k] === mc).map(Number);
+      const q = p => { const h = s.slice(0, Math.floor(n / 2)), k = s.slice(Math.ceil(n / 2)); const m = a => a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; return p === 1 ? m(h) : m(k); };
+      const steps = [st('Ordnen', s.map(x => f(x, 4)).join(' · '), `${n} Werte, der Größe nach geordnet.`),
+      st('Mittelwert', `x̄ = ${fr('Summe', 'Anzahl')} = ${fr(f(sum, 4), n)} ${Number.isInteger(mean * 1000) ? '=' : '≈'} <b>${f(mean, 3)}</b>`, 'Alle Werte addieren und durch die Anzahl teilen (arithmetisches Mittel, „Durchschnitt“).'),
+      st('Median', `Zentralwert = <b>${f(med, 3)}</b>`, n % 2 ? `Bei ${n} Werten steht der Median genau in der Mitte (Platz ${(n + 1) / 2}).` : `Bei ${n} Werten liegt die Mitte zwischen Platz ${n / 2} und ${n / 2 + 1}: Mittelwert dieser beiden.`),
+      st('Spannweite', `${f(s[n - 1], 4)} − ${f(s[0], 4)} = <b>${f(s[n - 1] - s[0], 4)}</b>`, 'Größter minus kleinster Wert.'),
+      st('Modalwert', mc > 1 ? modes.map(x => f(x, 4)).join(', ') + ` (je ${mc}-mal)` : 'keiner (jeder Wert kommt nur einmal vor)', 'Der häufigste Wert.')];
+      if (n >= 4) steps.push(st('Quartile (Jg. 10)', `q<sub>1</sub> = ${f(q(1), 3)}, &nbsp;q<sub>3</sub> = ${f(q(3), 3)}; &nbsp;Quartilsabstand = ${f(q(3) - q(1), 3)}`, 'Median der unteren bzw. oberen Hälfte – Grundlage für den Boxplot.'));
+      return R({ kind: 'Statistik', topic: 'Daten & Statistik', grade: '6–10', problemHTML: `Daten: ${raw.map(x => f(x, 4)).join('; ')}`, answerHTML: `Mittelwert ≈ ${f(mean, 3)}; Median = ${f(med, 3)}; Spannweite = ${f(s[n - 1] - s[0], 4)}`, steps, visual: { type: 'bars', values: raw, labels: raw.map((_, i) => String(i + 1)), title: 'Werte in Eingabereihenfolge' }, check: { ok: close(mean * n, sum), text: 'Geprüft: Mittelwert · Anzahl = Summe.' }, numeric: mean, values: { mean, median: med } });
+    },
+    gen() { const L = Array.from({ length: 6 }, () => 1 + Math.floor(Math.random() * 6)); return [{ list: L.join('; ') }, `Berechne den Mittelwert der Noten ${L.join(', ')}.`]; },
+  });
+
+  // Laplace
+  def('laplace', {
+    gen() { const k = 1 + Math.floor(Math.random() * 5); return [{ g: 6 - k, m: 6, desc: '' }, `Wie groß ist die Wahrscheinlichkeit, mit einem Würfel eine Zahl größer als ${k} zu werfen? (als Bruch oder Dezimalzahl)`]; },
+    name: 'Laplace-Wahrscheinlichkeit', group: 'Wahrscheinlichkeit', grades: [8], icon: '🎲',
+    fields: [NUM('g', 'günstige Ergebnisse'), NUM('m', 'mögliche Ergebnisse'), { k: 'desc', label: 'Ereignis (optional)', type: 'text', ph: 'Zahl größer als 4' }],
+    solve(v) {
+      const { g, m } = v; if (!Number.isInteger(g) || !Number.isInteger(m) || m <= 0 || g < 0 || g > m) throw new Error('Bitte ganze Zahlen mit 0 ≤ günstig ≤ möglich eingeben.');
+      const P = g / m; const d = gcd(g, m) || 1;
+      const steps = [st('Laplace-Formel', `P(E) = ${fr('Anzahl günstige Ergebnisse', 'Anzahl mögliche Ergebnisse')}`, 'Gilt, wenn alle Ergebnisse gleich wahrscheinlich sind (fairer Würfel, Münze, Glücksrad mit gleichen Feldern …).'), st('Einsetzen', `P = ${fr(g, m)}${d > 1 ? ' = ' + niceFrac(g, m) : ''} ≈ ${f(P, 4)} = <b>${f(P * 100, 2)} %</b>`)];
+      if (v.desc) steps.unshift(st('Ereignis', esc(v.desc) + (v.list ? ': ' + esc(v.list) : '')));
+      return R({ kind: 'Laplace', topic: 'Wahrscheinlichkeit', grade: '8', problemHTML: v.desc ? esc(v.desc) : `${g} von ${m} Ergebnissen günstig`, answerHTML: `P = ${niceFrac(g, m)} ≈ ${f(P * 100, 2)} %`, steps, visual: { type: 'percent', G: m, p: P * 100 }, check: { ok: true, text: 'Exakt als Bruch berechnet.' }, numeric: P });
+    },
+  });
+
+  // Urne / mehrstufig
+  def('urne', {
+    gen() { const r = 2 + Math.floor(Math.random() * 4), bl = 2 + Math.floor(Math.random() * 4); return [{ f1: 'rot', n1: r, f2: 'blau', n2: bl, f3: '', n3: null, k: '2', modus: 'ohne Zurücklegen', ev: 'alle haben die Zielfarbe', ziel: 'rot' }, `In einer Urne sind ${r} rote und ${bl} blaue Kugeln. Es werden zwei Kugeln ohne Zurücklegen gezogen. Wie groß ist P(beide rot)? (als Bruch)`]; },
+    name: 'Ziehen aus einer Urne (Baumdiagramm)', group: 'Wahrscheinlichkeit', grades: [8, 10], icon: '🌳',
+    fields: [{ k: 'f1', label: 'Farbe 1', type: 'text', dflt: 'rot' }, NUM('n1', 'Anzahl Farbe 1'), { k: 'f2', label: 'Farbe 2', type: 'text', dflt: 'blau' }, NUM('n2', 'Anzahl Farbe 2'), { k: 'f3', label: 'Farbe 3 (optional)', type: 'text', dflt: '' }, NUM('n3', 'Anzahl Farbe 3'), SEL('k', 'Wie oft wird gezogen?', ['2', '3']), SEL('modus', 'Ziehen', ['ohne Zurücklegen', 'mit Zurücklegen']), SEL('ev', 'Ereignis', ['alle haben die Zielfarbe', 'mindestens eine hat die Zielfarbe', 'genau eine hat die Zielfarbe', 'alle gleiche Farbe', 'alle verschiedene Farben']), { k: 'ziel', label: 'Zielfarbe', type: 'text', dflt: 'rot' }],
+    solve(v) {
+      const cols = [[v.f1, v.n1], [v.f2, v.n2], [v.f3, v.n3]].filter(([c, n]) => c && Number.isInteger(n) && n > 0).map(([c, n]) => ({ c: String(c).trim(), n }));
+      if (cols.length < 2) throw new Error('Bitte mindestens zwei Farben mit Anzahl eintragen.');
+      const k = parseInt(v.k || '2', 10), ohne = !/mit/.test(v.modus || 'ohne'); const N = cols.reduce((a, b) => a + b.n, 0);
+      if (ohne && k > N) throw new Error('So oft kann man ohne Zurücklegen nicht ziehen.');
+      const ziel = String(v.ziel || cols[0].c).trim().toLowerCase();
+      if (/Zielfarbe/.test(v.ev) && !cols.some(c => c.c.toLowerCase().replace(/e?[nrs]?$/, '') === ziel.replace(/e?[nrs]?$/, ''))) throw new Error('Die Zielfarbe kommt in der Urne nicht vor.');
+      const isZ = c => c.toLowerCase().replace(/e?[nrs]?$/, '') === ziel.replace(/e?[nrs]?$/, '');
+      const paths = [];
+      function walk(path, cnt, P) {
+        if (path.length === k) { paths.push({ path, P }); return; }
+        const tot = cnt.reduce((a, b) => a + b, 0);
+        cols.forEach((c, i) => { if (!cnt[i]) return; const p = math.fraction(cnt[i], tot); const nc = cnt.slice(); if (ohne) nc[i]--; walk(path.concat(i), nc, P.mul(p)); });
+      }
+      walk([], cols.map(c => c.n), math.fraction(1));
+      const test = p => { const z = p.path.filter(i => isZ(cols[i].c)).length; switch (true) { case /^alle haben/.test(v.ev): return z === k; case /mindestens/.test(v.ev): return z >= 1; case /genau eine/.test(v.ev): return z === 1; case /gleiche/.test(v.ev): return p.path.every(i => i === p.path[0]); default: return new Set(p.path).size === p.path.length; } };
+      const good = paths.filter(test); const P = good.reduce((a, p) => a.add(p.P), math.fraction(0));
+      const total = paths.reduce((a, p) => a.add(p.P), math.fraction(0));
+      // Baum
+      function tree(cnt, depth) { if (depth === k) return undefined; const tot = cnt.reduce((a, b) => a + b, 0); return cols.map((c, i) => { if (!cnt[i]) return null; const nc = cnt.slice(); if (ohne) nc[i]--; return { label: c.c, p: niceFracTxt(cnt[i], tot), children: tree(nc, depth + 1) }; }).filter(Boolean); }
+      function niceFracTxt(a, b) { const g = gcd(a, b); return `${a / g}/${b / g}`; }
+      const pathTxt = p => p.path.map(i => cols[i].c).join('–');
+      const fq = q => q.d === 1 ? String(q.n) : fr(q.n, q.d);
+      const steps = [st('Urne', `${cols.map(c => c.n + ' × ' + esc(c.c)).join(', ')} (zusammen ${N}); ${k}-mal ${ohne ? 'ohne' : 'mit'} Zurücklegen`, ohne ? 'Ohne Zurücklegen ändern sich die Wahrscheinlichkeiten nach jedem Zug (eine Kugel weniger).' : 'Mit Zurücklegen bleiben die Wahrscheinlichkeiten bei jedem Zug gleich.')];
+      steps.push(st('Günstige Pfade', good.length ? good.map(p => `${esc(pathTxt(p))}: ${fq(p.P)}`).join('<br>') : 'keine', '1. Pfadregel: Wahrscheinlichkeiten entlang eines Pfades multiplizieren.'));
+      steps.push(st('Addieren', `P = ${good.map(p => fq(p.P)).join(' + ') || '0'} = <b>${fq(P)}</b> ≈ ${f(P.valueOf() * 100, 2)} %`, '2. Pfadregel: Die Wahrscheinlichkeiten aller günstigen Pfade addieren.'));
+      if (/mindestens/.test(v.ev)) steps.push(st('Schneller mit dem Gegenereignis', `P = 1 − P(keine ${esc(ziel)}) = 1 − ${fq(math.fraction(1).sub(P))} = ${fq(P)}`, '„Mindestens eine“ ist das Gegenteil von „keine“.'));
+      const ok = total.equals(math.fraction(1));
+      return R({ kind: 'Mehrstufiger Zufallsversuch', topic: 'Wahrscheinlichkeit', grade: '8–10', problemHTML: `${cols.map(c => c.n + ' ' + esc(c.c)).join(', ')}; ${k}× ${ohne ? 'ohne' : 'mit'} Zurücklegen; P(${esc({ 'alle haben die Zielfarbe': 'alle ' + ziel, 'mindestens eine hat die Zielfarbe': 'mindestens eine ' + ziel, 'genau eine hat die Zielfarbe': 'genau eine ' + ziel, 'alle gleiche Farbe': 'gleiche Farbe', 'alle verschiedene Farben': 'verschiedene Farben' }[v.ev] || v.ev)})`, answerHTML: `P = ${fq(P)} ≈ ${f(P.valueOf() * 100, 2)} %`, steps, visual: { type: 'tree', branches: tree(cols.map(c => c.n), 0) }, check: { ok, text: ok ? 'Geprüft: Alle Pfade zusammen ergeben genau 1.' : 'Summe aller Pfade ist nicht 1!' }, numeric: P.valueOf() });
+    },
+  });
+
+  // Gerade durch zwei Punkte
+  def('gerade', {
+    gen() { const m = [-3, -2, -1, 1, 2, 3][Math.floor(Math.random() * 6)], b = Math.floor(Math.random() * 11) - 5, x1 = Math.floor(Math.random() * 5) - 2, x2 = x1 + 1 + Math.floor(Math.random() * 3); return [{ x1, y1: m * x1 + b, x2, y2: m * x2 + b, m: null }, `Bestimme die Steigung der Geraden durch P(${x1}|${m * x1 + b}) und Q(${x2}|${m * x2 + b}).`]; },
+    name: 'Gerade durch zwei Punkte', group: 'Funktionen', grades: [8], icon: '📈',
+    hint: 'Zwei Punkte eintragen – oder einen Punkt und die Steigung m.',
+    fields: [NUM('x1', 'P: x₁'), NUM('y1', 'P: y₁'), NUM('x2', 'Q: x₂'), NUM('y2', 'Q: y₂'), NUM('m', 'oder Steigung m')],
+    solve(v) {
+      let { x1, y1, x2, y2, m } = v; const steps = [];
+      if (x1 === null || y1 === null) throw new Error('Bitte mindestens den Punkt P eintragen.');
+      if (m === null) {
+        if (x2 === null || y2 === null) throw new Error('Bitte Q oder die Steigung m eintragen.');
+        if (x1 === x2) { steps.push(st('Senkrechte Gerade', `x = ${f(x1)}`, 'Beide Punkte haben dieselbe x-Koordinate – das ist keine Funktion.')); return R({ kind: 'Gerade', topic: 'Lineare Funktionen', grade: '8', problemHTML: `P(${f(x1)} | ${f(y1)}), Q(${f(x2)} | ${f(y2)})`, answerHTML: `x = ${f(x1)}`, steps, check: { ok: true, text: 'Logisch geprüft.' } }); }
+        m = (y2 - y1) / (x2 - x1);
+        steps.push(st('Steigung', `m = ${fr('y<sub>2</sub> − y<sub>1</sub>', 'x<sub>2</sub> − x<sub>1</sub>')} = ${fr(f(y2) + ' − ' + (y1 < 0 ? '(' + f(y1) + ')' : f(y1)), f(x2) + ' − ' + (x1 < 0 ? '(' + f(x1) + ')' : f(x1)))} = ${fr(f(y2 - y1), f(x2 - x1))} = <b>${f(m, 4)}</b>`, 'Steigungsdreieck: Höhenunterschied geteilt durch Breitenunterschied.'));
+      }
+      const b = y1 - m * x1;
+      steps.push(st('y-Achsenabschnitt', `${f(y1)} = ${f(m, 4)} · ${x1 < 0 ? '(' + f(x1) + ')' : f(x1)} + b ⇒ b = <b>${f(b, 4)}</b>`, 'Punkt P in y = mx + b einsetzen und nach b auflösen.'));
+      const eq = `y = ${f(m, 4)}x ${b < 0 ? '−' : '+'} ${f(Math.abs(b), 4)}`.replace(' + 0', '').replace(/^y = 1x/, 'y = x').replace(/^y = −1x/, 'y = −x');
+      steps.push(st('Funktionsgleichung', `<b>${eq}</b>`));
+      const pts = [{ x: x1, y: y1, label: 'P' }]; if (x2 !== null && y2 !== null) pts.push({ x: x2, y: y2, label: 'Q' });
+      const ok = pts.every(p => close(m * p.x + b, p.y, 1e-9));
+      return R({ kind: 'Gerade', topic: 'Lineare Funktionen', grade: '8', problemHTML: `P(${f(x1)} | ${f(y1)})${v.m === null ? `, Q(${f(x2)} | ${f(y2)})` : `, m = ${f(m)}`}`, answerHTML: eq, steps, visual: { type: 'graph', functions: [{ expr: `${m}*x+${b}`, label: 'f' }], points: pts, slope: true, showZeros: true }, check: { ok, text: ok ? 'Geprüft: Beide Punkte liegen auf der Geraden.' : 'Gegenprobe weicht ab!' }, numeric: m, values: { m, b } });
+    },
+  });
+
+  C['kreis'].gen = function () { const r = [2, 3, 4, 5, 6, 8, 10][Math.floor(Math.random() * 7)]; return [{ r, d: null, U: null, A: null, unit: 'cm' }, `Ein Kreis hat den Radius r = ${r} cm. Berechne den Flächeninhalt (auf 2 Stellen runden).`]; };
+  C['quader'].gen = function () { const a = 2 + Math.floor(Math.random() * 9), b = 2 + Math.floor(Math.random() * 6), c = 2 + Math.floor(Math.random() * 6); return [{ a, b, c, unit: 'cm' }, `Ein Quader ist ${a} cm lang, ${b} cm breit und ${c} cm hoch. Berechne das Volumen.`]; };
+  C['zylinder'].gen = function () { const r = 2 + Math.floor(Math.random() * 6), h = 5 + Math.floor(Math.random() * 10); return [{ r, h, unit: 'cm' }, `Ein Zylinder hat r = ${r} cm und h = ${h} cm. Berechne das Volumen (auf 2 Stellen runden).`]; };
+  C['kugel'].gen = function () { const r = 2 + Math.floor(Math.random() * 9); return [{ r, d: null, unit: 'cm' }, `Eine Kugel hat den Radius r = ${r} cm. Berechne das Volumen (auf 2 Stellen runden).`]; };
+  C['kegel'].gen = function () { const r = 2 + Math.floor(Math.random() * 6), h = 4 + Math.floor(Math.random() * 9); return [{ r, h, unit: 'cm' }, `Ein Kegel hat r = ${r} cm und h = ${h} cm. Berechne das Volumen (auf 2 Stellen runden).`]; };
+  C['pyramide'].gen = function () { const a = 3 * (1 + Math.floor(Math.random() * 4)), h = 2 + Math.floor(Math.random() * 8); return [{ a, h, unit: 'm' }, `Pyramide a = ${a} m, h = ${h} m. Berechne das Volumen.`]; };
+  C['rechteck'].gen = function () { const a = 3 + Math.floor(Math.random() * 15), b = 2 + Math.floor(Math.random() * 10); return [{ a, b, A: null, U: null, unit: 'cm' }, `Ein Rechteck ist ${a} cm lang und ${b} cm breit. Berechne den Flächeninhalt.`]; };
+  C['dreieck'].gen = function () { const g = 2 * (2 + Math.floor(Math.random() * 8)), h = 2 + Math.floor(Math.random() * 10); return [{ g, h, a: null, b: null, c: null, unit: 'cm' }, `Dreieck g = ${g} cm, h = ${h} cm. Berechne den Flächeninhalt.`]; };
+  // ---------- Text-Erkennung ----------
+  const NUMRE = '-?\\d+(?:[.,]\\d+)*';
+  const WD = '[\\wäöüßÄÖÜ]';
+  const num = s => parseNum(s);
+  function nums(t) { return (t.match(new RegExp(NUMRE, 'g')) || []).map(num).filter(x => x !== null); }
+  function labeled(t, names) {
+    for (const n of names) {
+      if (['hoch', 'lang', 'breit', 'tief'].includes(n)) { const m = t.match(new RegExp(`(${NUMRE})\\s*(?:mm|cm|dm|km|m)?\\s*${n}`, 'i')); if (m) return num(m[1]); continue; }
+      const single = n.length <= 2 && !/^[a-zäöü]{3,}/.test(n);
+      const re = single ? new RegExp(`(?:^|[^a-zäöüß₀-₉])${n}\\s*(?:=|:)\\s*(${NUMRE})`, 'i') : new RegExp(`${n}\\w*\\s*(?:von|beträgt|ist|misst|=|:|mit)?\\s*(?:\\w+\\s)?(${NUMRE})`, 'i');
+      const m = t.match(re); if (m) return num(m[1]);
+    }
+    return null;
+  }
+  const COLORS = ['rote', 'blaue', 'grüne', 'gelbe', 'schwarze', 'weiße', 'orange', 'lila', 'rot', 'blau', 'grün', 'gelb', 'schwarz', 'weiß', 'pinke', 'braune', 'graue', 'goldene', 'silberne'];
+  function wordNum(t) { return t.replace(/\b(eins|ein|eine|einen|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|zwölf)\b(?=\s+(?:mal|kugeln|würfe|personen|arbeiter|jahre|kinder|lose|gezogen|\w+e[nr]?\s+kugeln))/gi, w => ({ eins: 1, ein: 1, eine: 1, einen: 1, zwei: 2, drei: 3, vier: 4, 'fünf': 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, 'zwölf': 12 })[w.toLowerCase()]); }
+
+  function matchText(input) {
+    let t = ' ' + String(input).replace(/[−–]/g, '-').replace(/ /g, ' ').replace(/prozent/gi, '%').replace(/euro/gi, '€').replace(/\s+/g, ' ') + ' ';
+    t = wordNum(t);
+    const lo = t.toLowerCase();
+    const N = nums(t);
+    const has = re => re.test(lo);
+    const out = (calc, vals, note) => ({ calc, vals, note });
+    // Funktionen / Gleichungen im Text
+    const fm = t.match(/([fgh]\s*\(\s*x\s*\)\s*=\s*[^,;?!]+?)(?:\s+(?:und|hat|ist|zeichne|beschreibe|berechne)\b|[,;?!]|\s*$)/i);
+    if (fm) return { expr: fm[1].trim().replace(/[.!?]+$/, '') };
+    // ggT / kgV
+    if (has(/ggt|kgv|größte[nr]? gemeinsame[nr]? teiler|kleinste[sn]? gemeinsame[sn]? vielfache/)) { const L = N.filter(Number.isInteger); if (L.length >= 2) return out('ggtkgv', { list: L.join(', ') }); }
+    if (has(/primfaktor|primzahl|teilermenge|alle teiler|teiler von/)) { const L = N.filter(Number.isInteger); if (L.length === 1) return out('primfaktoren', { n: L[0] }); }
+    // Statistik
+    if (has(/mittelwert|durchschnitt|schnitt|median|zentralwert|spannweite|modalwert|quartil|arithmetische/)) {
+      const after = t.split(/(?:von|der|die|werte|daten|noten|zahlen|:)\s/i).pop();
+      const L = (after.match(new RegExp(NUMRE, 'g')) || []).map(num); const L2 = L.length >= 2 ? L : N;
+      if (L2.length >= 2) return out('statistik', { list: L2.map(x => String(x).replace('.', ',')).join('; ') });
+    }
+    // Würfel
+    if (has(/würfel/) && !has(/kugel|urne/) && !has(/volumen|oberfläche|kante/)) {
+      const fs = (lo.match(/(\d+)\s*-?\s*(seitig|flächig|er[- ]würfel)/) || [])[1] || 6; const n = +fs; const all = Array.from({ length: n }, (_, i) => i + 1);
+      let g = null, d = '';
+      let m;
+      if ((m = lo.match(/(größer|mehr) als (\d+)/))) { g = all.filter(x => x > +m[2]); d = `Zahl größer als ${m[2]}`; }
+      else if ((m = lo.match(/(kleiner|weniger) als (\d+)/))) { g = all.filter(x => x < +m[2]); d = `Zahl kleiner als ${m[2]}`; }
+      else if ((m = lo.match(/mindestens (?:eine )?(\d+)/))) { g = all.filter(x => x >= +m[1]); d = `mindestens ${m[1]}`; }
+      else if ((m = lo.match(/höchstens (?:eine )?(\d+)/))) { g = all.filter(x => x <= +m[1]); d = `höchstens ${m[1]}`; }
+      else if (has(/ungerade/)) { g = all.filter(x => x % 2); d = 'ungerade Zahl'; }
+      else if (has(/gerade/)) { g = all.filter(x => !(x % 2)); d = 'gerade Zahl'; }
+      else if (has(/primzahl/)) { g = all.filter(x => [2, 3, 5, 7, 11, 13, 17, 19].includes(x)); d = 'Primzahl'; }
+      else if (has(/sechs\b|eine 6|die 6/)) { g = [6]; d = 'eine 6'; }
+      else if ((m = lo.match(/(?:eine|die|zahl) (\d+)\b/))) { g = all.filter(x => x === +m[1]); d = `eine ${m[1]}`; }
+      if (g && !has(/zweimal|zwei mal|2 mal|zwei würfel|beide|zweimal würfeln|hintereinander/)) return out('laplace', { g: g.length, m: n, desc: `${n}-seitiger Würfel: ${d}`, list: `{${g.join(', ')}}` });
+    }
+    { const fm2 = lo.match(new RegExp(`(${NUMRE})\\s*(?:gleich\\S*\\s*)?(?:große[n]?\\s*)?(?:felder|sektoren|lose|karten|kugeln|schüler\\S*|personen)`)); const dm = lo.match(new RegExp(`(${NUMRE})\\s*(?:davon|von ihnen)`)) || lo.match(new RegExp(`davon\\s*(?:sind\\s*)?(${NUMRE})`));
+      if (fm2 && dm && has(/wahrscheinlich|chance|p\(/)) { const n = num(fm2[1]), g = num(dm[1]); if (Number.isInteger(n) && Number.isInteger(g) && g <= n) return out('laplace', { g, m: n, desc: 'günstig: ' + g + ' von ' + n }); } }
+    if (has(/münze/) && !has(/zweimal|zwei mal|dreimal|beide/)) return out('laplace', { g: 1, m: 2, desc: 'Münze: Kopf (bzw. Zahl)' });
+    // Urne
+    if (has(/urne|beutel|säckchen|kugeln|lose|bonbons|socken/)) {
+      const cs = []; const re = new RegExp(`(\\d+)\\s+(${COLORS.join('|')})${WD}*`, 'gi'); let m;
+      while ((m = re.exec(lo))) { const c = m[2].replace(/e$/, ''); if (!cs.some(x => x.c === c)) cs.push({ c, n: +m[1] }); }
+      if (cs.length >= 2) {
+        const km = lo.match(/(\d+)\s*(?:mal|kugeln|lose|bonbons|socken)?\s*(?:\w+\s){0,3}gezogen|(\d+)-?mal/); let k = km ? +(km[1] || km[2]) : 2; if (!(k >= 2 && k <= 3)) k = 2;
+        const ohne = !has(/mit zurücklegen/);
+        let ev = null, ziel = cs[0].c; let mm;
+        const cre = COLORS.join('|');
+        if ((mm = lo.match(new RegExp(`(?:beide|alle|nur)\\s+(?:${WD}+\\s)?(${cre})`)))) { ev = 'alle haben die Zielfarbe'; ziel = mm[1].replace(/e$/, ''); }
+        else if ((mm = lo.match(new RegExp(`mindestens (?:eine|1)\\s+(${cre})`)))) { ev = 'mindestens eine hat die Zielfarbe'; ziel = mm[1].replace(/e$/, ''); }
+        else if ((mm = lo.match(new RegExp(`genau (?:eine|1)\\s+(${cre})`)))) { ev = 'genau eine hat die Zielfarbe'; ziel = mm[1].replace(/e$/, ''); }
+        else if (has(/gleiche farbe|gleichfarbig|dieselbe farbe/)) ev = 'alle gleiche Farbe';
+        else if (has(/verschiedene farben|unterschiedliche farben|verschiedenfarbig/)) ev = 'alle verschiedene Farben';
+        if (ev) return out('urne', { f1: cs[0].c, n1: cs[0].n, f2: cs[1].c, n2: cs[1].n, f3: cs[2] ? cs[2].c : '', n3: cs[2] ? cs[2].n : null, k: String(k), modus: ohne ? 'ohne Zurücklegen' : 'mit Zurücklegen', ev, ziel });
+      }
+    }
+    // Zinsen / Wachstum
+    const pM = t.match(new RegExp(`(${NUMRE})\\s*%`)); const p = pM ? num(pM[1]) : null;
+    const yM = lo.match(new RegExp(`(${NUMRE})\\s*(jahre?n?|monate?n?|tage?n?|stunden?|wochen?)`));
+    const growth = has(/zinseszins|wächst|wachstum|vermehrt|verdoppel|nimmt (?:\w+\s){0,4}(?:zu|ab)|zerfällt|zerfall|abnahme|zunahme|exponentiell/) || (has(/jährlich|pro jahr|jedes jahr|stündlich|täglich|wöchentlich|monatlich|pro (?:stunde|tag|woche|monat)/) && yM && num(yM[1]) > 1 && has(/verliert|sinkt|steigt|wert|nach/)) || (has(/jährlich|pro jahr|jedes jahr/) && yM && num(yM[1]) > 1 && has(/nach|in \d+ jahren|wie (hoch|groß|viel)/) && has(/zins|verzinst|kapital|guthaben|anleg/));
+    if (p !== null && growth && yM) {
+      const nY = num(yM[1]); const rest = N.filter(x => x !== p && x !== nY); const K0 = rest.length ? rest[0] : null;
+      const down = has(/abnahme|nimmt (?:\w+\s){0,4}ab|zerf|sinkt|verliert|verringert|schrumpft|wertverlust/);
+      if (K0 !== null) return out('wachstum', { K0, p, art: down ? 'Abnahme' : 'Zunahme', n: nY, Kn: null });
+    }
+    if (p !== null && has(/zins/) && !growth) {
+      const KM = t.match(new RegExp(`(${NUMRE})\\s*€`)); const K = KM ? num(KM[1]) : N.find(x => x !== p);
+      let tt = 1, tu = 'Jahre';
+      if (yM) { tt = num(yM[1]); tu = /monat/.test(yM[2]) ? 'Monate' : /tag/.test(yM[2]) ? 'Tage' : 'Jahre'; }
+      if (K !== undefined && K !== null) return out('zinsen', { K, p, t: tt, tu, Z: null });
+    }
+    // Prozent: veränderter Grundwert
+    const down = has(/rabatt|reduziert|verringert|ermäßigt|gesenkt|billiger|preisnachlass|skonto|günstiger|weniger|sinkt|abnahme|abzug|nachlass/), up = has(/erhöht|aufschlag|teurer|steigt|zunahme|mehrwertsteuer|mwst|preiserhöhung|mehr als|aufpreis/);
+    if ((down || up) && (p !== null || has(/mehrwertsteuer|mwst/))) {
+      const pp = p !== null ? p : 19; const rest = N.filter(x => x !== pp);
+      if (rest.length >= 1) {
+        if (has(/vorher|ursprünglich|alter preis|ohne rabatt|vor der|noch \d|nur noch|kostete|jetzt nur/) && !has(/jetzt\?|kostet (es|er|sie) jetzt|neue[rn]? preis/)) return out('veraendert', { G: null, p: pp, art: up ? 'Aufschlag / Zunahme' : 'Rabatt / Abnahme', E: rest[0], unit: has(/€/) ? '€' : '' });
+        return out('veraendert', { G: rest[0], p: pp, art: up && !down ? 'Aufschlag / Zunahme' : 'Rabatt / Abnahme', E: null, unit: has(/€/) ? '€' : '' });
+      }
+    }
+    // Prozent: Grundaufgaben
+    let m;
+    if ((m = t.match(new RegExp(`(${NUMRE})\\s*%\\s*(?:von|aus|der|des|vom)\\s*(?:${WD}+\\s){0,2}?(${NUMRE})\\s*([a-zA-Z€²³]*)`, 'i')))) return out('prozent', { p: num(m[1]), G: num(m[2]), W: null, unit: m[3] || '' });
+    if ((m = t.match(new RegExp(`wie\\s*viel\\s*%?\\s*(?:sind|ist|entsprechen|macht|machen)\\s*(${NUMRE})\\s*([a-zA-Z€]*)\\s*(?:${WD}+\\s){0,2}?(?:von|aus)\\s*(${NUMRE})`, 'i')))) return out('prozent', { W: num(m[1]), G: num(m[3]), p: null, unit: m[2] || '' });
+    if ((m = t.match(new RegExp(`(${NUMRE})\\s*([a-zA-Z€]*)\\s*(?:von|aus)\\s*(${NUMRE})\\s*${WD}*\\s*(?:in|als)\\s*%`, 'i')))) return out('prozent', { W: num(m[1]), G: num(m[3]), p: null, unit: m[2] || '' });
+    if ((m = t.match(new RegExp(`(${NUMRE})\\s*([a-zA-Z€]*)\\s*(?:sind|entsprechen|ist|sind genau)\\s*(${NUMRE})\\s*%`, 'i')))) return out('prozent', { W: num(m[1]), p: num(m[3]), G: null, unit: m[2] || '' });
+    // Umwandeln
+    if (has(/\b(als|in)\s+(einen?\s+)?(bruch|dezimalzahl|kommazahl|%|dezimalbruch)|umwandeln|wandle/)) { const m = t.match(/(-?\d+\s*\/\s*\d+|-?\d+(?:,\d+)?\s*%?)/); if (m) return out('umwandeln', { x: m[1].replace(/\s/g, '') }); }
+    // Einheiten
+    const UNRE = '(zentimeter|millimeter|sekunden?|kilogramm|kilometer|minuten?|stunden?|tonnen?|tage?|liter|gramm|meter|cent|euro|mm²|cm²|dm²|km²|mm³|cm³|dm³|min|m²|m³|mm|cm|dm|km|ha|ml|hl|mg|kg|ct|m|a|l|g|t|h|s|d|€)(?![a-zäöüß])';
+    { const wm = lo.match(new RegExp(`wie\\s*viele?\\s*${UNRE}\\s*(?:sind|ergeben|hat|haben)\\s*((?:${NUMRE}\\s*${UNRE}\\s*)+)`)); if (wm) { const to = normUnit(wm[1]); const pairs = [...wm[2].matchAll(new RegExp(`(${NUMRE})\\s*${UNRE}`, 'g'))].map(x => [num(x[1]), normUnit(x[2])]); if (to && pairs.length && pairs.every(([, u]) => u && unitGroup(u) === unitGroup(to))) { const g = unitGroup(to); const tot = pairs.reduce((a, [x, u]) => a + x * UNITS[g][u], 0); const small = pairs.map(q => q[1]).sort((a, b) => UNITS[g][a] - UNITS[g][b])[0]; return out('einheiten', { x: Math.round(tot / UNITS[g][small] * 1e9) / 1e9, von: small, nach: to }, pairs.map(([x, u]) => f(x) + ' ' + u).join(' ') + ' = ' + f(tot / UNITS[g][to], 6) + ' ' + to); } } }
+    if ((m = lo.match(new RegExp(`((?:${NUMRE}\\s*${UNRE}\\s*)+)(?:in|zu|=|nach)\\s*${UNRE}`)))) {
+      const to = normUnit(m[m.length - 1]); const pairs = [...m[1].matchAll(new RegExp(`(${NUMRE})\\s*${UNRE}`, 'g'))].map(x => [num(x[1]), normUnit(x[2])]);
+      if (to && pairs.every(([, u]) => u && unitGroup(u) === unitGroup(to))) {
+        if (pairs.length === 1) return out('einheiten', { x: pairs[0][0], von: pairs[0][1], nach: to });
+        const g = unitGroup(to); const tot = pairs.reduce((a, [x, u]) => a + x * UNITS[g][u], 0); const small = pairs.map(p2 => p2[1]).sort((a, b) => UNITS[g][a] - UNITS[g][b])[0];
+        return out('einheiten', { x: Math.round(tot / UNITS[g][small] * 1e9) / 1e9, von: small, nach: to }, pairs.map(([x, u]) => f(x) + ' ' + u).join(' ') + ' = ' + f(tot / UNITS[g][to], 6) + ' ' + to);
+      }
+    }
+    // Schatten / Strahlensatz
+    if (has(/schatten/) && N.length >= 3) return out('strahlensatz', { a1: N[0], b1: N[1], b2: N[2], unit: 'm' });
+    // Gerade durch Punkte
+    const PP = [...t.matchAll(new RegExp(`\\(\\s*(${NUMRE})\\s*[|;]\\s*(${NUMRE})\\s*\\)`, 'g'))].map(x => [num(x[1]), num(x[2])]);
+    if (PP.length >= 2 && has(/gerade|funktion|steigung|lineare/)) return out('gerade', { x1: PP[0][0], y1: PP[0][1], x2: PP[1][0], y2: PP[1][1], m: null });
+    if (PP.length === 1 && has(/steigung/)) { const mm2 = lo.match(new RegExp(`(?:steigung|m)\\s*(?:von|=|:)?\\s*(${NUMRE})`)); if (mm2) return out('gerade', { x1: PP[0][0], y1: PP[0][1], x2: null, y2: null, m: num(mm2[1]) }); }
+    // Geometrie
+    const unit = (lo.match(/\d\s*(mm|cm|dm|km|m)\b/) || [])[1] || 'cm';
+    const L = names => labeled(t, names);
+    const ang = n => { const r = new RegExp(`(?:${n})\\s*=\\s*(${NUMRE})\\s*°?`, 'i'); const q = t.match(r); return q ? num(q[1]) : null; };
+    const al = ang('α|alpha'), be = ang('β|beta'), ga = ang('γ|gamma');
+    if (has(/winkelart|art des winkels|was für ein winkel|welche art|welcher winkel ist|einordnen/) && N.length) return out('winkelart', { w: N[0] });
+    if (has(/leiter/) && has(/wand|mauer|haus/) && N.length >= 2 && !has(/rechtwinklig/)) { const L2 = labeled(t, ['lang']) ?? N[0]; const dist = N.find(x => x !== L2); return out('pythagoras', { a: null, b: dist, c: L2, unit }, 'Leiter = Hypotenuse c, Abstand zur Wand = b, gesuchte Höhe = a'); }
+    if (has(/rechtwinklig|pythagoras|hypotenuse|kathete/)) {
+      let a = L(['a']), b = L(['b']), c = L(['c']);
+      const kat = lo.match(new RegExp(`katheten?\\s*(?:${WD}+\\s){0,3}?(${NUMRE})\\s*${WD}*\\s*(?:und|,)\\s*(${NUMRE})`));
+      if (kat && a === null && b === null) { a = num(kat[1]); b = num(kat[2]); }
+      if (a === null && b === null) { const k1 = lo.match(new RegExp(`kathete\\s*(?:a|b)?\\s*(?:von|=|ist|beträgt|misst|mit|:)?\\s*(${NUMRE})`)); if (k1) a = num(k1[1]); }
+      const hy = lo.match(new RegExp(`hypotenuse\\s*(?:c\\s*)?(?:von|=|ist|beträgt|misst|:)?\\s*(${NUMRE})`)); if (hy && c === null) c = num(hy[1]);
+      if (al !== null || be !== null) { if ([a, b, c].some(x => x !== null)) return out('trigo', { a, b, c, al, be, unit }); }
+      else if ([a, b, c].filter(x => x !== null).length === 2) return has(/α|β|alpha|beta|winkel/) ? out('trigo', { a, b, c, al: null, be: null, unit }) : out('pythagoras', { a, b, c, unit });
+    }
+    if (has(/dreieck|viereck/) && (al !== null || be !== null) && !has(/rechtwinklig/) && N.filter(x => x !== al && x !== be && x !== ga).length === 0) {
+      const vier = has(/viereck|trapez|parallelogramm|drachen/); return out('winkelsumme', { fig: vier ? 'Viereck' : 'Dreieck', w1: al, w2: be, w3: ga });
+    }
+    const R_ = L(['r', 'radius']), D_ = L(['d', 'durchmesser']), H_ = L(['h', 'höhe', 'hoch']);
+    if (has(/kugel/) && (R_ !== null || D_ !== null)) return out('kugel', { r: R_, d: D_, unit });
+    if (has(/zylinder|dose/) && (R_ !== null || D_ !== null) && H_ !== null) return out('zylinder', { r: R_ ?? D_ / 2, h: H_, unit });
+    if (has(/kegel/) && (R_ !== null || D_ !== null) && H_ !== null) return out('kegel', { r: R_ ?? D_ / 2, h: H_, unit });
+    if (has(/pyramide/) && H_ !== null) { const a = L(['a', 'grundkante', 'kante', 'seitenlänge']); if (a !== null) return out('pyramide', { a, h: H_, unit }); }
+    if (has(/würfel/) && !has(/wahrscheinlich|werfen|gewürfelt/)) { const a = L(['a', 'kantenlänge', 'kante']) ?? N[0]; if (a !== undefined && a !== null) return out('quader', { a, b: null, c: null, unit }); }
+    if (has(/quader|karton|aquarium|schachtel|becken/)) {
+      let a = L(['a', 'länge', 'lang']), b = L(['b', 'breite', 'breit']), c = L(['c', 'höhe', 'hoch', 'tief']);
+      const lw = lo.match(new RegExp(`(${NUMRE})\\s*${WD}*\\s*lang${WD}*\\s*,?\\s*(${NUMRE})\\s*${WD}*\\s*breit${WD}*\\s*(?:und)?\\s*(${NUMRE})\\s*${WD}*\\s*(?:hoch|tief)`)); if (lw) { a = num(lw[1]); b = num(lw[2]); c = num(lw[3]); }
+      if (a === null && N.length >= 3) [a, b, c] = N; if (a !== null && b !== null && c !== null) return out('quader', { a, b, c, unit });
+    }
+    if (has(/kreis/) && !has(/kreisdiagramm/)) { const U_ = L(['umfang', 'u']), A_ = L(['flächeninhalt', 'fläche', 'a']); if (R_ !== null || D_ !== null || U_ !== null || A_ !== null) return out('kreis', { r: R_, d: D_, U: R_ === null && D_ === null ? U_ : null, A: R_ === null && D_ === null && U_ === null ? A_ : null, unit }); }
+    if (has(/trapez/)) { const a = L(['a']), c = L(['c']); if (a !== null && c !== null && H_ !== null) return out('parallelogramm', { g: a, c, h: H_, unit }); }
+    if (has(/parallelogramm/)) { const g = L(['g', 'grundseite', 'a']); if (g !== null && H_ !== null) return out('parallelogramm', { g, c: null, h: H_, unit }); }
+    if (has(/dreieck/)) { const g = L(['g', 'grundseite']), a = L(['a']), b = L(['b']), c = L(['c']); if ((g !== null && H_ !== null) || (a !== null && b !== null && c !== null)) return out('dreieck', { g, h: H_, a, b, c, unit }); }
+    if (has(/quadrat/) && !has(/quadratzahl|quadratisch/)) { const a = L(['a', 'seitenlänge', 'seite']) ?? N[0]; if (a !== undefined && a !== null) return out('rechteck', { a, b: null, A: null, U: null, unit }); }
+    if (has(/rechteck|zimmer|garten|grundstück|beet|spielfeld|platte/)) {
+      let a = L(['a', 'länge', 'lang']), b = L(['b', 'breite', 'breit']);
+      const lw = lo.match(new RegExp(`(${NUMRE})\\s*${WD}*\\s*lang${WD}*\\s*(?:und|,)\\s*(${NUMRE})\\s*${WD}*\\s*breit`)); if (lw) { a = num(lw[1]); b = num(lw[2]); }
+      if (a === null && N.length === 2) [a, b] = N; if (a !== null && b !== null) return out('rechteck', { a, b, A: null, U: null, unit });
+    }
+    // Dreisatz
+    if (N.length === 3 && has(/kost|wieg|brauch|reich|schaff|fahr|verbrauch|bekomm|zahl|dauer|füll|pump|wie viel|wie lange|wie viele|was kost/) && !has(/%/)) {
+      const anti = has(/km\/h|geschwindigkeit|tempo|schneller|langsamer/) || has(/arbeiter|person|leute|helfer|maschinen|pumpen|bagger|lkw|lastwagen|kühe|pferde|tiere|schüler|kinder|gäste|teilnehmer|handwerker|maler|drucker/) && has(/tag|stunde|woche|minute|monat|reich|brauch|benötig|dauer/);
+      const um = [...t.matchAll(new RegExp(`(${NUMRE})\\s*([a-zA-ZäöüßÄÖÜ€/]+)`, 'g'))].map(x => x[2]);
+      return out('dreisatz', { a1: N[0], ua: um[0] || '', b1: N[1], ub: um[1] || '', a2: N[2], art: anti ? 'antiproportional' : 'proportional' });
+    }
+    // Rechenausdruck im Text
+    const mx = t.match(/[\d(√-][\d\s()+\-*\/:^.,·×÷√²³xyab=]*[\d)²³x]/g);
+    if (mx) { const best = mx.sort((a, b) => b.length - a.length)[0]; if (best && /[+\-*\/:^·×÷=√²³]/.test(best.replace(/^-/, '')) && /\d/.test(best)) return { expr: best.trim() }; }
+    return null;
+  }
+
+  function solveCalc(id, vals) {
+    const c = C[id]; if (!c) throw new Error('Unbekannter Rechner');
+    const v = {};
+    c.fields.forEach(fd => { const raw = vals[fd.k]; if (fd.type === 'select') v[fd.k] = raw ?? fd.dflt; else if (fd.type === 'text') v[fd.k] = raw ?? fd.dflt ?? ''; else v[fd.k] = raw === '' || raw === undefined ? null : (typeof raw === 'number' ? raw : parseNum(raw)); });
+    Object.keys(vals).forEach(k => { if (!(k in v)) v[k] = vals[k]; });
+    const r = c.solve(v);
+    r.calcId = id; r.calcVals = vals; r.calcName = c.name;
+    return r;
+  }
+
+
+  // ---------- Themen Jg. 5–10 (alle Beispiele ohne KI lösbar) ----------
+  const TOPICS = {
+    5: [
+      ['Grundrechenarten', ['345+678', '1000-387', '24*15', '1296:8'], []],
+      ['Rechenregeln', ['(12+8)·3−15:5', '48−6·(3+4)', '2·3−4:2'], []],
+      ['Quadratzahlen & Potenzen', ['12^2', '2^5', '10^4'], []],
+      ['Teiler, ggT & kgV', ['Bestimme ggT und kgV von 24 und 36.', 'Primfaktorzerlegung von 360', 'Ist 97 eine Primzahl?'], ['ggtkgv', 'primfaktoren']],
+      ['Größen & Einheiten', ['Rechne 3,5 km in m um.', '2 h 15 min in min', '2,5 t in kg'], ['einheiten']],
+      ['Winkel', ['Welche Winkelart hat ein Winkel von 135°?'], ['winkelart']],
+      ['Umfang & Flächeninhalt', ['Ein Rechteck ist 7 cm lang und 4 cm breit. Berechne Umfang und Flächeninhalt.', 'Quadrat mit Seitenlänge 6 cm'], ['rechteck']],
+    ],
+    6: [
+      ['Brüche kürzen & erweitern', ['12/18', '24/36'], []],
+      ['Brüche addieren & subtrahieren', ['2/3+5/4', '7/8−1/6', '1 1/2 + 2/3'], []],
+      ['Brüche multiplizieren & dividieren', ['3/4·8/9', '5/6:10/3'], []],
+      ['Dezimalzahlen', ['0,5·3,2+1,25', '7,2:0,6', '12,4−3,75'], []],
+      ['Bruch, Dezimalzahl, Prozent', ['Wandle 3/8 in eine Dezimalzahl um.', '0,75 als Bruch', 'Schreibe 2/3 in Prozent'], ['umwandeln']],
+      ['Quader & Würfel', ['Ein Quader ist 5 cm lang, 3 cm breit und 4 cm hoch. Berechne Volumen und Oberfläche.', 'Würfel mit Kantenlänge 3 cm'], ['quader']],
+      ['Daten & Mittelwert', ['Berechne Mittelwert und Median der Noten 3, 2, 4, 1, 2, 5, 3.'], ['statistik']],
+    ],
+    7: [
+      ['Rationale Zahlen', ['−3^2+(−2)^2', '(−12)·(−3)+(−20):4', '−7+12−(−5)'], []],
+      ['Terme vereinfachen', ['3(2x−4)−(x+1)', '2x+3y−x+5y', '4a·3b−2ab'], []],
+      ['Lineare Gleichungen', ['3x+5=2x−7', '2(x+3)=4x−8', 'x/3+2=5'], []],
+      ['Ungleichungen', ['2x+3<7', '−3x+2≥11'], []],
+      ['Zuordnungen (Dreisatz)', ['3 kg Äpfel kosten 4,50 €. Was kosten 7 kg?', '4 Arbeiter brauchen 6 Tage. Wie lange brauchen 3 Arbeiter?'], ['dreisatz']],
+      ['Prozentrechnung', ['Wie viel sind 15 % von 240 €?', 'Wie viel Prozent sind 18 von 60?', '45 € sind 30 %', 'Ein Fahrrad kostet 240 €. Es gibt 15 % Rabatt. Wie viel kostet es jetzt?'], ['prozent', 'veraendert']],
+      ['Zinsrechnung', ['Wie viele Zinsen bringen 1500 € bei 2,5 % Zinssatz in einem Jahr?', 'Wie viel Zinsen bekommt man für 2400 € bei 3 % in 8 Monaten?'], ['zinsen']],
+      ['Dreiecke & Winkelsumme', ['In einem Dreieck ist α = 48° und β = 67°. Wie groß ist γ?', 'Dreieck g = 8 cm, h = 5 cm'], ['winkelsumme', 'dreieck']],
+    ],
+    8: [
+      ['Binomische Formeln', ['(a+b)^2', '(x−5)^2', '(x+3)(x−3)', '(2x−1)(x+4)'], []],
+      ['Lineare Funktionen', ['f(x)=2x−4', 'y=0,5x+1', 'Bestimme die Gerade durch P(1|3) und Q(4|9).'], ['gerade']],
+      ['Lineare Gleichungssysteme', ['2x+y=7; x−y=2', '3a+2b=12; 2a−b=1'], []],
+      ['Bruchgleichungen', ['3/(x−1)=2/(x+1)', '1/x+1/(2x)=3'], []],
+      ['Vielecke & Kreis', ['Trapez a = 6 cm, c = 4 cm, h = 3 cm', 'Ein Kreis hat den Radius r = 5 cm. Berechne Umfang und Flächeninhalt.'], ['parallelogramm', 'kreis']],
+      ['Prisma & Zylinder', ['Ein Zylinder hat r = 3 cm und h = 10 cm. Berechne Volumen und Oberfläche.'], ['prisma', 'zylinder']],
+      ['Wahrscheinlichkeit', ['Wie groß ist die Wahrscheinlichkeit, mit einem Würfel eine Zahl größer als 4 zu werfen?', 'Ein Glücksrad hat 8 gleich große Felder, 3 davon sind rot. Wahrscheinlichkeit für rot?'], ['laplace']],
+    ],
+    9: [
+      ['Quadratwurzeln', ['sqrt(144)+2^3', '√2·√8', 'sqrt(50)'], []],
+      ['Potenzen & Zehnerpotenzen', ['2^−3', '3,2·10^5·2·10^−2', '(2^3)^2'], []],
+      ['Quadratische Gleichungen', ['x^2−5x+6=0', '3x^2−2x−1=0', '(x+2)^2=25', 'x^2+4x=0'], []],
+      ['Quadratische Funktionen', ['f(x)=x^2−4x+3', 'f(x)=−2x^2+8x−6'], []],
+      ['Wurzel- & Betragsgleichungen', ['sqrt(x+3)=x−3', 'abs(x−3)=5'], []],
+      ['Satz des Pythagoras', ['In einem rechtwinkligen Dreieck sind die Katheten a = 6 cm und b = 8 cm. Berechne die Hypotenuse c.', 'Eine Leiter ist 5 m lang und steht 3 m von der Wand entfernt. Wie hoch reicht sie?'], ['pythagoras']],
+      ['Strahlensätze & Ähnlichkeit', ['Ein 2 m hoher Stab wirft einen 1,5 m langen Schatten, ein Baum zur gleichen Zeit einen 12 m langen. Wie hoch ist der Baum?'], ['strahlensatz']],
+      ['Pyramide, Kegel & Kugel', ['Eine Kugel hat den Radius r = 6 cm. Berechne Volumen und Oberfläche.', 'Ein Kegel hat r = 4 cm und h = 9 cm. Berechne das Volumen.', 'Pyramide a = 6 m, h = 4 m'], ['pyramide', 'kegel', 'kugel']],
+    ],
+    10: [
+      ['Trigonometrie', ['sin(30)+cos(60)', 'In einem rechtwinkligen Dreieck ist α = 35° und die Hypotenuse c = 10 cm. Berechne a und b.'], ['trigo']],
+      ['Exponentielles Wachstum', ['Ein Kapital von 2000 € wird jährlich mit 3 % verzinst. Wie hoch ist es nach 10 Jahren?', 'Ein Auto im Wert von 20000 € verliert jährlich 15 % an Wert. Wert nach 4 Jahren?', 'f(x)=2·1,5^x'], ['wachstum']],
+      ['Logarithmus', ['2^x=32', '3·2^x=96', '2^x=10', 'log(1000)'], []],
+      ['Sinusfunktion', ['f(x)=2·sin(x)', 'f(x)=sin(2x)'], []],
+      ['Mehrstufige Zufallsversuche', ['In einer Urne sind 3 rote und 2 blaue Kugeln. Es werden zwei Kugeln ohne Zurücklegen gezogen. Wie groß ist P(beide rot)?', 'In einer Urne sind 3 rote und 2 blaue Kugeln. Es wird zweimal mit Zurücklegen gezogen. Wahrscheinlichkeit für mindestens eine blaue?'], ['urne']],
+      ['Statistik', ['Bestimme Median, Spannweite und Mittelwert von 4, 9, 2, 7, 7, 10, 3.'], ['statistik']],
+      ['Höhere Gleichungen', ['x^3−x=0', 'x^4−5x^2+4=0', 'x^3−6x^2+11x−6=0'], []],
+    ],
+  };
+
+  // Gesamtablauf ohne KI: Rechenausdruck exakt lösen oder Standardformulierung erkennen
+  function looksText(q) {
+    const w = String(q).replace(/sqrt|sin|cos|tan|nthRoot|abs|log|lg|ln|exp|pi/g, '');
+    return /[a-zA-ZäöüßÄÖÜ]{3,}/.test(w) || /%|€|°|²(?=\s*(in|zu))|\b(in|von|als|zu|und)\b/.test(w) || /\d\s*(mm|cm|dm|km|m|ml|l|g|kg|t|h|s|min)\b/.test(w) && /\b(in|zu)\b/.test(w);
+  }
+  function pipeline(q) {
+    const tryLocal = s => { const r = ME.solveLocal(s); return r; };
+    const viaText = () => {
+      const m = matchText(q); if (!m) return null;
+      if (m.expr) { const r = tryLocal(m.expr); if (!r.route && !r.error) { r.recognized = { expr: m.expr }; return r; } return r.error ? r : null; }
+      const r = solveCalc(m.calc, m.vals); r.recognized = { calc: m.calc, vals: m.vals, note: m.note }; if (m.calc === 'einheiten' && m.note) { r.answerHTML = esc(m.note).replace(/\./g, ','); r.steps.unshift(st('Zusammenfassen', esc(m.note.split(' = ')[0]) + ' = ' + f(m.vals.x, 6) + ' ' + m.vals.von, 'Erst alles in die kleinere Einheit umrechnen und addieren.')); } return r;
+    };
+    if (looksText(q)) { const r = viaText(); if (r) return r; const l = tryLocal(q); if (!l.route) return l; return { route: 'ai' }; }
+    const l = tryLocal(q); if (!l.route) return l;
+    const r = viaText(); return r || { route: 'ai' };
+  }
+  const API = { TOPICS, CALCS: C, solveCalc, matchText, parseNum, normUnit, pipeline, looksText };
+  if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Calc = API;
+})(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* App: Eingabe, KI-Erkennung, Lösungsdarstellung */
 (function () {
@@ -1803,6 +2910,7 @@ Aufgabe: ${input}`;
     document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== 'v-' + view);
     document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
     if (view === 'draw') sizePad();
+    if (view === 'calc' && !show.keep) renderCalcView();
     window.scrollTo(0, 0);
   }
   document.querySelectorAll('.nav button').forEach(b => b.onclick = () => show(b.dataset.v));
@@ -1951,7 +3059,8 @@ Aufgabe: ${input}`;
     R.innerHTML = '';
     if (meta.preview) R.append(el('div', 'card scanprev small', `<img src="${meta.preview}" alt="">`));
     let res = null;
-    const local = meta.kind === 'text' ? { route: 'ai' } : ME.solveLocal(input);
+    if (input.startsWith('calc:')) { const [, id, js] = input.match(/^calc:([^:]+):(.*)$/) || []; try { return showCalc(id, JSON.parse(js)); } catch (e) { } }
+    const local = Calc.pipeline(input);
     if (local.error) { renderError(input, local.error, meta); return; }
     if (!local.route) {
       res = local; res.source = 'local';
@@ -1960,7 +3069,7 @@ Aufgabe: ${input}`;
       if (res.needAI && sample) aiExtra(input, res);
       return;
     }
-    if (!sample) { renderError(input, NOAI ? 'Diese Aufgabe kann die Web-Version nicht exakt lösen. Gib die Rechnung, den Term oder die Gleichung direkt ein (z. B. 240*(1-15/100) statt einer Textaufgabe). Exakt gerechnet werden: Grundrechenarten, Brüche, Dezimalzahlen, Potenzen, Wurzeln, Terme, lineare & quadratische Gleichungen, Gleichungssysteme und Funktionen.' : 'Diese Aufgabe (z. B. Textaufgabe oder besondere Gleichung) braucht die KI-Freigabe. Exakt rechnen kann die App ohne KI: Grundrechenarten, Brüche, Terme, lineare & quadratische Gleichungen, Gleichungssysteme und Funktionen.', meta); return; }
+    if (!sample) { renderNoMatch(input, meta); return; }
     const box = el('div', 'loading', '<span class="dot"></span><span class="dot"></span><span class="dot"></span> Ich rechne und prüfe die Lösung …');
     R.append(problemCard(input, null, meta)); R.append(box);
     try {
@@ -1979,6 +3088,71 @@ Aufgabe: ${input}`;
       addHistory(input, res);
     } catch (e) { box.outerHTML = `<div class="card warn">${ME.esc(aiErr(e))}</div>`; }
   }
+  function renderNoMatch(input, meta) {
+    const R = $('#result'); R.append(problemCard(input, null, meta));
+    const c = el('div', 'card warn', '<b>Diese Formulierung kenne ich nicht sicher.</b><br>Damit nichts falsch gerechnet wird, wähle bitte den passenden Aufgabentyp – oder tippe die Rechnung bzw. Gleichung direkt ein.');
+    R.append(c);
+    const nums = (input.match(/-?\d+(?:[.,]\d+)?/g) || []);
+    if (nums.length) R.append(el('div', 'hint', 'Zahlen in deiner Aufgabe: ' + nums.map(ME.esc).join(' · ')));
+    R.append(calcList(null, true));
+  }
+  // ---------- Rechner ----------
+  const GROUPS = ['Zahlen', 'Größen', 'Prozent & Zinsen', 'Zuordnungen', 'Flächen', 'Winkel', 'Körper', 'Dreiecke', 'Funktionen', 'Daten', 'Wahrscheinlichkeit'];
+  let calcGrade = 0;
+  function calcList(filterGrade, compact) {
+    const wrap = el('div', 'calclist');
+    GROUPS.forEach(g => {
+      const items = Object.values(Calc.CALCS).filter(c => c.group === g && (!filterGrade || c.grades.includes(filterGrade)));
+      if (!items.length) return;
+      const card = el('div', 'card cgroup'); card.append(el('div', 'tname', g));
+      const grid = el('div', 'cgrid');
+      items.forEach(c => { const b = el('button', 'citem', `<span class="ci">${c.icon || '🧮'}</span><span class="cn">${ME.esc(c.name)}<small>Jg. ${c.grades.join(', ')}</small></span>`); b.onclick = () => openCalc(c.id); grid.append(b); });
+      card.append(grid); wrap.append(card);
+    });
+    return wrap;
+  }
+  function renderCalcView() {
+    const V = $('#calcBody'); V.innerHTML = '';
+    const gr = el('div', 'gr'); [0, 5, 6, 7, 8, 9, 10].forEach(k => { const b = el('button', 'gchip' + (k === calcGrade ? ' on' : ''), k ? String(k) : 'Alle'); b.onclick = () => { calcGrade = k; renderCalcView(); }; gr.append(b); });
+    V.append(gr, calcList(calcGrade || null));
+  }
+  function openCalc(id, vals) {
+    const c = Calc.CALCS[id]; if (!c) return;
+    show.keep = true; show('calc'); show.keep = false; vals = vals || {};
+    const V = $('#calcBody'); V.innerHTML = '';
+    const back = el('button', 'mini', '‹ Alle Rechner'); back.onclick = () => renderCalcView();
+    const card = el('div', 'card cform');
+    card.innerHTML = `<div class="sectitle">${c.icon || ''} ${ME.esc(c.name)}</div>${c.hint ? `<p class="muted">${ME.esc(c.hint)}</p>` : ''}`;
+    const form = el('form', 'fgrid');
+    const inputs = {};
+    c.fields.forEach(fd => {
+      const row = el('label', 'frow2'); row.append(el('span', 'fl', ME.esc(fd.label) + (fd.unit ? ` <small>(${ME.esc(fd.unit)})</small>` : '')));
+      let inpEl;
+      if (fd.type === 'select') { inpEl = el('select'); fd.options.forEach(o => { const op = el('option'); op.value = o; op.textContent = o; inpEl.append(op); }); inpEl.value = vals[fd.k] ?? fd.dflt; }
+      else { inpEl = el('input'); inpEl.type = 'text'; if (fd.type !== 'text') inpEl.setAttribute('inputmode', 'decimal'); inpEl.placeholder = fd.ph || ''; const v0 = vals[fd.k] ?? fd.dflt; inpEl.value = v0 === null || v0 === undefined ? '' : String(v0).replace('.', ','); }
+      inputs[fd.k] = inpEl; row.append(inpEl); form.append(row);
+    });
+    const err = el('div', 'ferr');
+    const go = el('button', 'btn wide', 'Berechnen ▸'); go.type = 'submit';
+    form.append(err, go);
+    form.onsubmit = e => {
+      e.preventDefault(); err.textContent = '';
+      const v = {}; for (const k in inputs) v[k] = inputs[k].value.trim() === '' ? (c.fields.find(x => x.k === k).type === 'text' ? '' : null) : inputs[k].value.trim();
+      try { const r = Calc.solveCalc(id, v); showCalcResult(r, id, v); } catch (ex) { err.textContent = ex.message; }
+    };
+    card.append(form);
+    V.append(back, card);
+    window.scrollTo(0, 0);
+  }
+  function showCalc(id, vals) { try { const r = Calc.solveCalc(id, vals); showCalcResult(r, id, vals); } catch (e) { openCalc(id, vals); } }
+  function showCalcResult(r, id, v) {
+    openResult(); const R = $('#result'); R.innerHTML = '';
+    r.source = 'local';
+    const key = 'calc:' + id + ':' + JSON.stringify(v);
+    render(r, key, { calc: id, vals: v });
+    addHistory(key, r);
+  }
+
   function fromAI(j, v, input) {
     const steps = (j.steps || []).map(s => ({
       title: s.title || '', html: s.math ? String(s.math).split(/;(?![^()]*\))/).filter(x => x.trim()).map(m => `<div>${ME.exprHTML(m.trim())}</div>`).join('') : '',
@@ -1988,6 +3162,12 @@ Aufgabe: ${input}`;
   }
   function problemCard(input, res, meta) {
     const c = el('div', 'card prob');
+    if (meta && meta.calc) {
+      const cc = Calc.CALCS[meta.calc];
+      c.innerHTML = `<div class="plabel">${ME.esc(cc ? cc.name : 'Rechner')}</div><div class="ptext m">${res && res.problemHTML ? res.problemHTML : ''}</div>`;
+      const ed = el('button', 'editb', '✎ Werte ändern'); ed.onclick = () => openCalc(meta.calc, meta.vals); c.append(ed);
+      return c;
+    }
     const isText = (meta && meta.kind === 'text') || isTexty(input);
     c.innerHTML = `<div class="plabel">Aufgabe ${meta && meta.conf ? `<span class="conf ${meta.conf}">erkannt: ${meta.conf}</span>` : ''}</div><div class="ptext ${isText ? 'txt' : 'm'}">${res && res.problemHTML ? res.problemHTML : (isText ? ME.esc(input) : input.split(/[;\n]/).map(p => `<div>${ME.exprHTML(p)}</div>`).join(''))}</div>`;
     const ed = el('button', 'editb', '✎ bearbeiten'); ed.onclick = () => { inp.value = input; updPrev(); show('type'); };
@@ -2002,10 +3182,18 @@ Aufgabe: ${input}`;
     state.last = { res, input };
     const R = $('#result');
     R.append(problemCard(input, res, meta));
+    if (res.recognized && res.recognized.calc) {
+      const rc = res.recognized, cc = Calc.CALCS[rc.calc];
+      const chips = cc.fields.filter(fd => rc.vals[fd.k] !== null && rc.vals[fd.k] !== undefined && rc.vals[fd.k] !== '').map(fd => `<span class="vchip">${ME.esc(fd.label.replace(/\s*\(.*\)$/, ''))}: <b>${ME.esc(String(rc.vals[fd.k]).replace('.', ','))}</b></span>`).join('');
+      const k = el('div', 'card recog', `<div class="plabel">So habe ich die Aufgabe verstanden</div><div class="rtype">${cc.icon || ''} ${ME.esc(cc.name)}</div><div class="vchips">${chips}</div>${rc.note ? `<div class="hint">${ME.esc(rc.note)}</div>` : ''}`);
+      const b = el('button', 'mini', '✎ Stimmt nicht? Im Rechner ändern'); b.onclick = () => openCalc(rc.calc, rc.vals); k.append(b);
+      if (rc.calc === 'dreisatz') { const alt = rc.vals.art === 'antiproportional' ? 'proportional' : 'antiproportional'; const b2 = el('button', 'mini', `↔ ${alt} rechnen`); b2.onclick = () => showCalc('dreisatz', Object.assign({}, rc.vals, { art: alt })); k.append(b2); }
+      R.append(k);
+    }
     // Antwort
     const a = el('div', 'card ans');
     const badge = res.check ? (res.check.ok ? `<div class="chk ok">✓ ${ME.esc(res.check.text)}</div>` : `<div class="chk bad">⚠ ${ME.esc(res.check.text)} Bitte die Schritte kritisch prüfen.</div>`) : (res.source === 'ai' ? '<div class="chk na">ℹ Diese Lösung konnte nicht automatisch nachgerechnet werden.</div>' : '');
-    a.innerHTML = `<div class="tags"><span class="tag">${ME.esc(res.topic || res.kind)}</span>${res.grade ? `<span class="tag g">Jg. ${ME.esc(String(res.grade).replace(/\D+/g, '') || res.grade)}</span>` : ''}<span class="tag ${res.source === 'local' ? 'ex' : 'ki'}">${res.source === 'local' ? 'exakt gerechnet' : 'KI + Probe'}</span></div><div class="alabel">Lösung</div><div class="aval">${res.answerHTML}</div>${(res.answerAlt || []).length ? `<div class="aalt">${res.answerAlt.join(' &nbsp;·&nbsp; ')}</div>` : ''}${badge}`;
+    a.innerHTML = `<div class="tags"><span class="tag">${ME.esc(res.topic || res.kind)}</span>${res.grade ? `<span class="tag g">Jg. ${ME.esc(String(res.grade).replace(/^\D+/, ''))}</span>` : ''}<span class="tag ${res.source === 'local' ? 'ex' : 'ki'}">${res.source === 'local' ? 'exakt gerechnet' : 'KI + Probe'}</span></div><div class="alabel">Lösung</div><div class="aval">${res.answerHTML}</div>${(res.answerAlt || []).length ? `<div class="aalt">${res.answerAlt.join(' &nbsp;·&nbsp; ')}</div>` : ''}${badge}`;
     R.append(a);
     // Visual oben
     const vis = res.visual || (res.steps || []).map(s => s.visual).find(v => v && v.type === 'graph');
@@ -2031,10 +3219,8 @@ Aufgabe: ${input}`;
     sc.append(ctr);
     R.append(sc);
     // KI-Zusatz
-    if (sample) {
-      R.append(askBox(res, input));
-      R.append(practiceBox(res, input));
-    }
+    if (sample) R.append(askBox(res, input));
+    const pb = localPracticeBox(res, input); if (pb) R.append(pb); else if (sample) R.append(practiceBox(res, input));
   }
   function stepEl(s, i, res, input, isNew) {
     const li = el('li', 'step' + (isNew ? ' fresh' : ''));
@@ -2130,6 +3316,57 @@ Bisherige Erklärung: ${plain(s.explain)} ${plain(s.why)}`, { onText: ({ text })
     if (exp.nums) return ME.compareAnswer(user, exp.nums.filter(x => x !== null));
     return null;
   }
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const nz = (a, b) => { let x; do x = rnd(a, b); while (!x); return x; };
+  const lin = (terms) => terms.filter(([c]) => c).map(([c, v], i) => { const abs = Math.abs(c); const t = (v && abs === 1 ? '' : abs) + (v || ''); return (c < 0 ? (i ? ' − ' : '−') : (i ? ' + ' : '')) + t; }).join('') || '0';
+  function taskGen(res) {
+    const cid = res.calcId || (res.recognized && res.recognized.calc);
+    if (cid && Calc.CALCS[cid] && Calc.CALCS[cid].gen) return () => { const [vals, text] = Calc.CALCS[cid].gen(); const r = Calc.solveCalc(cid, vals); return { text, textual: true, exp: { nums: [r.numeric] }, show: () => showCalcResult(r, cid, vals) }; };
+    const k = res.kind, tp = res.topic || '';
+    let g = null;
+    if (k === 'Lineare Gleichung') g = () => { const x = nz(-9, 9), a = rnd(2, 9), c = rnd(0, a - 1), b = rnd(-20, 20), d = a * x + b - c * x; return `${lin([[a, 'x'], [b]])} = ${lin([[c, 'x'], [d]])}`; };
+    else if (k === 'Quadratische Gleichung') g = () => { const r1 = rnd(-9, 9); let r2; do r2 = rnd(-9, 9); while (r2 === r1); return `${lin([[1, 'x²'], [-(r1 + r2), 'x'], [r1 * r2]])} = 0`; };
+    else if (k === 'Gleichungssystem') g = () => { const x = rnd(-6, 6), y = rnd(-6, 6); let a1, b1, a2, b2; do { a1 = nz(-5, 5); b1 = nz(-5, 5); a2 = nz(-5, 5); b2 = nz(-5, 5); } while (a1 * b2 - a2 * b1 === 0); return `${lin([[a1, 'x'], [b1, 'y']])} = ${a1 * x + b1 * y}; ${lin([[a2, 'x'], [b2, 'y']])} = ${a2 * x + b2 * y}`; };
+    else if (k === 'Gleichung höheren Grades') g = () => { const r = [rnd(-4, 4), rnd(-4, 4), rnd(-4, 4)]; const b = -(r[0] + r[1] + r[2]), c = r[0] * r[1] + r[0] * r[2] + r[1] * r[2], d = -r[0] * r[1] * r[2]; return `${lin([[1, 'x³'], [b, 'x²'], [c, 'x'], [d]])} = 0`; };
+    else if (k === 'Exponentialgleichung') g = () => { const b = [2, 3, 5][rnd(0, 2)], n = rnd(1, b === 5 ? 3 : 5), kk = rnd(1, 4); return `${kk > 1 ? kk + '·' : ''}${b}^x = ${kk * b ** n}`; };
+    else if (k === 'Term') g = () => { const a = rnd(1, 4), b = nz(-9, 9), c = rnd(1, 3), d = nz(-9, 9); return Math.random() < 0.5 ? `(${lin([[a, 'x'], [b]])})^2` : `(${lin([[a, 'x'], [b]])})(${lin([[c, 'x'], [d]])})`; };
+    else if (k === 'Rechnen') {
+      if (/Bruch/.test(tp)) g = () => { const op = ['+', '−', '·', ':'][rnd(0, 3)]; return `${rnd(1, 9)}/${rnd(2, 9)} ${op} ${rnd(1, 9)}/${rnd(2, 9)}`; };
+      else if (/Dezimal/.test(tp)) g = () => `${rnd(1, 99) / 10}`.replace('.', ',') + ' · ' + `${rnd(1, 99) / 10}`.replace('.', ',') + ' + ' + `${rnd(1, 999) / 100}`.replace('.', ',');
+      else if (/Potenz/.test(tp)) g = () => `${rnd(2, 5)}^${rnd(2, 4)} − ${rnd(2, 9)}·${rnd(2, 9)}`;
+      else if (/Wurzel/.test(tp)) g = () => `sqrt(${rnd(2, 15) ** 2}) + ${rnd(2, 6)}^2`;
+      else if (/Rational/.test(tp)) g = () => `(${nz(-12, 12)}) · (${nz(-9, 9)}) + (${nz(-30, 30)})`;
+      else g = () => `${rnd(10, 99)} + ${rnd(2, 12)} · ${rnd(2, 12)} − ${rnd(10, 60)}`;
+    }
+    if (!g) return null;
+    return () => { const task = g(); const loc = ME.solveLocal(task); return { text: task, textual: false, exp: expectedOf(loc), show: () => solve(task) }; };
+  }
+  function localPracticeBox(res, input) {
+    const gen = taskGen(res); if (!gen) return null;
+    const c = el('div', 'card practice');
+    c.innerHTML = '<div class="sectitle">Üben</div><p class="muted">Löse eine ähnliche Aufgabe selbst – die App prüft dein Ergebnis exakt.</p>';
+    const b = el('button', 'btn', 'Ähnliche Aufgabe'); const area = el('div'); c.append(b, area);
+    let streak = 0;
+    b.onclick = () => {
+      let t; for (let i = 0; i < 20; i++) { t = gen(); if (t.exp) break; }
+      if (!t || !t.exp) { area.innerHTML = '<div class="hint">Gerade keine passende Aufgabe gefunden – nochmal tippen.</div>'; return; }
+      area.innerHTML = '';
+      const tx = el('div', 'ptask', t.textual ? ME.esc(t.text) : t.text.split(';').map(p => `<div>${ME.exprHTML(p)}</div>`).join(''));
+      const hintTxt = t.exp.map ? 'z. B. x = 2; y = −1' : t.exp.term ? 'vereinfachter Term' : (t.exp.nums && t.exp.nums.length > 1 ? 'z. B. x = 3; x = −2' : 'Dein Ergebnis');
+      const f = el('form', 'askf', `<input placeholder="${hintTxt}" aria-label="Dein Ergebnis" autocomplete="off"><button class="btn sm">Prüfen</button>`);
+      const fb = el('div', 'fb'); const sol = el('button', 'mini', 'Lösungsweg zeigen'); sol.onclick = t.show;
+      area.append(tx, f, fb, sol);
+      f.onsubmit = e => {
+        e.preventDefault(); const u = f.querySelector('input').value.trim(); if (!u) return;
+        const ok = checkUser(u, t.exp);
+        if (ok) streak++; else if (ok === false) streak = 0;
+        fb.className = 'fb ' + (ok ? 'ok' : ok === false ? 'bad' : '');
+        fb.innerHTML = ok ? `✓ Richtig!${streak > 1 ? ` ${streak} in Folge 🔥` : ''}` : ok === false ? '✗ Noch nicht richtig. Versuch es nochmal oder schau dir den Lösungsweg an.' : 'Ich konnte deine Eingabe nicht lesen. Schreib z. B. „x = 4“ oder „12,5“.';
+      };
+      b.textContent = 'Neue Aufgabe';
+    };
+    return c;
+  }
   function practiceBox(res, input) {
     const c = el('div', 'card practice');
     c.innerHTML = '<div class="sectitle">Üben</div><p class="muted">Löse eine ähnliche Aufgabe selbst – die App prüft dein Ergebnis.</p>';
@@ -2177,73 +3414,21 @@ Bisherige Erklärung: ${plain(s.explain)} ${plain(s.why)}`, { onText: ({ text })
   }
 
   // ---------- Themen ----------
-  const TOPICS = {
-    5: [
-      ['Grundrechenarten', ['345+678', '1000-387', '24*15', '1296:8']],
-      ['Rechenregeln', ['(12+8)·3−15:5', '48−6·(3+4)', '2·3−4:2']],
-      ['Quadratzahlen & Potenzen', ['12^2', '2^5', '10^4']],
-      ['Teiler, ggT & kgV', ['Bestimme ggT und kgV von 24 und 36.']],
-      ['Größen & Einheiten', ['Rechne 3,5 km in m und 2 h 15 min in Minuten um.']],
-      ['Winkel', ['Welche Winkelart hat ein Winkel von 135°? Zeichne ihn.']],
-      ['Umfang & Flächeninhalt', ['Ein Rechteck ist 7 cm lang und 4 cm breit. Berechne Umfang und Flächeninhalt.']],
-    ],
-    6: [
-      ['Brüche kürzen & erweitern', ['12/18', '24/36']],
-      ['Brüche addieren & subtrahieren', ['2/3+5/4', '7/8−1/6', '1 1/2 + 2/3']],
-      ['Brüche multiplizieren & dividieren', ['3/4·8/9', '5/6:10/3']],
-      ['Dezimalzahlen', ['0,5·3,2+1,25', '7,2:0,6', '12,4−3,75']],
-      ['Quader & Würfel', ['Ein Quader ist 5 cm lang, 3 cm breit und 4 cm hoch. Berechne Volumen und Oberfläche.']],
-      ['Daten & Mittelwert', ['Berechne Mittelwert und Median der Noten 3, 2, 4, 1, 2, 5, 3.']],
-    ],
-    7: [
-      ['Rationale Zahlen', ['−3^2+(−2)^2', '(−12)·(−3)+(−20):4', '−7+12−(−5)']],
-      ['Terme vereinfachen', ['3(2x−4)−(x+1)', '2x+3y−x+5y', '4a·3b−2ab']],
-      ['Lineare Gleichungen', ['3x+5=2x−7', '2(x+3)=4x−8', 'x/3+2=5']],
-      ['Zuordnungen (Dreisatz)', ['3 kg Äpfel kosten 4,50 €. Was kosten 7 kg?', '4 Arbeiter brauchen 6 Tage. Wie lange brauchen 3 Arbeiter?']],
-      ['Prozentrechnung', ['Ein Fahrrad kostet 240 €. Es gibt 15 % Rabatt. Wie viel kostet es jetzt?', 'Wie viel Prozent sind 18 von 60?']],
-      ['Zinsrechnung', ['Wie viele Zinsen bringen 1500 € bei 2,5 % Zinssatz in einem Jahr?']],
-      ['Dreiecke & Winkelsumme', ['In einem Dreieck ist α = 48° und β = 67°. Wie groß ist γ?']],
-    ],
-    8: [
-      ['Binomische Formeln', ['(a+b)^2', '(x−5)^2', '(x+3)(x−3)', '(2x−1)(x+4)']],
-      ['Lineare Funktionen', ['f(x)=2x−4', 'y=0,5x+1', 'Bestimme die Gerade durch P(1|3) und Q(4|9).']],
-      ['Lineare Gleichungssysteme', ['2x+y=7; x−y=2', '3a+2b=12; 2a−b=1']],
-      ['Kreis', ['Ein Kreis hat den Radius r = 5 cm. Berechne Umfang und Flächeninhalt.']],
-      ['Prisma & Zylinder', ['Ein Zylinder hat r = 3 cm und h = 10 cm. Berechne Volumen und Oberfläche.']],
-      ['Wahrscheinlichkeit', ['Wie groß ist die Wahrscheinlichkeit, mit einem Würfel eine Zahl größer als 4 zu werfen?']],
-    ],
-    9: [
-      ['Quadratwurzeln', ['sqrt(144)+2^3', '√2·√8', 'sqrt(50)']],
-      ['Potenzen & Zehnerpotenzen', ['2^−3', '3,2·10^5·2·10^−2', '(2^3)^2']],
-      ['Quadratische Gleichungen', ['x^2−5x+6=0', '3x^2−2x−1=0', '(x+2)^2=25', 'x^2+4x=0']],
-      ['Quadratische Funktionen', ['f(x)=x^2−4x+3', 'f(x)=−2x^2+8x−6']],
-      ['Satz des Pythagoras', ['In einem rechtwinkligen Dreieck sind die Katheten a = 6 cm und b = 8 cm. Berechne die Hypotenuse c.']],
-      ['Strahlensätze & Ähnlichkeit', ['Ein 2 m hoher Stab wirft einen 1,5 m langen Schatten, ein Baum zur gleichen Zeit einen 12 m langen. Wie hoch ist der Baum?']],
-      ['Pyramide, Kegel & Kugel', ['Eine Kugel hat den Radius r = 6 cm. Berechne Volumen und Oberfläche.', 'Ein Kegel hat r = 4 cm und h = 9 cm. Berechne das Volumen.']],
-    ],
-    10: [
-      ['Trigonometrie', ['sin(30)+cos(60)', 'In einem rechtwinkligen Dreieck ist α = 35° und die Hypotenuse c = 10 cm. Berechne a und b.']],
-      ['Exponentielles Wachstum', ['Ein Kapital von 2000 € wird jährlich mit 3 % verzinst. Wie hoch ist es nach 10 Jahren?', 'f(x)=2·1,5^x']],
-      ['Logarithmus', ['2^x=32', 'log(1000)', '3·2^x=96']],
-      ['Sinusfunktion', ['f(x)=2·sin(x)', 'Beschreibe den Graphen von f(x) = sin(2x).']],
-      ['Mehrstufige Zufallsversuche', ['In einer Urne sind 3 rote und 2 blaue Kugeln. Es werden zwei Kugeln ohne Zurücklegen gezogen. Wie groß ist P(beide rot)?']],
-      ['Statistik', ['Bestimme Median, Spannweite und Mittelwert von 4, 9, 2, 7, 7, 10, 3.']],
-      ['Höhere Gleichungen', ['x^3−x=0', 'x^4−5x^2+4=0']],
-    ],
-  };
+  const TOPICS = Calc.TOPICS;
   let grade = 7;
   function renderTopics() {
     const g = $('#grades'); g.innerHTML = '';
     for (let k = 5; k <= 10; k++) { const b = el('button', 'gchip' + (k === grade ? ' on' : ''), String(k)); b.onclick = () => { grade = k; renderTopics(); }; g.append(b); }
     const L = $('#topicList'); L.innerHTML = '';
-    TOPICS[grade].forEach(([name, ex0]) => {
-      const ex = sample ? ex0 : ex0.filter(e => { const r = ME.solveLocal(e); return !r.route && !r.error; });
+    TOPICS[grade].forEach(([name, ex0, calcs]) => {
+      const ex = ex0;
       if (!ex.length) return;
       const c = el('div', 'card topic');
       c.append(el('div', 'tname', name));
       const exs = el('div', 'exs');
       ex.forEach(e => { const b = el('button', 'ex', isTexty(e) ? ME.esc(e) : ME.exprHTML(e)); b.onclick = () => solve(e); exs.append(b); });
       c.append(exs);
+      (calcs || []).forEach(id => { const cc = Calc.CALCS[id]; if (!cc) return; const b = el('button', 'mini', `🧮 Rechner: ${ME.esc(cc.name)}`); b.onclick = () => openCalc(id); c.append(b); });
       if (sample) { const b = el('button', 'mini ai', '📖 Thema erklären'); b.onclick = () => explainTopic(name, grade); c.append(b); }
       L.append(c);
     });
@@ -2275,7 +3460,7 @@ Bisherige Erklärung: ${plain(s.explain)} ${plain(s.why)}`, { onText: ({ text })
   function renderHistory() {
     const L = $('#histList'); L.innerHTML = '';
     if (!state.history.length) { L.innerHTML = '<p class="muted">Noch nichts gelöst.</p>'; return; }
-    state.history.forEach(h => { const b = el('button', 'hitem', `<div class="hq">${isTexty(h.input) ? ME.esc(h.input) : ME.exprHTML(h.input)}</div><div class="ha">${ME.esc(h.topic || '')} · ${ME.esc(h.ans)}</div>`); b.onclick = () => solve(h.input); L.append(b); });
+    state.history.forEach(h => { const cm = h.input.match(/^calc:([^:]+):/); const b = el('button', 'hitem', `<div class="hq">${cm ? '🧮 ' + ME.esc((Calc.CALCS[cm[1]] || {}).name || 'Rechner') : (isTexty(h.input) ? ME.esc(h.input) : ME.exprHTML(h.input))}</div><div class="ha">${ME.esc(h.topic || '')} · ${ME.esc(h.ans)}</div>`); b.onclick = () => solve(h.input); L.append(b); });
     const clr = el('button', 'mini', 'Verlauf löschen'); clr.onclick = () => { state.history = []; try { localStorage.removeItem('mb_hist'); } catch (e) { } renderHistory(); }; L.append(clr);
   }
 
@@ -2298,11 +3483,12 @@ Bisherige Erklärung: ${plain(s.explain)} ${plain(s.why)}`, { onText: ({ text })
 })();
 </script>
 <script>window.TOUR = { steps: [
-  { title: "Willkommen bei Rechenblick", text: "<p>Gib eine Aufgabe ein und du bekommst den Lösungsweg Schritt für Schritt – exakt gerechnet und mit Probe.</p>" },
+  { title: "Willkommen bei Rechenblick", text: "<p>Gib eine Aufgabe ein – Rechnung, Gleichung oder kurze Textaufgabe – und du bekommst den Lösungsweg Schritt für Schritt, exakt gerechnet und mit Probe.</p>" },
   { sel: "#expr", title: "Aufgabe eingeben", text: "<p>Hier tippst du die Aufgabe ein, z. B. <b>2(x+3)=4x−8</b> oder <b>2/3+5/4</b>. Darunter siehst du sofort die Vorschau.</p>" },
   { sel: "#kb", title: "Mathe-Tastatur", text: "<p>Brüche, Potenzen, Wurzeln, x und y – alles mit einem Tipp. Gleichungssysteme trennst du mit „;“.</p>" },
   { sel: "#goBtn", title: "Lösen", text: "<p>Der Lösungsweg erscheint Schritt für Schritt. Tippe auf einen Schritt für Erklärung, „Warum?“ und interaktive Bilder.</p>" },
-  { sel: ".nav button[data-v=top]", title: "Themen Jg. 5–10", text: "<p>Beispielaufgaben nach Jahrgangsstufe zum Ausprobieren.</p>" },
+  { sel: ".nav button[data-v=calc]", title: "Rechner für Textaufgaben", text: "<p>Prozent, Zinsen, Dreisatz, Flächen, Körper, Pythagoras, Wahrscheinlichkeit … Typ wählen, Werte eintragen. Kurze Textaufgaben kannst du aber auch direkt eintippen.</p>" },
+  { sel: ".nav button[data-v=top]", title: "Themen Jg. 5–10", text: "<p>Beispielaufgaben nach Jahrgangsstufe – mit Übungsaufgaben, die sofort geprüft werden.</p>" },
   { sel: "#histBtn", title: "Verlauf", text: "<p>Hier findest du deine zuletzt gelösten Aufgaben wieder.</p>" }
 ]};</script>
 <script defer src="tour.js"></script>
