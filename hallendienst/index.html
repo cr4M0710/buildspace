@@ -187,8 +187,15 @@
   .rang .nr { width: 22px; text-align: right; color: var(--muted); font-weight: 700; font-size: .85rem; }
   .rang .nm { flex: 0 0 44%; font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rang .bar { flex: 1; height: 10px; background: var(--zebra); border-radius: 6px; overflow: hidden; }
+  .rang .bar { display: flex; }
   .rang .bar i { display: block; height: 100%; background: var(--rot); border-radius: 6px; }
-  .rang .z { width: 28px; text-align: right; font-weight: 800; }
+  .rang .bar i.vor { background: var(--rot); opacity: .28; }
+  .rang .bar i { border-radius: 0; }
+  .rang .z { min-width: 28px; text-align: right; font-weight: 800; white-space: nowrap; }
+  .rang .z small { font-weight: 700; color: var(--muted); font-size: .78rem; margin-left: 3px; }
+  .legende { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin: 4px 0 2px; }
+  .legende i { display: inline-block; width: 14px; height: 8px; border-radius: 4px; background: var(--rot); margin-right: 5px; vertical-align: middle; }
+  .legende i.vor { opacity: .28; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chips span { background: var(--zebra); border-radius: 8px; padding: 5px 9px; font-size: .82rem; font-weight: 600; }
 
@@ -331,7 +338,7 @@
   <!-- ============ STATISTIK ============ -->
   <section id="tab-statistik" class="tab">
     <div class="kennzahlen">
-      <div class="kennzahl"><div class="wert" id="st-einsaetze">0</div><div class="label">Dienste gesamt</div></div>
+      <div class="kennzahl"><div class="wert" id="st-einsaetze">0</div><div class="label">Dienste geleistet</div></div>
       <div class="kennzahl"><div class="wert" id="st-personen">0</div><div class="label">Personen</div></div>
       <div class="kennzahl"><div class="wert" id="st-schnitt">0</div><div class="label">Ø pro Person</div></div>
     </div>
@@ -961,7 +968,7 @@ const App = {
     const meine = S.eintraege.filter(istMein).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d);
     const kommend = meine.filter(x => !istVorbei(x.d)).sort((a, b) => startVon(a.d) - startVon(b.d));
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
-      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' in der Saison'
+      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.filter(x => istVorbei(x.d)).reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' geleistet'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
       + Strafen.ichHtml();
@@ -1534,32 +1541,40 @@ const App = {
 
   // ---------- Tab: Statistik ----------
   renderStatistik() {
+    // Gezählt werden nur geleistete (vergangene) Dienste; kommende sind nur hell vorgemerkt.
     const zaehl = new Map();
     const arten = new Map();
     S.eintraege.forEach(e => {
       const d = dienstById(e.dienst); if (!d) return;
       const k = norm(e.name);
       if (!zaehl.has(k)) zaehl.set(k, { name: e.name, n: 0, kommend: 0 });
-      const w = eintragWert(e, d);
-      const z = zaehl.get(k); z.n += w; if (!istVorbei(d)) z.kommend += w;
-      const a = d.art || 'sonstiges'; arten.set(a, (arten.get(a) || 0) + w);
+      const w = eintragWert(e, d), vorbei = istVorbei(d);
+      const z = zaehl.get(k); if (vorbei) z.n += w; else z.kommend += w;
+      const a = d.art || 'sonstiges'; if (!arten.has(a)) arten.set(a, { n: 0, kommend: 0 });
+      if (vorbei) arten.get(a).n += w; else arten.get(a).kommend += w;
     });
-    const liste = [...zaehl.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'de'));
-    const ges = liste.reduce((s, x) => s + x.n, 0);
+    const liste = [...zaehl.values()].sort((a, b) => b.n - a.n || b.kommend - a.kommend || a.name.localeCompare(b.name, 'de'));
+    const mitDienst = liste.filter(x => x.n > 0);
+    const ges = liste.reduce((s, x) => s + x.n, 0), vor = liste.reduce((s, x) => s + x.kommend, 0);
     $('#st-einsaetze').textContent = fmtW(ges);
-    $('#st-personen').textContent = liste.length;
-    $('#st-schnitt').textContent = liste.length ? (ges / liste.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
-    const max = liste.length ? liste[0].n : 1;
-    $('#st-rangliste').innerHTML = liste.length ? liste.map((x, i) =>
-      '<div class="rang"><span class="nr">' + (i + 1) + '.</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span><span class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></span><span class="z">' + fmtW(x.n) + '</span></div>').join('') + '<div class="hinweis" style="margin-bottom:6px">Gezählt wird der Umfang der Dienste (ca. 1 pro Spiel bzw. 2 Stunden), vergangene und kommende der Saison.</div>'
+    $('#st-personen').textContent = mitDienst.length;
+    $('#st-schnitt').textContent = mitDienst.length ? (ges / mitDienst.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
+    const balken = (n, k, max) => '<span class="bar">' + (n ? '<i style="width:' + (n / max * 100) + '%"></i>' : '') + (k ? '<i class="vor" style="width:' + (k / max * 100) + '%"></i>' : '') + '</span>'
+      + '<span class="z">' + fmtW(n) + (k ? '<small>+' + fmtW(k) + '</small>' : '') + '</span>';
+    const legende = vor ? '<div class="legende"><span><i></i>geleistet</span><span><i class="vor"></i>vorgemerkt (zählt nach dem Dienst)</span></div>' : '';
+    const max = Math.max(1, ...liste.map(x => x.n + x.kommend));
+    $('#st-rangliste').innerHTML = liste.length ? legende + liste.map((x, i) =>
+      '<div class="rang"><span class="nr">' + (x.n ? (i + 1) + '.' : '') + '</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span>' + balken(x.n, x.kommend, max) + '</div>').join('')
+        + '<div class="hinweis" style="margin-bottom:6px">Gezählt wird der Umfang der geleisteten Dienste (ca. 1 pro Spiel bzw. 2 Stunden). Kommende Dienste sind nur hell vorgemerkt und zählen, sobald sie vorbei sind.</div>'
       : '<div class="leer">Noch keine Einträge.</div>';
     const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)) && !freigestellt(n));
     const frei = alleSpieler().filter(freigestellt).sort((a, b) => a.localeCompare(b, 'de'));
     $('#st-ohne').innerHTML = (ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '')
-      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (zaehl.has(norm(n)) ? ' <small style="color:var(--gruen)">· ' + fmtW(zaehl.get(norm(n)).n) + '× freiwillig</small>' : '') + '</span>').join('') + '</div>'
+      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => { const z = zaehl.get(norm(n)); return '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (z && z.n ? ' <small style="color:var(--gruen)">· ' + fmtW(z.n) + '× freiwillig</small>' : '') + (z && z.kommend ? ' <small style="color:var(--muted)">· +' + fmtW(z.kommend) + ' vorgemerkt</small>' : '') + '</span>'; }).join('') + '</div>'
         + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
-    const al = [...arten.entries()].sort((a, b) => b[1] - a[1]);
-    $('#st-arten').innerHTML = al.length ? al.map(([a, n]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span><span class="bar"><i style="width:' + Math.round(n / al[0][1] * 100) + '%"></i></span><span class="z">' + fmtW(n) + '</span></div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
+    const al = [...arten.entries()].sort((a, b) => b[1].n - a[1].n || b[1].kommend - a[1].kommend);
+    const amax = Math.max(1, ...al.map(([, v]) => v.n + v.kommend));
+    $('#st-arten').innerHTML = al.length ? al.map(([a, v]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span>' + balken(v.n, v.kommend, amax) + '</div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
   },
 
   // ---------- Tab: Verwalten ----------
