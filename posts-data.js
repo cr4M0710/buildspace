@@ -1357,4 +1357,16 @@ const posts = [
     titleEn: "Rechenblick",
     excerptEn: "Maths solver for grades 5–10: type in a task and reveal the solution step by step – calculated exactly with a check, with “why?” explanations and interactive visuals (balance, fraction bars, area model, graphs with sliders). Fractions, terms, equations, systems of equations, functions."
    },
+   {
+    title: "Winkelwerkstatt",
+    excerpt: "Winkel verstehen mit der digitalen Winkelscheibe: Winkel einstellen und Winkelart zuordnen, Übungen zum Erkennen, Schätzen, Messen und Einstellen mit animierter Erklärung (Bild und Rechnung), Solo-Blitzrunde, 1 gegen 1 und Klassenquiz. Dazu Arbeitsblatt-Generator mit Lösungen und Winkelscheibe als Bastelvorlage (PDF).",
+    date: "2026-11-17",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "winkelwerkstatt.html",
+    emoji: "📐",
+    tags: ["tool", "spiel", "geometrie", "einzelarbeit", "partnerarbeit", "klassenquiz", "jg5", "jg6"],
+    titleEn: "Angle Workshop",
+    excerptEn: "Understand angles with a digital angle disc: set angles and classify them, practise recognising, estimating, measuring and setting angles with animated explanations (picture and calculation), solo speed round, 1-vs-1 and class quiz. Plus a worksheet generator with solutions and a printable angle disc template (PDF)."
+   },
 ];
