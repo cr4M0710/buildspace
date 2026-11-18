@@ -172,6 +172,7 @@ footer{max-width:1240px;margin:0 auto;padding:4px 14px 24px;color:#6b7684;font-s
    <svg id="hlSvg" class="stage" viewBox="0 0 760 420"></svg>
    <div class="sl"><label>Animation <output id="hlTo"></output></label><input type="range" id="hlT" min="0" max="1000" value="0"></div>
    <div class="btns"><button class="btn" id="hlPlay">▶ Abspielen</button><button class="btn alt" id="hlReset">⟲ Zurück</button><button class="btn alt" id="hlNew">🎲 Neue Maße</button></div>
+   <div class="sl" id="hlRbox"><label>Radius r <output id="hlRo"></output></label><input type="range" id="hlR" min="1" max="5" step="0.5" value="3"></div>
    <div class="sl" id="hlNbox"><label>Anzahl der Kreisteile <output id="hlNo"></output></label><input type="range" id="hlN" min="0" max="8" value="3"></div>
   </div>
   <div class="side card">
@@ -379,7 +380,7 @@ function exWalk(){exStopWalk();const o=EX.outline;if(!o)return;const segs=[];let
 $('#exWalkBtn').onclick=exWalk;
 
 /* ===================== HERLEITUNGEN ===================== */
-const HL={type:'kreisA',t:0,n:12,d:{},raf:null};
+const HL={type:'kreisA',t:0,n:12,r:3,d:{},raf:null};
 const NS=[4,6,8,12,16,24,32,48,64];
 const HTYPES=[['rechteck','Rechteck'],['dreieck','Dreieck'],['parallelogramm','Parallelogramm'],['trapez','Trapez'],['kreisA','Kreis: Flächeninhalt'],['kreisU','Kreis: Umfang']];
 function hlDims(){const g=R(6,10),a2=R(3,5),c2=R(3,5);HL.d={rechteck:{a:R(4,8),b:R(2,5)},dreieck:{g,h:R(3,6),s:R(1,g-1)},parallelogramm:{g:R(5,8),h:R(3,5),s:R(1,3)},trapez:{a:c2+a2,c:c2,h:R(3,5),s:R(1,a2-1)}};}
@@ -433,22 +434,25 @@ function hlCircA(t){const n=HL.n,r=95,cx=150,cy=210,th=2*PI/n,c=2*r*Math.sin(th/
   o+=txt(380,40,'A ≈ π · r · r = π · r²','big')+txt(380,370,`${n} Teile – ${n<16?'noch recht wellig':n<40?'schon fast ein Rechteck':'praktisch ein Rechteck!'}`,'');}
  else o+=txt(380,370,`${n} Kreisteile (oben orange, unten blau)`,'');
  return {o,steps:[`Zerschneide den Kreis in ${n} gleich große Tortenstücke.`,'Lege die Stücke abwechselnd mit der Spitze nach oben und – um 180° gedreht – nach unten nebeneinander.','Je kleiner (mehr) die Stücke, desto mehr ähnelt die Figur einem Rechteck. Stelle oben mehr Teile ein!','Das Rechteck ist so lang wie der halbe Kreisumfang (π · r) und so breit wie der Radius r.  A = π · r · r = π · r²'],cur:t<.08?0:t<.92?1:n<24?2:3};}
-function hlCircU(t){const r=55,gy=255,x0=90;const ph=2*PI*ease(clamp((t-.1)/.72));const cx=x0+r*ph,cy=gy-r;
- let o=line([30,gy],[730,gy],`stroke="${COL.head}" stroke-width="2"`);
+function hlCircU(t){const U=19,rc=HL.r,r=rc*U,gy=272,x0=60;const ph=2*PI*ease(clamp((t-.1)/.72));const cx=x0+r*ph,cy=gy-r;const u=2*PI*rc,d=2*rc;
+ let o=line([20,gy],[740,gy],`stroke="${COL.head}" stroke-width="2"`);
+ for(let k=0;x0+k*U<=735;k++){const x=x0+k*U;o+=line([x,gy],[x,gy+(k%2?5:9)],`stroke="${COL.head}" stroke-width="1"`);if(k%2===0&&k)o+=`<text x="${x}" y="${gy+19}" text-anchor="middle" style="font:700 10px Nunito" fill="#5b6573">${k}</text>`;}
+ o+=`<text x="${x0}" y="${gy+19}" text-anchor="middle" style="font:700 10px Nunito" fill="#5b6573">0 cm</text>`;
  if(ph>0)o+=line([x0,gy],[x0+r*ph,gy],`stroke="${COL.red}" stroke-width="7" stroke-linecap="round"`);
  o+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COL.surf}" stroke="#B9C9DD" stroke-width="2"/>`;
  const rem=2*PI-ph;if(rem>1e-3){if(rem>2*PI-1e-3)o+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${COL.red}" stroke-width="6"/>`;else{const as=PI/2-rem,ae=PI/2;o+=`<path d="M${P2([cx+r*Math.cos(as),cy+r*Math.sin(as)])} A${r} ${r} 0 ${rem>PI?1:0} 1 ${P2([cx+r*Math.cos(ae),cy+r*Math.sin(ae)])}" fill="none" stroke="${COL.red}" stroke-width="6"/>`;}}
- const ma=PI/2+ph,mp=[cx+r*Math.cos(ma),cy+r*Math.sin(ma)];o+=line([cx,cy],mp,`stroke="${COL.dark}" stroke-width="2"`)+`<circle cx="${cx}" cy="${cy}" r="3" fill="${COL.dark}"/><circle cx="${mp[0]}" cy="${mp[1]}" r="7" fill="${COL.org}" stroke="#fff" stroke-width="2"/>`;
- o+=`<circle cx="${x0}" cy="${gy}" r="5" fill="${COL.head}"/>`+txt(x0,gy+18,'Start','');
- if(t>.86){const D=2*r,yy=gy+48;const cols=['#2E6099','#5E8CC4','#2E6099'];for(let i=0;i<3;i++)o+=`<rect x="${x0+i*D}" y="${yy-10}" width="${D}" height="20" fill="${cols[i]}"/>`+txt(x0+i*D+D/2,yy,'d','acc',`style="fill:#fff;stroke:none"`);
-  o+=`<rect x="${x0+3*D}" y="${yy-10}" width="${(PI-3)*D}" height="20" fill="${COL.org}"/>`+txt(x0+3*D+30,yy+28,'+ ein kleines Stück (0,14 · d)','org');
-  o+=txt(380,40,'u = π · d ≈ 3,14 · d = 2 · π · r','big');}
- return {o,steps:['Markiere einen Punkt am Rand und stelle den Kreis an den Start.','Rolle den Kreis ohne zu rutschen genau eine Umdrehung weit.','Die abgerollte rote Strecke ist genau der Umfang u des Kreises.','Der Durchmesser d passt etwas mehr als 3-mal hinein, genau π-mal (π ≈ 3,14):  u = π · d = 2 · π · r'],cur:t<.1?0:t<.82?1:t<.86?2:3};}
+ if(t<.1)o+=line([cx-r,cy],[cx+r,cy],`stroke="${COL.acc}" stroke-width="2.5"`)+txt(cx,cy-r-14,`d = ${f(d)} cm`,'acc');
+ const ma=PI/2+ph,mp=[cx+r*Math.cos(ma),cy+r*Math.sin(ma)];if(t>=.1)o+=line([cx,cy],mp,`stroke="${COL.dark}" stroke-width="2"`);o+=`<circle cx="${cx}" cy="${cy}" r="3" fill="${COL.dark}"/><circle cx="${mp[0]}" cy="${mp[1]}" r="7" fill="${COL.org}" stroke="#fff" stroke-width="2"/>`;
+ if(t>=.1&&t<=.86)o+=txt(Math.min(Math.max(x0+r*ph/2,x0+40),700),gy-14,`${f(rc*ph,1)} cm`,'red');
+ if(t>.86){const D=2*r,yy=gy+50;const cols=['#2E6099','#5E8CC4','#2E6099'];for(let i=0;i<3;i++)o+=`<rect x="${x0+i*D}" y="${yy-10}" width="${D}" height="20" fill="${cols[i]}"/>`+txt(x0+i*D+D/2,yy,`d = ${f(d)} cm`,'',`style="fill:#fff;stroke:none;font-size:12px"`);
+  o+=`<rect x="${x0+3*D}" y="${yy-10}" width="${(PI-3)*D}" height="20" fill="${COL.org}"/>`+`<text x="${x0+3*D+(PI-3)*D+6}" y="${yy}" dominant-baseline="middle" class="lbl org" style="font-size:13px">+ 0,14 · d</text>`;
+  o+=txt(380,40,`u = π · d ≈ 3,14 · ${f(d)} cm ≈ ${f(u)} cm`,'big');}
+ return {o,steps:[`Markiere einen Punkt am Rand. Der Kreis hat den Radius r = ${f(rc)} cm, also den Durchmesser d = ${f(d)} cm.`,'Rolle den Kreis ohne zu rutschen genau eine Umdrehung weit.',`Die abgerollte rote Strecke ist genau der Umfang u ≈ ${f(u)} cm.`,`Der Durchmesser passt etwas mehr als 3-mal hinein, genau π-mal (π ≈ 3,14):  u = π · d = 2 · π · r ≈ ${f(u)} cm`],cur:t<.1?0:t<.82?1:t<.86?2:3};}
 function hlRender(){const t=HL.t;let res;switch(HL.type){case 'rechteck':res=hlRect(t);break;case 'dreieck':res=hlTri(t);break;case 'parallelogramm':res=hlPar(t);break;case 'trapez':res=hlTrap(t);break;case 'kreisA':res=hlCircA(t);break;default:res=hlCircU(t);}
  $('#hlSvg').innerHTML=`<rect width="760" height="420" fill="${COL.paper}"/>`+res.o;
  $('#hlSteps').innerHTML=res.steps.map((s,i)=>`<li class="${i<res.cur?'on':i===res.cur?'on cur':''}">${s}</li>`).join('');
  $('#hlT').value=Math.round(t*1000);$('#hlTo').textContent=Math.round(t*100)+' %';
- $('#hlNbox').style.display=HL.type==='kreisA'?'':'none';$('#hlNew').style.display=HL.type.startsWith('kreis')?'none':'';$('#hlNo').textContent=HL.n;
+ $('#hlNbox').style.display=HL.type==='kreisA'?'':'none';$('#hlRbox').style.display=HL.type==='kreisU'?'':'none';$('#hlRo').textContent=f(HL.r)+' cm';$('#hlNew').style.display=HL.type.startsWith('kreis')?'none':'';$('#hlNo').textContent=HL.n;
  $('#hlTitle').textContent='So geht\'s: '+HTYPES.find(x=>x[0]===HL.type)[1];}
 function hlStop(){if(HL.raf)cancelAnimationFrame(HL.raf);HL.raf=null;$('#hlPlay').textContent='▶ Abspielen';}
 function hlPlay(){if(HL.raf)return hlStop();if(HL.t>=1)HL.t=0;const dur=HL.type==='rechteck'?6500:5500;let last=performance.now();$('#hlPlay').textContent='⏸ Pause';
@@ -457,11 +461,14 @@ function hlChips(){chipRow($('#hlChips'),HTYPES,k=>k===HL.type,k=>{hlStop();HL.t
 $('#hlT').oninput=e=>{hlStop();HL.t=e.target.value/1000;hlRender();};
 $('#hlPlay').onclick=hlPlay;$('#hlReset').onclick=()=>{hlStop();HL.t=0;hlRender();};$('#hlNew').onclick=()=>{hlStop();hlDims();HL.t=0;hlRender();};
 $('#hlN').oninput=e=>{HL.n=NS[+e.target.value];hlRender();};
+$('#hlR').oninput=e=>{HL.r=+e.target.value;hlRender();};
 
 /* ===================== 3D (Schrägbild) ===================== */
-const KC=.5*Math.SQRT1_2,KS=.5*Math.SQRT1_2,VD=[-KC,1,-KS];
-const pj=(P,o)=>[o.x+(P[0]+P[1]*KC)*o.U,o.y-(P[2]+P[1]*KS)*o.U];
-function fit3(P3,box,maxU=80){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;P3.forEach(P=>{const x=P[0]+P[1]*KC,y=-(P[2]+P[1]*KS);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});const bw=(x1-x0)||1,bh=(y1-y0)||1;const U=Math.min(box.w/bw,box.h/bh,maxU);return {U,x:box.x+(box.w-bw*U)/2-x0*U,y:box.y+(box.h-bh*U)/2-y0*U}}
+const KC=.5*Math.SQRT1_2,KS=.5*Math.SQRT1_2,ROUND={kc:0,ks:.32};
+/* runde Körper (Zylinder, Kegel): Ansicht schräg von oben ohne Verzerrung, damit sie rund wirken */
+const pj=(P,o)=>{const kc=o.kc??KC,ks=o.ks??KS;return [o.x+(P[0]+P[1]*kc)*o.U,o.y-(P[2]+P[1]*ks)*o.U]};
+const vdOf=o=>[-(o.kc??KC),1,-(o.ks??KS)];
+function fit3(P3,box,maxU=80,pr={}){const kc=pr.kc??KC,ks=pr.ks??KS;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;P3.forEach(P=>{const x=P[0]+P[1]*kc,y=-(P[2]+P[1]*ks);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});const bw=(x1-x0)||1,bh=(y1-y0)||1;const U=Math.min(box.w/bw,box.h/bh,maxU);return {U,x:box.x+(box.w-bw*U)/2-x0*U,y:box.y+(box.h-bh*U)/2-y0*U,kc,ks}}
 const v3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],cr3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dt3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 function ccw(base){let s=0;for(let i=0;i<base.length;i++){const a=base[i],b=base[(i+1)%base.length];s+=a[0]*b[1]-b[0]*a[1]}return s>=0?base:base.slice().reverse()}
 const rectB=(a,b,x=0,y=0)=>[[x,y],[x+a,y],[x+a,y+b],[x,y+b]];
@@ -469,7 +476,7 @@ const circB=(cx,cy,r,n=64)=>Array.from({length:n},(_,i)=>[cx+r*Math.cos(i/n*2*PI
 const boxPts=(a,b,c)=>[[0,0,0],[a,0,0],[a,b,0],[0,b,0],[0,0,c],[a,0,c],[a,b,c],[0,b,c]];
 function visRange(vis){const n=vis.length;let i0=-1;for(let i=0;i<n;i++)if(vis[i]&&!vis[(i-1+n)%n]){i0=i;break;}if(i0<0)return null;const idx=[];let i=i0;while(vis[i%n]&&idx.length<n){idx.push(i%n);i++;}return idx;}
 /* st: fill, sideFill, topFill, op, smooth, part:'hidden'|'visible'|'faces', noHidden */
-function drawPrism(base,z0,z1,o,st={}){base=ccw(base);const n=base.length,sm=!!st.smooth,stroke=st.stroke||COL.dark,sw=st.sw||2,op=st.op??1;
+function drawPrism(base,z0,z1,o,st={}){const VD=vdOf(o);base=ccw(base);const n=base.length,sm=!!st.smooth,stroke=st.stroke||COL.dark,sw=st.sw||2,op=st.op??1;
  const B=i=>pj([base[(i+n)%n][0],base[(i+n)%n][1],z0],o),T=i=>pj([base[(i+n)%n][0],base[(i+n)%n][1],z1],o);
  const vis=base.map((a,i)=>{const b=base[(i+1)%n];return dt3([b[1]-a[1],-(b[0]-a[0]),0],VD)<-1e-9});
  const dash=`stroke="${stroke}" stroke-width="${(sw*.6).toFixed(2)}" stroke-dasharray="5 4" opacity=".75"`,sol=`stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round"`;
@@ -482,9 +489,9 @@ function drawPrism(base,z0,z1,o,st={}){base=ccw(base);const n=base.length,sm=!!s
  if(sm){const r=visRange(vis);if(r){const bp=r.map(i=>B(i)).concat([B(r[r.length-1]+1)]);const tp=r.map(i=>T(i)).concat([T(r[r.length-1]+1)]).reverse();faces+=`<polygon points="${PTS(bp.concat(tp))}" fill="${st.sideFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;}}
  faces+=`<polygon points="${PTS(base.map((_,i)=>T(i)))}" fill="${st.topFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;
  if(st.part==='hidden')return hid;if(st.part==='visible')return lines;if(st.part==='faces')return faces;
- return (st.noHidden?'':hid)+faces+lines;}
-function sliceLines(base,z,o,col='#fff',w=1.6){base=ccw(base);const n=base.length;let s='';base.forEach((a,i)=>{const b=base[(i+1)%n];if(dt3([b[1]-a[1],-(b[0]-a[0]),0],VD)<-1e-9)s+=line(pj([a[0],a[1],z],o),pj([b[0],b[1],z],o),`stroke="${col}" stroke-width="${w}" opacity=".9"`)});return s}
-function drawPyramid(base,zb,apex,o,st={}){base=ccw(base);const n=base.length,sm=!!st.smooth,stroke=st.stroke||COL.dark,sw=st.sw||2,op=st.op??1;
+ return faces+(st.noHidden?'':hid)+lines;}
+function sliceLines(base,z,o,col='#fff',w=1.6){const VD=vdOf(o);base=ccw(base);const n=base.length;let s='';base.forEach((a,i)=>{const b=base[(i+1)%n];if(dt3([b[1]-a[1],-(b[0]-a[0]),0],VD)<-1e-9)s+=line(pj([a[0],a[1],z],o),pj([b[0],b[1],z],o),`stroke="${col}" stroke-width="${w}" opacity=".9"`)});return s}
+function drawPyramid(base,zb,apex,o,st={}){const VD=vdOf(o);base=ccw(base);const n=base.length,sm=!!st.smooth,stroke=st.stroke||COL.dark,sw=st.sw||2,op=st.op??1;
  const B3=base.map(p=>[p[0],p[1],zb]);const bc=B3.reduce((a,b)=>[a[0]+b[0]/n,a[1]+b[1]/n,a[2]+b[2]/n],[0,0,0]);const C=[(bc[0]+apex[0])/2,(bc[1]+apex[1])/2,(bc[2]+apex[2])/2];
  const vis=B3.map((a,i)=>{const b=B3[(i+1)%n];let nn=cr3(v3(b,a),v3(apex,a));const fc=[(a[0]+b[0]+apex[0])/3,(a[1]+b[1]+apex[1])/3,(a[2]+b[2]+apex[2])/3];if(dt3(nn,v3(fc,C))<0)nn=nn.map(x=>-x);return dt3(nn,VD)<-1e-9});
  const baseVis=apex[2]<zb;const Bp=B3.map(P=>pj(P,o)),Ap=pj(apex,o);
@@ -493,10 +500,10 @@ function drawPyramid(base,zb,apex,o,st={}){base=ccw(base);const n=base.length,sm
  for(let i=0;i<n;i++){const vi=vis[i],vp=vis[(i-1+n)%n];if(vi||baseVis)lines+=line(Bp[i],Bp[(i+1)%n],sol);else hid+=line(Bp[i],Bp[(i+1)%n],dash);
   if(sm){if(vi!==vp)lines+=line(Bp[i],Ap,sol);}else{if(vi||vp)lines+=line(Bp[i],Ap,sol);else hid+=line(Bp[i],Ap,dash);}
   if(!sm&&vi)faces+=`<polygon points="${PTS([Bp[i],Bp[(i+1)%n],Ap])}" fill="${st.sideFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;}
- if(sm){if(vis.every(v=>v))faces+=`<polygon points="${PTS(Bp)}" fill="${st.sideFill||st.fill}" fill-opacity="${op}"/>`;else{const r=visRange(vis);if(r){const bp=r.map(i=>Bp[i]).concat([Bp[(r[r.length-1]+1)%n]]);faces+=`<polygon points="${PTS(bp.concat([Ap]))}" fill="${st.sideFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;}}}
+ if(sm){if(vis.every(v=>v))faces+=`<polygon points="${PTS(Bp)}" fill="${st.sideFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;else{const r=visRange(vis);if(r){const bp=r.map(i=>Bp[i]).concat([Bp[(r[r.length-1]+1)%n]]);faces+=`<polygon points="${PTS(bp.concat([Ap]))}" fill="${st.sideFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;}}}
  if(baseVis)faces+=`<polygon points="${PTS(Bp)}" fill="${st.topFill||st.fill||'#9DBCE3'}" fill-opacity="${op}"/>`;
  if(st.part==='hidden')return hid;if(st.part==='visible')return lines;if(st.part==='faces')return faces;
- return (st.noHidden?'':hid)+faces+lines;}
+ return faces+(st.noHidden?'':hid)+lines;}
 const CB=['#5E8CC4','#3F6FA8','#A9C6EA'],CB2=['#7FA6D6','#5E8CC4','#C5D8EF'],CO=['#E8A33D','#C98522','#F6D39A'];
 function cubeSvg(x,y,z,o,c){const P=(a,b,d)=>pj([x+a,y+b,z+d],o);const st=`stroke="${COL.dark}" stroke-width="1" stroke-linejoin="round"`;
  return `<polygon points="${PTS([P(0,0,0),P(1,0,0),P(1,0,1),P(0,0,1)])}" fill="${c[0]}" ${st}/><polygon points="${PTS([P(1,0,0),P(1,1,0),P(1,1,1),P(1,0,1)])}" fill="${c[1]}" ${st}/><polygon points="${PTS([P(0,0,1),P(1,0,1),P(1,1,1),P(0,1,1)])}" fill="${c[2]}" ${st}/>`}
@@ -519,7 +526,7 @@ function vRender(){const ty=VOL.type,p=VOL.p[ty],t=VOL.t;let s=`<rect width="760
   <div class="fbox"><h4>Volumen V</h4><div class="fl">${c} Schichten übereinander<br>${ty==='wuerfel'?'V = a · a · a = a³':'V = a · b · c'}<br>V = ${a} cm · ${b} cm · ${c} cm = ${N} cm³</div></div>
   <div class="fbox w"><h4>Oberfläche O (Zusatz)</h4><div class="fl">${ty==='wuerfel'?`O = 6 · a² = 6 · ${a*a} = ${6*a*a} cm²`:`O = 2 · (a·b + a·c + b·c)<br>O = 2 · (${a*b} + ${a*c} + ${b*c}) = ${2*(a*b+a*c+b*c)} cm²`}</div></div>`;}
  else if(ty==='prisma'||ty==='zylinder'){const isZ=ty==='zylinder',h=p.h;const base=isZ?circB(p.r,p.r,p.r):[[0,0],[p.g,0],[p.g*.3,p.hg]];const G=isZ?PI*p.r*p.r:p.g*p.hg/2;
-  const pts3=[];base.forEach(q=>{pts3.push([q[0],q[1],0],[q[0],q[1],h])});const o=fit3(pts3,{x:110,y:40,w:440,h:340},80);const H=t*h;
+  const pts3=[];base.forEach(q=>{pts3.push([q[0],q[1],0],[q[0],q[1],h])});const o=fit3(pts3,{x:110,y:40,w:440,h:340},80,isZ?ROUND:{});const H=t*h;
   s+=drawPrism(base,0,h,o,{part:'hidden',smooth:isZ});
   if(H>0){s+=drawPrism(base,0,H,o,{fill:'#7FA6D6',sideFill:'#5E8CC4',topFill:'#F6D39A',op:.92,smooth:isZ,noHidden:true,sw:1.5,stroke:'#3F6FA8'});for(let z=1;z<H-1e-6;z++)s+=sliceLines(base,z,o);
    const bc=base.reduce((a,q)=>[a[0]+q[0]/base.length,a[1]+q[1]/base.length],[0,0]);s+=lab3([bc[0],bc[1],H],o,'G',0,0,'org');}
@@ -532,7 +539,7 @@ function vRender(){const ty=VOL.type,p=VOL.p[ty],t=VOL.t;let s=`<rect width="760
   ${isZ?`<div class="fbox w"><h4>Oberfläche O (Zusatz)</h4><div class="fl">O = 2 · π · r² + 2 · π · r · h<br>O ≈ ${f(2*G)} + ${f(2*PI*p.r*h)} ≈ ${f(2*G+2*PI*p.r*h)} cm²</div></div>`:''}`;}
  else{const isK=ty==='kegel',h=p.h;const size=isK?2*p.r:p.a;const base=isK?circB(p.r,p.r,p.r):rectB(p.a,p.a);const ctr=[size/2,size/2];const G=isK?PI*p.r*p.r:p.a*p.a;
   const zL=h*.55,dx=size*1.9;const baseR=base.map(q=>[q[0]+dx,q[1]]);
-  const all=[];base.forEach(q=>all.push([q[0],q[1],zL+h],[q[0],q[1],zL]));baseR.forEach(q=>all.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(all,{x:30,y:30,w:700,h:360},70);
+  const all=[];base.forEach(q=>all.push([q[0],q[1],zL+h],[q[0],q[1],zL]));baseR.forEach(q=>all.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(all,{x:30,y:30,w:700,h:360},70,isK?ROUND:{});
   const rt=t*3;const k=Math.min(2,Math.floor(rt)),u=t>=1?1:rt-k;const pour=ease(clamp((u-.15)/.7));const fp=t>=1?0:1-pour;const level=t>=1?1:(k+pour)/3;
   const apexL=[ctr[0],ctr[1],zL];s+=drawPyramid(base,zL+h,apexL,o,{part:'hidden',smooth:isK});
   if(fp>0.001){const sc=Math.cbrt(fp),Hw=h*sc;const wb=base.map(q=>[ctr[0]+(q[0]-ctr[0])*sc,ctr[1]+(q[1]-ctr[1])*sc]);s+=drawPyramid(wb,zL+Hw,apexL,o,{fill:'#7FA6D6',sideFill:'#5E8CC4',topFill:'#A9C6EA',op:.9,smooth:isK,noHidden:true,sw:1,stroke:'#3F6FA8'});}
@@ -630,9 +637,9 @@ function volFig(kind,p,un){const W=360,H=240;let g=svgOpen(W,H);const L=v=>un?`$
  else if(kind==='wuerfel'){const {a}=p;const o=fit3(boxPts(a,a,a),{x:90,y:25,w:W-180,h:H-55},80);g+=drawPrism(rectB(a,a),0,a,o,stl)+lab3([a/2,0,0],o,'a = '+L(a),0,16);}
  else if(kind==='prisma'){const {g:gg,hg,h}=p;const base=[[0,0],[gg,0],[gg*.3,hg]];const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(pts,{x:80,y:25,w:W-160,h:H-55},80);
   g+=drawPrism(base,0,h,o,stl)+line(pj([gg*.3,0,h],o),pj([gg*.3,hg,h],o),`stroke="${COL.t2}" stroke-width="2" stroke-dasharray="4 3"`)+lab3([gg*.3,hg/2,h],o,'h_G = '+L(hg),-6,-8,'org','end')+lab3([gg/2,0,0],o,'g = '+L(gg),0,16)+lab3([0,0,h/2],o,'h = '+L(h),-8,0,'','end');}
- else if(kind==='zylinder'){const {r,h}=p;const base=circB(r,r,r,48);const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(pts,{x:90,y:22,w:W-180,h:H-48},80);
+ else if(kind==='zylinder'){const {r,h}=p;const base=circB(r,r,r,48);const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(pts,{x:90,y:22,w:W-180,h:H-48},80,ROUND);
   g+=drawPrism(base,0,h,o,{...stl,smooth:true})+line(pj([r,r,h],o),pj([2*r,r,h],o),`stroke="${COL.head}" stroke-width="2"`)+lab3([1.5*r,r,h],o,'r = '+L(r),0,-11)+lab3([0,r,h/2],o,'h = '+L(h),-8,0,'','end');}
- else{const isK=kind==='kegel';const s=isK?2*p.r:p.a;const base=isK?circB(p.r,p.r,p.r,48):rectB(p.a,p.a);const apex=[s/2,s/2,p.h];const pts=base.map(q=>[q[0],q[1],0]).concat([apex]);const o=fit3(pts,{x:90,y:20,w:W-180,h:H-46},80);
+ else{const isK=kind==='kegel';const s=isK?2*p.r:p.a;const base=isK?circB(p.r,p.r,p.r,48):rectB(p.a,p.a);const apex=[s/2,s/2,p.h];const pts=base.map(q=>[q[0],q[1],0]).concat([apex]);const o=fit3(pts,{x:90,y:20,w:W-180,h:H-46},80,isK?ROUND:{});
   g+=drawPyramid(base,0,apex,o,{...stl,smooth:isK})+line(pj([s/2,s/2,0],o),pj(apex,o),`stroke="${COL.t2}" stroke-width="2" stroke-dasharray="5 4"`)+lab3([s/2,s/2,p.h/2],o,'h = '+L(p.h),8,0,'org','start');
   g+=isK?line(pj([p.r,p.r,0],o),pj([2*p.r,p.r,0],o),`stroke="${COL.head}" stroke-width="2"`)+lab3([1.5*p.r,p.r,0],o,'r = '+L(p.r),0,14):lab3([s/2,0,0],o,'a = '+L(p.a),0,16);}
  return g+'</svg>';}
@@ -642,10 +649,10 @@ function exVol(kind,p,un){const W=360,H=250;let g=svgOpen(W,H);
    g+=txt(W/2,H-28,`1 Schicht = ${a} · ${b} = ${a*b} Würfel`,'acc','style="font-size:13px"')+txt(W/2,H-10,`${c} Schichten → V = ${a*b} · ${c} = ${a*b*c} Würfel`,'org pop',`style="animation-delay:${(c*.7).toFixed(1)}s;font-size:13px"`);}
   else{const o=fit3(boxPts(a,b,c),{x:60,y:20,w:W-120,h:H-70},80);const nl=Math.min(6,Math.ceil(c));for(let i=0;i<nl;i++)g+=`<g class="pop" style="animation-delay:${(i*.5).toFixed(1)}s">${drawPrism(rectB(a,b),c*i/nl,c*(i+1)/nl,o,{fill:i%2?'#7FA6D6':'#A9C6EA',sideFill:i%2?'#5E8CC4':'#7FA6D6',topFill:i===nl-1?'#F6D39A':'#C5D8EF',noHidden:true,sw:1.2})}</g>`;
    g+=txt(W/2,H-28,`Grundfläche G = a · b = ${f(a*b)} ${un}²`,'acc','style="font-size:13px"')+txt(W/2,H-10,`V = G · c = ${f(a*b)} · ${f(c)} = ${f(a*b*c)} ${un}³`,'org pop','style="animation-delay:3s;font-size:13px"');}}
- else if(kind==='prisma'||kind==='zylinder'){const isZ=kind==='zylinder';const base=isZ?circB(p.r,p.r,p.r,48):[[0,0],[p.g,0],[p.g*.3,p.hg]];const h=p.h;const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(pts,{x:80,y:15,w:W-160,h:H-65},80);const nl=Math.min(6,Math.max(2,Math.ceil(h)));
+ else if(kind==='prisma'||kind==='zylinder'){const isZ=kind==='zylinder';const base=isZ?circB(p.r,p.r,p.r,48):[[0,0],[p.g,0],[p.g*.3,p.hg]];const h=p.h;const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],h]));const o=fit3(pts,{x:80,y:15,w:W-160,h:H-65},80,isZ?ROUND:{});const nl=Math.min(6,Math.max(2,Math.ceil(h)));
   for(let i=0;i<nl;i++)g+=`<g class="pop" style="animation-delay:${(i*.5).toFixed(1)}s">${drawPrism(base,h*i/nl,h*(i+1)/nl,o,{fill:'#A9C6EA',sideFill:i%2?'#5E8CC4':'#7FA6D6',topFill:i===nl-1?'#F6D39A':'#C5D8EF',noHidden:true,smooth:isZ,sw:1.2})}</g>`;
   const G=isZ?PI*p.r*p.r:p.g*p.hg/2;g+=txt(W/2,H-28,`Grundfläche G ${isZ?'≈':'='} ${f(G)} ${un}² (orange)`,'acc','style="font-size:13px"')+txt(W/2,H-10,`Stapeln bis Höhe h: V = G · h ${isZ?'≈':'='} ${f(G*h)} ${un}³`,'org pop',`style="animation-delay:${(nl*.5).toFixed(1)}s;font-size:13px"`);}
- else{const isK=kind==='kegel';const s=isK?2*p.r:p.a;const base=isK?circB(p.r,p.r,p.r,48):rectB(p.a,p.a);const apex=[s/2,s/2,p.h];const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],p.h]));const o=fit3(pts,{x:80,y:15,w:W-160,h:H-65},80);
+ else{const isK=kind==='kegel';const s=isK?2*p.r:p.a;const base=isK?circB(p.r,p.r,p.r,48):rectB(p.a,p.a);const apex=[s/2,s/2,p.h];const pts=[];base.forEach(q=>pts.push([q[0],q[1],0],[q[0],q[1],p.h]));const o=fit3(pts,{x:80,y:15,w:W-160,h:H-65},80,isK?ROUND:{});
   g+=drawPrism(base,0,p.h,o,{part:'hidden',smooth:isK})+drawPrism(base,0,p.h,o,{part:'visible',smooth:isK,sw:1.5});
   g+=`<g class="pop" style="animation-delay:.6s">${drawPyramid(base,0,apex,o,{fill:COL.org,sideFill:'#E8A33D',topFill:'#F6D39A',op:.85,smooth:isK,noHidden:true})}</g>`;
   g+=txt(W/2,H-28,`passt 3-mal in ${isK?'den Zylinder':'den Quader'} mit gleichem G und h`,'acc pop','style="animation-delay:1.4s;font-size:13px"')+txt(W/2,H-10,'V = G · h : 3','org pop','style="animation-delay:2s;font-size:15px"');}
