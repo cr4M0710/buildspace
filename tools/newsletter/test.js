@@ -80,6 +80,9 @@ function makeEnv(opts = {}) {
           const page = Number((/[?&]page=(\d+)/.exec(url) || [])[1] || 1);
           return resp(200, JSON.stringify(page === 1 ? env.commits : []));
         }
+        if (url.startsWith("https://buildspaceos.de/assets/newsletter/changes.json")) {
+          return env.changes ? resp(200, JSON.stringify(env.changes)) : resp(404, "");
+        }
         if (url.startsWith("https://buildspaceos.de/assets/newsletter/previews/index.json")) {
           return env.previews ? resp(200, JSON.stringify(env.previews)) : resp(404, "");
         }
@@ -486,6 +489,30 @@ test("Ohne Vorschaubild bleibt die Karte wie bisher", () => {
   const items = e.ctx.loadPosts_();
   ok(items.every((i) => i.preview === ""), "kein Bild erwartet");
   ok(!e.ctx.buildDigest_(items.slice(0, 2), "0".repeat(32), new Date(), []).html.includes("/previews/"));
+});
+
+test("changes.json hat Vorrang vor der GitHub-API und ordnet über Dateien zu", () => {
+  postsSrc = original;
+  const e = makeEnv();
+  e.ctx.setup(); confirmed(e, "a@example.org");
+  e.ctx.sendWeeklyDigest();
+  const p = firstPage(e);
+  const path = p.url.replace(/[?#].*$/, "");
+  e.env.pages[path] = "neu";
+  e.env.githubDown = true;                      // GitHub blockt (wie bei Google-Servern)
+  const now = Date.parse("2026-11-01T18:00:00+01:00") + 7 * 86400000;
+  e.env.changes = { commits: [
+    { date: new Date(now - 3600e3).toISOString(), msg: "Lernspiel-Paket: neue Level", files: [path] },
+    { date: new Date(now - 3600e3).toISOString(), msg: "Alles: Fußzeile", files: Array.from({ length: 10 }, (_, i) => "t" + i + ".html").concat([path]) },
+    { date: new Date(now - 20 * 86400e3).toISOString(), msg: p.title + ": uralt", files: [path] }
+  ] };
+  e.advance(7 * 86400000);
+  const before = e.mails.length;
+  eq(e.ctx.sendWeeklyDigest().updates, 1);
+  const h = e.mails[before].htmlBody;
+  ok(h.includes("neue Level"), "Zuordnung über Datei fehlt");
+  ok(!h.includes("Fußzeile") && !h.includes("uralt"), "Sammel-Änderung oder alte Notiz gelistet");
+  postsSrc = original;
 });
 
 test("Test-Newsletter geht nur an die eigene Adresse", () => {

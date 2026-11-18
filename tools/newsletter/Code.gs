@@ -217,12 +217,13 @@ function findUpdates_(posts, fresh, since) {
   });
   var changed;
   try { changed = changedPages_(list); } catch (err) { console.warn("Fingerabdrücke nicht prüfbar: " + err); changed = null; }
-  var notes = commitNotes_(since);   // null, wenn GitHub nicht erreichbar
+  var notes = commitNotes_(since);   // null, wenn keine Quelle erreichbar
+  var known = allKeys_(posts);
   var out = [];
   list.forEach(function (path) {
     var p = byPath[path];
     if (changed && !changed.baseline && !changed.paths[path]) return;
-    var mine = notes ? notesFor_(notes, p, path) : [];
+    var mine = notes ? notesFor_(notes, p, path, known) : [];
     if (notes && !mine.length) return;
     if (!notes && (!changed || changed.baseline)) return;
     out.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, preview: p.preview, areas: p.areas, notes: mine });
@@ -257,23 +258,54 @@ function changedPages_(paths) {
   return { baseline: baseline, paths: result };
 }
 
+/* Commit-Nachrichten seit `since` als „Was ist neu“-Notizen.
+   Quelle 1: assets/newsletter/changes.json auf buildspaceos.de (schreibt die GitHub
+   Action nach jedem Push – zuverlässig, ohne Abfragegrenze).
+   Quelle 2 (Notlösung): GitHub-API – die lehnt Anfragen von Google-Servern oft ab. */
 function commitNotes_(since) {
+  var notes = changesFile_(since);
+  if (notes) return notes;
+  return githubNotes_(since);
+}
+
+function noteFrom_(msg, files) {
+  msg = String(msg || "").split("\n")[0].trim();
+  if (!msg || /\[still\]/i.test(msg) || /^(Merge|Revert)\b/.test(msg) || /^Neues (Tool|Programm)\b/i.test(msg)) return null;
+  var m = /^([^:]{2,60}):\s*(.+)$/.exec(msg);
+  if (!m) return null;
+  files = files || [];
+  var pages = files.filter(function (f) { return /\.html$/.test(f); }).length;
+  return { names: m[1].split(/\s*[\/,]\s*/).map(norm_), text: m[2], files: files, pages: pages };
+}
+
+function changesFile_(since) {
+  try {
+    var r = UrlFetchApp.fetch(CONFIG.SITE_URL + "/assets/newsletter/changes.json?nocache=" + Date.now(), { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) { console.warn("changes.json nicht erreichbar (" + r.getResponseCode() + ")"); return null; }
+    var data = JSON.parse(r.getContentText()), out = [];
+    (data.commits || []).forEach(function (c) {
+      if (new Date(c.date).getTime() < since.getTime()) return;
+      var n = noteFrom_(c.msg, c.files);
+      if (n) out.push(n);
+    });
+    return out;
+  } catch (err) { console.warn("changes.json unlesbar: " + err); return null; }
+}
+
+function githubNotes_(since) {
   if (!CONFIG.GITHUB_REPO) return null;
   var notes = [];
   try {
     for (var page = 1; page <= 3; page++) {
       var r = UrlFetchApp.fetch("https://api.github.com/repos/" + CONFIG.GITHUB_REPO + "/commits?per_page=100&page=" + page +
         "&since=" + encodeURIComponent(since.toISOString()), { muteHttpExceptions: true, headers: { Accept: "application/vnd.github+json" } });
-      if (r.getResponseCode() !== 200) return page === 1 ? null : notes;
+      if (r.getResponseCode() !== 200) { console.warn("GitHub-API antwortet " + r.getResponseCode()); return page === 1 ? null : notes; }
       var arr = JSON.parse(r.getContentText());
       arr.forEach(function (c) {
         var login = (c.author && c.author.login) || "";
-        var msg = String((c.commit && c.commit.message) || "").split("\n")[0].trim();
         if (/\[bot\]$/.test(login) || /bot$/i.test((c.commit && c.commit.author && c.commit.author.name) || "")) return;
-        if (!msg || /\[still\]/i.test(msg) || /^(Merge|Revert)\b/.test(msg) || /^Neues (Tool|Programm)\b/i.test(msg)) return;
-        var m = /^([^:]{2,60}):\s*(.+)$/.exec(msg);
-        if (!m) return;
-        notes.push({ names: m[1].split(/\s*[\/,]\s*/).map(norm_), text: m[2] });
+        var n = noteFrom_(c.commit && c.commit.message, []);
+        if (n) notes.push(n);
       });
       if (arr.length < 100) break;
     }
@@ -285,16 +317,40 @@ function norm_(s) {
   return String(s || "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]/g, "");
 }
 
-function notesFor_(notes, p, path) {
-  // Treffer nur bei genauem Namen: ganzer Titel, Titel vor „–“/„(“ oder Dateiname
-  // („Handball: …“ passt also nicht zu „Handball-Anzeigetafel“)
+/* Namen, unter denen ein Tool in Commit-Nachrichten auftaucht: ganzer Titel,
+   Titel vor „–“/„(“ oder Dateiname („Handball: …“ passt nicht zu „Handball-Anzeigetafel“) */
+function keysFor_(p, path) {
   var keys = {};
   keys[norm_(p.title)] = 1;
   keys[norm_(String(p.title).split(/\s+[–—-]\s+|\s*\(/)[0])] = 1;
   keys[norm_(path.replace(/\/index\.html$|\.html$|\/$/g, "").split("/")[0])] = 1;
+  return keys;
+}
+
+function allKeys_(posts) {
+  var all = {};
+  posts.forEach(function (p) {
+    var path = pagePath_(p.url);
+    if (!path) return;
+    var k = keysFor_(p, path);
+    for (var x in k) all[x] = 1;
+  });
+  return all;
+}
+
+function notesFor_(notes, p, path, known) {
+  var keys = keysFor_(p, path);
+  // Zusätzlich: Die Änderung hat genau diese Seite angefasst (nicht bei Sammel-Änderungen über viele Seiten)
+  var dir = path.indexOf("/") > 0 ? path.split("/")[0] + "/" : "";
+  function touches(n) {
+    if (!n.files || !n.files.length || n.pages > 6) return false;
+    // Nennt die Nachricht ein ANDERES Tool („Hallendienst: …“), gehört sie dorthin
+    if (known && n.names.some(function (x) { return known[x] && !keys[x]; })) return false;
+    return n.files.some(function (f) { return dir ? f.indexOf(dir) === 0 : f === path; });
+  }
   var seen = {}, out = [];
   notes.forEach(function (n) {
-    var hit = n.names.some(function (x) { return x.length >= 4 && keys[x]; });
+    var hit = n.names.some(function (x) { return x.length >= 4 && keys[x]; }) || touches(n);
     if (!hit || /\.(js|html|css|json)\b/i.test(n.text)) return;   // rein technische Notizen weglassen
     var t = n.text.length > 140 ? n.text.slice(0, 137).replace(/\s+\S*$/, "") + " …" : n.text;
     if (seen[t]) return;
@@ -359,11 +415,11 @@ function sendTestDigest() {
   var notes = commitNotes_(new Date(Date.now() - 7 * 86400000)) || [];
   var newPaths = {};
   posts.forEach(function (p) { newPaths[pagePath_(p.url)] = true; });
-  var updates = [], used = {};
+  var updates = [], used = {}, known = allKeys_(all);
   all.forEach(function (p) {
     var path = pagePath_(p.url);
     if (!path || newPaths[path] || used[path]) return;
-    var mine = notesFor_(notes, p, path);
+    var mine = notesFor_(notes, p, path, known);
     if (mine.length) { used[path] = true; updates.push({ url: p.url, title: p.title, excerpt: p.excerpt, icon: p.icon, preview: p.preview, areas: p.areas, notes: mine }); }
   });
   var mail = buildDigest_(posts, "0123456789abcdef0123456789abcdef", new Date(), updates.slice(0, CONFIG.MAX_UPDATES));

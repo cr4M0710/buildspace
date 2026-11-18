@@ -1,6 +1,7 @@
 name: Newsletter – Vorschaubilder
 # Fotografiert jede Tool-Seite aus posts-data.js (nur neue oder geänderte) und legt
 # die Bilder in assets/newsletter/previews/ ab. Der Newsletter zeigt sie als Vorschau.
+# Schreibt außerdem assets/newsletter/changes.json (Commit-Nachrichten für „Außerdem verbessert“).
 # Läuft nach jedem Push mit geänderten Seiten und sonntags vor dem Versand (So 18 Uhr).
 on:
   push:
@@ -9,6 +10,7 @@ on:
       - "**.html"
       - "posts-data.js"
       - "tools/newsletter/previews.mjs"
+      - "tools/newsletter/changes.mjs"
       - ".github/workflows/vorschaubilder.yml"
   schedule:
     - cron: "30 15 * * 0"   # Sonntag 16:30 (Winter) / 17:30 (Sommer) deutscher Zeit
@@ -32,6 +34,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # volle Historie für die Änderungsliste (changes.json)
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -41,11 +45,13 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Vorschaubilder erstellen
         run: node tools/newsletter/previews.mjs ${{ github.event.inputs.alle == 'true' && '--all' || '' }}
+      - name: Änderungsliste für „Außerdem verbessert“
+        run: node tools/newsletter/changes.mjs
       - name: Änderungen speichern
         run: |
           git config user.name "vorschau-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/newsletter/previews
+          git add assets/newsletter/previews assets/newsletter/changes.json
           if git diff --cached --quiet; then echo "Nichts zu speichern"; exit 0; fi
           git commit -m "Vorschaubilder aktualisiert [still]"
-          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep 5; done
+          for i in 1 2 3 4 5; do git pull --rebase -q && node tools/newsletter/changes.mjs && git add assets/newsletter/changes.json && (git diff --cached --quiet || git commit -q --amend --no-edit) ; git push -q && break; sleep 5; done
