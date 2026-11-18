@@ -1369,4 +1369,16 @@ const posts = [
     titleEn: "Angle Workshop",
     excerptEn: "Understand angles with a digital angle disc: set angles and classify them, practise recognising, estimating, measuring and setting angles with animated explanations (picture and calculation), solo speed round, 1-vs-1 and class quiz. Plus a worksheet generator with solutions and a printable angle disc template (PDF)."
    },
+   {
+    title: "Flächenwerkstatt",
+    excerpt: "Flächeninhalt, Umfang und Volumen anschaulich: Figuren mit Reglern verändern, Kästchen zählen und ausmalen, Umfang ablaufen, animierte Herleitungen (Kreis in Tortenstücke zum Rechteck, Dreieck zum Rechteck ergänzt, Parallelogramm, Trapez, Kreisumfang abrollen), Körper im Schrägbild mit Füll- und Umschütt-Animation. Übungen mit Erklärung (Bild und Rechnung), Solo, 1 gegen 1 und Klassenquiz sowie Arbeitsblatt-Generator mit Lösungen (PDF).",
+    date: "2026-11-18",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "flaechenwerkstatt.html",
+    emoji: "📏",
+    tags: ["tool", "spiel", "geometrie", "einzelarbeit", "partnerarbeit", "klassenquiz", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Area Workshop",
+    excerptEn: "Area, perimeter and volume made visible: change shapes with sliders, count and colour squares, walk the perimeter, animated derivations (circle cut into slices forming a rectangle, triangle completed to a rectangle, parallelogram, trapezium, rolling out the circumference), solids in oblique view with filling and pouring animations. Practice with explanations (picture and calculation), solo, 1-vs-1 and class quiz, plus a worksheet generator with solutions (PDF)."
+   },
 ];
