@@ -1239,7 +1239,7 @@ const posts = [
    },
    {
     title: "Bruch-Werkstatt",
-    excerpt: "Bruchrechnung ikonisch und symbolisch nebeneinander: Brüche & Größen, Erweitern, Kürzen und alle vier Rechenarten mit gleichnamigen und ungleichnamigen Brüchen – je 3 animierte Beispiele, Übungsaufgaben in drei Niveaus mit Bild-Hilfe und eigene Brüche zum Ausprobieren.",
+    excerpt: "Bruchrechnung ikonisch und symbolisch nebeneinander: Brüche & Größen, Zahlenstrahl, Erweitern, Kürzen, Vergleichen & Ordnen und alle vier Rechenarten – mit animierten Beispielen und Schiebereglern, Übungen in drei Niveaus mit Bild-Hilfe, eigenen Brüchen (auch gemischte Zahlen) und Arbeitsblättern zum Ausdrucken mit Lösungsblatt.",
     date: "2026-11-01",
     category: "schule",
     subcategory: "mathematik",
@@ -1247,7 +1247,7 @@ const posts = [
     emoji: "🧮",
     tags: ["tool", "bruchrechnung", "einzelarbeit", "vertretung", "jg5", "jg6", "jg7"],
     titleEn: "Fraction Workshop",
-    excerptEn: "Fractions shown as pictures and as calculations side by side: fractions of quantities, expanding, simplifying and all four operations with like and unlike denominators – 3 animated examples each, practice tasks on three levels with picture hints, and your own fractions to explore."
+    excerptEn: "Fractions shown as pictures and as calculations side by side: fractions of quantities, number line, expanding, simplifying, comparing & ordering and all four operations – with animated examples and sliders, practice on three levels with picture hints, your own fractions (including mixed numbers) and printable worksheets with answer sheet."
    },
    {
     title: "Scanwerk",
