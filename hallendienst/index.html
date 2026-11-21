@@ -1050,7 +1050,7 @@ const App = {
     const meine = S.eintraege.filter(istMein).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d);
     const kommend = meine.filter(x => !istVorbei(x.d)).sort((a, b) => startVon(a.d) - startVon(b.d));
     ich.innerHTML = '<div class="ich"><div class="avatar">' + esc((name || '?').charAt(0).toUpperCase()) + '</div><div class="t">'
-      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Als ' + esc(rollenText(name)) + ' freigestellt – Dienste nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.filter(x => istVorbei(x.d)).reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' geleistet'
+      + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Freigestellt (' + esc(rollenText(name)) + ') – Dienste hier nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.filter(x => istVorbei(x.d)).reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' geleistet'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
       + Strafen.ichHtml();
@@ -1673,7 +1673,7 @@ const App = {
     const frei = alleSpieler().filter(freigestellt).sort((a, b) => a.localeCompare(b, 'de'));
     $('#st-ohne').innerHTML = (ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '')
       + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => { const z = zaehl.get(norm(n)); return '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (z && z.n ? ' <small style="color:var(--gruen)">· ' + fmtW(z.n) + '× freiwillig</small>' : '') + (z && z.kommend ? ' <small style="color:var(--muted)">· +' + fmtW(z.kommend) + ' vorgemerkt</small>' : '') + '</span>'; }).join('') + '</div>'
-        + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
+        + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen hier keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
     const al = [...arten.entries()].sort((a, b) => b[1].n - a[1].n || b[1].kommend - a[1].kommend);
     const amax = Math.max(1, ...al.map(([, v]) => v.n + v.kommend));
     $('#st-arten').innerHTML = al.length ? al.map(([a, v]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span>' + balken(v.n, v.kommend, amax) + '</div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
@@ -1711,7 +1711,7 @@ const App = {
       + '<div class="zeile"><div class="t">' + (p.gesperrt ? '🔒 Eintragen gesperrt' : 'Eintragen offen') + '<small>' + (p.gesperrt ? 'Spieler:innen können sich weder ein- noch austragen' : 'Spieler:innen tragen sich selbst ein') + '</small></div><button class="btn klein ' + (p.gesperrt ? '' : 'sekundaer') + '" onclick="App.sperreUmschalten()">' + (p.gesperrt ? 'Öffnen' : 'Sperren') + '</button></div>'
       + '</div>'
       + '<h2>Spielerliste (' + ((p.spieler || []).length) + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Wird beim Eintragen vorgeschlagen und in der Statistik („Noch ohne Dienst“) genutzt.' + (p.strafenkasse ? ' Neue Spieler:innen aus der verknüpften Strafenkasse kommen automatisch dazu.' : '') + '</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.spielerModal()">Spielerliste bearbeiten</button></div>'
-      + '<h2>Freigestellt (' + alleSpieler().filter(freigestellt).length + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Schiedsrichter, Zeitnehmer/Sekretär für den Verein und Trainer müssen keine Dienste machen, können aber freiwillig einspringen. Sie erscheinen nicht unter „Noch ohne Dienst“.</div>'
+      + '<h2>Freigestellt (' + alleSpieler().filter(freigestellt).length + ')</h2><div class="card"><div class="hinweis" style="margin-top:0">Schiedsrichter, Zeitnehmer/Sekretär für den Verein, Trainer, Inaktive und wer seinen Dienst für M2 leistet, müssen hier keine Dienste machen, können aber freiwillig einspringen. Sie erscheinen nicht unter „Noch ohne Dienst“.</div>'
       + (alleSpieler().some(freigestellt) ? '<div class="chips" style="margin-top:9px">' + alleSpieler().filter(freigestellt).map(n => '<span>' + rollenEmoji(n) + ' ' + esc(n) + '</span>').join('') + '</div>' : '')
       + '<button class="btn sekundaer" style="margin-top:9px" onclick="App.rollenModal()">Rollen festlegen</button></div>'
       + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
@@ -2554,6 +2554,8 @@ const ROLLEN = {
   schiri: { e: '🟨', n: 'Schiedsrichter' },
   zn: { e: '⏱️', n: 'Zeitnehmer/Sekretär für den Verein' },
   trainer: { e: '📋', n: 'Trainer' },
+  inaktiv: { e: '💤', n: 'Inaktiv' },
+  m2: { e: '2️⃣', n: 'Dienst für M2' },
 };
 function rollenVon(name) { const r = (S.plan && S.plan.rollen) || {}; return (r[norm(name)] || []).filter(k => ROLLEN[k]); }
 function freigestellt(name) { return rollenVon(name).length > 0; }

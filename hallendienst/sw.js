@@ -1,7 +1,7 @@
 /* Service Worker – Hallendienst HSG Wettenberg
    Strategie: network-first für gleiche Herkunft (immer aktuell online, offline aus Cache).
    Fremd-Herkunft (z. B. Firebase) wird nicht angefasst. */
-const CACHE = 'hallendienst-v5';
+const CACHE = 'hallendienst-v6';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 
