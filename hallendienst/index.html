@@ -191,6 +191,15 @@
   .rang .bar i { display: block; height: 100%; background: var(--rot); border-radius: 6px; }
   .rang .bar i.vor { background: var(--rot); opacity: .28; }
   .rang .bar i { border-radius: 0; }
+  .rang.klick { cursor: pointer; } .rang.klick:active { background: var(--zebra); }
+  .rang.klick .z::after { content: ' ›'; color: var(--muted); font-weight: 700; }
+  .st-chip { cursor: pointer; }
+  .sp-dienst { display: flex; gap: 10px; align-items: center; padding: 9px 0; }
+  .sp-dienst + .sp-dienst { border-top: 1px solid var(--rand); }
+  .sp-dienst .t { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.35; }
+  .sp-dienst .t small { display: block; color: var(--muted); font-size: .8rem; }
+  .sp-dienst .w { font-weight: 800; white-space: nowrap; font-size: .85rem; }
+  .sp-dienst.kommend { opacity: .6; }
   .rang .z { min-width: 28px; text-align: right; font-weight: 800; white-space: nowrap; }
   .rang .z small { font-weight: 700; color: var(--muted); font-size: .78rem; margin-left: 3px; }
   .legende { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin: 4px 0 2px; }
@@ -314,8 +323,8 @@
     <div class="card" id="ich-karte"></div>
     <div id="naechster"></div>
     <div class="filter" id="filter"></div>
+    <div style="text-align:right;margin:-2px 0 10px"><button class="btn klein sekundaer" id="vergangen-btn" onclick="App.vergangeneUmschalten()">Vergangene Dienste zeigen</button></div>
     <div id="dienst-liste"></div>
-    <div style="text-align:center;margin:6px 0 4px"><button class="btn klein sekundaer" id="vergangen-btn" onclick="App.vergangeneUmschalten()">Vergangene Dienste zeigen</button></div>
   </section>
 
   <!-- ============ CHECKLISTE ============ -->
@@ -1666,17 +1675,35 @@ const App = {
     const legende = vor ? '<div class="legende"><span><i></i>geleistet</span><span><i class="vor"></i>vorgemerkt (zählt nach dem Dienst)</span></div>' : '';
     const max = Math.max(1, ...liste.map(x => x.n + x.kommend));
     $('#st-rangliste').innerHTML = liste.length ? legende + liste.map((x, i) =>
-      '<div class="rang"><span class="nr">' + (x.n ? (i + 1) + '.' : '') + '</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span>' + balken(x.n, x.kommend, max) + '</div>').join('')
+      '<div class="rang klick" data-sp="' + esc(x.name) + '"><span class="nr">' + (x.n ? (i + 1) + '.' : '') + '</span><span class="nm">' + esc(x.name) + (freigestellt(x.name) ? ' ' + rollenEmoji(x.name) : '') + '</span>' + balken(x.n, x.kommend, max) + '</div>').join('')
         + '<div class="hinweis" style="margin-bottom:6px">Gezählt wird der Umfang der geleisteten Dienste (ca. 1 pro Spiel bzw. 2 Stunden). Kommende Dienste sind nur hell vorgemerkt und zählen, sobald sie vorbei sind.</div>'
       : '<div class="leer">Noch keine Einträge.</div>';
     const ohne = alleSpieler().filter(n => !zaehl.has(norm(n)) && !freigestellt(n));
     const frei = alleSpieler().filter(freigestellt).sort((a, b) => a.localeCompare(b, 'de'));
     $('#st-ohne').innerHTML = (ohne.length ? '<h2>Noch ohne Dienst</h2><div class="card"><div class="chips">' + ohne.map(n => '<span>' + esc(n) + '</span>').join('') + '</div></div>' : '')
-      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => { const z = zaehl.get(norm(n)); return '<span title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (z && z.n ? ' <small style="color:var(--gruen)">· ' + fmtW(z.n) + '× freiwillig</small>' : '') + (z && z.kommend ? ' <small style="color:var(--muted)">· +' + fmtW(z.kommend) + ' vorgemerkt</small>' : '') + '</span>'; }).join('') + '</div>'
+      + (frei.length ? '<h2>Freigestellt</h2><div class="card"><div class="chips">' + frei.map(n => { const z = zaehl.get(norm(n)); return '<span class="' + (z ? 'st-chip' : '') + '"' + (z ? ' data-sp="' + esc(n) + '"' : '') + ' title="' + esc(rollenText(n)) + '">' + rollenEmoji(n) + ' ' + esc(n) + (z && z.n ? ' <small style="color:var(--gruen)">· ' + fmtW(z.n) + '× freiwillig</small>' : '') + (z && z.kommend ? ' <small style="color:var(--muted)">· +' + fmtW(z.kommend) + ' vorgemerkt</small>' : '') + '</span>'; }).join('') + '</div>'
         + '<div class="hinweis">' + Object.values(ROLLEN).map(r => r.e + ' ' + r.n).join(' · ') + ' – müssen hier keine Dienste machen, helfen aber gern freiwillig aus.</div></div>' : '');
+    ['#st-rangliste', '#st-ohne'].forEach(sel => $(sel).querySelectorAll('[data-sp]').forEach(el => el.onclick = () => this.spielerDiensteModal(el.dataset.sp)));
     const al = [...arten.entries()].sort((a, b) => b[1].n - a[1].n || b[1].kommend - a[1].kommend);
     const amax = Math.max(1, ...al.map(([, v]) => v.n + v.kommend));
     $('#st-arten').innerHTML = al.length ? al.map(([a, v]) => '<div class="rang"><span class="nm">' + (ARTEN[a] || ARTEN.sonstiges).e + ' ' + esc((ARTEN[a] || ARTEN.sonstiges).n) + '</span>' + balken(v.n, v.kommend, amax) + '</div>').join('') : '<div class="leer">Noch keine Einträge.</div>';
+  },
+
+  // Alle Dienste einer Person (aus der Statistik angetippt)
+  spielerDiensteModal(name) {
+    const k = norm(name);
+    const l = S.eintraege.filter(e => norm(e.name) === k).map(e => ({ e, d: dienstById(e.dienst) })).filter(x => x.d)
+      .sort((a, b) => startVon(b.d) - startVon(a.d));
+    const geleistet = l.filter(x => istVorbei(x.d)), kommend = l.filter(x => !istVorbei(x.d)).reverse();
+    const summe = geleistet.reduce((s, x) => s + eintragWert(x.e, x.d), 0);
+    const zeile = (x, komm) => { const a = ARTEN[x.d.art] || ARTEN.sonstiges, w = eintragWert(x.e, x.d);
+      return '<div class="sp-dienst' + (komm ? ' kommend' : '') + '"><span style="font-size:1.2rem">' + a.e + '</span><div class="t"><b>' + esc(x.d.titel) + '</b>' + (x.e.tausch && komm ? ' <span class="tag-label warn">sucht Ersatz</span>' : '')
+        + '<small>' + esc(tagKurz(startVon(x.d))) + ', ' + esc(zeitText(x.d)) + (x.d.gruppe ? ' · ' + esc(x.d.gruppe) : '') + '</small></div><span class="w">' + fmtW(w) + '×</span></div>'; };
+    oeffneModal('<h3>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</h3>'
+      + '<div class="unter">' + fmtW(summe) + ' geleistet' + (kommend.length ? ' · ' + kommend.length + ' kommend' : '') + (freigestellt(name) ? '<br>Freigestellt (' + esc(rollenText(name)) + ') – Dienste freiwillig' : '') + '</div>'
+      + (kommend.length ? '<h2 style="margin-top:14px">Kommend</h2><div>' + kommend.map(x => zeile(x, true)).join('') + '</div>' : '')
+      + '<h2 style="margin-top:14px">Geleistet</h2><div>' + (geleistet.length ? geleistet.map(x => zeile(x, false)).join('') : '<div class="hinweis" style="margin-top:0">Noch keine Dienste geleistet.</div>') + '</div>'
+      + '<div class="knoepfe"><button class="btn" data-zu>Schließen</button></div>');
   },
 
   // ---------- Tab: Verwalten ----------
