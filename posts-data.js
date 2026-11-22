@@ -1381,4 +1381,16 @@ const posts = [
     titleEn: "Area Workshop",
     excerptEn: "Area, perimeter and volume made visible: change shapes with sliders, count and colour squares, walk the perimeter, animated derivations (circle cut into slices forming a rectangle, triangle completed to a rectangle, parallelogram, trapezium, rolling out the circumference), solids in oblique view with filling and pouring animations. Practice with explanations (picture and calculation), solo, 1-vs-1 and class quiz, plus a worksheet generator with solutions (PDF)."
    },
+   {
+    title: "Geoheft",
+    excerpt: "Konstruieren wie in Goodnotes: Heft mit Apple-Pencil-Unterstützung, Geodreieck mit Einrasten (15°-Schritte, parallel und senkrecht an Linien, Nullpunkt an Punkten), Linien an der Kante mit Längenanzeige, Zirkel mit Radius in cm und Punkte, die an Schnittpunkten einrasten. Arbeitsblätter als PDF oder Foto importieren (Originalmaß, kalibrierbar), Export als Bild oder PDF für Goodnotes, Abgleich zwischen Geräten mit Google-Konto.",
+    date: "2026-11-22",
+    category: "schule",
+    subcategory: "mathematik",
+    url: "geoheft.html",
+    emoji: "📐",
+    tags: ["tool", "geometrie", "einzelarbeit", "jg5", "jg6", "jg7", "jg8", "jg9", "jg10"],
+    titleEn: "Geo Notebook",
+    excerptEn: "Construct like in Goodnotes: a notebook with Apple Pencil support, a set square that snaps (15° steps, parallel and perpendicular to lines, zero point onto points), straight lines along its edge with length display, compasses with radius in cm and points that snap to intersections. Import worksheets as PDF or photo (true scale, calibratable), export as image or PDF for Goodnotes, sync between devices with a Google account."
+   },
 ];
