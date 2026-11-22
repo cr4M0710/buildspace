@@ -87,7 +87,16 @@ async function main() {
   // 1. Aktuelle Regeln holen und sichern
   let alt = "";
   try {
-    const rel = await api("GET", RELEASE);
+    let rel;
+    // Neu vergebene Rechte brauchen bei Google ein paar Minuten, bis sie greifen
+    for (let versuch = 1; ; versuch++) {
+      try { rel = await api("GET", RELEASE); break; }
+      catch (e) {
+        if (e.status !== 403 || versuch >= 10) throw e;
+        log(`Noch keine Berechtigung – warte 30 s, bis neu vergebene Rechte greifen (Versuch ${versuch}/10) …`);
+        await new Promise((r) => setTimeout(r, 30000));
+      }
+    }
     const rs = await api("GET", rel.rulesetName);
     alt = (rs.source.files || []).map((f) => f.content).join("\n");
     fs.writeFileSync("vorherige-regeln.rules", alt);
