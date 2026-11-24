@@ -532,6 +532,9 @@
       <button class="btn klein sekundaer" id="team-link-btn" onclick="App.teamAnsichtLink()" style="display:none;width:100%;margin-top:9px">Spieler-Ansicht teilen (nur Lesen)</button>
     </div>
 
+    <h2>Hallendienst verknüpfen (optional)</h2>
+    <div class="card" style="padding:14px" id="hd-verknuepfung"></div>
+
     <h2>Spieler</h2>
     <div class="werkzeug">
       <div class="suchwrap"><span class="such-ico" id="ico-such-sp"></span>
@@ -877,6 +880,7 @@ function normalisieren(d) {
   if (d.paypalme == null) d.paypalme = '';
   if (!Array.isArray(d.archiv)) d.archiv = [];
   if (d.hallendienst == null) d.hallendienst = '';
+  if (d.einstTs == null) d.einstTs = 0;
   return d;
 }
 
@@ -1002,7 +1006,7 @@ const Hallendienst = {
     Fb.laden().then(() => {
       if (this.id !== id) return;
       const ref = Fb.db.collection('hallendienst').doc(id);
-      const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); };
+      const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); if (!nurLesen) App.rendernHdVerknuepfung(); };
       this._abos.push(ref.onSnapshot(s => { this.plan = s.exists ? { titel: s.data().titel || 'Hallendienst', spieler: s.data().spieler || [] } : null; neu(); this.spielerImport(); }, () => {}));
       this._abos.push(ref.collection('dienste').onSnapshot(q => { this.dienste = q.docs.map(d => { const x = d.data(); return { id: d.id, titel: x.titel, datum: x.datum, von: x.von, bis: x.bis || '', plaetze: x.plaetze, ort: x.ort || '' }; }); neu(); }, () => {}));
       this._abos.push(ref.collection('eintraege').onSnapshot(q => { this.eintraege = q.docs.map(d => { const x = d.data(); return { dienst: x.dienst, platz: x.platz, name: x.name }; }); neu(); }, () => {}));
@@ -1069,7 +1073,11 @@ const kannPaypal = () => !!(daten.paypalme || daten.paypal);
 const titelZeile = () => (daten.verein ? `${daten.titel} – ${daten.verein}` : daten.titel);
 
 function betragParsen(text) {
-  const n = parseFloat(String(text).replace(',', '.'));
+  let t = String(text == null ? '' : text).replace(/[\s€]/g, '');
+  // deutsches Format: Punkt = Tausender, Komma = Dezimal („1.234,50“, „1.000“)
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  const n = parseFloat(t);
   return isNaN(n) ? null : Math.round(n * 100) / 100;
 }
 
@@ -1124,7 +1132,11 @@ function stabil(o) {
 // Spieler/Katalog: ganze Sammlung, neuerer Zeitstempel (spielerTs/katalogTs) gewinnt.
 function mergeDaten(remote, local) {
   const m = {};
-  ['titel', 'verein', 'paypal', 'paypalme', 'hallendienst'].forEach(k => { m[k] = local[k] != null ? local[k] : remote[k]; });
+  // Einstellungen (Name, PayPal, Hallendienst-Link): neuerer Stand gewinnt (einstTs), damit Änderungen einer
+  // Kassenwartin nicht vom alten Stand eines anderen Geräts überschrieben werden. Ohne Zeitstempel: wie bisher lokal.
+  const einstLokal = (local.einstTs || 0) >= (remote.einstTs || 0);
+  ['titel', 'verein', 'paypal', 'paypalme', 'hallendienst'].forEach(k => { const a = einstLokal ? local : remote, b = einstLokal ? remote : local; m[k] = a[k] != null ? a[k] : b[k]; });
+  m.einstTs = Math.max(local.einstTs || 0, remote.einstTs || 0);
   // Saison-Archiv: Vereinigung nach id (abgeschlossene Saisons ändern sich nicht mehr)
   const arch = {};
   [...(remote.archiv || []), ...(local.archiv || [])].forEach(a => { if (a && a.id) arch[a.id] = a; });
@@ -1430,6 +1442,7 @@ const Sync = {
       if (!snap.exists) { this.ansichtWeg(); return; }
       const r = this.ansichtAuswerten(snap.data());
       daten = r.data; this.cfg.lastAt = r.updated_at; speichernNurLokal(); App.rendern(); this.status('ok');
+      hdStartseite();
     }, () => this.status('fehler', 'Offline – zuletzt geladener Stand'));
   },
   ansichtWeg() {
@@ -2256,6 +2269,7 @@ const App = {
   // ===== Tab: Verwalten =====
   rendernVerwalten() {
     this.rendernVerwaltenSyncKnopf();
+    this.rendernHdVerknuepfung();
     const pinfo = document.getElementById('profil-info');
     if (pinfo) pinfo.textContent = `Aktives Team: ${daten.titel || PROFIL.titel}. Jedes Team hat eigene Spieler, eigenen Strafenkatalog, eigene Buchungen und eigenen Cloud-Sync – ein Wechsel lädt die App neu.`;
     this.rendernSaison();
@@ -2936,6 +2950,65 @@ const App = {
     this.profilModal();
   },
 
+  // ===== Verknüpfung mit dem Hallendienst =====
+  // Gespeichert wird nur die Plan-ID in den Daten der Strafenkasse. Rechte bleiben getrennt:
+  // Kassenwart:innen ändern hier nur die Strafenkasse, Hallendienst-Admins nur den Hallendienst.
+  rendernHdVerknuepfung() {
+    const el = document.getElementById('hd-verknuepfung'); if (!el) return;
+    const id = daten.hallendienst;
+    const ansicht = Sync.istFirebase() && Sync.meta && Sync.meta.ansicht;
+    if (!id) {
+      el.innerHTML = `<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch den Hallendienst-Planer? Dann startet der Link der Spieler-Ansicht mit einer Auswahl: Namen wählen, danach „Hallendienst“ oder „Strafenkasse“. Neue Spieler aus dem Hallendienst kommen automatisch dazu.</div>
+        <button class="btn klein sekundaer" style="width:100%;margin-top:9px" onclick="App.hallendienstModal()">Hallendienst verknüpfen</button>`;
+      return;
+    }
+    const titel = Hallendienst.id === id && Hallendienst.plan ? Hallendienst.plan.titel : '';
+    el.innerHTML = `<div class="sync-status" style="margin-bottom:4px"><span class="punkt gruen"></span>Verknüpft${titel ? ' mit „' + esc(titel) + '“' : ''}</div>
+      <div class="hinweis" style="margin-top:2px">${ansicht
+        ? 'Der Link der Spieler-Ansicht öffnet jetzt zuerst die Auswahl: Namen wählen, dann „Hallendienst“ oder „Strafenkasse“. Der Link bleibt derselbe.'
+        : 'Die Auswahl erscheint, sobald ihr eine Spieler-Ansicht teilt (Cloud-Sync › „Spieler-Ansicht teilen“).'}
+        Rechte bleiben getrennt: Kassenwart:innen buchen nur in der Strafenkasse, Hallendienst-Admins verwalten nur den Hallendienst.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+        <button class="btn klein sekundaer" onclick="App.hallendienstModal()">Ändern</button>
+        <button class="btn klein gefahr" onclick="App.hallendienstTrennen()">Trennen</button>
+      </div>
+      <a class="btn klein sekundaer" style="width:100%;margin-top:9px;text-decoration:none" href="${esc(hallendienstLink(id))}">Hallendienst öffnen</a>`;
+  },
+  hallendienstModal() {
+    this.modal(`
+      <h3>Hallendienst verknüpfen</h3>
+      <div class="hinweis" style="margin-top:0">Den Mannschafts-Link aus dem Hallendienst-Planer einfügen (dort unter Verwalten › „Link für die Mannschaft“).</div>
+      <div class="feld"><label>Mannschafts-Link des Hallendienstes</label><input type="text" id="e-hallendienst" autocapitalize="off" autocomplete="off" value="${esc(daten.hallendienst ? hallendienstLink(daten.hallendienst) : '')}" placeholder="https://buildspaceos.de/hallendienst/index.html?plan=…"></div>
+      <div class="hinweis" style="margin-top:0">Danach startet der Link der Spieler-Ansicht mit der Auswahl „Hallendienst“ oder „Strafenkasse“. Admin-Rechte im Hallendienst brauchst du dafür nicht – und bekommst du dadurch auch nicht.</div>
+      <div class="knoepfe">
+        <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
+        <button class="btn" id="hd-ok" onclick="App.hallendienstSpeichern()">Verknüpfen</button>
+      </div>`);
+  },
+  async hallendienstSpeichern() {
+    const roh = document.getElementById('e-hallendienst').value.trim();
+    const id = hallendienstId(roh);
+    if (!roh) { this.modalZu(); if (daten.hallendienst) this.hallendienstTrennen(); return; }
+    if (!id) { this.toast('Das ist kein gültiger Hallendienst-Link (er enthält „?plan=“).'); return; }
+    const knopf = document.getElementById('hd-ok'); if (knopf) knopf.disabled = true;
+    try {
+      await Fb.laden();
+      const snap = await Fb.db.collection('hallendienst').doc(id).get();
+      if (!snap.exists) { this.toast('Diesen Hallendienst-Plan gibt es nicht (mehr). Link prüfen.'); if (knopf) knopf.disabled = false; return; }
+    } catch (e) {
+      if (!navigator.onLine) { this.toast('Keine Verbindung – bitte online erneut versuchen.'); if (knopf) knopf.disabled = false; return; }
+    }
+    daten.hallendienst = id; daten.einstTs = Date.now();
+    speichern(); this.modalZu(); this.rendern();
+    this.toast('Hallendienst verknüpft');
+  },
+  hallendienstTrennen() {
+    if (!confirm('Verknüpfung zum Hallendienst lösen? Der Hallendienst selbst bleibt unverändert.')) return;
+    daten.hallendienst = ''; daten.einstTs = Date.now();
+    speichern(); this.rendern();
+    this.toast('Getrennt');
+  },
+
   einstellungenModal() {
     this.modal(`
       <h3>Verein / Mannschaft</h3>
@@ -2945,8 +3018,6 @@ const App = {
       <div class="feld"><label>PayPal.me-Name (optional, für „Jetzt zahlen“)</label><input type="text" id="e-paypalme" value="${esc(daten.paypalme || '')}" placeholder="z. B. nickstroh – aus paypal.me/nickstroh"></div>
       <div class="hinweis" style="margin-top:0">Mit PayPal.me-Name öffnet „Jetzt per PayPal zahlen“ in der Spieler-Ansicht PayPal direkt mit dem offenen Betrag. Deinen Namen findest du in der PayPal-App unter „PayPal.me“.</div>
       <div class="hinweis" style="margin-top:0">Erscheint im Kopf der App und in den geteilten Übersichten, Bildern und PDFs. PayPal leer lassen, wenn nicht gewünscht.</div>
-      <div class="feld"><label>Hallendienst-Link (optional)</label><input type="text" id="e-hallendienst" autocapitalize="off" value="${esc(daten.hallendienst ? hallendienstLink(daten.hallendienst) : '')}" placeholder="https://buildspaceos.de/hallendienst/index.html?plan=…"></div>
-      <div class="hinweis" style="margin-top:0">Nutzt ihr auch den Hallendienst-Planer? Mannschafts-Link hier einfügen – dann sehen alle in der Spieler-Ansicht neben ihren Strafen auch ihre Hallendienste, und neue Spieler aus dem Hallendienst werden automatisch übernommen.</div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.einstellungenSpeichern()">Speichern</button>
@@ -2960,10 +3031,7 @@ const App = {
     daten.verein = document.getElementById('e-verein').value.trim();
     daten.paypal = document.getElementById('e-paypal').value.trim();
     daten.paypalme = paypalMeName(document.getElementById('e-paypalme').value);
-    const hdRoh = document.getElementById('e-hallendienst').value.trim();
-    const hd = hallendienstId(hdRoh);
-    if (hdRoh && !hd) { this.toast('Das ist kein gültiger Hallendienst-Link.'); return; }
-    daten.hallendienst = hd || '';
+    daten.einstTs = Date.now();
     speichern();
     this.modalZu(); this.rendern();
     this.toast('Gespeichert');
@@ -3590,9 +3658,22 @@ function ansichtOberflaeche() {
   const lh = document.getElementById('lese-hinweis'); if (lh) lh.innerHTML = ICON.cloud + 'Spieler-Ansicht – Live-Stand, nur Lesen';
 }
 
+// Spieler-Ansicht mit verknüpftem Hallendienst: zuerst die Auswahl „Wer bist du? → Hallendienst / Strafenkasse“.
+// Die Startseite liefert der Hallendienst-Planer (gleiche Website); er bekommt den Lesezugang dieser
+// Spieler-Ansicht mit (sk=<team>~<token>) und bettet die Strafenkasse dort ein. Nicht im eingebetteten Modus.
+function hdStartseite() {
+  if (hdStartseite.weg || EINGEBETTET || !nurLesen || !Sync.cfg || Sync.cfg.typ !== 'spieleransicht') return;
+  const id = daten.hallendienst; if (!id || !/^[A-Za-z0-9]{16,40}$/.test(id)) return;
+  hdStartseite.weg = true;
+  const u = new URL('../hallendienst/index.html', location.href);
+  u.search = '?plan=' + id + '&sk=' + encodeURIComponent((PROFIL_ID || '') + '~' + Sync.cfg.token);
+  location.replace(u.href);
+}
+
 App.themeAnwenden();
 Sync.status(Sync.aktiv() ? 'ok' : 'aus');
 App.rendern();
+hdStartseite();
 if (nurLesen) App.tab('uebersicht');
 if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
 else if (Sync.aktiv()) Sync.abgleichen(false);
