@@ -628,7 +628,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { plaene: 'hd-plaene', name: 'hd-name', theme: 'hd-theme', letzter: 'hd-letzter', filter: 'hd-filter', cache: id => 'hd-cache-' + id, oauth: 'hd-oauth', weiter: 'hd-weiterleitung' };
+const K = { plaene: 'hd-plaene', name: 'hd-name', theme: 'hd-theme', letzter: 'hd-letzter', filter: 'hd-filter', cache: id => 'hd-cache-' + id, oauth: 'hd-oauth', weiter: 'hd-weiterleitung', skExtern: id => 'hd-sk-extern-' + id };
 const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 const pad = n => String(n).padStart(2, '0');
 const zufallsId = (n = 20) => { const z = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; return Array.from(crypto.getRandomValues(new Uint8Array(n)), b => z[b % z.length]).join(''); };
@@ -764,7 +764,11 @@ const S = {
 
 function dienstById(id) { return S.dienste.find(d => d.id === id); }
 function startVon(d) { return d.start && d.start.toDate ? d.start.toDate() : ausDatum(d.datum, d.von); }
-function endeVon(d) { return d.bis ? ausDatum(d.datum, d.bis) : new Date(startVon(d).getTime() + 60 * 60e3); }
+function endeVon(d) {
+  if (!d.bis) return new Date(startVon(d).getTime() + 60 * 60e3);
+  const e = ausDatum(d.datum, d.bis);
+  return e < startVon(d) ? new Date(e.getTime() + 864e5) : e; // über Mitternacht
+}
 function eintraegeVon(id) { return S.eintraege.filter(e => e.dienst === id).sort((a, b) => a.platz - b.platz); }
 function belegt(d) { return eintraegeVon(d.id).filter(e => e.platz < d.plaetze).length; }
 function frei(d) { return Math.max(0, d.plaetze - belegt(d)); }
@@ -812,6 +816,9 @@ const App = {
     const p = new URLSearchParams(location.search).get('plan')
       || (rueck ? (LS.get(K.oauth, {}) || {}).plan
          : (!new URLSearchParams(location.search).has('start') && LS.get(K.letzter, null)));
+    // Aus der Spieler-Ansicht der Strafenkasse weitergeleitet: deren Lesezugang für dieses Gerät merken
+    const skParam = new URLSearchParams(location.search).get('sk');
+    if (p && skParam && /^[A-Za-z0-9_-]{0,40}~[a-z0-9]{8,40}$/.test(skParam)) LS.set(K.skExtern(p), skParam.replace('~', '|'));
     if (p) this.planOeffnen(p, { still: true }); else this.startZeigen();
     try { await Fb.laden(); } catch (e) { S.fehler = 'Keine Verbindung zur Datenbank (offline?)'; this.renderAlles(); return; }
     if (rueck) await Fb.googleRueckkehr(rueckHash);
@@ -821,7 +828,7 @@ const App = {
   // ---------- Navigation ----------
   startZeigen() {
     this.abosBeenden();
-    S.planId = null; S.plan = null; S.dienste = []; S.eintraege = []; S.admin = null; S.istAdmin = false;
+    S.planId = null; S.plan = null; S.dienste = []; S.eintraege = []; S.admin = null; S.istAdmin = false; S.skExtern = null;
     try { history.replaceState(null, '', location.pathname + '?start'); } catch (e) {}
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('aktiv', t.id === 'tab-start'));
     $('#nav').style.display = 'none'; document.body.classList.add('ohne-nav');
@@ -847,6 +854,7 @@ const App = {
     if (!/^[A-Za-z0-9]{16,40}$/.test(id)) { toast('Das ist kein gültiger Plan-Code.'); return; }
     this.abosBeenden();
     S.planId = id; S.plan = null; S.dienste = []; S.eintraege = []; S.admin = null; S.istAdmin = false; S.istBesitzer = false; S.fehler = null; S.live = false;
+    S.skExtern = LS.get(K.skExtern(id), null);
     LS.set(K.letzter, id);
     try { history.replaceState(null, '', location.pathname + '?plan=' + id); } catch (e) {}
     // Sofort aus dem Zwischenspeicher zeigen (offline lesbar)
@@ -856,7 +864,7 @@ const App = {
     $('#teilen-btn').style.display = '';
     // Mit verknüpfter Strafenkasse startet die App auf der Startseite (Wer bist du? → Dienste / Strafenkasse)
     S.ersteAnsicht = !opt.tab;
-    this.tabZeigen(opt.tab || (c && c.plan && c.plan.strafenkasse ? 'home' : 'dienste'));
+    this.tabZeigen(opt.tab || ((c && c.plan && c.plan.strafenkasse) || S.skExtern ? 'home' : 'dienste'));
     Fb.laden().then(() => this.abosStarten()).catch(() => {});
   },
   abosBeenden() { S.abos.splice(0).forEach(u => { try { u(); } catch (e) {} }); },
@@ -868,7 +876,7 @@ const App = {
       if (S.planId !== id) return;
       if (!s.exists) { if (!s.metadata.fromCache) { S.plan = null; S.fehler = 'Diesen Plan gibt es nicht (mehr). Prüfe den Link.'; this.renderAlles(); } return; }
       S.plan = s.data(); S.fehler = null; S.live = !s.metadata.fromCache;
-      if (S.ersteAnsicht) { S.ersteAnsicht = false; if (S.plan.strafenkasse && S.tab === 'dienste') { this.tabZeigen('home'); return; } if (!S.plan.strafenkasse && (S.tab === 'home' || S.tab === 'strafen')) { this.tabZeigen('dienste'); return; } }
+      if (S.ersteAnsicht) { S.ersteAnsicht = false; const sk = !!Strafen.cfg(); if (sk && S.tab === 'dienste') { this.tabZeigen('home'); return; } if (!sk && (S.tab === 'home' || S.tab === 'strafen')) { this.tabZeigen('dienste'); return; } }
       this.planMerken(id, S.plan.titel); this.cacheSchreiben(); this.renderAlles();
     }, fehler));
     S.abos.push(Fb.planRef(id).collection('dienste').onSnapshot(s => {
@@ -917,7 +925,7 @@ const App = {
   // damit später gelöschte Namen nicht zurückkommen). Schreiben darf nur die Verwaltung – alle anderen sehen
   // die Namen trotzdem sofort (alleSpieler()).
   async spielerImport() {
-    if (!S.istAdmin || !S.plan || !Strafen.daten || this._importLaeuft) return;
+    if (!S.istAdmin || !S.plan || !S.plan.strafenkasse || !Strafen.daten || this._importLaeuft) return;
     const key = 'hd-sk-import-' + S.planId;
     const schon = new Set(LS.get(key, []));
     const vorhanden = new Set((S.plan.spieler || []).map(norm));
@@ -992,7 +1000,11 @@ const App = {
   // ---------- Startseite: Wer bist du? → Dienste oder Strafenkasse ----------
   renderHome() {
     const el = $('#home-inhalt'), p = S.plan;
-    if (!p) { el.innerHTML = '<div class="leer">' + esc(S.fehler || 'Lade …') + '</div>'; return; }
+    if (!p) {
+      el.innerHTML = '<div class="leer">' + esc(S.fehler || 'Lade …') + '</div>' + (S.fehler && Strafen.cfg() ? '<button class="btn sekundaer" id="k-strafen">💶 Zur Strafenkasse</button>' : '');
+      if ($('#k-strafen')) $('#k-strafen').onclick = () => this.tabZeigen('strafen');
+      return;
+    }
     Strafen.pruefen();
     const name = meinName();
     const namen = alleSpieler().sort((a, b) => a.localeCompare(b, 'de'));
@@ -1715,12 +1727,12 @@ const App = {
       + '<div class="hinweis">Wer diesen Link hat, kann den Plan sehen und sich eintragen. Als App installieren: Link in Safari öffnen › Teilen › „Zum Home-Bildschirm“.</div></div>';
     if (!Fb.google()) {
       h += '<h2>Verwaltung</h2><div class="card stapel"><div class="hinweis" style="margin-top:0">Dienste anlegen und Namen bearbeiten dürfen nur eingetragene Admins dieses Plans. Melde dich mit dem Google-Konto an, das die Verwaltung eingetragen hat.</div>'
-        + '<button class="btn" onclick="Fb.anmelden()">Mit Google anmelden</button></div>' + (S.plan && S.plan.strafenkasse ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
+        + '<button class="btn" onclick="Fb.anmelden()">Mit Google anmelden</button></div>' + (Strafen.cfg() ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
       el.innerHTML = h; return;
     }
     if (!S.istAdmin) {
       h += '<h2>Verwaltung</h2><div class="card stapel"><div class="hinweis" style="margin-top:0">Angemeldet als <b>' + esc(Fb.email()) + '</b> – du bist (noch) kein Admin dieses Plans. Bitte die Verwaltung, deine Adresse unter „Admins“ einzutragen, und lade danach neu.</div>'
-        + '<div class="zwei"><button class="btn sekundaer" onclick="App.adminPruefen()">Neu prüfen</button><button class="btn sekundaer" onclick="Fb.abmelden()">Abmelden</button></div></div>' + (S.plan && S.plan.strafenkasse ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
+        + '<div class="zwei"><button class="btn sekundaer" onclick="App.adminPruefen()">Neu prüfen</button><button class="btn sekundaer" onclick="Fb.abmelden()">Abmelden</button></div></div>' + (Strafen.cfg() ? '<h2>Strafenkasse</h2><div class="card"><div class="hinweis" style="margin-top:0">Kassenwart:innen verwalten die Strafenkasse getrennt vom Hallendienst – mit ihrem eigenen Google-Zugang.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseVerwalten()">Strafenkasse zum Verwalten öffnen</button></div>' : '');
       el.innerHTML = h; return;
     }
     const p = S.plan || {};
@@ -1744,7 +1756,8 @@ const App = {
       + '<h2>Strafenkasse verknüpfen (optional)</h2><div class="card">' + (p.strafenkasse
           ? '<div class="hinweis" style="margin-top:0">✓ Verknüpft – der Mannschafts-Link öffnet jetzt eine Startseite: Namen wählen, dann „Hallendienst“ oder „Strafenkasse“. Der bisherige Link der Strafenkasse funktioniert weiter.</div><div class="zwei" style="margin-top:9px"><button class="btn sekundaer" onclick="App.strafenkasseModal()">Ändern</button><button class="btn gefahr" onclick="App.strafenkasseTrennen()">Trennen</button></div>'
           : '<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch die Strafenkasse? Dann seht ihr Strafen und Dienste an einem Ort.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.strafenkasseModal()">Strafenkasse verknüpfen</button>')
-      + '<div class="hinweis">Andersherum: Den Mannschafts-Link oben kann die Kassenwartin bzw. der Kassenwart in der Strafenkasse unter „Name &amp; PayPal ändern“ eintragen – dann zeigt auch die Strafenkasse eure Dienste.</div></div>'
+      + (!p.strafenkasse && S.skExtern ? '<div class="hinweis">ℹ️ Die Strafenkasse eurer Mannschaft hat diesen Plan von ihrer Seite verknüpft – ihr Link startet mit derselben Auswahl. Kassenwart:innen haben dadurch keine Rechte im Hallendienst.</div>' : '')
+      + '<div class="hinweis">Andersherum geht es auch: Die Kassenwartin bzw. der Kassenwart trägt den Mannschafts-Link oben in der Strafenkasse unter Verwalten › „Hallendienst verknüpfen“ ein – dann startet auch der Link der Strafenkasse mit der Auswahl „Hallendienst“ oder „Strafenkasse“. Admins und Kassenwart:innen bleiben getrennt: Jede Seite verwaltet nur ihr eigenes Tool.</div></div>'
       + '<h2>Checkliste</h2><div class="card"><div class="hinweis" style="margin-top:0">' + (offenePlatzhalter() ? '⚠️ Noch ' + offenePlatzhalter() + ' Platzhalter in [eckigen Klammern] offen. ' : '') + 'Telefonnummern werden in der App zum Antippen.</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.checklisteModal()">Checkliste bearbeiten</button></div>'
       + '<h2>Dienste-Katalog</h2><div class="card"><div class="hinweis" style="margin-top:0">' + this.katalog().map(v => (ARTEN[v.art] || ARTEN.sonstiges).e + ' ' + esc(v.titel)).join(' · ') + '</div><div class="hinweis">Beim Anlegen eines Spieltags werden die Dienste automatisch nach der spielenden Mannschaft vorausgewählt (Vereinsplan). Zeiten anpassen oder eigene Dienste dauerhaft ergänzen:</div><button class="btn sekundaer" style="margin-top:9px" onclick="App.vorlageModal()">Katalog bearbeiten</button></div>'
       + '<h2>Admins Hallendienst</h2><div class="card" style="padding:4px 14px">' + ((S.admin && S.admin.members) || []).map(mail =>
@@ -2516,7 +2529,10 @@ const Strafen = {
     const team = /[?&]team=([A-Za-z0-9_-]+)/.exec(text);
     return (team ? team[1] : '') + '|' + t[1];
   },
-  cfg() { const v = S.plan && S.plan.strafenkasse; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
+  // Eigene Verknüpfung des Plans hat Vorrang; sonst die, mit der die Strafenkasse hierher weitergeleitet hat.
+  cfg() { const v = (S.plan && S.plan.strafenkasse) || S.skExtern; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
+  extern() { return !(S.plan && S.plan.strafenkasse) && !!S.skExtern; },
+  externLoesen() { if (S.planId) LS.del(K.skExtern(S.planId)); S.skExtern = null; this.pruefen(); if (S.tab === 'home' || S.tab === 'strafen') App.tabZeigen('dienste'); else App.renderAlles(); },
   link() { const c = this.cfg(); if (!c) return ''; const u = new URL('../strafenkasse/index.html', location.href); if (c.team) u.search = '?team=' + c.team; u.hash = 's=' + c.token; return u.href; },
   pruefen() {
     const c = this.cfg();
@@ -2527,9 +2543,11 @@ const Strafen = {
     Fb.laden().then(() => {
       if (this.token !== c.token) return;
       this._abo = Fb.db.collection('strafenkasse_ansicht').doc(c.token).onSnapshot(snap => {
-        if (!snap.exists) { this.daten = null; App.renderAlles(); return; }
+        if (!snap.exists) { if (this.extern()) { this.externLoesen(); return; } this.daten = null; App.renderAlles(); return; }
         this.team = snap.data().team || null;
-        try { const d = JSON.parse(snap.data().json); this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); App.spielerImport(); } catch (e) {}
+        try { const d = JSON.parse(snap.data().json);
+          // Hat die Kassenwartin die Verknüpfung (von ihrer Seite) gelöst oder geändert, verschwindet die Auswahl hier wieder
+          if (this.extern() && d.hallendienst !== S.planId) { this.externLoesen(); return; } this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); App.spielerImport(); } catch (e) {}
       }, () => {});
     }).catch(() => {});
   },
