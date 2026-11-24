@@ -363,6 +363,27 @@
   .sync-status .punkt { margin: 0; }
   a { color: var(--rot); }
 
+  /* ---------- Startseite mit verknüpftem Hallendienst ---------- */
+  #sk-start, #sk-hd { display: none; }
+  body.start-modus main, body.start-modus nav, body.hd-modus main, body.hd-modus nav { display: none !important; }
+  body.start-modus #sk-start { display: block; }
+  body.hd-modus #sk-hd { display: block; position: fixed; left: 0; right: 0; bottom: 0; top: var(--kopf-h, 70px); background: var(--bg); }
+  #sk-hd iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  #sk-start { padding: 16px calc(14px + env(safe-area-inset-right)) 24px calc(14px + env(safe-area-inset-left)); max-width: 640px; margin: 0 auto; }
+  .start-kopf { text-align: center; background: var(--card); border: 1px solid var(--rand); border-radius: 16px; padding: 20px 16px; margin-bottom: 12px; }
+  .start-kopf img { width: 64px; height: 64px; object-fit: contain; }
+  .start-kopf .gross { font-size: 1.25rem; font-weight: 800; margin-top: 8px; }
+  .start-kopf .klein { color: var(--muted); font-size: .88rem; margin-top: 3px; }
+  .start-kopf .klein a { color: var(--rot); }
+  .start-kopf select { width: 100%; margin-top: 14px; padding: 12px; border-radius: 10px; border: 1.5px solid var(--rand); background: var(--feld); color: var(--text); font-size: 1rem; }
+  .kachel { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer; background: var(--card); color: var(--text); border: 1px solid var(--rand); border-radius: 16px; padding: 18px 16px; margin-bottom: 12px; font: inherit; }
+  .kachel:active { transform: scale(.985); }
+  .kachel .ico { font-size: 2rem; width: 54px; height: 54px; border-radius: 14px; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kachel .t { flex: 1; min-width: 0; }
+  .kachel .t b { display: block; font-size: 1.12rem; }
+  .kachel .t small { display: block; color: var(--muted); font-size: .86rem; margin-top: 3px; line-height: 1.4; }
+  .kachel .pfeil { color: var(--muted); font-size: 1.4rem; }
+
   /* ---------- Druck (PDF) ---------- */
   #druckbereich { display: none; }
 </style>
@@ -400,10 +421,15 @@
     <h1>Strafenkasse</h1>
     <div class="sub">HSG Wettenberg</div>
   </div>
+  <button class="kopf-btn" id="home-btn" title="Start: Hallendienst oder Strafenkasse" onclick="Start.zeigen()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></button>
   <button class="kopf-btn" id="team-btn" title="Team wechseln" onclick="App.profilModal()"></button>
   <button class="kopf-btn aus" id="sync-btn" title="Cloud-Sync" onclick="App.syncKnopf()"></button>
   <button class="kopf-btn" id="theme-btn" title="Design wechseln" onclick="App.themeWechseln()"></button>
 </header>
+
+<!-- Startseite (nur mit verknüpftem Hallendienst): Wer bist du? → Hallendienst / Strafenkasse -->
+<section id="sk-start"><div id="sk-start-inhalt"></div></section>
+<div id="sk-hd"><iframe id="hd-frame" title="Hallendienst"></iframe></div>
 
 <main>
 
@@ -995,6 +1021,8 @@ function hallendienstId(text) {
   const m = /[?&]plan=([A-Za-z0-9]{16,40})/.exec(t);
   return m ? m[1] : (/^[A-Za-z0-9]{16,40}$/.test(t) ? t : null);
 }
+// Verknüpfter Plan: hier eingetragen oder (Verweis) im Hallendienst verknüpft
+function hdPlanId() { return daten.hallendienst || (typeof Start !== 'undefined' && Start.plan()) || null; }
 function hallendienstLink(id) { return new URL('../hallendienst/index.html?plan=' + id, location.href).href; }
 const Hallendienst = {
   plan: null, dienste: [], eintraege: [], id: null, _abos: [], geladen: false,
@@ -1008,7 +1036,7 @@ const Hallendienst = {
     Fb.laden().then(() => {
       if (this.id !== id) return;
       const ref = Fb.db.collection('hallendienst').doc(id);
-      const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); if (!nurLesen) App.rendernHdVerknuepfung(); };
+      const neu = () => { this.geladen = true; try { localStorage.setItem('sk-hd-cache-' + id, JSON.stringify({ plan: this.plan, dienste: this.dienste, eintraege: this.eintraege })); } catch (e) {} App.rendernMeinStand(); if (!nurLesen) App.rendernHdVerknuepfung(); if (typeof Start !== 'undefined' && Start.modus === 'start') Start.rendern(); };
       this._abos.push(ref.onSnapshot(s => { this.plan = s.exists ? { titel: s.data().titel || 'Hallendienst', spieler: s.data().spieler || [] } : null; neu(); this.spielerImport(); }, () => {}));
       this._abos.push(ref.collection('dienste').onSnapshot(q => { this.dienste = q.docs.map(d => { const x = d.data(); return { id: d.id, titel: x.titel, datum: x.datum, von: x.von, bis: x.bis || '', plaetze: x.plaetze, ort: x.ort || '' }; }); neu(); }, () => {}));
       this._abos.push(ref.collection('eintraege').onSnapshot(q => { this.eintraege = q.docs.map(d => { const x = d.data(); return { dienst: x.dienst, platz: x.platz, name: x.name }; }); neu(); }, () => {}));
@@ -1042,7 +1070,7 @@ const Hallendienst = {
   },
   rendern(ich) {
     const el = document.getElementById('hd-dienste'); if (!el || EINGEBETTET) return;
-    this.start(daten.hallendienst || null);
+    this.start(hdPlanId());
     if (!this.id || !this.geladen || !this.plan) { el.innerHTML = ''; return; }
     const jetzt = new Date();
     const kommend = this.dienste.filter(d => this.ende(d) >= jetzt).sort((a, b) => (a.datum + a.von).localeCompare(b.datum + b.von));
@@ -1058,7 +1086,7 @@ const Hallendienst = {
         : meine.length ? meine.slice(0, 4).map(d => `<div style="font-size:.9rem;padding:4px 0"><b>${esc(tag(d))}, ${esc(d.von)}${d.bis ? '–' + esc(d.bis) : ''}</b> · ${esc(d.titel)}</div>`).join('')
         : '<div class="mein-sub" style="text-align:left">Keine kommenden Dienste eingetragen.</div>'}
       ${offen ? `<div class="mein-sub" style="text-align:left;margin-top:4px">Im Plan sind noch ${offen} Plätze offen.</div>` : ''}
-      <a class="btn sekundaer klein" style="width:100%;margin-top:10px;text-decoration:none" href="${esc(hallendienstLink(this.id))}">Zum Hallendienst</a></div>`;
+      <button class="btn sekundaer klein" style="width:100%;margin-top:10px" onclick="Start.hallendienst()">Zum Hallendienst</button></div>`;
   },
 };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -1444,7 +1472,7 @@ const Sync = {
       if (!snap.exists) { this.ansichtWeg(); return; }
       const r = this.ansichtAuswerten(snap.data());
       daten = r.data; this.cfg.lastAt = r.updated_at; speichernNurLokal(); App.rendern(); this.status('ok');
-      hdStartseite();
+      Start.pruefen();
     }, () => this.status('fehler', 'Offline – zuletzt geladener Stand'));
   },
   ansichtWeg() {
@@ -1505,7 +1533,7 @@ const Sync = {
     const ico = { aus: ICON.cloudAus, ok: ICON.cloudOk, laedt: ICON.cloud, ausstehend: ICON.cloud, fehler: ICON.cloudAus }[zustand] || ICON.cloud;
     btn.innerHTML = ico;
     this._zustand = zustand;
-    if (zustand === 'ok' && this.istFirebase() && !nurLesen) { this.ansichtPlanen(); hdStartseite(); }
+    if (zustand === 'ok' && this.istFirebase() && !nurLesen) { this.ansichtPlanen(); Start.pruefen(); }
     this.statusText(text);
   },
   statusText(text) {
@@ -1669,7 +1697,7 @@ const App = {
   },
 
   rendernKopf() {
-    const h1 = document.querySelector('header h1'); if (h1) h1.textContent = daten.titel || 'Strafenkasse';
+    const h1 = document.querySelector('header h1'); if (h1 && !(typeof Start !== 'undefined' && Start.modus === 'hd')) h1.textContent = daten.titel || 'Strafenkasse';
     const sub = document.querySelector('header .sub');
     if (sub && !nurLesen) sub.textContent = daten.verein || '';
     document.title = (daten.titel || 'Strafenkasse') + (daten.verein ? ' · ' + daten.verein : '');
@@ -1684,7 +1712,7 @@ const App = {
   },
 
   rendern() {
-    if (daten.hallendienst) Hallendienst.start(daten.hallendienst); else Hallendienst.start(null);
+    Hallendienst.start(hdPlanId());
     this.rendernKopf();
     this.renderMbBanner();
     this.rendernErfassen();
@@ -2968,7 +2996,7 @@ const App = {
       const t = Hallendienst.id === this._hdVerweis && Hallendienst.plan ? Hallendienst.plan.titel : '';
       el.innerHTML = `<div class="sync-status" style="margin-bottom:4px"><span class="punkt gruen"></span>Vom Hallendienst aus verknüpft${t ? ' („' + esc(t) + '“)' : ''}</div>
         <div class="hinweis" style="margin-top:2px">Der Link der Spieler-Ansicht startet mit der Auswahl „Hallendienst“ oder „Strafenkasse“. Lösen kann die Verknüpfung nur die Hallendienst-Verwaltung – Rechte bleiben getrennt.</div>
-        <a class="btn klein sekundaer" style="width:100%;margin-top:9px;text-decoration:none" href="${esc(hallendienstLink(this._hdVerweis))}">Hallendienst öffnen</a>`;
+        <button class="btn klein sekundaer" style="width:100%;margin-top:9px" onclick="Start.hallendienst()">Hallendienst öffnen</button>`;
       return;
     }
     if (!id) {
@@ -2986,7 +3014,7 @@ const App = {
         <button class="btn klein sekundaer" onclick="App.hallendienstModal()">Ändern</button>
         <button class="btn klein gefahr" onclick="App.hallendienstTrennen()">Trennen</button>
       </div>
-      <a class="btn klein sekundaer" style="width:100%;margin-top:9px;text-decoration:none" href="${esc(hallendienstLink(id))}">Hallendienst öffnen</a>`;
+      <button class="btn klein sekundaer" style="width:100%;margin-top:9px" onclick="Start.hallendienst()">Hallendienst öffnen</button>`;
   },
   hallendienstModal() {
     this.modal(`
@@ -3685,41 +3713,104 @@ function ansichtOberflaeche() {
   const lh = document.getElementById('lese-hinweis'); if (lh) lh.innerHTML = ICON.cloud + 'Spieler-Ansicht – Live-Stand, nur Lesen';
 }
 
-// Spieler-Ansicht mit verknüpftem Hallendienst: zuerst die Auswahl „Wer bist du? → Hallendienst / Strafenkasse“.
-// Die Startseite liefert der Hallendienst-Planer (gleiche Website); er bekommt den Lesezugang dieser
-// Spieler-Ansicht mit (sk=<team>~<token>) und bettet die Strafenkasse dort ein. Nicht im eingebetteten Modus.
-// Verknüpft sein kann von beiden Seiten: hier in der Strafenkasse (daten.hallendienst) oder im Hallendienst
-// (dann steht dort ein Verweis strafenkasse_hd/{token}).
-// Auch Kassenwart:innen sehen beim Öffnen zuerst die Auswahl (einmal pro Sitzung, damit „Zur Strafenkasse“
-// nicht wieder zurückspringt); im Hallendienst bekommen sie dann die volle Strafenkasse eingebettet.
-function hdStartseite() {
-  if (hdStartseite.weg || EINGEBETTET || !Sync.cfg) return;
-  const spieler = nurLesen && Sync.cfg.typ === 'spieleransicht';
-  const kassenwart = !nurLesen && Sync.istFirebase() && Sync.aktiv() && Sync.meta && Sync.meta.ansicht;
-  if (!spieler && !kassenwart) return;
-  if (kassenwart) { try { if (sessionStorage.getItem('sk-hd-start-' + PROFIL_ID)) return; } catch (e) { return; } }
-  const token = spieler ? Sync.cfg.token : Sync.meta.ansicht;
-  const ok = id => id && /^[A-Za-z0-9]{16,40}$/.test(id);
-  const id = ok(daten.hallendienst) ? daten.hallendienst : hdStartseite.plan;
-  if (!ok(id)) {
-    if (hdStartseite.gefragt) return;
-    hdStartseite.gefragt = true;
-    Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(token).get())
-      .then(s => { if (s.exists && ok(s.data().plan)) { hdStartseite.plan = s.data().plan; hdStartseite(); } })
-      .catch(() => {});
-    return;
-  }
-  hdStartseite.weg = true;
-  try { sessionStorage.setItem('sk-hd-start-' + PROFIL_ID, '1'); } catch (e) {}
-  const u = new URL('../hallendienst/index.html', location.href);
-  u.search = '?plan=' + id + '&sk=' + encodeURIComponent((PROFIL_ID || '') + '~' + token);
-  location.replace(u.href);
-}
+// ===== Startseite mit verknüpftem Hallendienst =====
+// Verknüpft sein kann von beiden Seiten: hier (daten.hallendienst) oder im Hallendienst (Verweis strafenkasse_hd/{token}).
+// Alles bleibt in dieser App: der Hallendienst wird eingebettet (wie die Strafenkasse im Hallendienst) –
+// so öffnet iOS kein zusätzliches Browserfenster.
+const Start = {
+  verweis: null, gefragt: null, offen: false, modus: '', geladen: Date.now(), gezeigt: false,
+  token() {
+    if (nurLesen && Sync.cfg && Sync.cfg.typ === 'spieleransicht') return Sync.cfg.token;
+    return Sync.istFirebase() && Sync.meta && Sync.meta.ansicht ? Sync.meta.ansicht : null;
+  },
+  ok(id) { return !!id && /^[A-Za-z0-9]{16,40}$/.test(id); },
+  plan() { return this.ok(daten.hallendienst) ? daten.hallendienst : (this.ok(this.verweis) ? this.verweis : null); },
+  // Bei jedem Laden/Abgleich: Verknüpfung ermitteln und beim Öffnen der App einmal die Auswahl zeigen
+  pruefen() {
+    if (EINGEBETTET) return;
+    const t = this.token();
+    if (!this.ok(daten.hallendienst) && t && this.gefragt !== t) {
+      this.gefragt = t;
+      Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(t).get())
+        .then(snap => { this.verweis = snap.exists ? snap.data().plan : null; this.pruefen(); }).catch(() => {});
+    }
+    const id = this.plan();
+    document.getElementById('home-btn').style.display = id ? '' : 'none';
+    if (!id) { if (this.modus) this.strafenkasse(); return; }
+    Hallendienst.start(id);
+    if (!this.gezeigt && !SK_DIREKT && Date.now() - this.geladen < 8000) { this.gezeigt = true; this.zeigen(); }
+    else if (this.modus === 'start') this.rendern();
+  },
+  kopfHoehe() { document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px'); },
+  setzen(m) {
+    this.modus = m;
+    document.body.classList.toggle('start-modus', m === 'start');
+    document.body.classList.toggle('hd-modus', m === 'hd');
+    document.getElementById('home-btn').style.visibility = m === 'start' ? 'hidden' : '';
+    const h1 = document.querySelector('header h1');
+    if (h1) h1.textContent = m === 'hd' ? ((Hallendienst.plan && Hallendienst.plan.titel) || 'Hallendienst') : (daten.titel || 'Strafenkasse');
+    this.kopfHoehe(); window.scrollTo(0, 0);
+  },
+  zeigen() { if (!this.plan()) return; this.setzen('start'); this.rendern(); },
+  strafenkasse() { this.setzen(''); App.rendernKopf(); },
+  hallendienst() {
+    const id = this.plan(); if (!id) return;
+    const f = document.getElementById('hd-frame');
+    const src = new URL('../hallendienst/index.html?plan=' + id + '&embed=1', location.href).href;
+    if (f.dataset.src !== src) { f.dataset.src = src; f.src = src; }
+    this.setzen('hd');
+  },
+  ich() { return daten.spieler.find(s => s.id === prefs.ichBin) || null; },
+  rendern() {
+    const el = document.getElementById('sk-start-inhalt'); if (!el) return;
+    const ich = this.ich();
+    const namen = [...daten.spieler].filter(s => s.aktiv !== false).sort(nachName);
+    let h = `<div class="start-kopf"><img src="${esc(LOGO)}" alt="">`
+      + (ich ? `<div class="gross">Hallo ${esc(ich.name.split(' ')[0])}! 👋</div><div class="klein">${esc(ich.name)} · <a href="#" id="st-wechseln">nicht du?</a></div>`
+             : `<div class="gross">Wer bist du?</div><div class="klein">Wähle einmal deinen Namen – dann siehst du deine Dienste und deinen Strafen-Stand.</div>
+                <select id="st-name"><option value="">Ich bin …</option>${namen.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>`)
+      + `</div>`;
+    // Kachel Hallendienst
+    const hd = Hallendienst, jetzt = new Date();
+    let dTxt = 'Für Dienste eintragen, tauschen, Checkliste.';
+    if (hd.geladen && hd.plan) {
+      const kommend = hd.dienste.filter(d => hd.ende(d) >= jetzt).sort((a, b) => (a.datum + a.von).localeCompare(b.datum + b.von));
+      const name = hd.meinName(ich);
+      const meine = ich && name ? kommend.filter(d => hd.eintraege.some(e => e.dienst === d.id && hd.norm(e.name) === hd.norm(name))) : [];
+      const offen = kommend.reduce((n, d) => n + Math.max(0, d.plaetze - hd.eintraege.filter(e => e.dienst === d.id && e.platz < d.plaetze).length), 0);
+      const tag = d => { const [y, m, t] = d.datum.split('-').map(Number); return new Date(y, m - 1, t).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+      dTxt = meine.length ? `Nächster Dienst: ${tag(meine[0])}, ${meine[0].von} Uhr · ${meine[0].titel}${meine.length > 1 ? ' (+' + (meine.length - 1) + ' weitere)' : ''}`
+        : (ich ? 'Du bist für keinen kommenden Dienst eingetragen.' : dTxt) + (offen ? ` ${offen} ${offen === 1 ? 'Platz' : 'Plätze'} offen.` : '');
+    }
+    h += `<button class="kachel" id="st-hd"><span class="ico">🧹</span><span class="t"><b>${esc((hd.plan && hd.plan.titel) || 'Hallendienst')}</b><small>${esc(dTxt)}</small></span><span class="pfeil">›</span></button>`;
+    // Kachel Strafenkasse
+    let sTxt = nurLesen ? 'Strafen, Stand und Bezahlen.' : 'Erfassen, Übersicht und Verwalten.', sStil = '';
+    if (ich) { const sd = saldo(ich.id); sTxt = sd > 0 ? eur(sd) + ' offen' : 'Alles bezahlt 👍' + (sd < 0 ? ' (Guthaben ' + eur(-sd) + ')' : ''); sStil = sd > 0 ? 'color:var(--rot);font-weight:800' : 'color:var(--gruen);font-weight:700'; }
+    if (!nurLesen) sTxt = '🔑 Als Kassenwart:in verwalten – ' + sTxt;
+    h += `<button class="kachel" id="st-sk"><span class="ico">💶</span><span class="t"><b>${esc(daten.titel || 'Strafenkasse')}</b><small style="${sStil}">${esc(sTxt)}</small></span><span class="pfeil">›</span></button>`;
+    el.innerHTML = h;
+    document.getElementById('st-hd').onclick = () => this.hallendienst();
+    document.getElementById('st-sk').onclick = () => this.strafenkasse();
+    const w = document.getElementById('st-wechseln');
+    if (w) w.onclick = e => { e.preventDefault(); App.uiSet('ichBin', ''); this.rendern(); };
+    const sel = document.getElementById('st-name');
+    if (sel) sel.onchange = () => {
+      if (!sel.value) return;
+      App.uiSet('ichBin', sel.value);
+      // Gleichen Namen auch dem Hallendienst mitgeben (gleiche Website, gleiches Gerät)
+      const sp = daten.spieler.find(x => x.id === sel.value);
+      try { if (sp) { localStorage.setItem('hd-name', JSON.stringify(sp.name)); if (Hallendienst.id) localStorage.removeItem('sk-hd-name-' + Hallendienst.id); } } catch (e) {}
+      const f = document.getElementById('hd-frame'); if (f.dataset.src) { f.dataset.src = ''; f.removeAttribute('src'); }
+      this.rendern();
+    };
+  },
+};
+window.addEventListener('resize', () => { if (Start.modus === 'hd') Start.kopfHoehe(); });
 
 App.themeAnwenden();
 Sync.status(Sync.aktiv() ? 'ok' : 'aus');
 App.rendern();
-hdStartseite();
+Start.pruefen();
 if (nurLesen) App.tab('uebersicht');
 if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
 else if (Sync.aktiv()) Sync.abgleichen(false);

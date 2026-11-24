@@ -90,6 +90,8 @@
   .kachel .t b { display: block; font-size: 1.12rem; }
   .kachel .t small { display: block; color: var(--muted); font-size: .86rem; margin-top: 3px; line-height: 1.4; }
   .kachel .pfeil { color: var(--muted); font-size: 1.4rem; }
+  /* In die Strafenkasse eingebettet (?embed=1): Kopf kommt von der Strafenkasse */
+  html.eingebettet header { display: none !important; }
   /* Strafenkasse eingebettet */
   body.sk-modus { padding-bottom: 0; }
   body.sk-modus main { padding: 0; max-width: none; }
@@ -628,6 +630,9 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
+// In der Strafenkassen-App eingebettet (?embed=1): ohne eigenen Kopf, ohne Strafenkasse (die ist dort schon offen)
+const HD_EMBED = /[?&]embed=1(&|$)/.test(location.search);
+if (HD_EMBED) document.documentElement.classList.add('eingebettet');
 const K = { plaene: 'hd-plaene', name: 'hd-name', theme: 'hd-theme', letzter: 'hd-letzter', filter: 'hd-filter', cache: id => 'hd-cache-' + id, oauth: 'hd-oauth', weiter: 'hd-weiterleitung', skExtern: id => 'hd-sk-extern-' + id };
 const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 const pad = n => String(n).padStart(2, '0');
@@ -700,6 +705,7 @@ const Fb = {
   istIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); },
   standalone() { return !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)); },
   async anmelden() {
+    if (HD_EMBED) { try { window.top.location.href = planLink(); } catch (e) { location.href = planLink(); } return; }
     if (this.istIOS() || this.standalone()) { this.googleWeiterleiten(); return; }
     try { await this.laden(); } catch (e) { toast('Firebase konnte nicht geladen werden (offline?)'); return; }
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -822,7 +828,7 @@ const App = {
     if (p) this.planOeffnen(p, { still: true }); else this.startZeigen();
     try { await Fb.laden(); } catch (e) { S.fehler = 'Keine Verbindung zur Datenbank (offline?)'; this.renderAlles(); return; }
     if (rueck) await Fb.googleRueckkehr(rueckHash);
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    if ('serviceWorker' in navigator && !HD_EMBED) navigator.serviceWorker.register('sw.js').catch(() => {});
   },
 
   // ---------- Navigation ----------
@@ -856,7 +862,7 @@ const App = {
     S.planId = id; S.plan = null; S.dienste = []; S.eintraege = []; S.admin = null; S.istAdmin = false; S.istBesitzer = false; S.fehler = null; S.live = false;
     S.skExtern = LS.get(K.skExtern(id), null);
     LS.set(K.letzter, id);
-    try { history.replaceState(null, '', location.pathname + '?plan=' + id); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + '?plan=' + id + (HD_EMBED ? '&embed=1' : '')); } catch (e) {}
     // Sofort aus dem Zwischenspeicher zeigen (offline lesbar)
     const c = LS.get(K.cache(id), null);
     if (c) { S.plan = c.plan; S.dienste = c.dienste.map(d => ({ ...d, start: null })); S.eintraege = c.eintraege; }
@@ -2553,7 +2559,7 @@ const Strafen = {
     return (team ? team[1] : '') + '|' + t[1];
   },
   // Eigene Verknüpfung des Plans hat Vorrang; sonst die, mit der die Strafenkasse hierher weitergeleitet hat.
-  cfg() { const v = (S.plan && S.plan.strafenkasse) || S.skExtern; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
+  cfg() { if (HD_EMBED) return null; const v = (S.plan && S.plan.strafenkasse) || S.skExtern; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
   extern() { return !(S.plan && S.plan.strafenkasse) && !!S.skExtern; },
   // Ist die angemeldete Google-Adresse Kassenwart:in dieser Strafenkasse? (Lesen erlauben die Regeln nur dann.)
   kw: null,
