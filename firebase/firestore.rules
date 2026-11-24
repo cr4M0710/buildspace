@@ -238,6 +238,18 @@ service cloud.firestore {
       allow delete: if hd_konto() && hd_alt().owner == request.auth.uid;
     }
 
+    // Verweis Strafenkasse → Hallendienst, wenn die Verknüpfung im Hallendienst gesetzt wurde:
+    // strafenkasse_hd/{token der Spieler-Ansicht} = { plan }. Lesen mit Token (wie die Spieler-Ansicht),
+    // schreiben nur Admins des Plans, der genau diese Spieler-Ansicht verknüpft hat.
+    match /strafenkasse_hd/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if hd_admin(hd_neu().plan)
+        && hd_nur(['plan', 'at']) && hd_neu().plan is string
+        && hd_plan(hd_neu().plan).get('strafenkasse', '').matches('^[A-Za-z0-9_-]*[|]' + token + '$');
+      allow delete: if hd_admin(hd_alt().plan);
+    }
+
     match /hallendienst/{plan} {
       allow get: if true;
       allow list: if false;

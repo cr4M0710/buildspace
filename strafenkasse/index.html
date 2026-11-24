@@ -2957,6 +2957,18 @@ const App = {
     const el = document.getElementById('hd-verknuepfung'); if (!el) return;
     const id = daten.hallendienst;
     const ansicht = Sync.istFirebase() && Sync.meta && Sync.meta.ansicht;
+    if (!id && ansicht && this._hdVerweis === undefined) {
+      this._hdVerweis = null;
+      Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(Sync.meta.ansicht).get())
+        .then(s => { this._hdVerweis = s.exists ? s.data().plan : null; if (this._hdVerweis) Hallendienst.start(this._hdVerweis); this.rendernHdVerknuepfung(); }).catch(() => {});
+    }
+    if (!id && this._hdVerweis) {
+      const t = Hallendienst.id === this._hdVerweis && Hallendienst.plan ? Hallendienst.plan.titel : '';
+      el.innerHTML = `<div class="sync-status" style="margin-bottom:4px"><span class="punkt gruen"></span>Vom Hallendienst aus verknüpft${t ? ' („' + esc(t) + '“)' : ''}</div>
+        <div class="hinweis" style="margin-top:2px">Der Link der Spieler-Ansicht startet mit der Auswahl „Hallendienst“ oder „Strafenkasse“. Lösen kann die Verknüpfung nur die Hallendienst-Verwaltung – Rechte bleiben getrennt.</div>
+        <a class="btn klein sekundaer" style="width:100%;margin-top:9px;text-decoration:none" href="${esc(hallendienstLink(this._hdVerweis))}">Hallendienst öffnen</a>`;
+      return;
+    }
     if (!id) {
       el.innerHTML = `<div class="hinweis" style="margin-top:0">Nutzt eure Mannschaft auch den Hallendienst-Planer? Dann startet der Link der Spieler-Ansicht mit einer Auswahl: Namen wählen, danach „Hallendienst“ oder „Strafenkasse“. Neue Spieler aus dem Hallendienst kommen automatisch dazu.</div>
         <button class="btn klein sekundaer" style="width:100%;margin-top:9px" onclick="App.hallendienstModal()">Hallendienst verknüpfen</button>`;
@@ -3661,9 +3673,20 @@ function ansichtOberflaeche() {
 // Spieler-Ansicht mit verknüpftem Hallendienst: zuerst die Auswahl „Wer bist du? → Hallendienst / Strafenkasse“.
 // Die Startseite liefert der Hallendienst-Planer (gleiche Website); er bekommt den Lesezugang dieser
 // Spieler-Ansicht mit (sk=<team>~<token>) und bettet die Strafenkasse dort ein. Nicht im eingebetteten Modus.
+// Verknüpft sein kann von beiden Seiten: hier in der Strafenkasse (daten.hallendienst) oder im Hallendienst
+// (dann steht dort ein Verweis strafenkasse_hd/{token}).
 function hdStartseite() {
   if (hdStartseite.weg || EINGEBETTET || !nurLesen || !Sync.cfg || Sync.cfg.typ !== 'spieleransicht') return;
-  const id = daten.hallendienst; if (!id || !/^[A-Za-z0-9]{16,40}$/.test(id)) return;
+  const ok = id => id && /^[A-Za-z0-9]{16,40}$/.test(id);
+  const id = ok(daten.hallendienst) ? daten.hallendienst : hdStartseite.plan;
+  if (!ok(id)) {
+    if (hdStartseite.gefragt) return;
+    hdStartseite.gefragt = true;
+    Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(Sync.cfg.token).get())
+      .then(s => { if (s.exists && ok(s.data().plan)) { hdStartseite.plan = s.data().plan; hdStartseite(); } })
+      .catch(() => {});
+    return;
+  }
   hdStartseite.weg = true;
   const u = new URL('../hallendienst/index.html', location.href);
   u.search = '?plan=' + id + '&sk=' + encodeURIComponent((PROFIL_ID || '') + '~' + Sync.cfg.token);

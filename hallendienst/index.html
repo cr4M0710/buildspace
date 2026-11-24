@@ -905,6 +905,21 @@ const App = {
     l.unshift({ id, titel: titel || 'Hallendienst', t: Date.now() });
     LS.set(K.plaene, l.slice(0, 12));
   },
+  // Verweis für die Strafenkasse (strafenkasse_hd/{token}), damit auch deren Spieler-Link mit der Auswahl startet.
+  // Setzt nur die Hallendienst-Verwaltung; wird bei jedem Öffnen durch einen Admin nachgezogen (auch für alte Verknüpfungen).
+  async skVerweis(alt) {
+    if (!S.istAdmin || !S.planId || !S.plan) return;
+    const id = S.planId, v = S.plan.strafenkasse || '';
+    const tok = v.indexOf('|') >= 0 ? v.split('|')[1] : '';
+    const ref = t => Fb.db.collection('strafenkasse_hd').doc(t);
+    try {
+      if (alt && alt !== tok) { const s = await ref(alt).get(); if (s.exists && s.data().plan === id) await ref(alt).delete(); }
+      if (!tok || LS.get('hd-skv-' + id, '') === tok) return;
+      const s = await ref(tok).get();
+      if (!s.exists || s.data().plan !== id) await ref(tok).set({ plan: id, at: Fb.jetzt() });
+      LS.set('hd-skv-' + id, tok);
+    } catch (e) { /* Regeln evtl. noch nicht eingespielt – nächstes Öffnen versucht es erneut */ }
+  },
   async adminPruefen() {
     S.admin = null; S.istAdmin = false; S.istBesitzer = false;
     if (!S.planId || !Fb.google()) { this.renderAlles(); return; }
@@ -920,6 +935,7 @@ const App = {
     } catch (e) { /* kein Admin */ }
     this.renderAlles();
     this.spielerImport();
+    this.skVerweis();
   },
   // Verknüpfte Strafenkasse: neue Spieler automatisch in die Spielerliste übernehmen (jeder Name nur einmal,
   // damit später gelöschte Namen nicht zurückkommen). Schreiben darf nur die Verwaltung – alle anderen sehen
@@ -1378,13 +1394,16 @@ const App = {
         await Fb.laden();
         const snap = await Fb.db.collection('strafenkasse_ansicht').doc(v.split('|')[1]).get();
         if (!snap.exists) { toast('Diese Spieler-Ansicht gibt es nicht (mehr).'); m.querySelector('#sk-ok').disabled = false; return; }
+        const alt = Strafen.cfg() && !Strafen.extern() ? Strafen.cfg().token : '';
         await this.planSpeichern({ strafenkasse: v }); schliesseModal(); toast('Strafenkasse verknüpft.');
+        S.plan = { ...S.plan, strafenkasse: v }; LS.del('hd-skv-' + S.planId); this.skVerweis(alt);
       } catch (e) { m.querySelector('#sk-ok').disabled = false; toast(fehlerText(e), 6000); }
     };
   },
   async strafenkasseTrennen() {
     if (!confirm('Verknüpfung zur Strafenkasse lösen? Die Strafenkasse selbst bleibt unverändert.')) return;
-    try { await this.planSpeichern({ strafenkasse: '' }); toast('Getrennt.'); } catch (e) { toast(fehlerText(e), 6000); }
+    const alt = S.plan && S.plan.strafenkasse && S.plan.strafenkasse.split('|')[1];
+    try { await this.planSpeichern({ strafenkasse: '' }); toast('Getrennt.'); S.plan = { ...S.plan, strafenkasse: '' }; LS.del('hd-skv-' + S.planId); this.skVerweis(alt); } catch (e) { toast(fehlerText(e), 6000); }
   },
 
   // ---------- Schiri-Regeln E-Jugend ----------
