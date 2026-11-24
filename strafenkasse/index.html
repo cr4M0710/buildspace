@@ -374,6 +374,8 @@
   if (!/[?&]embed=1(&|$)/.test(location.search)) return;
   window.__SK_EINGEBETTET = true;
   document.documentElement.classList.add('eingebettet');
+  // Kassenwart:in im Hallendienst (&verwalten=1): volle Strafenkasse eingebettet, normal gespeichert
+  if (/[?&]verwalten=1(&|$)/.test(location.search)) { window.__SK_VERWALTEN = true; return; }
   try {
     var echt = window.localStorage, mem = Object.create(null);
     var shim = {
@@ -674,7 +676,7 @@ EIGENE_TEAMS.forEach(t => { PROFILE[t.id] = eigenesProfil(t); });
     const t = new URLSearchParams(location.search).get('team');
     if (t && !PROFILE[t] && TEAM_ID_MUSTER.test(t)) {
       const neu = { id: t, titel: 'Neue Mannschaft', verein: 'HSG Wettenberg', viaLink: true };
-      if (!window.__SK_EINGEBETTET) { EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS); }
+      if (!window.__SK_EINGEBETTET || window.__SK_VERWALTEN) { EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS); }
       PROFILE[t] = eigenesProfil(neu);
     }
   } catch (e) {}
@@ -3600,12 +3602,22 @@ document.addEventListener('input', e => {
 
 // ---------- Start ----------
 const GOOGLE_RUECKKEHR = /(^|[#&])(id_token|error)=/.test(location.hash);
+// Eingebettet als Kassenwart:in: mit dem Firebase-Team aus dem Hallendienst verbinden, falls dieses Gerät
+// das Team noch nicht synchronisiert (Zugriff prüfen weiterhin die Firestore-Regeln).
+if (window.__SK_VERWALTEN) {
+  const code = (new URLSearchParams(location.search).get('code') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  let c = null; try { c = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) {}
+  if (code && (!c || (c.typ === 'firebase' && c.code !== code))) {
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify({ typ: 'firebase', code, autoSync: true, rev: null, lastJson: null, lastAt: null })); } catch (e) {}
+  }
+}
 Sync.init();
 
 // Team-Ansicht (nur Lesen): per Link (#v=...) aktivieren UND dauerhaft merken,
 // damit auch die Homescreen-App (die den #-Teil verliert) im Ansicht-Modus bleibt.
 const ANSICHT_KEY = `hsg-${PROFIL_ID}-ansicht`;
 (() => {
+  if (window.__SK_VERWALTEN) return; // Kassenwart-Ansicht im Hallendienst, nie Spieler-Ansicht
   const h = location.hash || '';
   // Notausstieg zurück zum Vollzugriff: .../#bearbeiten
   if (h === '#normal' || h === '#edit' || h === '#bearbeiten') {
@@ -3701,7 +3713,7 @@ if (nurLesen) App.tab('uebersicht');
 if (Sync.cfg && Sync.cfg.typ === 'spieleransicht') Sync.ansichtLive();
 else if (Sync.aktiv()) Sync.abgleichen(false);
 if (GOOGLE_RUECKKEHR) Fb.googleRueckkehr();
-else if (!nurLesen && ERSTSTART) App.profilModal(true);
+else if (!nurLesen && ERSTSTART && !EINGEBETTET) App.profilModal(true);
 else if (!nurLesen) App.monatsbeitragErinnerung();
 
 document.addEventListener('visibilitychange', () => {

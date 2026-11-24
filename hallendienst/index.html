@@ -936,6 +936,7 @@ const App = {
     this.renderAlles();
     this.spielerImport();
     this.skVerweis();
+    Strafen.kassenwartPruefen();
   },
   // Verknüpfte Strafenkasse: neue Spieler automatisch in die Spielerliste übernehmen (jeder Name nur einmal,
   // damit später gelöschte Namen nicht zurückkommen). Schreiben darf nur die Verwaltung – alle anderen sehen
@@ -1042,6 +1043,7 @@ const App = {
       if (ich) { const sd = Strafen.saldo(ich.id); sTxt = sd > 0 ? Strafen.eur(sd) + ' offen' : 'Alles bezahlt 👍' + (sd < 0 ? ' (Guthaben ' + Strafen.eur(-sd) + ')' : ''); sFarbe = sd > 0 ? 'color:var(--rot);font-weight:800' : 'color:var(--gruen);font-weight:700'; }
       else if (name) sTxt = 'Dein Name steht (noch) nicht in der Strafenkasse – dort kannst du ihn auswählen.';
     }
+    if (Strafen.istKassenwart()) { sTxt = '🔑 Als Kassenwart:in verwalten – ' + sTxt; }
     h += '<button class="kachel" id="k-strafen"><span class="ico" style="background:var(--chip-mein)">💶</span><span class="t"><b>' + esc((Strafen.daten && Strafen.daten.titel) || 'Strafenkasse') + '</b><small style="' + sFarbe + '">' + esc(sTxt) + '</small></span><span class="pfeil">›</span></button>';
     if (S.dienste.some(d => d.datum === isoDatum(new Date()))) h += '<button class="btn sekundaer" id="k-check">✅ Heute ist Hallendienst – zur Checkliste</button>';
     el.innerHTML = h;
@@ -1066,8 +1068,10 @@ const App = {
     const ich = Strafen.ich();
     const th = LS.get(K.theme, 'system');
     const u = new URL('../strafenkasse/index.html', location.href);
-    u.search = '?' + (c.team ? 'team=' + encodeURIComponent(c.team) + '&' : '') + 'embed=1&theme=' + (th === 'system' ? 'auto' : th) + (ich ? '&ich=' + encodeURIComponent(ich.id) : '');
-    u.hash = 's=' + c.token;
+    const kw = Strafen.istKassenwart();
+    u.search = '?' + (c.team ? 'team=' + encodeURIComponent(c.team) + '&' : '') + 'embed=1&theme=' + (th === 'system' ? 'auto' : th)
+      + (kw ? '&verwalten=1&code=' + encodeURIComponent(Strafen.team) : (ich ? '&ich=' + encodeURIComponent(ich.id) : ''));
+    u.hash = kw ? '' : 's=' + c.token;
     const f = $('#sk-frame');
     if (f.dataset.src !== u.href) { f.dataset.src = u.href; f.src = u.href; }
   },
@@ -2551,6 +2555,18 @@ const Strafen = {
   // Eigene Verknüpfung des Plans hat Vorrang; sonst die, mit der die Strafenkasse hierher weitergeleitet hat.
   cfg() { const v = (S.plan && S.plan.strafenkasse) || S.skExtern; if (!v || v.indexOf('|') < 0) return null; const [team, token] = v.split('|'); return { team, token }; },
   extern() { return !(S.plan && S.plan.strafenkasse) && !!S.skExtern; },
+  // Ist die angemeldete Google-Adresse Kassenwart:in dieser Strafenkasse? (Lesen erlauben die Regeln nur dann.)
+  kw: null,
+  async kassenwartPruefen() {
+    const team = this.team, mail = Fb.email();
+    if (!team || !mail) { if (this.kw) { this.kw = null; App.renderAlles(); } return; }
+    if (this.kw && this.kw.team === team && this.kw.mail === mail) return;
+    let ja = false;
+    try { const s = await Fb.db.collection('strafenkasse').doc(team).get(); ja = s.exists && (s.data().members || []).includes(mail); } catch (e) { ja = false; }
+    if (this.team !== team || Fb.email() !== mail) return;
+    this.kw = { team, mail, ja }; App.renderAlles();
+  },
+  istKassenwart() { return !!(this.kw && this.kw.ja && this.kw.team === this.team && this.kw.mail === Fb.email()); },
   externLoesen() { if (S.planId) LS.del(K.skExtern(S.planId)); S.skExtern = null; this.pruefen(); if (S.tab === 'home' || S.tab === 'strafen') App.tabZeigen('dienste'); else App.renderAlles(); },
   link() { const c = this.cfg(); if (!c) return ''; const u = new URL('../strafenkasse/index.html', location.href); if (c.team) u.search = '?team=' + c.team; u.hash = 's=' + c.token; return u.href; },
   pruefen() {
@@ -2563,7 +2579,7 @@ const Strafen = {
       if (this.token !== c.token) return;
       this._abo = Fb.db.collection('strafenkasse_ansicht').doc(c.token).onSnapshot(snap => {
         if (!snap.exists) { if (this.extern()) { this.externLoesen(); return; } this.daten = null; App.renderAlles(); return; }
-        this.team = snap.data().team || null;
+        this.team = snap.data().team || null; this.kassenwartPruefen();
         try { const d = JSON.parse(snap.data().json);
           // Hat die Kassenwartin die Verknüpfung (von ihrer Seite) gelöst oder geändert, verschwindet die Auswahl hier wieder
           if (this.extern() && d.hallendienst !== S.planId) { this.externLoesen(); return; } this.daten = { spieler: (d.spieler || []).map(x => ({ id: x.id, name: x.name, aktiv: x.aktiv })), buchungen: (d.buchungen || []).filter(b => b.art === 'strafe' || b.art === 'zahlung').map(b => ({ s: b.spielerId, a: b.art, b: b.betrag })), titel: d.titel || 'Strafenkasse' }; LS.set('hd-sk-' + c.token, this.daten); App.renderAlles(); App.spielerImport(); } catch (e) {}
