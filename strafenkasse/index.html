@@ -1505,7 +1505,7 @@ const Sync = {
     const ico = { aus: ICON.cloudAus, ok: ICON.cloudOk, laedt: ICON.cloud, ausstehend: ICON.cloud, fehler: ICON.cloudAus }[zustand] || ICON.cloud;
     btn.innerHTML = ico;
     this._zustand = zustand;
-    if (zustand === 'ok' && this.istFirebase() && !nurLesen) this.ansichtPlanen();
+    if (zustand === 'ok' && this.istFirebase() && !nurLesen) { this.ansichtPlanen(); hdStartseite(); }
     this.statusText(text);
   },
   statusText(text) {
@@ -3602,6 +3602,9 @@ document.addEventListener('input', e => {
 
 // ---------- Start ----------
 const GOOGLE_RUECKKEHR = /(^|[#&])(id_token|error)=/.test(location.hash);
+// Bewusst direkt in die Strafenkasse (#bearbeiten aus dem Hallendienst, ?direkt=1): keine Auswahl-Seite in dieser Sitzung
+const SK_DIREKT = /^#(bearbeiten|edit|normal)$/.test(location.hash) || /[?&]direkt=1(&|$)/.test(location.search);
+try { if (SK_DIREKT) sessionStorage.setItem('sk-hd-start-' + PROFIL_ID, '1'); } catch (e) {}
 // Eingebettet als Kassenwart:in: mit dem Firebase-Team aus dem Hallendienst verbinden, falls dieses Gerät
 // das Team noch nicht synchronisiert (Zugriff prüfen weiterhin die Firestore-Regeln).
 if (window.__SK_VERWALTEN) {
@@ -3687,21 +3690,29 @@ function ansichtOberflaeche() {
 // Spieler-Ansicht mit (sk=<team>~<token>) und bettet die Strafenkasse dort ein. Nicht im eingebetteten Modus.
 // Verknüpft sein kann von beiden Seiten: hier in der Strafenkasse (daten.hallendienst) oder im Hallendienst
 // (dann steht dort ein Verweis strafenkasse_hd/{token}).
+// Auch Kassenwart:innen sehen beim Öffnen zuerst die Auswahl (einmal pro Sitzung, damit „Zur Strafenkasse“
+// nicht wieder zurückspringt); im Hallendienst bekommen sie dann die volle Strafenkasse eingebettet.
 function hdStartseite() {
-  if (hdStartseite.weg || EINGEBETTET || !nurLesen || !Sync.cfg || Sync.cfg.typ !== 'spieleransicht') return;
+  if (hdStartseite.weg || EINGEBETTET || !Sync.cfg) return;
+  const spieler = nurLesen && Sync.cfg.typ === 'spieleransicht';
+  const kassenwart = !nurLesen && Sync.istFirebase() && Sync.aktiv() && Sync.meta && Sync.meta.ansicht;
+  if (!spieler && !kassenwart) return;
+  if (kassenwart) { try { if (sessionStorage.getItem('sk-hd-start-' + PROFIL_ID)) return; } catch (e) { return; } }
+  const token = spieler ? Sync.cfg.token : Sync.meta.ansicht;
   const ok = id => id && /^[A-Za-z0-9]{16,40}$/.test(id);
   const id = ok(daten.hallendienst) ? daten.hallendienst : hdStartseite.plan;
   if (!ok(id)) {
     if (hdStartseite.gefragt) return;
     hdStartseite.gefragt = true;
-    Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(Sync.cfg.token).get())
+    Fb.laden().then(() => Fb.db.collection('strafenkasse_hd').doc(token).get())
       .then(s => { if (s.exists && ok(s.data().plan)) { hdStartseite.plan = s.data().plan; hdStartseite(); } })
       .catch(() => {});
     return;
   }
   hdStartseite.weg = true;
+  try { sessionStorage.setItem('sk-hd-start-' + PROFIL_ID, '1'); } catch (e) {}
   const u = new URL('../hallendienst/index.html', location.href);
-  u.search = '?plan=' + id + '&sk=' + encodeURIComponent((PROFIL_ID || '') + '~' + Sync.cfg.token);
+  u.search = '?plan=' + id + '&sk=' + encodeURIComponent((PROFIL_ID || '') + '~' + token);
   location.replace(u.href);
 }
 
