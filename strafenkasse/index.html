@@ -423,7 +423,7 @@
     <button class="btn sekundaer" onclick="App.kasseModal()">Kasse: Ausgabe / Einnahme</button>
 
     <h2>Strafe erfassen</h2>
-    <button class="btn sekundaer" onclick="App.sonstigeStrafeModal()">Sonstige Strafe (freier Betrag)</button>
+    <button class="btn sekundaer" onclick="App.sonstigeStrafeModal()">Sonstige Strafe (Betrag oder z. B. Kiste Bier)</button>
     <div style="height:10px"></div>
     <div class="werkzeug" id="erfassen-werkzeug">
       <div class="suchwrap"><span class="such-ico" id="ico-such-erfassen"></span>
@@ -973,6 +973,10 @@ function neueId() { return Date.now().toString(36) + Math.random().toString(36).
 
 // ---------- Hilfen ----------
 const eur = b => b.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+// Sachstrafe (z. B. „Kiste Bier“): freier Text statt/zusätzlich zum Geldbetrag.
+// Anzeige: „Kiste Bier“ oder „5,00 € + Kiste Bier“ (HTML-escaped).
+const strafWert = x => !x.sach ? eur(x.betrag) : (x.betrag > 0 ? eur(x.betrag) + ' + ' : '') + esc(x.sach);
+const sachOffen = spielerId => daten.buchungen.filter(b => b.spielerId === spielerId && b.art === 'strafe' && b.sach && !b.sachErledigt);
 const heute = () => new Date().toISOString().slice(0, 10);
 const datumDE = iso => { const [j, m, t] = iso.split('-'); return `${t}.${m}.${j}`; };
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -1732,7 +1736,7 @@ const App = {
     const treffer = daten.katalog.filter(k => !suche || k.name.toLowerCase().includes(suche));
     grid.innerHTML = treffer.length ? treffer.map(k =>
       `<button class="strafe-btn" onclick="App.strafeModal('${k.id}')">
-         <span class="name">${esc(k.name)}</span><span class="preis">${eur(k.betrag)}</span>
+         <span class="name">${esc(k.name)}</span><span class="preis">${strafWert(k)}</span>
        </button>`).join('') : '<div class="leer" style="grid-column:1/-1">Keine Strafe gefunden.</div>';
     document.getElementById('katalog-leer-hinweis').style.display = daten.katalog.length ? 'none' : 'block';
     document.getElementById('erfassen-werkzeug').style.display = daten.katalog.length > 8 ? '' : 'none';
@@ -1762,8 +1766,9 @@ const App = {
     if (!k) return;
     if (!this.spielerSortiertAktiv().length) { this.toast('Lege zuerst Spieler unter „Verwalten“ an.'); return; }
     this.modal(`
-      <h3>${esc(k.name)} · ${eur(k.betrag)}</h3>
+      <h3>${esc(k.name)} · ${strafWert(k)}</h3>
       <div class="feld"><label>Wer? (mehrere möglich)</label>${this.chipPickerHtml()}</div>
+      <div class="feld"><label>Sachstrafe (optional)</label><input type="text" id="m-sach" value="${esc(k.sach || '')}" placeholder="z. B. Kiste Bier"></div>
       <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
       <div class="feld"><label>Notiz (optional)</label><input type="text" id="m-notiz" placeholder="z. B. Auswärtsspiel Pohlheim"></div>
       <div class="knoepfe">
@@ -1778,8 +1783,9 @@ const App = {
     if (!ids.length) { this.toast('Bitte mindestens einen Spieler wählen.'); return; }
     const datum = document.getElementById('m-datum').value || heute();
     const notiz = document.getElementById('m-notiz').value.trim();
+    const sach = document.getElementById('m-sach').value.trim();
     const ts = Date.now();
-    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text: k.name, betrag: k.betrag, datum, notiz, ts }));
+    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text: k.name, betrag: k.betrag || 0, datum, notiz, ts, ...(sach ? { sach } : {}) }));
     daten.buchungen.push(...neue);
     this.modalZu(); this.rendern();
     this.toastRueckgaengig(`${k.name} für ${ids.length} Spieler gebucht`, neue.map(b => b.id));
@@ -1790,9 +1796,12 @@ const App = {
     this.modal(`
       <h3>Sonstige Strafe</h3>
       <div class="feld"><label>Bezeichnung</label><input type="text" id="m-text" placeholder="z. B. Wette verloren"></div>
-      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" placeholder="z. B. 5,00"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" placeholder="z. B. 5,00 – leer lassen bei reiner Sachstrafe"></div>
+      <div class="feld"><label>Sachstrafe (optional)</label><input type="text" id="m-sach" placeholder="z. B. Kiste Bier"></div>
+      <div class="hinweis" style="margin-top:-4px;margin-bottom:10px">Betrag, Sachstrafe oder beides. Eine Sachstrafe bleibt offen, bis du sie beim Spieler als erledigt markierst.</div>
       <div class="feld"><label>Wer? (mehrere möglich)</label>${this.chipPickerHtml()}</div>
       <div class="feld"><label>Datum</label><input type="date" id="m-datum" value="${heute()}"></div>
+      <div class="feld"><label>Notiz (optional)</label><input type="text" id="m-notiz" placeholder="z. B. Geburtstag nachgefeiert"></div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.sonstigeStrafeSpeichern()">Speichern</button>
@@ -1800,13 +1809,16 @@ const App = {
   },
 
   sonstigeStrafeSpeichern() {
-    const text = document.getElementById('m-text').value.trim();
-    const betrag = betragParsen(document.getElementById('m-betrag').value);
+    const sach = document.getElementById('m-sach').value.trim();
+    const text = document.getElementById('m-text').value.trim() || sach;
+    const betragRoh = document.getElementById('m-betrag').value.trim();
+    const betrag = betragRoh ? betragParsen(betragRoh) : 0;
     const ids = [...document.querySelectorAll('#m-chips .chip.gewaehlt')].map(c => c.dataset.id);
-    if (!text || betrag === null || betrag <= 0 || !ids.length) { this.toast('Bitte Bezeichnung, Betrag und Spieler angeben.'); return; }
+    if (!text || betrag === null || betrag < 0 || (betrag <= 0 && !sach) || !ids.length) { this.toast('Bitte Bezeichnung, Betrag oder Sachstrafe und Spieler angeben.'); return; }
     const datum = document.getElementById('m-datum').value || heute();
+    const notiz = document.getElementById('m-notiz').value.trim();
     const ts = Date.now();
-    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text, betrag, datum, notiz: '', ts }));
+    const neue = ids.map(spielerId => ({ id: neueId(), art: 'strafe', spielerId, text, betrag, datum, notiz, ts, ...(sach ? { sach } : {}) }));
     daten.buchungen.push(...neue);
     this.modalZu(); this.rendern();
     this.toastRueckgaengig('Strafe gebucht', neue.map(b => b.id));
@@ -2005,7 +2017,8 @@ const App = {
     liste.innerHTML = arr.length ? arr.map(s => {
       const off = saldo(s.id);
       return `<div class="zeile" onclick="App.spielerDetail('${s.id}')" style="cursor:pointer">
-        <div><div class="haupt">${esc(s.name)}${s.aktiv === false ? ' <small>(inaktiv)</small>' : ''}</div></div>
+        <div><div class="haupt">${esc(s.name)}${s.aktiv === false ? ' <small>(inaktiv)</small>' : ''}</div>
+        ${sachOffen(s.id).length ? `<div class="detail">offen: ${sachOffen(s.id).map(b => esc(b.sach)).join(', ')}</div>` : ''}</div>
         <div class="betrag ${off > 0 ? 'offen' : off < 0 ? 'plus' : ''}">${eur(off)}</div>
       </div>`;
     }).join('') : '<div class="leer">Kein Spieler gefunden.</div>';
@@ -2015,13 +2028,16 @@ const App = {
     const s = daten.spieler.find(x => x.id === id);
     const buchungen = daten.buchungen.filter(b => b.spielerId === id).sort((a, b) => b.datum.localeCompare(a.datum));
     this.modal(`
-      <h3>${esc(s.name)} · offen: ${eur(saldo(id))}</h3>
+      <h3>${esc(s.name)} · offen: ${eur(saldo(id))}${sachOffen(id).map(b => ' + ' + esc(b.sach)).join('')}</h3>
       <div class="detail-liste">
       ${buchungen.length ? buchungen.map(b => `
         <div class="zeile">
           <div><div class="haupt">${esc(b.text)}</div>
-          <div class="detail">${datumDE(b.datum)}${b.notiz ? ' · ' + esc(b.notiz) : ''}</div></div>
-          <div class="betrag ${b.art === 'strafe' ? 'offen' : 'plus'}">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</div>
+          <div class="detail">${datumDE(b.datum)}${b.notiz ? ' · ' + esc(b.notiz) : ''}${b.sach ? (b.sachErledigt ? ' · ✓ erledigt' : ' · noch offen') : ''}</div></div>
+          <div class="aktionen">
+            <div class="betrag ${b.art === 'strafe' && !(b.sach && b.sachErledigt && !(b.betrag > 0)) ? 'offen' : 'plus'}">${b.art === 'zahlung' ? '−' : ''}${b.art === 'strafe' ? strafWert(b) : eur(b.betrag)}</div>
+            ${b.sach && !nurLesen ? `<button type="button" class="mini-link" onclick="App.sachUmschalten('${b.id}','${id}')">${b.sachErledigt ? 'wieder offen' : 'erledigt'}</button>` : ''}
+          </div>
         </div>`).join('') : '<div class="leer">Noch keine Buchungen.</div>'}
       </div>
       ${nurLesen && saldo(id) > 0 && kannPaypal() ? `<button class="btn" onclick="App.jetztZahlen('${id}')">Jetzt per PayPal zahlen (${eur(saldo(id))})</button><div style="height:9px"></div>` : ''}
@@ -2030,6 +2046,17 @@ const App = {
         <button class="btn sekundaer" onclick="App.spielerPdf('${id}')">Als PDF</button>
         <button class="btn sekundaer" onclick="App.modalZu()">Schließen</button>
       </div>`);
+  },
+
+  sachUmschalten(buchungId, spielerId) {
+    const b = daten.buchungen.find(x => x.id === buchungId);
+    if (!b) return;
+    b.sachErledigt = !b.sachErledigt;
+    if (!b.sachErledigt) delete b.sachErledigt;
+    b.ts = Date.now();
+    this.rendern();
+    this.spielerDetail(spielerId);
+    this.toast(b.sachErledigt ? `${b.sach} erledigt` : `${b.sach} wieder offen`);
   },
 
   spielerPdf(id) {
@@ -2044,7 +2071,7 @@ const App = {
       ${daten.paypal ? `<div class="datum">Zahlung: bar oder PayPal an ${esc(daten.paypal)}</div>` : ''}
       <table>
         <tr><th>Datum</th><th>Buchung</th><th class="r">Betrag</th></tr>
-        ${bs.length ? bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('') : '<tr><td colspan="3">Noch keine Buchungen</td></tr>'}
+        ${bs.length ? bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${b.art === 'strafe' ? strafWert(b) + (b.sach && b.sachErledigt ? ' ✓' : '') : eur(b.betrag)}</td></tr>`).join('') : '<tr><td colspan="3">Noch keine Buchungen</td></tr>'}
         <tr class="summe"><td>Strafen gesamt</td><td></td><td class="r">${eur(strafen)}</td></tr>
         <tr class="summe"><td>Gezahlt</td><td></td><td class="r">−${eur(gezahlt)}</td></tr>
         <tr class="summe"><td>Offen</td><td></td><td class="r">${eur(strafen - gezahlt)}</td></tr>
@@ -2103,7 +2130,7 @@ const App = {
         <div><div class="haupt"><span class="punkt ${punkt[b.art] || 'grau'}"></span>${esc(b.text)}${b.spielerId ? ' · ' + esc(spielerName(b.spielerId)) : ''}</div>
         <div class="detail">${datumDE(b.datum)}${b.notiz ? ' · ' + esc(b.notiz) : ''}</div></div>
         <div class="aktionen">
-          <div class="betrag ${b.art === 'strafe' || b.art === 'kasse_aus' ? 'offen' : 'plus'}">${eur(b.betrag)}</div>
+          <div class="betrag ${b.art === 'strafe' || b.art === 'kasse_aus' ? 'offen' : 'plus'}">${b.art === 'strafe' ? strafWert(b) : eur(b.betrag)}</div>
           <button class="icon-btn" title="Bearbeiten" onclick="App.buchungBearbeitenModal('${b.id}')">${ICON.edit}</button>
           <button class="icon-btn rot" title="Löschen" onclick="App.buchungLoeschen('${b.id}')">${ICON.del}</button>
         </div>
@@ -2158,7 +2185,7 @@ const App = {
   buchungLoeschen(id) {
     const b = daten.buchungen.find(x => x.id === id);
     if (!b) return;
-    if (!confirm(`„${b.text}“ (${eur(b.betrag)}) wirklich löschen?`)) return;
+    if (!confirm(`„${b.text}“ (${b.sach ? (b.betrag > 0 ? eur(b.betrag) + ' + ' : '') + b.sach : eur(b.betrag)}) wirklich löschen?`)) return;
     daten.buchungen = daten.buchungen.filter(x => x.id !== id);
     daten.geloescht[id] = Date.now();
     this.rendern();
@@ -2181,7 +2208,9 @@ const App = {
       </div>
       <div class="feld" id="e-spieler-feld"><label>Spieler</label><select id="e-spieler">${spielerOpts}</select></div>
       <div class="feld"><label>Bezeichnung</label><input type="text" id="e-text" value="${esc(b.text)}"></div>
-      <div class="feld"><label>Betrag (€)</label><input type="text" id="e-betrag" inputmode="decimal" value="${String(b.betrag).replace('.', ',')}"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="e-betrag" inputmode="decimal" value="${b.sach && !(b.betrag > 0) ? '' : String(b.betrag).replace('.', ',')}"></div>
+      <div class="feld" id="e-sach-feld"><label>Sachstrafe (optional)</label><input type="text" id="e-sach" value="${esc(b.sach || '')}" placeholder="z. B. Kiste Bier">
+        <label class="filter-toggle" style="margin-top:8px"><input type="checkbox" id="e-sach-erledigt"${b.sachErledigt ? ' checked' : ''}> Sachstrafe erledigt</label></div>
       <div class="feld"><label>Datum</label><input type="date" id="e-datum" value="${b.datum}"></div>
       <div class="feld"><label>Notiz (optional)</label><input type="text" id="e-notiz" value="${esc(b.notiz || '')}"></div>
       <div class="knoepfe">
@@ -2195,6 +2224,8 @@ const App = {
     const el = document.getElementById('e-art'); if (!el) return;
     const feld = document.getElementById('e-spieler-feld');
     if (feld) feld.style.display = (el.value === 'strafe' || el.value === 'zahlung') ? '' : 'none';
+    const sf = document.getElementById('e-sach-feld');
+    if (sf) sf.style.display = el.value === 'strafe' ? '' : 'none';
   },
 
   buchungSpeichern(id) {
@@ -2202,8 +2233,10 @@ const App = {
     if (!b) return;
     const art = document.getElementById('e-art').value;
     const text = document.getElementById('e-text').value.trim();
-    const betrag = betragParsen(document.getElementById('e-betrag').value);
-    if (!text || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und gültigen Betrag angeben.'); return; }
+    const sach = art === 'strafe' ? document.getElementById('e-sach').value.trim() : '';
+    const betragRoh = document.getElementById('e-betrag').value.trim();
+    const betrag = betragRoh ? betragParsen(betragRoh) : (sach ? 0 : null);
+    if (!text || betrag === null || betrag < 0 || (betrag <= 0 && !sach)) { this.toast('Bitte Bezeichnung und gültigen Betrag (oder Sachstrafe) angeben.'); return; }
     const brauchtSpieler = (art === 'strafe' || art === 'zahlung');
     const sel = document.getElementById('e-spieler');
     if (brauchtSpieler && (!sel || !sel.value)) { this.toast('Bitte einen Spieler wählen.'); return; }
@@ -2212,6 +2245,8 @@ const App = {
     b.betrag = betrag;
     b.datum = document.getElementById('e-datum').value || b.datum;
     b.notiz = document.getElementById('e-notiz').value.trim();
+    if (sach) { b.sach = sach; if (document.getElementById('e-sach-erledigt').checked) b.sachErledigt = true; else delete b.sachErledigt; }
+    else { delete b.sach; delete b.sachErledigt; }
     if (brauchtSpieler) b.spielerId = sel.value; else delete b.spielerId;
     b.ts = Date.now();
     this.modalZu(); this.rendern();
@@ -2254,7 +2289,7 @@ const App = {
       <div class="zeile">
         <div class="haupt">${esc(k.name)}</div>
         <div class="aktionen">
-          <div class="betrag">${eur(k.betrag)}</div>
+          <div class="betrag">${strafWert(k)}</div>
           <button class="icon-btn" title="Bearbeiten" onclick="App.katalogModal('${k.id}')">${ICON.edit}</button>
           <button class="icon-btn rot" title="Löschen" onclick="App.katalogLoeschen('${k.id}')">${ICON.del}</button>
         </div>
@@ -2404,7 +2439,8 @@ const App = {
     this.modal(`
       <h3>${k ? 'Strafe bearbeiten' : 'Strafe hinzufügen'}</h3>
       <div class="feld"><label>Bezeichnung</label><input type="text" id="m-name" value="${k ? esc(k.name) : ''}" placeholder="z. B. Zu spät zum Training"></div>
-      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" value="${k ? String(k.betrag).replace('.', ',') : ''}" placeholder="z. B. 2,50"></div>
+      <div class="feld"><label>Betrag (€)</label><input type="text" id="m-betrag" inputmode="decimal" value="${k && k.betrag > 0 ? String(k.betrag).replace('.', ',') : ''}" placeholder="z. B. 2,50 – leer bei reiner Sachstrafe"></div>
+      <div class="feld"><label>Sachstrafe (optional)</label><input type="text" id="m-sach" value="${k ? esc(k.sach || '') : ''}" placeholder="z. B. Kiste Bier"></div>
       <div class="knoepfe">
         <button class="btn sekundaer" onclick="App.modalZu()">Abbrechen</button>
         <button class="btn" onclick="App.katalogSpeichern('${id || ''}')">Speichern</button>
@@ -2413,10 +2449,12 @@ const App = {
 
   katalogSpeichern(id) {
     const name = document.getElementById('m-name').value.trim();
-    const betrag = betragParsen(document.getElementById('m-betrag').value);
-    if (!name || betrag === null || betrag <= 0) { this.toast('Bitte Bezeichnung und Betrag angeben.'); return; }
-    if (id) { const k = daten.katalog.find(x => x.id === id); k.name = name; k.betrag = betrag; }
-    else daten.katalog.push({ id: neueId(), name, betrag });
+    const sach = document.getElementById('m-sach').value.trim();
+    const betragRoh = document.getElementById('m-betrag').value.trim();
+    const betrag = betragRoh ? betragParsen(betragRoh) : 0;
+    if (!name || betrag === null || betrag < 0 || (betrag <= 0 && !sach)) { this.toast('Bitte Bezeichnung und Betrag oder Sachstrafe angeben.'); return; }
+    if (id) { const k = daten.katalog.find(x => x.id === id); k.name = name; k.betrag = betrag; if (sach) k.sach = sach; else delete k.sach; }
+    else daten.katalog.push({ id: neueId(), name, betrag, ...(sach ? { sach } : {}) });
     daten.katalogTs = Date.now();
     this.modalZu(); this.rendern();
   },
@@ -2431,7 +2469,7 @@ const App = {
 
   // ===== Katalog Export / Import =====
   katalogAlsZeilen() {
-    return daten.katalog.map(k => `${k.name}; ${k.betrag.toFixed(2).replace('.', ',')}`).join('\n');
+    return daten.katalog.map(k => `${k.name}; ${k.betrag.toFixed(2).replace('.', ',')}${k.sach ? '; ' + k.sach : ''}`).join('\n');
   },
 
   katalogExportModal() {
@@ -2452,7 +2490,7 @@ const App = {
       `Strafenkatalog · ${titelZeile()}`,
       `Stand: ${datumDE(heute())}`,
       `------------------------------`,
-      ...daten.katalog.map(k => `${k.name}: ${eur(k.betrag)}`),
+      ...daten.katalog.map(k => `${k.name}: ${k.sach ? (k.betrag > 0 ? eur(k.betrag) + ' + ' : '') + k.sach : eur(k.betrag)}`),
       `------------------------------`,
       `Individuelle Strafen nach Absprache.`,
     ].join('\n');
@@ -2505,9 +2543,9 @@ const App = {
       if (!eintrag) { fehler.push(t); continue; }
       const vorhanden = daten.katalog.find(k => k.name.toLowerCase() === eintrag.name.toLowerCase());
       if (vorhanden) {
-        if (vorhanden.betrag !== eintrag.betrag) { vorhanden.betrag = eintrag.betrag; geaendert++; }
+        if (vorhanden.betrag !== eintrag.betrag || (eintrag.sach && vorhanden.sach !== eintrag.sach)) { vorhanden.betrag = eintrag.betrag; if (eintrag.sach) vorhanden.sach = eintrag.sach; geaendert++; }
       } else {
-        daten.katalog.push({ id: neueId(), name: eintrag.name, betrag: eintrag.betrag });
+        daten.katalog.push({ id: neueId(), name: eintrag.name, betrag: eintrag.betrag, ...(eintrag.sach ? { sach: eintrag.sach } : {}) });
         neu++;
       }
     }
@@ -2518,6 +2556,13 @@ const App = {
   },
 
   katalogZeileParsen(zeile) {
+    // Optional drittes Feld: Sachstrafe („Name; Betrag; Kiste Bier“)
+    const teile = zeile.split(';').map(x => x.trim());
+    if (teile.length >= 3 && teile[2]) {
+      const betrag = teile[1] ? betragParsen(teile[1].replace(/€/g, '')) : 0;
+      if (!teile[0] || betrag === null || betrag < 0) return null;
+      return { name: teile[0], betrag, sach: teile.slice(2).join('; ') };
+    }
     let t = zeile.replace(/€/g, '').trim();
     const m = t.match(/(\d+(?:[.,]\d{1,2})?)\s*$/);
     if (!m) return null;
@@ -3055,7 +3100,7 @@ const App = {
         if (!bs.length) return '';
         return `<h2>${esc(s.name)}</h2><table>
           <tr><th>Datum</th><th>Buchung</th><th class="r">Betrag</th></tr>
-          ${bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${eur(b.betrag)}</td></tr>`).join('')}
+          ${bs.map(b => `<tr><td>${datumDE(b.datum)}</td><td>${esc(b.text)}${b.notiz ? ' – ' + esc(b.notiz) : ''}</td><td class="r">${b.art === 'zahlung' ? '−' : ''}${b.art === 'strafe' ? strafWert(b) + (b.sach && b.sachErledigt ? ' ✓' : '') : eur(b.betrag)}</td></tr>`).join('')}
         </table>`;
       }).join('')}`;
     this.pdfErstellen();
