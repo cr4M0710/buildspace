@@ -368,6 +368,10 @@
       <div class="kennzahl"><div class="wert" id="st-personen">0</div><div class="label">Personen</div></div>
       <div class="kennzahl"><div class="wert" id="st-schnitt">0</div><div class="label">Ø pro Person</div></div>
     </div>
+    <h2>Teilen</h2>
+    <div class="btn-reihe">
+      <button class="btn klein" onclick="App.statistikTeilen()">Statistik teilen</button>
+    </div>
     <h2>Wer hat wie viele Dienste?</h2>
     <div class="card" id="st-rangliste" style="padding:6px 14px"></div>
     <div id="st-ohne"></div>
@@ -1400,7 +1404,7 @@ const App = {
     location.href = new URL('../strafenkasse/index.html' + (c.team ? '?team=' + encodeURIComponent(c.team) : '') + '#bearbeiten', location.href).href;
   },
   strafenkasseModal() {
-    const m = oeffneModal('<h3>Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › Cloud-Sync auf „Spieler-Ansicht teilen (nur Lesen)“ tippen und den Link hier einfügen.</div>'
+    const m = oeffneModal('<h3>Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › „Link für die Mannschaft“ auf „Kopieren“ tippen und den Link hier einfügen.</div>'
       + '<label class="feld">Link der Spieler-Ansicht</label><input class="ein" id="sk-link" autocapitalize="off" placeholder="https://buildspaceos.de/strafenkasse/index.html?team=…#s=…">'
       + '<div class="knoepfe"><button class="btn sekundaer" data-zu>Abbrechen</button><button class="btn" id="sk-ok">Verknüpfen</button></div>');
     m.querySelector('#sk-ok').onclick = async () => {
@@ -1529,6 +1533,17 @@ const App = {
         + '<td>' + namen.join(', ') + (f ? (namen.length ? ', ' : '') + '<span class="offen">' + f + '× offen</span>' : '') + '</td></tr>';
     });
     return html;
+  },
+  async statistikTeilen() {
+    if (!this._stListe) this.renderStatistik();
+    const { liste, ges, ohne } = this._stListe;
+    let text = '📊 ' + ((S.plan && S.plan.titel) || 'Hallendienst') + ' – Dienste-Statistik\n'
+      + fmtW(ges) + ' Dienste geleistet\n\n';
+    const mit = liste.filter(x => x.n > 0);
+    text += mit.length ? mit.map((x, i) => (i + 1) + '. ' + x.name + ': ' + fmtW(x.n) + (x.kommend ? ' (+' + fmtW(x.kommend) + ' vorgemerkt)' : '')).join('\n') : 'Noch keine Dienste geleistet.';
+    if (ohne.length) text += '\n\nNoch ohne Dienst: ' + ohne.join(', ');
+    text += '\n\n👉 Eintragen: ' + planLink();
+    await teilen(text);
   },
   async offeneTeilen() {
     const offen = S.dienste.filter(d => !istVorbei(d) && frei(d) > 0);
@@ -1715,6 +1730,7 @@ const App = {
     const liste = [...zaehl.values()].sort((a, b) => b.n - a.n || b.kommend - a.kommend || a.name.localeCompare(b.name, 'de'));
     const mitDienst = liste.filter(x => x.n > 0);
     const ges = liste.reduce((s, x) => s + x.n, 0), vor = liste.reduce((s, x) => s + x.kommend, 0);
+    this._stListe = { liste, ges, ohne: alleSpieler().filter(n => !zaehl.has(norm(n)) && !freigestellt(n)) };
     $('#st-einsaetze').textContent = fmtW(ges);
     $('#st-personen').textContent = mitDienst.length;
     $('#st-schnitt').textContent = mitDienst.length ? (ges / mitDienst.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
