@@ -751,6 +751,8 @@ const Fb = {
       await this.laden();
       await this.auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(tok));
       toast('Angemeldet als ' + (claims.email || ''));
+      // Anmeldung für die Kabine (../kabine/) läuft über diese Rücksprung-Adresse: danach zurück zur Kabine
+      if (saved.weiter) { try { const u = new URL(saved.weiter, location.href); if (u.origin === location.origin && /\/kabine\/(index\.html)?$/.test(u.pathname)) { location.replace(u.href); return true; } } catch (e) {} }
     } catch (e) { toast('Google-Anmeldung fehlgeschlagen' + (e && e.code ? ' (' + e.code + ')' : ''), 8000); }
     return true;
   },
@@ -825,6 +827,9 @@ const App = {
     // Aus der Spieler-Ansicht der Strafenkasse weitergeleitet: deren Lesezugang für dieses Gerät merken
     const skParam = new URLSearchParams(location.search).get('sk');
     if (p && skParam && /^[A-Za-z0-9_-]{0,40}~[a-z0-9]{8,40}$/.test(skParam)) LS.set(K.skExtern(p), skParam.replace('~', '|'));
+    // Aus der Kabine kommend (?ich=Name): Namen übernehmen, falls auf diesem Gerät noch keiner gewählt ist
+    const ichParam = new URLSearchParams(location.search).get('ich');
+    if (ichParam && !meinName()) LS.set(K.name, ichParam.trim().slice(0, 40));
     if (p) this.planOeffnen(p, { still: true }); else this.startZeigen();
     try { await Fb.laden(); } catch (e) { S.fehler = 'Keine Verbindung zur Datenbank (offline?)'; this.renderAlles(); return; }
     if (rueck) await Fb.googleRueckkehr(rueckHash);
@@ -1052,7 +1057,9 @@ const App = {
     if (Strafen.istKassenwart()) { sTxt = '🔑 Als Kassenwart:in verwalten – ' + sTxt; }
     h += '<button class="kachel" id="k-strafen"><span class="ico" style="background:var(--chip-mein)">💶</span><span class="t"><b>' + esc((Strafen.daten && Strafen.daten.titel) || 'Strafenkasse') + '</b><small style="' + sFarbe + '">' + esc(sTxt) + '</small></span><span class="pfeil">›</span></button>';
     if (S.dienste.some(d => d.datum === isoDatum(new Date()))) h += '<button class="btn sekundaer" id="k-check">✅ Heute ist Hallendienst – zur Checkliste</button>';
+    h += Kabine.kachelHtml();
     el.innerHTML = h;
+    if ($('#k-kabine')) $('#k-kabine').onclick = () => { location.href = Kabine.link(); };
     $('#k-dienste').onclick = () => this.tabZeigen('dienste');
     $('#k-strafen').onclick = () => this.tabZeigen('strafen');
     if ($('#k-check')) $('#k-check').onclick = () => this.tabZeigen('checkliste');
@@ -1100,7 +1107,7 @@ const App = {
       + (name ? '<b>' + esc(name) + (freigestellt(name) ? ' ' + rollenEmoji(name) : '') + '</b>' + (freigestellt(name) ? 'Freigestellt (' + esc(rollenText(name)) + ') – Dienste hier nur freiwillig. ' : '') + kommend.length + ' kommende' + (kommend.length === 1 ? 'r Dienst' : ' Dienste') + ' · ' + fmtW(meine.filter(x => istVorbei(x.d)).reduce((sum, x) => sum + eintragWert(x.e, x.d), 0)) + ' geleistet'
               : '<b>Wer bist du?</b>Name einmal festlegen – dann siehst du „Meine“ Dienste.')
       + '</div><button class="btn klein sekundaer" onclick="App.nameModal()">' + (name ? 'Ändern' : 'Festlegen') + '</button></div>'
-      + Strafen.ichHtml();
+      + Strafen.ichHtml() + (Strafen.cfg() ? '' : Kabine.zeileHtml());
     Strafen.knoepfe(ich);
     const heute = isoDatum(new Date());
     const heuteDienste = S.dienste.filter(d => d.datum === heute);
@@ -2551,6 +2558,34 @@ const App = {
 
 // ---------------- Verknüpfung mit der Strafenkasse (optional) ----------------
 // Plan-Feld „strafenkasse“ = "<team>|<token>" der Spieler-Ansicht; gelesen wird strafenkasse_ansicht/{token} (öffentlich mit Token).
+// Verknüpfte Kabine (Termine & Zusagen, ../kabine/): Den Verweis kabine_hd/{plan} setzt die Verwaltung der Kabine.
+const Kabine = {
+  plan: null, daten: null,
+  pruefen() {
+    if (!S.planId || this.plan === S.planId) return;
+    const id = S.planId; this.plan = id; this.daten = LS.get('hd-kabine-' + id, null);
+    Fb.laden().then(() => Fb.db.collection('kabine_hd').doc(id).get()).then(s => {
+      if (this.plan !== id) return;
+      const d = s.exists && s.data().team ? { team: String(s.data().team), titel: String(s.data().titel || '') } : null;
+      const alt = JSON.stringify(this.daten); this.daten = d; LS.set('hd-kabine-' + id, d);
+      if (JSON.stringify(d) !== alt) App.renderAlles();
+    }).catch(() => {});
+  },
+  link() {
+    if (!this.daten || !/^[A-Za-z0-9]{16,40}$/.test(this.daten.team)) return '';
+    const n = meinName();
+    return new URL('../kabine/index.html?team=' + this.daten.team + (n ? '&ich=' + encodeURIComponent(n) : ''), location.href).href;
+  },
+  kachelHtml() {
+    this.pruefen(); if (!this.link()) return '';
+    return '<button class="kachel" id="k-kabine"><span class="ico" style="background:var(--chip-tausch)">📅</span><span class="t"><b>' + esc(this.daten.titel ? this.daten.titel + ' – Termine' : 'Termine & Zusagen') + '</b><small>Training, Spiele und Termine – zu- und absagen (Kabine).</small></span><span class="pfeil">›</span></button>';
+  },
+  zeileHtml() {
+    this.pruefen(); if (!this.link()) return '';
+    return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">📅 <b>Termine &amp; Zusagen</b> deiner Mannschaft</div><a class="btn klein sekundaer" style="text-decoration:none" target="_top" href="' + esc(this.link()) + '">Kabine</a></div>';
+  },
+};
+
 const Strafen = {
   daten: null, token: null, _abo: null,
   parse(text) {
