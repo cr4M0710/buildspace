@@ -695,11 +695,36 @@ let AUSGEBLENDET = ausgeblendetLaden();
 const sichtbar = id => !!PROFILE[id] && !AUSGEBLENDET.includes(id);
 let EIGENE_TEAMS = eigeneTeamsLaden();
 EIGENE_TEAMS.forEach(t => { PROFILE[t.id] = eigenesProfil(t); });
+// Geteilte Links zeigen nicht die interne Team-ID (m1/m2 = „Männer 1/2“), sondern einen neutralen Link-Namen
+// (t-xxxxxxxx). Auf diesem Gerät führt er zurück zum eigenen Team; andere Geräte legen ihn wie ein eigenes Team an.
+const LINK_ALIAS_KEY = 'hsg-link-alias-v1';
+function aliasLaden() { try { const m = JSON.parse(localStorage.getItem(LINK_ALIAS_KEY) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } }
+function linkId(id) {
+  if (!BASIS_PROFILE[id]) return id;
+  const m = aliasLaden();
+  let a = Object.keys(m).find(k => m[k] === id);
+  if (!a) {
+    a = 't-' + Array.from(crypto.getRandomValues(new Uint8Array(8)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+    m[a] = id; try { localStorage.setItem(LINK_ALIAS_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  return a;
+}
+function teamParam() {
+  const t = new URLSearchParams(location.search).get('team');
+  const m = aliasLaden();
+  return t && m[t] && PROFILE[m[t]] ? m[t] : t;
+}
+// Anzeigename eines Teams: der in der App eingestellte Titel, nicht der Vorgabename
+function teamTitel(id) {
+  if (typeof daten !== 'undefined' && id === PROFIL_ID && daten && daten.titel) return daten.titel;
+  try { const d = JSON.parse(localStorage.getItem(`hsg-${id}-strafenkasse-v1`) || 'null'); if (d && d.titel) return d.titel; } catch (e) {}
+  return (PROFILE[id] || {}).titel || 'Strafenkasse';
+}
 // Unbekanntes eigenes Team per Link (?team=t-xxxx) – z. B. Spieler-Ansicht oder zweiter Kassenwart:
 // automatisch auf diesem Gerät anlegen; der Name wird beim ersten Laden aus den Daten übernommen.
 (() => {
   try {
-    const t = new URLSearchParams(location.search).get('team');
+    const t = teamParam();
     if (t && !PROFILE[t] && TEAM_ID_MUSTER.test(t)) {
       const neu = { id: t, titel: 'Neue Mannschaft', verein: 'HSG Wettenberg', viaLink: true };
       if (!window.__SK_EINGEBETTET || window.__SK_VERWALTEN) { EIGENE_TEAMS.push(neu); eigeneTeamsSpeichern(EIGENE_TEAMS); }
@@ -711,7 +736,7 @@ let ERSTSTART = false; // Gerät ohne Team und ohne Daten -> Begrüßung mit Tea
 function ermittleAktivesProfil() {
   // Direktlink auf ein Team möglich: strafenkasse/index.html?team=m1
   try {
-    const t = new URLSearchParams(location.search).get('team');
+    const t = teamParam();
     if (t && PROFILE[t]) {
       if (window.__SK_EINGEBETTET) return t; // eingebettet: aktives Team dieses Geräts nicht umstellen
       if (AUSGEBLENDET.includes(t)) { AUSGEBLENDET = AUSGEBLENDET.filter(x => x !== t); ausgeblendetSpeichern(AUSGEBLENDET); }
@@ -1449,7 +1474,7 @@ const Sync = {
     try { await Fb.ansichtRef(alt).delete(); } catch (e) {}
   },
   ansichtLink(token) {
-    return location.origin + location.pathname + '?team=' + PROFIL_ID + '#s=' + token;
+    return location.origin + location.pathname + '?team=' + linkId(PROFIL_ID) + '#s=' + token;
   },
   // Spieler-Ansicht: Stand lesen (ohne Anmeldung)
   async pullAnsicht() {
@@ -2888,7 +2913,7 @@ const App = {
     if (nurLesen) { this.toast('In der Team-Ansicht nicht möglich.'); return; }
     const zeile = p => {
       const aktiv = p.id === PROFIL_ID && !begruessung;
-      const name = aktiv ? (daten.titel || p.titel) : p.titel;
+      const name = teamTitel(p.id);
       return `<div style="display:flex;gap:8px;margin-bottom:9px">
         <button class="btn ${aktiv ? '' : 'sekundaer'}" style="flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left" onclick="App.profilWechseln('${p.id}', ${begruessung ? 'true' : 'false'})">
           <span>${esc(name)}</span>${aktiv ? '<span style="font-size:.78rem;opacity:.85">Aktiv</span>' : ''}
@@ -2949,10 +2974,10 @@ const App = {
     try { localStorage.setItem(PROFIL_KEY, id); } catch (e) {}
     location.href = location.pathname + '?team=' + id;
   },
-  teamLink(id) { return location.origin + location.pathname + '?team=' + id; },
+  teamLink(id) { return location.origin + location.pathname + '?team=' + linkId(id); },
   async teamLinkKopieren(id) {
     const link = this.teamLink(id);
-    const name = (PROFILE[id] || {}).titel || 'Strafenkasse';
+    const name = teamTitel(id);
     try {
       if (navigator.share) { await navigator.share({ title: name, text: name + ' – Teamlink für Kassenwarte:', url: link }); return; }
     } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -2961,7 +2986,7 @@ const App = {
   },
   teamEntfernen(id) {
     const p = PROFILE[id]; if (!p) return;
-    const name = id === PROFIL_ID ? (daten.titel || p.titel) : p.titel;
+    const name = teamTitel(id);
     const verbunden = (() => { try { return !!localStorage.getItem('hsg-' + id + '-sync-v1'); } catch (e) { return false; } })();
     if (!confirm(`„${name}“ auf diesem Gerät löschen?\n\nAlle hier gespeicherten Spieler, Strafen und Buchungen dieses Teams werden von diesem Gerät entfernt.` +
       (verbunden ? '\n\nDie Daten im Cloud-Sync bleiben online erhalten; über den Teamlink und eine erneute Anmeldung ist das Team wieder da.' : '\n\nDieses Team ist mit keinem Cloud-Sync verbunden – die Daten sind danach endgültig weg.'))) return;
