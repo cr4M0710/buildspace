@@ -96,7 +96,8 @@
   body.sk-modus { padding-bottom: 0; }
   body.sk-modus main { padding: 0; max-width: none; }
   #sk-rahmen { position: fixed; left: 0; right: 0; bottom: 0; top: var(--kopf-h, 70px); background: var(--card); padding-bottom: env(safe-area-inset-bottom); }
-  #sk-rahmen iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  #sk-rahmen iframe, #kb-rahmen iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  #kb-rahmen { position: fixed; left: 0; right: 0; bottom: 0; top: var(--kopf-h, 70px); background: var(--card); padding-bottom: env(safe-area-inset-bottom); }
   .tab.aktiv { display: block; }
   h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 22px 2px 10px; }
   h2:first-child { margin-top: 4px; }
@@ -318,6 +319,7 @@
 
   <!-- ============ STRAFENKASSE (Spieler-Ansicht eingebettet) ============ -->
   <section id="tab-strafen" class="tab"><div id="sk-rahmen"><iframe id="sk-frame" title="Strafenkasse"></iframe></div></section>
+  <section id="tab-kabine" class="tab"><div id="kb-rahmen"><iframe id="kb-frame" title="Kabine"></iframe></div></section>
 
   <!-- ============ DIENSTE ============ -->
   <section id="tab-dienste" class="tab">
@@ -852,13 +854,15 @@ const App = {
     $('#kopf-sub').textContent = 'HSG Wettenberg';
     this.renderStart();
   },
+  // Startseite gibt es, sobald Strafenkasse oder Kabine verknüpft ist
+  hubAktiv() { return !!(Strafen.cfg() || Kabine.link()); },
   tabZeigen(tab) {
-    if ((tab === 'home' || tab === 'strafen') && !Strafen.cfg()) tab = 'dienste';
+    if ((tab === 'home' && !this.hubAktiv()) || (tab === 'strafen' && !Strafen.cfg()) || (tab === 'kabine' && !Kabine.link())) tab = 'dienste';
     S.tab = tab;
-    const hub = tab === 'home' || tab === 'strafen';
+    const hub = tab === 'home' || tab === 'strafen' || tab === 'kabine';
     $('#nav').style.display = hub ? 'none' : ''; document.body.classList.toggle('ohne-nav', hub);
-    document.body.classList.toggle('sk-modus', tab === 'strafen');
-    if (tab === 'strafen') document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px');
+    document.body.classList.toggle('sk-modus', tab === 'strafen' || tab === 'kabine');
+    if (tab === 'strafen' || tab === 'kabine') document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px');
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('aktiv', t.id === 'tab-' + tab));
     document.querySelectorAll('nav button').forEach(b => b.classList.toggle('aktiv', b.dataset.tab === tab));
     window.scrollTo(0, 0);
@@ -879,7 +883,8 @@ const App = {
     $('#teilen-btn').style.display = '';
     // Mit verknüpfter Strafenkasse startet die App auf der Startseite (Wer bist du? → Dienste / Strafenkasse)
     S.ersteAnsicht = !opt.tab;
-    this.tabZeigen(opt.tab || ((c && c.plan && c.plan.strafenkasse) || S.skExtern ? 'home' : 'dienste'));
+    Kabine.pruefen();
+    this.tabZeigen(opt.tab || ((c && c.plan && c.plan.strafenkasse) || S.skExtern || Kabine.link() ? 'home' : 'dienste'));
     Fb.laden().then(() => this.abosStarten()).catch(() => {});
   },
   abosBeenden() { S.abos.splice(0).forEach(u => { try { u(); } catch (e) {} }); },
@@ -891,7 +896,7 @@ const App = {
       if (S.planId !== id) return;
       if (!s.exists) { if (!s.metadata.fromCache) { S.plan = null; S.fehler = 'Diesen Plan gibt es nicht (mehr). Prüfe den Link.'; this.renderAlles(); } return; }
       S.plan = s.data(); S.fehler = null; S.live = !s.metadata.fromCache;
-      if (S.ersteAnsicht) { S.ersteAnsicht = false; const sk = !!Strafen.cfg(); if (sk && S.tab === 'dienste') { this.tabZeigen('home'); return; } if (!sk && (S.tab === 'home' || S.tab === 'strafen')) { this.tabZeigen('dienste'); return; } }
+      if (S.ersteAnsicht) { S.ersteAnsicht = false; const sk = this.hubAktiv(); if (sk && S.tab === 'dienste') { this.tabZeigen('home'); return; } if (!sk && (S.tab === 'home' || S.tab === 'strafen')) { this.tabZeigen('dienste'); return; } }
       this.planMerken(id, S.plan.titel); this.cacheSchreiben(); this.renderAlles();
     }, fehler));
     S.abos.push(Fb.planRef(id).collection('dienste').onSnapshot(s => {
@@ -987,7 +992,8 @@ const App = {
     if (S.tab === 'checkliste') this.renderCheckliste();
     if (S.tab === 'home') this.renderHome();
     if (S.tab === 'strafen') this.renderStrafen();
-    $('#home-btn').style.display = Strafen.cfg() && S.tab !== 'home' ? '' : 'none';
+    if (S.tab === 'kabine') this.renderKabine();
+    $('#home-btn').style.display = this.hubAktiv() && S.tab !== 'home' ? '' : 'none';
     const tausch = S.eintraege.filter(e => e.tausch && !istMein(e) && dienstById(e.dienst) && !istVorbei(dienstById(e.dienst))).length;
     const b = $('#nav-badge'); b.style.display = tausch ? '' : 'none'; b.textContent = tausch;
   },
@@ -1051,6 +1057,7 @@ const App = {
     const dTxt = meine.length ? 'Nächster Dienst: ' + tagKurz(startVon(meine[0])) + ', ' + meine[0].von + ' Uhr · ' + meine[0].titel + (meine.length > 1 ? ' (+' + (meine.length - 1) + ' weitere)' : '')
       : (name ? 'Du bist für keinen kommenden Dienst eingetragen.' : 'Für Dienste eintragen, tauschen, Checkliste.') + (offen ? ' ' + offen + (offen === 1 ? ' Platz' : ' Plätze') + ' offen.' : '');
     h += '<button class="kachel" id="k-dienste"><span class="ico">🧹</span><span class="t"><b>Hallendienst</b><small>' + esc(dTxt) + '</small></span><span class="pfeil">›</span></button>';
+    if (Strafen.cfg()) {
     // Kachel Strafenkasse
     let sTxt = 'Strafen, Stand und Bezahlen.', sFarbe = '';
     if (Strafen.daten) {
@@ -1060,12 +1067,13 @@ const App = {
     }
     if (Strafen.istKassenwart()) { sTxt = '🔑 Als Kassenwart:in verwalten – ' + sTxt; }
     h += '<button class="kachel" id="k-strafen"><span class="ico" style="background:var(--chip-mein)">💶</span><span class="t"><b>' + esc((Strafen.daten && Strafen.daten.titel) || 'Strafenkasse') + '</b><small style="' + sFarbe + '">' + esc(sTxt) + '</small></span><span class="pfeil">›</span></button>';
+    }
     if (S.dienste.some(d => d.datum === isoDatum(new Date()))) h += '<button class="btn sekundaer" id="k-check">✅ Heute ist Hallendienst – zur Checkliste</button>';
     h += Kabine.kachelHtml();
     el.innerHTML = h;
-    if ($('#k-kabine')) $('#k-kabine').onclick = () => { location.href = Kabine.link(); };
+    if ($('#k-kabine')) $('#k-kabine').onclick = () => this.tabZeigen('kabine');
     $('#k-dienste').onclick = () => this.tabZeigen('dienste');
-    $('#k-strafen').onclick = () => this.tabZeigen('strafen');
+    if ($('#k-strafen')) $('#k-strafen').onclick = () => this.tabZeigen('strafen');
     if ($('#k-check')) $('#k-check').onclick = () => this.tabZeigen('checkliste');
     if ($('#home-wechseln')) $('#home-wechseln').onclick = e => { e.preventDefault(); LS.set(K.name, ''); if (Strafen.token) LS.set('hd-sk-ich-' + Strafen.token, null); this.renderHome(); };
     const sel = $('#home-name');
@@ -1078,6 +1086,12 @@ const App = {
       if (Strafen.token) LS.set('hd-sk-ich-' + Strafen.token, sp ? sp.id : null);
       this.renderHome();
     };
+  },
+  renderKabine() {
+    const l = Kabine.link(); if (!l) return;
+    const u = new URL(l); u.searchParams.set('embed', '1');
+    const f = $('#kb-frame');
+    if (f.dataset.src !== u.href) { f.dataset.src = u.href; f.src = u.href; }
   },
   renderStrafen() {
     const c = Strafen.cfg(); if (!c) return;
@@ -2588,7 +2602,7 @@ const Kabine = {
     }).catch(() => {});
   },
   link() {
-    if (!this.daten || !/^[A-Za-z0-9]{16,40}$/.test(this.daten.team)) return '';
+    if (HD_EMBED || !this.daten || !/^[A-Za-z0-9]{16,40}$/.test(this.daten.team)) return '';
     const n = meinName();
     return new URL('../kabine/index.html?team=' + this.daten.team + (n ? '&ich=' + encodeURIComponent(n) : ''), location.href).href;
   },
@@ -2598,7 +2612,7 @@ const Kabine = {
   },
   zeileHtml() {
     this.pruefen(); if (!this.link()) return '';
-    return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">📅 <b>Termine &amp; Zusagen</b> deiner Mannschaft</div><a class="btn klein sekundaer" style="text-decoration:none" target="_top" href="' + esc(this.link()) + '">Kabine</a></div>';
+    return '<div style="border-top:1px solid var(--rand);margin-top:12px;padding-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:.9rem;line-height:1.4">📅 <b>Termine &amp; Zusagen</b> deiner Mannschaft</div><button class="btn klein sekundaer" onclick="App.tabZeigen(\'kabine\')">Kabine</button></div>';
   },
 };
 

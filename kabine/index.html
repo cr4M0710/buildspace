@@ -45,6 +45,14 @@
   html { font-size: 16px; -webkit-text-size-adjust: 100%; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: calc(76px + env(safe-area-inset-bottom)); min-height: 100vh; }
   body.ohne-nav { padding-bottom: 24px; }
+  /* Eingebettet in Hallendienst/Strafenkasse (?embed=1): Kopf kommt von dort */
+  html.eingebettet header { display: none !important; }
+  html.eingebettet [data-hd-auf], html.eingebettet [data-sk-auf] { display: none !important; }
+  /* Hallendienst/Strafenkasse in der Kabine geöffnet (ohne zusätzliches Browserfenster) */
+  #fremd { display: none; }
+  body.fremd-modus main, body.fremd-modus nav, body.fremd-modus .fab { display: none !important; }
+  body.fremd-modus #fremd { display: block; position: fixed; left: 0; right: 0; bottom: 0; top: var(--kopf-h, 66px); background: var(--bg); z-index: 15; }
+  #fremd iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
   a { color: var(--rot); }
   svg { display: block; }
   button { font-family: inherit; }
@@ -299,10 +307,12 @@
     <h1 id="kopf-titel">Kabine</h1>
     <div class="sub" id="kopf-sub">HSG Wettenberg</div>
   </div>
+  <button class="kopf-btn" id="zurueck-btn" title="Zurück zur Kabine" onclick="Fremd.zu()" style="display:none"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></button>
   <button class="kopf-btn" id="ich-btn" title="Wer bist du?" onclick="App.ichWaehlen()" style="display:none"></button>
   <button class="kopf-btn" id="teilen-btn" title="Mannschafts-Link teilen" onclick="App.linkTeilen()" style="display:none"></button>
 </header>
 
+<div id="fremd"><iframe id="fremd-frame" title="Hallendienst / Strafenkasse"></iframe></div>
 <main>
   <section id="tab-start" class="tab"><div id="start-inhalt"></div></section>
   <section id="tab-home" class="tab"><div id="home-inhalt"></div></section>
@@ -398,6 +408,9 @@ function initialen(name) {
 function vorname(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
 // Links in Texten anklickbar machen (Text ist schon escaped)
 function verlinken(html) { return html.replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g, '<a href="$1" target="_blank" rel="noopener">$1</a>'); }
+// Eingebettet in Hallendienst oder Strafenkasse (?embed=1): ohne eigenen Kopf und ohne deren Kacheln
+const KB_EMBED = /[?&]embed=1(&|$)/.test(location.search);
+if (KB_EMBED) document.documentElement.classList.add('eingebettet');
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
@@ -473,6 +486,8 @@ const Fb = {
   istIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); },
   standalone() { return !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)); },
   async anmelden() {
+    // Google lässt sich nicht in einem Rahmen anzeigen -> ganze Seite der Kabine
+    if (KB_EMBED) { const u = new URL(location.href); u.searchParams.delete('embed'); try { window.top.location.href = u.href; } catch (e) { location.href = u.href; } return; }
     if ((this.istIOS() || this.standalone()) && !window.KB_EMULATOR) { this.googleWeiterleiten(); return; }
     try { await this.laden(); } catch (e) { toast('Firebase konnte nicht geladen werden (offline?)'); return; }
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -601,7 +616,7 @@ const App = {
     this._ichHinweis = q.get('ich') || null;
     if (id) this.teamOeffnen(id); else this.startZeigen();
     try { await Fb.laden(); } catch (e) { S.fehler = 'Keine Verbindung zur Datenbank (offline?)'; this.renderAlles(); return; }
-    if ('serviceWorker' in navigator && !window.KB_EMULATOR) navigator.serviceWorker.register('sw.js').catch(() => {});
+    if ('serviceWorker' in navigator && !window.KB_EMULATOR && !KB_EMBED) navigator.serviceWorker.register('sw.js').catch(() => {});
     setInterval(() => { if (S.teamId && document.visibilityState === 'visible') this.renderAlles(); }, 60000);
   },
   authGeaendert() {
@@ -634,7 +649,7 @@ const App = {
     this.abosBeenden();
     Object.assign(S, { teamId: id, team: null, admin: null, istAdmin: false, istBesitzer: false, termine: [], antworten: new Map(), aufgaben: [], abw: [], posts: [], kommentare: [], stimmen: [], fehler: null, live: false });
     LS.set(K.letzter, id);
-    try { history.replaceState(null, '', location.pathname + '?team=' + id); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + '?team=' + id + (KB_EMBED ? '&embed=1' : '')); } catch (e) {}
     const c = LS.get(K.cache(id), null);
     if (c && c.team) { S.team = c.team; S.termine = (c.termine || []).map(t => ({ ...t, start: null, fristBis: t.fristMs ? { toDate: () => new Date(t.fristMs) } : null })); }
     $('#nav').style.display = ''; document.body.classList.remove('ohne-nav');
@@ -750,6 +765,7 @@ const App = {
   },
   renderKopf() {
     if (!S.teamId) return;
+    if (Fremd.offen) return;
     $('#kopf-titel').textContent = (S.team && S.team.titel) || 'Kabine';
     const online = navigator.onLine !== false && S.live;
     $('#kopf-sub').innerHTML = '<span class="live-punkt' + (online ? '' : ' aus') + '"></span>' + esc(S.fehler ? S.fehler : ((S.team && S.team.verein) || 'HSG Wettenberg') + (S.istAdmin ? ' · Verwaltung' : '') + (online ? '' : ' · offline'));
@@ -967,7 +983,7 @@ Object.assign(App, {
     h += '<h2>Als Nächstes<span class="rechts"><button class="btn mini sekundaer" onclick="App.tabZeigen(\'termine\')">Alle</button></span></h2>';
     h += kommend.length ? kommend.map(t => terminKarte(t)).join('') : '<div class="card leer">' + (off.length ? 'Sonst nichts geplant.' : 'Keine Termine geplant.') + (S.istAdmin ? '<br><button class="btn klein" style="margin-top:9px" onclick="Editor.oeffnen()">＋ Termin anlegen</button>' : '') + '</div>';
     // Hallendienst & Strafenkasse
-    const hd = Hd.ichHtml(i), sk = Sk.ichHtml(i);
+    const hd = KB_EMBED ? '' : Hd.ichHtml(i), sk = KB_EMBED ? '' : Sk.ichHtml(i);
     if (hd || sk) h += '<h2>Verein</h2>' + hd + sk;
     // Pinnwand: wichtig + neueste
     const wichtig = S.posts.filter(p => p.wichtig).slice(0, 2);
@@ -2103,7 +2119,7 @@ const Hd = {
       + (n ? 'Dein nächster Dienst: <b style="color:var(--text)">' + esc(tagKurz(ausDatum(n.d.datum)) + ' ' + n.d.von + ' · ' + n.d.titel) + '</b>' + (l.length > 1 ? ' (+' + (l.length - 1) + ' weitere)' : '') : (m ? 'Du hast keinen kommenden Dienst.' : 'Dienste der Mannschaft'))
       + (frei ? ' · ' + frei + ' Plätze frei' : '') + '</small></div><span class="pfeil">›</span></div>';
   },
-  mehrHtml() { return this.planId ? '<div class="kachel" data-hd-auf><div class="ico">🧹</div><div class="t"><b>Hallendienst öffnen</b><small>' + esc((this.plan && this.plan.titel) || 'Dienste eintragen') + '</small></div><span class="pfeil">›</span></div>' : ''; },
+  mehrHtml() { return this.planId && !KB_EMBED ? '<div class="kachel" data-hd-auf><div class="ico">🧹</div><div class="t"><b>Hallendienst öffnen</b><small>' + esc((this.plan && this.plan.titel) || 'Dienste eintragen') + '</small></div><span class="pfeil">›</span></div>' : ''; },
   tagHtml(datum, dienste) {
     let h = '<div class="gruppe-kopf">🧹 Hallendienst an diesem Tag</div><div class="card flach" style="box-shadow:none;background:var(--zebra)">';
     dienste.slice().sort((a, b) => (a.von || '').localeCompare(b.von || '')).forEach(d => {
@@ -2118,7 +2134,7 @@ const Hd = {
     const heute = isoDatum(new Date()); const kommend = l.filter(x => x.d.datum >= heute);
     return '<div class="gruppe-kopf">🧹 Hallendienst<span class="z">' + l.length + ' Dienste</span></div><div class="hinweis" style="margin-top:0">' + (kommend.length ? 'Nächster: ' + esc(tagKurz(ausDatum(kommend[0].d.datum)) + ' ' + kommend[0].d.von + ' · ' + kommend[0].d.titel) : 'Kein kommender Dienst.') + '</div>';
   },
-  knoepfe(el) { el.querySelectorAll('[data-hd-auf]').forEach(b => b.onclick = () => { const i = ich(); location.href = this.link() + (i ? '&ich=' + encodeURIComponent(i.name) : ''); }); },
+  knoepfe(el) { el.querySelectorAll('[data-hd-auf]').forEach(b => b.onclick = () => { const i = ich(); Fremd.auf(this.link() + '&embed=1' + (i ? '&ich=' + encodeURIComponent(i.name) : ''), (this.plan && this.plan.titel) || 'Hallendienst'); }); },
   verknuepfenModal() {
     const akt = S.team.hallendienst;
     const m = oeffneModal('<h3>🧹 Hallendienst verknüpfen</h3><div class="unter">Füge den Mannschafts-Link aus dem Hallendienst ein (dort oben rechts „Teilen“). Spieler:innen sehen dann ihre Dienste hier, und im Hallendienst erscheint die Kabine auf der Startseite.</div>'
@@ -2158,6 +2174,31 @@ const Hd = {
     } catch (e) { /* Regeln evtl. noch nicht eingespielt */ }
   },
 };
+
+// ---------------- Hallendienst/Strafenkasse in der Kabine öffnen ----------------
+// Bleibt in dieser App (Rahmen unter dem eigenen Kopf) – so öffnet iOS kein zusätzliches Browserfenster.
+const Fremd = {
+  offen: false,
+  auf(url, titel) {
+    if (!url) return;
+    if (KB_EMBED) return; // eingebettet: Eltern-App öffnet die anderen Tools selbst
+    const f = $('#fremd-frame');
+    if (f.dataset.src !== url) { f.dataset.src = url; f.src = url; }
+    this.offen = true;
+    document.body.classList.add('fremd-modus');
+    $('#zurueck-btn').style.display = ''; $('#ich-btn').style.display = 'none'; $('#teilen-btn').style.display = 'none';
+    $('#kopf-titel').textContent = titel;
+    document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px');
+    window.scrollTo(0, 0);
+  },
+  zu() {
+    this.offen = false;
+    document.body.classList.remove('fremd-modus');
+    $('#zurueck-btn').style.display = 'none'; $('#teilen-btn').style.display = S.teamId ? '' : 'none';
+    App.renderAlles();
+  },
+};
+window.addEventListener('resize', () => { if (Fremd.offen) document.documentElement.style.setProperty('--kopf-h', document.querySelector('header').offsetHeight + 'px'); });
 
 // ---------------- Strafenkasse (../strafenkasse/) ----------------
 const Sk = {
@@ -2204,7 +2245,7 @@ const Sk = {
     const sd = this.saldo(sp.id);
     return '<div class="kachel" data-sk-auf><div class="ico">💰</div><div class="t"><b>Strafenkasse</b><small>' + (sd > 0 ? '<b style="color:var(--rot)">' + eur(sd) + ' offen</b>' : '<b style="color:var(--gruen)">alles bezahlt</b>' + (sd < 0 ? ' (Guthaben ' + eur(-sd) + ')' : '')) + '</small></div><span class="pfeil">›</span></div>';
   },
-  mehrHtml() { return this.cfg() ? '<div class="kachel" data-sk-auf><div class="ico">💰</div><div class="t"><b>Strafenkasse öffnen</b><small>' + esc((this.daten && this.daten.titel) || 'Strafen & Zahlungen') + '</small></div><span class="pfeil">›</span></div>' : ''; },
+  mehrHtml() { return this.cfg() && !KB_EMBED ? '<div class="kachel" data-sk-auf><div class="ico">💰</div><div class="t"><b>Strafenkasse öffnen</b><small>' + esc((this.daten && this.daten.titel) || 'Strafen & Zahlungen') + '</small></div><span class="pfeil">›</span></div>' : ''; },
   personHtml(m) {
     const sp = this.spielerZu(m); if (!sp) return '';
     const sd = this.saldo(sp.id);
@@ -2213,7 +2254,17 @@ const Sk = {
       + (l.length ? '<div class="hinweis" style="margin-top:0">' + l.map(b => esc(b.d.split('-').reverse().join('.')) + ' · ' + esc(b.t) + ' (' + eur(b.b) + ')').join('<br>') + '</div>' : '')
       + '<button class="btn mini sekundaer" style="margin-top:7px" data-sk-auf>Zur Strafenkasse</button>';
   },
-  knoepfe(el) { el.querySelectorAll('[data-sk-auf]').forEach(b => b.onclick = () => { location.href = this.link(); }); },
+  // Eingebettet öffnen: Kassenwart:innen die volle Strafenkasse, alle anderen die Spieler-Ansicht
+  einbettLink() {
+    const c = this.cfg(); if (!c) return '';
+    const u = new URL('../strafenkasse/index.html', location.href);
+    const th = document.documentElement.dataset.theme;
+    const sp = this.spielerZu(ich());
+    if (this.istKassenwart() && this.team) { u.search = '?' + (c.team ? 'team=' + c.team + '&' : '') + 'embed=1&verwalten=1&code=' + encodeURIComponent(this.team) + (th ? '&theme=' + th : ''); }
+    else { u.search = '?' + (c.team ? 'team=' + c.team + '&' : '') + 'embed=1' + (th ? '&theme=' + th : '') + (sp ? '&ich=' + encodeURIComponent(sp.id) : ''); u.hash = 's=' + c.token; }
+    return u.href;
+  },
+  knoepfe(el) { el.querySelectorAll('[data-sk-auf]').forEach(b => b.onclick = () => { Fremd.auf(this.einbettLink(), (this.daten && this.daten.titel) || 'Strafenkasse'); }); },
   verknuepfenModal() {
     const eigen = S.team.strafenkasse;
     const m = oeffneModal('<h3>💰 Strafenkasse verknüpfen</h3><div class="unter">In der Strafenkasse unter Verwalten › Cloud-Sync auf „Spieler-Ansicht teilen (nur Lesen)“ tippen und den Link hier einfügen.'

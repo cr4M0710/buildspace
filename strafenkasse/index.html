@@ -431,7 +431,7 @@
 
 <!-- Startseite (nur mit verknüpftem Hallendienst): Wer bist du? → Hallendienst / Strafenkasse -->
 <section id="sk-start"><div id="sk-start-inhalt"></div></section>
-<div id="sk-hd"><iframe id="hd-frame" title="Hallendienst"></iframe></div>
+<div id="sk-hd"><iframe id="hd-frame" title="Hallendienst"></iframe><iframe id="kb-frame" title="Kabine" style="display:none"></iframe></div>
 
 <main>
 
@@ -1726,7 +1726,7 @@ const App = {
   },
 
   rendernKopf() {
-    const h1 = document.querySelector('header h1'); if (h1 && !(typeof Start !== 'undefined' && Start.modus === 'hd')) h1.textContent = daten.titel || 'Strafenkasse';
+    const h1 = document.querySelector('header h1'); if (h1 && !(typeof Start !== 'undefined' && (Start.modus === 'hd' || Start.modus === 'kb'))) h1.textContent = daten.titel || 'Strafenkasse';
     const sub = document.querySelector('header .sub');
     if (sub && !nurLesen) sub.textContent = daten.verein || '';
     document.title = (daten.titel || 'Strafenkasse') + (daten.verein ? ' · ' + daten.verein : '');
@@ -3793,6 +3793,7 @@ function ansichtOberflaeche() {
 // Alles bleibt in dieser App: der Hallendienst wird eingebettet (wie die Strafenkasse im Hallendienst) –
 // so öffnet iOS kein zusätzliches Browserfenster.
 const Start = {
+  kabine: null, kbGefragt: null,
   verweis: null, gefragt: null, offen: false, modus: '', geladen: Date.now(), gezeigt: false,
   token() {
     if (nurLesen && Sync.cfg && Sync.cfg.typ === 'spieleransicht') return Sync.cfg.token;
@@ -3813,6 +3814,17 @@ const Start = {
     document.getElementById('home-btn').style.display = id ? '' : 'none';
     if (!id) { if (this.modus) this.strafenkasse(); return; }
     Hallendienst.start(id);
+    // Verknüpfte Kabine (Termine & Zusagen) über den Verweis des Hallendienstes: kabine_hd/{plan}
+    if (this.kbGefragt !== id) {
+      this.kbGefragt = id;
+      try { this.kabine = JSON.parse(localStorage.getItem('sk-kabine-' + id) || 'null'); } catch (e) { this.kabine = null; }
+      Fb.laden().then(() => Fb.db.collection('kabine_hd').doc(id).get()).then(snap => {
+        const k = snap.exists && /^[A-Za-z0-9]{16,40}$/.test(String(snap.data().team || '')) ? { team: String(snap.data().team), titel: String(snap.data().titel || '') } : null;
+        const alt = JSON.stringify(this.kabine); this.kabine = k;
+        try { localStorage.setItem('sk-kabine-' + id, JSON.stringify(k)); } catch (e) {}
+        if (JSON.stringify(k) !== alt && this.modus === 'start') this.rendern();
+      }).catch(() => {});
+    }
     if (!this.gezeigt && !SK_DIREKT && Date.now() - this.geladen < 8000) { this.gezeigt = true; this.zeigen(); }
     else if (this.modus === 'start') this.rendern();
   },
@@ -3820,10 +3832,12 @@ const Start = {
   setzen(m) {
     this.modus = m;
     document.body.classList.toggle('start-modus', m === 'start');
-    document.body.classList.toggle('hd-modus', m === 'hd');
+    document.body.classList.toggle('hd-modus', m === 'hd' || m === 'kb');
+    document.getElementById('hd-frame').style.display = m === 'kb' ? 'none' : '';
+    document.getElementById('kb-frame').style.display = m === 'kb' ? '' : 'none';
     document.getElementById('home-btn').style.visibility = m === 'start' ? 'hidden' : '';
     const h1 = document.querySelector('header h1');
-    if (h1) h1.textContent = m === 'hd' ? ((Hallendienst.plan && Hallendienst.plan.titel) || 'Hallendienst') : (daten.titel || 'Strafenkasse');
+    if (h1) h1.textContent = m === 'hd' ? ((Hallendienst.plan && Hallendienst.plan.titel) || 'Hallendienst') : m === 'kb' ? ((this.kabine && this.kabine.titel) || 'Kabine') : (daten.titel || 'Strafenkasse');
     this.kopfHoehe(); window.scrollTo(0, 0);
   },
   zeigen() { if (!this.plan()) return; this.setzen('start'); this.rendern(); },
@@ -3834,6 +3848,14 @@ const Start = {
     const src = new URL('../hallendienst/index.html?plan=' + id + '&embed=1', location.href).href;
     if (f.dataset.src !== src) { f.dataset.src = src; f.src = src; }
     this.setzen('hd');
+  },
+  kabineAuf() {
+    if (!this.kabine) return;
+    const ich = this.ich();
+    const src = new URL('../kabine/index.html?team=' + this.kabine.team + '&embed=1' + (ich ? '&ich=' + encodeURIComponent(ich.name) : ''), location.href).href;
+    const f = document.getElementById('kb-frame');
+    if (f.dataset.src !== src) { f.dataset.src = src; f.src = src; }
+    this.setzen('kb');
   },
   ich() { return daten.spieler.find(s => s.id === prefs.ichBin) || null; },
   rendern() {
@@ -3863,7 +3885,10 @@ const Start = {
     if (ich) { const sd = saldo(ich.id); sTxt = sd > 0 ? eur(sd) + ' offen' : 'Alles bezahlt 👍' + (sd < 0 ? ' (Guthaben ' + eur(-sd) + ')' : ''); sStil = sd > 0 ? 'color:var(--rot);font-weight:800' : 'color:var(--gruen);font-weight:700'; }
     if (!nurLesen) sTxt = '🔑 Als Kassenwart:in verwalten – ' + sTxt;
     h += `<button class="kachel" id="st-sk"><span class="ico">💶</span><span class="t"><b>${esc(daten.titel || 'Strafenkasse')}</b><small style="${sStil}">${esc(sTxt)}</small></span><span class="pfeil">›</span></button>`;
+    // Kachel Kabine (Termine & Zusagen)
+    if (this.kabine) h += `<button class="kachel" id="st-kb"><span class="ico">📅</span><span class="t"><b>${esc(this.kabine.titel ? this.kabine.titel + ' – Termine' : 'Termine & Zusagen')}</b><small>Training, Spiele und Termine – zu- und absagen.</small></span><span class="pfeil">›</span></button>`;
     el.innerHTML = h;
+    if (document.getElementById('st-kb')) document.getElementById('st-kb').onclick = () => this.kabineAuf();
     document.getElementById('st-hd').onclick = () => this.hallendienst();
     document.getElementById('st-sk').onclick = () => this.strafenkasse();
     const w = document.getElementById('st-wechseln');
@@ -3880,7 +3905,7 @@ const Start = {
     };
   },
 };
-window.addEventListener('resize', () => { if (Start.modus === 'hd') Start.kopfHoehe(); });
+window.addEventListener('resize', () => { if (Start.modus === 'hd' || Start.modus === 'kb') Start.kopfHoehe(); });
 
 App.themeAnwenden();
 Sync.status(Sync.aktiv() ? 'ok' : 'aus');
