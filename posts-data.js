@@ -1393,4 +1393,16 @@ const posts = [
     titleEn: "Geo Notebook",
     excerptEn: "Construct like in Goodnotes: a notebook with Apple Pencil support, a set square that snaps (15° steps, parallel and perpendicular to lines, zero point onto points), straight lines along its edge with length display, compasses with radius in cm and points that snap to intersections. Import worksheets as PDF or photo (true scale, calibratable), export as image or PDF for Goodnotes, sync between devices with a Google account."
    },
+   {
+    title: "Kabine – HSG Wettenberg",
+    excerpt: "Training, Spiele und Termine für jede Mannschaft: per Link mit einem Tipp zu- oder absagen, Antwortfristen, Kader nominieren, Warteliste, Aufgaben (Fahrdienst, Trikots), Fahrgemeinschaften, Abwesenheiten, Pinnwand mit Umfragen, Anwesenheit und Statistik. Spielplan aus nuLiga übernehmen, verknüpft mit Hallendienst und Strafenkasse – als App installierbar.",
+    date: "2026-11-25",
+    category: "handball",
+    subcategory: "verein",
+    url: "kabine/index.html",
+    emoji: "📅",
+    tags: ["tool"],
+    titleEn: "Locker Room – HSG Wettenberg",
+    excerptEn: "Training sessions, matches and events for every team: accept or decline with one tap via a link, response deadlines, squad nominations, waiting list, tasks (driving, washing kits), car pools, absences, a team board with polls, attendance and stats. Imports fixtures from nuLiga and links up with Hall Duty and the Penalty Fund – installable as an app."
+   },
 ];

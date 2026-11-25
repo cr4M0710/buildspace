@@ -380,6 +380,177 @@ service cloud.firestore {
       }
     }
 
+    // =================================================================
+    // Kabine (kabine/index.html) – Training, Spiele, Termine
+    // - Mannschafts-ID im Link (20 Zeichen) = Lesezugang
+    // - Zu-/Absagen, Aufgaben, Abwesenheiten, Pinnwand mit anonymer
+    //   Sitzung; Frist, Mitgliedschaft und Felder werden hier geprüft
+    // - Verwaltung: Google-Konten in kabine_admin/{team}.members
+    // =================================================================
+    function kb_angemeldet() { return request.auth != null; }
+    function kb_konto() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email_verified == true;
+    }
+    function kb_mail() { return request.auth.token.email.lower(); }
+    function kb_neu() { return request.resource.data; }
+    function kb_alt() { return resource.data; }
+    function kb_nur(felder) { return kb_neu().keys().hasOnly(felder); }
+    function kb_geaendert() { return kb_neu().diff(kb_alt()).affectedKeys(); }
+    function kb_text(v, max) { return v is string && v.size() <= max; }
+    function kb_datum(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function kb_adminDoc(team) { return get(/databases/$(database)/documents/kabine_admin/$(team)).data; }
+    function kb_admin(team) { return kb_konto() && kb_mail() in kb_adminDoc(team).members; }
+    function kb_owner(team) { return kb_konto() && kb_adminDoc(team).owner == request.auth.uid; }
+    function kb_team(team) { return get(/databases/$(database)/documents/kabine/$(team)).data; }
+    function kb_termin(team, t) { return get(/databases/$(database)/documents/kabine/$(team)/termine/$(t)).data; }
+    function kb_mitglied(team, id) { return id is string && id in kb_team(team).mitglieder; }
+    // Spieler:innen dürfen bis zur Antwortfrist antworten (nicht bei abgesagten Terminen oder gesperrter Mannschaft)
+    function kb_offen(team, t) {
+      return kb_termin(team, t).get('abgesagt', false) != true
+        && kb_team(team).get('gesperrt', false) != true
+        && request.time < kb_termin(team, t).fristBis;
+    }
+
+    match /kabine_admin/{team} {
+      allow get: if kb_konto() && (resource == null || kb_mail() in resource.data.members);
+      allow list: if kb_konto() && kb_mail() in resource.data.members;
+      allow create: if kb_konto() && team.size() >= 16
+        && !exists(/databases/$(database)/documents/kabine/$(team))
+        && kb_nur(['owner', 'ownerEmail', 'members', 'titel', 'erstellt'])
+        && kb_neu().owner == request.auth.uid && kb_neu().ownerEmail == kb_mail()
+        && kb_neu().members == [kb_mail()] && kb_text(kb_neu().titel, 80);
+      allow update: if kb_konto() && kb_mail() in kb_alt().members
+        && kb_neu().owner == kb_alt().owner && kb_neu().ownerEmail == kb_alt().ownerEmail
+        && kb_neu().members is list && kb_neu().members.size() <= 10 && kb_alt().ownerEmail in kb_neu().members
+        && (kb_neu().members == kb_alt().members || kb_alt().owner == request.auth.uid)
+        && kb_text(kb_neu().get('titel', ''), 80);
+      allow delete: if kb_konto() && kb_alt().owner == request.auth.uid;
+    }
+
+    // Rückverweis Hallendienst → Kabine: kabine_hd/{plan} = { team, titel }.
+    // Schreiben nur die Admins einer Mannschaft, die genau diesen Plan verknüpft hat.
+    match /kabine_hd/{plan} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if kb_nur(['team', 'titel', 'at']) && kb_neu().team is string
+        && kb_admin(kb_neu().team) && kb_team(kb_neu().team).get('hallendienst', '') == plan
+        && kb_text(kb_neu().titel, 60);
+      allow delete: if kb_admin(kb_alt().team);
+    }
+
+    match /kabine/{team} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if kb_admin(team)
+        && kb_nur(['titel', 'verein', 'hinweis', 'saisonStart', 'mitglieder', 'einst', 'hallendienst', 'strafenkasse', 'anwurf', 'gesperrt', 'erstellt', 'aktualisiert'])
+        && kb_text(kb_neu().titel, 80) && kb_text(kb_neu().get('verein', ''), 80) && kb_text(kb_neu().get('hinweis', ''), 600)
+        && kb_text(kb_neu().get('hallendienst', ''), 60) && kb_text(kb_neu().get('strafenkasse', ''), 120)
+        && kb_text(kb_neu().get('saisonStart', ''), 10)
+        && kb_neu().mitglieder is map && kb_neu().mitglieder.size() <= 80
+        && kb_neu().get('einst', {}) is map
+        && kb_neu().get('gesperrt', false) is bool;
+      allow delete: if kb_owner(team);
+
+      // Termine: nur die Verwaltung
+      match /termine/{t} {
+        allow read: if true;
+        allow create, update: if kb_admin(team)
+          && kb_nur(['typ', 'titel', 'datum', 'von', 'bis', 'treff', 'ort', 'adresse', 'gegner', 'heim', 'notiz', 'frist', 'fristBis', 'start',
+                     'max', 'kader', 'standard', 'pflicht', 'fahrten', 'aufgaben', 'anwesenheit', 'abgesagt', 'absageGrund', 'serie',
+                     'quelle', 'quelleZeit', 'ergebnis', 'strafen', 'erstellt', 'aktualisiert'])
+          && kb_neu().typ in ['training', 'spiel', 'event']
+          && kb_text(kb_neu().titel, 80) && kb_datum(kb_neu().datum)
+          && kb_neu().start is timestamp && kb_neu().fristBis is timestamp
+          && kb_text(kb_neu().get('notiz', ''), 2000) && kb_text(kb_neu().get('ort', ''), 120)
+          && kb_neu().get('aufgaben', {}) is map && kb_neu().get('aufgaben', {}).size() <= 10
+          && kb_neu().get('kader', []) is list && kb_neu().get('kader', []).size() <= 80
+          && kb_neu().get('anwesenheit', {}) is map && kb_neu().get('anwesenheit', {}).size() <= 100
+          && kb_neu().get('strafen', []) is list && kb_neu().get('strafen', []).size() <= 300;
+        allow delete: if kb_admin(team);
+      }
+
+      // Zu-/Absagen: ID = <termin>_<mitglied>
+      match /antworten/{a} {
+        allow read: if true;
+        allow create, update: if kb_angemeldet()
+          && kb_nur(['termin', 'spieler', 'status', 'grund', 'auto', 'mitfahrt', 'start', 'uid', 'at', 'von'])
+          && kb_neu().termin is string && a == kb_neu().termin + '_' + kb_neu().spieler
+          && kb_neu().status in ['ja', 'nein', 'vielleicht']
+          && kb_text(kb_neu().get('grund', ''), 140) && kb_text(kb_neu().get('von', ''), 60)
+          && kb_neu().get('auto', 0) is int && kb_neu().get('auto', 0) >= 0 && kb_neu().get('auto', 0) <= 8
+          && kb_neu().get('mitfahrt', false) is bool
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time
+          && kb_mitglied(team, kb_neu().spieler)
+          && kb_neu().start == kb_termin(team, kb_neu().termin).start
+          && (kb_admin(team) || kb_offen(team, kb_neu().termin));
+        allow delete: if kb_admin(team) || (kb_angemeldet() && kb_offen(team, kb_alt().termin));
+      }
+
+      // Aufgaben (Fahrdienst, Trikots …): ID = <termin>_<aufgabe>_<platz>
+      match /aufgaben/{u} {
+        allow read: if true;
+        allow create: if kb_angemeldet()
+          && kb_nur(['termin', 'aufgabe', 'platz', 'spieler', 'name', 'start', 'uid', 'at'])
+          && kb_neu().termin is string && kb_neu().aufgabe is string && kb_neu().platz is int && kb_neu().platz >= 0
+          && u == kb_neu().termin + '_' + kb_neu().aufgabe + '_' + string(kb_neu().platz)
+          && kb_neu().platz < kb_termin(team, kb_neu().termin).aufgaben[kb_neu().aufgabe].plaetze
+          && kb_mitglied(team, kb_neu().spieler) && kb_text(kb_neu().name, 40)
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time
+          && kb_neu().start == kb_termin(team, kb_neu().termin).start
+          && (kb_admin(team) || kb_termin(team, kb_neu().termin).get('abgesagt', false) != true);
+        allow update: if kb_admin(team) && kb_geaendert().hasOnly(['start', 'uid', 'at', 'name', 'spieler'])
+          && kb_mitglied(team, kb_neu().spieler) && kb_neu().start == kb_termin(team, kb_neu().termin).start;
+        allow delete: if kb_admin(team) || (kb_angemeldet() && request.time < kb_termin(team, kb_alt().termin).start);
+      }
+
+      match /abwesenheiten/{id} {
+        allow read: if true;
+        allow create, update: if kb_angemeldet()
+          && kb_nur(['spieler', 'von', 'bis', 'grund', 'uid', 'at'])
+          && kb_mitglied(team, kb_neu().spieler) && kb_datum(kb_neu().von) && kb_datum(kb_neu().bis)
+          && kb_neu().von <= kb_neu().bis && kb_text(kb_neu().grund, 80)
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time;
+        allow delete: if kb_angemeldet();
+      }
+
+      // Pinnwand mit Umfragen
+      match /posts/{p} {
+        allow read: if true;
+        allow create: if kb_angemeldet()
+          && kb_nur(['text', 'autor', 'spieler', 'uid', 'at', 'wichtig', 'umfrage'])
+          && kb_text(kb_neu().text, 2000) && kb_text(kb_neu().autor, 40) && kb_neu().autor.size() > 0 && kb_text(kb_neu().spieler, 30)
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time
+          && kb_neu().wichtig is bool && (kb_neu().wichtig == false || kb_admin(team))
+          && (kb_team(team).get('einst', {}).get('postsNur', false) != true || kb_admin(team))
+          && (kb_neu().umfrage == null || (kb_neu().umfrage is map && kb_text(kb_neu().umfrage.frage, 200)
+              && kb_neu().umfrage.optionen is list && kb_neu().umfrage.optionen.size() >= 2 && kb_neu().umfrage.optionen.size() <= 10));
+        allow update: if (kb_admin(team) && kb_geaendert().hasOnly(['wichtig', 'umfrage', 'text']) && kb_text(kb_neu().text, 2000))
+          || (kb_angemeldet() && kb_alt().uid == request.auth.uid && kb_geaendert().hasOnly(['text']) && kb_text(kb_neu().text, 2000));
+        allow delete: if kb_admin(team) || (kb_angemeldet() && kb_alt().uid == request.auth.uid);
+      }
+      match /kommentare/{k} {
+        allow read: if true;
+        allow create: if kb_angemeldet()
+          && kb_nur(['post', 'text', 'autor', 'spieler', 'uid', 'at'])
+          && kb_neu().post is string && kb_text(kb_neu().text, 500) && kb_neu().text.size() > 0
+          && kb_text(kb_neu().autor, 40) && kb_mitglied(team, kb_neu().spieler)
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time;
+        allow delete: if kb_admin(team) || (kb_angemeldet() && kb_alt().uid == request.auth.uid);
+      }
+      // Stimmen: ID = <post>_<mitglied>
+      match /stimmen/{st} {
+        allow read: if true;
+        allow create, update: if kb_angemeldet()
+          && kb_nur(['post', 'spieler', 'wahl', 'uid', 'at'])
+          && st == kb_neu().post + '_' + kb_neu().spieler
+          && kb_mitglied(team, kb_neu().spieler)
+          && kb_neu().wahl is list && kb_neu().wahl.size() >= 1 && kb_neu().wahl.size() <= 10
+          && kb_neu().uid == request.auth.uid && kb_neu().at == request.time;
+        allow delete: if kb_angemeldet();
+      }
+    }
+
     // Newsletter: läuft NICHT über Firestore (Google Apps Script) – nichts zu tun.
   }
 }
