@@ -181,6 +181,32 @@
   .blatt.hoch .loes-page .loesungen-grid { column-count: 2; }
   .loes-page.d-compact .loesungen-grid { font-size: 8pt; }
 
+  /* ---------- Testmodus: Punkte & Lösungsblatt ---------- */
+  .seg-mode button { font-size: .95rem; }
+  .is-test .sol-only-warmup { display: none; }
+  .test-only { display: none; }
+  .is-test .test-only { display: block; }
+  .task .pts { flex-shrink: 0; align-self: flex-start; margin-left: 1mm; font-size: 7.6pt; line-height: 1; color: #444; border: 1px solid #b9b4a6; border-radius: 2.5mm; padding: 1mm 1.6mm; white-space: nowrap; background: #fff; }
+  .task .pts .pe { display: inline-block; width: 4.5mm; border-bottom: 1px solid #888; margin-right: .8mm; height: 2.4mm; vertical-align: -.4mm; }
+  .preview-scale-wrap .task .pts { cursor: pointer; }
+  @media (hover: hover) { .preview-scale-wrap .task .pts:hover { border-color: var(--kreide); background: #fff7e6; } }
+  .cover-fields.score { margin-top: 2.5mm; }
+  .cover-fields.score span.mid { flex: 0 0 38mm; }
+  .tl-page .tl-head { display: flex; align-items: baseline; gap: 4mm; margin-bottom: 3mm; }
+  .tl-page .tl-head h2 { margin: 0; flex: 1; }
+  .tl-page .tl-sum { font-size: 10pt; font-weight: 700; color: #fff; background: var(--ink); border-radius: 3px; padding: .8mm 2.5mm; white-space: nowrap; }
+  .tl-page .loesungen-grid { flex: 1; min-height: 0; column-fill: auto; }
+  .tl-row { display: flex; gap: 2mm; align-items: baseline; padding: .7mm 0; border-bottom: 1px dotted #d6d1c3; }
+  .tl-row .tl-n { font-weight: 700; color: var(--ink); min-width: 5mm; }
+  .tl-row .tl-s { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .tl-row .tl-p { flex-shrink: 0; font-weight: 700; color: var(--ink); background: #eef3f0; border-radius: 2mm; padding: .2mm 1.6mm; font-size: .92em; }
+  .tl-key { flex-shrink: 0; margin-top: 3mm; border-top: 1.5px solid var(--ink); padding-top: 2mm; }
+  .tl-key h3 { font-family: var(--font-display); font-size: 9pt; font-weight: 600; color: var(--ink); margin: 0 0 1.5mm; }
+  .tl-key table { border-collapse: collapse; width: 100%; font-size: 8.4pt; }
+  .tl-key td, .tl-key th { border: 1px solid #a9a493; padding: .6mm 1.5mm; text-align: center; }
+  .tl-key th { background: #f1ede2; font-weight: 600; }
+  .tl-key td:first-child, .tl-key th:first-child { text-align: left; white-space: nowrap; }
+
   /* ---------- Messbereich (unsichtbar, echte Größe) ---------- */
   #measure { position: fixed; left: -20000px; top: 0; visibility: hidden; pointer-events: none; }
 
@@ -256,6 +282,12 @@
 
       <section class="step">
         <div class="step-h"><span class="nr">4</span>Blatt</div>
+        <span class="lbl-sm">Art</span>
+        <div class="seg seg-mode" id="modeSeg" role="group" aria-label="Art des Blatts" style="margin-bottom:8px">
+          <button type="button" data-m="warmup">🔥 Warm-up</button>
+          <button type="button" data-m="test">📝 Test</button>
+        </div>
+        <div class="hint test-only" style="margin:0 0 12px">Jede Aufgabe bekommt passende Punkte (nach Niveau und Umfang) – in der Vorschau auf die Punkte tippen, um sie zu ändern. Dazu kommt ein eigenes Lösungsblatt mit Punkteverteilung und Notenschlüssel.</div>
         <span class="lbl-sm">Anzahl Aufgaben</span>
         <div class="count-wrap">
           <input type="range" id="anzahl" min="6" max="30" value="16" aria-label="Anzahl Aufgaben">
@@ -277,7 +309,7 @@
               <div class="seg" id="pageSeg"><button type="button" data-p="1">1 Seite</button><button type="button" data-p="2">2 Seiten</button></div></div>
             <div><span class="lbl-sm">Format</span>
               <div class="seg" id="fmtSeg"><button type="button" data-o="quer">A4 quer</button><button type="button" data-o="hoch">A4 hoch</button></div></div>
-            <div><span class="lbl-sm">Lösungen</span>
+            <div class="sol-only-warmup"><span class="lbl-sm">Lösungen</span>
               <div class="seg" id="solSeg"><button type="button" data-s="unten">unten</button><button type="button" data-s="seite">eigene Seite</button><button type="button" data-s="ohne">ohne</button></div></div>
             <div class="hint" style="margin-top:0">Die Schriftgröße passt sich automatisch an, damit alles auf das Blatt passt. Reicht der Platz nicht, wandern die Lösungen auf eine eigene Seite.</div>
           </div>
@@ -287,6 +319,7 @@
     <div class="action-bar">
       <button type="button" class="gen-btn" id="genBtn">🎲 Neu würfeln</button>
       <button type="button" class="print-btn" id="printBtn" disabled>⏳ PDF lädt …</button>
+      <button type="button" class="print-btn test-only" id="solPdfBtn" disabled>🔑 Lösungsblatt</button>
     </div>
   </aside>
 
@@ -2219,7 +2252,7 @@ const KATALOG = {
 
 /* ============================= ZUSTAND ============================= */
 const STORE_KEY = 'mathe-warmup-v2';
-const DEFAULT_STATE = { jg:5, sel:['5:a_kopf','5:m_kopf'], lv:'mix', n:16, titel:'', forms:['num','text','tab','bild'], pages:2, fmt:'quer', sol:'unten', open:{} };
+const DEFAULT_STATE = { jg:5, sel:['5:a_kopf','5:m_kopf'], lv:'mix', n:16, titel:'', forms:['num','text','tab','bild'], pages:2, fmt:'quer', sol:'unten', mode:'warmup', open:{} };
 let S = loadState();
 function loadState(){
   let s = null;
@@ -2229,6 +2262,7 @@ function loadState(){
   s.sel = (s.sel||[]).filter(id => itemById(id));
   if(!Array.isArray(s.forms) || !s.forms.length) s.forms = DEFAULT_STATE.forms.slice();
   s.n = Math.min(30, Math.max(6, +s.n||16));
+  if(s.mode!=='test') s.mode = 'warmup';
   return s;
 }
 function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {} }
@@ -2301,6 +2335,9 @@ function renderSettings(){
   document.querySelectorAll('#pageSeg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.p===S.pages));
   document.querySelectorAll('#fmtSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.o===S.fmt));
   document.querySelectorAll('#solSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s===S.sol));
+  document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m===S.mode));
+  document.body.classList.toggle('is-test', isTest());
+  const tip = document.querySelector('.preview-top .tip'); if(tip) tip.textContent = isTest() ? 'Tipp: Aufgabe antippen = austauschen · Punkte antippen = ändern' : 'Tipp: Aufgabe in der Vorschau antippen = austauschen';
   $('#anzahl').value = S.n; $('#anzahlDisplay').textContent = S.n;
   $('#titel').value = S.titel;
 }
@@ -2331,8 +2368,31 @@ function makeTask(item, L){
   const forms = erlaubteForm(item.key) || G[item.key].f;
   const rep = P(forms);
   const r = G[item.key].g(L, rep);
-  return { key:item.key, label:item.label, jg:item.jg, L, rep, t:r.t, s:r.s, d:r.d||null };
+  const t = { key:item.key, label:item.label, jg:item.jg, L, rep, t:r.t, s:r.s, d:r.d||null };
+  t.p = punkteFuer(t);
+  return t;
 }
+/* Testmodus: angemessene Punkte je Aufgabe – Grundwert nach Niveau (C=1, B=2, A=3),
+   mehr bei Teilaufgaben, längeren Sachaufgaben, Tabellen, Grafiken und Gleichungssystemen */
+function punkteFuer(t){
+  const txt = t.t.replace(/<[^>]+>/g,' ');
+  let p = t.L;
+  const teile = new Set((txt.match(/(^|[\s(])([a-f])\)/g)||[]).map(x=>x.trim().replace('(',''))).size;
+  if(teile>=2) p = Math.max(p, Math.ceil(teile * (t.L===1 ? 0.5 : 1)));
+  if(txt.replace(/\s+/g,' ').length > 150) p += 1;
+  if(/<table/.test(t.t) || /class="lgs"/.test(t.t)) p += 1;
+  if(t.d && t.L>1) p += 0.5;
+  return Math.max(1, Math.min(6, Math.round(p)));
+}
+const isTest = () => S.mode==='test';
+const summe = tasks => tasks.reduce((a,t)=>a+(t.p||0),0);
+/* Notenschlüssel (Standard): 1 ab 95 %, 2 ab 80 %, 3 ab 65 %, 4 ab 50 %, 5 ab 25 % – auf halbe Punkte aufgerundet */
+const NOTEN = [[1,.95],[2,.80],[3,.65],[4,.50],[5,.25],[6,0]];
+function notenschluessel(total){
+  const ab = NOTEN.map(([n,q]) => [n, Math.ceil(q*total*2)/2]);
+  return ab.map(([n,von],i) => ({ n, von, bis: i===0 ? total : ab[i-1][1]-0.5 }));
+}
+const pz = x => String(x).replace('.',',');
 function buildTasks(n, lvMode, kurs){
   let { items } = poolFor(kurs);
   const passend = items.filter(it => erlaubteForm(it.key));
@@ -2376,9 +2436,9 @@ function fitSVG(svgStr, maxH, maxW){
   return svgStr.replace(m[0], `width="${rd(w*k,1)}" height="${rd(h*k,1)}"`);
 }
 function taskHTML(t, nr, si, ti, dens){
-  return `<div class="task" data-s="${si}" data-i="${ti}"><div class="num">${nr}.</div><div class="content"><div class="tx"><span class="lvdot lv${t.L}"></span>${t.t}</div>${t.d?`<div class="fig">${fitSVG(t.d, dens.fig[0], dens.fig[1])}</div>`:''}<div class="workspace"></div></div></div>`;
+  return `<div class="task" data-s="${si}" data-i="${ti}"><div class="num">${nr}.</div><div class="content"><div class="tx"><span class="lvdot lv${t.L}"></span>${t.t}</div>${t.d?`<div class="fig">${fitSVG(t.d, dens.fig[0], dens.fig[1])}</div>`:''}<div class="workspace"></div></div>${isTest()?`<div class="pts" title="Punkte ändern"><span class="pe"></span>/ ${t.p} P.</div>`:''}</div>`;
 }
-function weight(t){ return 1 + t.t.replace(/<[^>]+>/g,'').length/85 + (t.d?1.3:0) + (/<table/.test(t.t)?0.7:0) + (/class="lgs"/.test(t.t)?0.5:0); }
+function weight(t){ return (isTest()?1.08:1) + t.t.replace(/<[^>]+>/g,'').length/85 + (t.d?1.3:0) + (/<table/.test(t.t)?0.7:0) + (/class="lgs"/.test(t.t)?0.5:0); }
 function chunk(tasks, ratios){
   const total = tasks.reduce((s,t)=>s+weight(t),0), rs = ratios.reduce((a,b)=>a+b,0);
   let cum=0; const targets = ratios.map(r => (cum+=r, total*cum/rs));
@@ -2391,7 +2451,21 @@ function coverHTML(sheet){
   const kurs = sheet.kurs ? `<span class="kursmark">${sheet.kurs}-Kurs</span>` : '';
   return `<div class="cover"><div class="cover-title">${esc(sheet.titel)} ${kurs}</div>
     <div class="cover-thema">${esc(sheet.sub)}</div>
-    <div class="cover-fields"><span>Name:</span><span class="short">Klasse:</span><span class="short">Datum:</span></div></div>`;
+    <div class="cover-fields"><span>Name:</span><span class="short">Klasse:</span><span class="short">Datum:</span></div>${isTest()?`
+    <div class="cover-fields score"><span class="mid">Punkte: &nbsp; &nbsp; &nbsp; &nbsp; / ${pz(summe(sheet.tasks))}</span><span class="short">Note:</span><span>Unterschrift:</span></div>`:''}</div>`;
+}
+function testLoesungHTML(sheet, dens){
+  const total = summe(sheet.tasks);
+  const rows = sheet.tasks.map((t,i)=>`<div class="tl-row"><span class="tl-n">${i+1}.</span><span class="tl-s">${t.s}</span><span class="tl-p">${t.p} P.</span></div>`).join('');
+  const key = notenschluessel(total);
+  return `<div class="loes-page tl-page ${dens.c}">
+    <div class="tl-head"><h2>Lösungsblatt – ${esc(sheet.titel)}${sheet.kurs?` (${sheet.kurs}-Kurs)`:''}</h2><span class="tl-sum">Gesamt: ${pz(total)} Punkte</span></div>
+    <div class="loesungen-grid">${rows}</div>
+    <div class="tl-key"><h3>Notenschlüssel</h3><table>
+      <tr><th>Note</th>${key.map(k=>`<th>${k.n}</th>`).join('')}</tr>
+      <tr><td>Punkte</td>${key.map(k=>`<td>${k.bis<k.von ? '–' : k.n===6 ? `0 – ${pz(k.bis)}` : `${pz(k.von)} – ${pz(k.bis)}`}</td>`).join('')}</tr>
+      <tr><td>Anteil</td>${NOTEN.map(([n,q],i)=>`<td>${i===0?'ab 95 %':n===6?'unter 25 %':`ab ${Math.round(q*100)} %`}</td>`).join('')}</tr>
+    </table></div></div>`;
 }
 function buildPages(sheet, si, dens, solMode, pageCount){
   const zonesPerPage = S.fmt==='quer' ? 2 : 1;
@@ -2408,6 +2482,7 @@ function buildPages(sheet, si, dens, solMode, pageCount){
   });
   const pages = [];
   for(let p=0; p<pageCount; p++) pages.push(zones.slice(p*zonesPerPage, (p+1)*zonesPerPage).join('<div class="fold-line vertical"></div>'));
+  if(solMode==='test') pages.push(testLoesungHTML(sheet, dens));
   if(solMode==='seite') pages.push(`<div class="loes-page ${dens.c}"><h2>Lösungen – ${esc(sheet.titel)}${sheet.kurs?` (${sheet.kurs}-Kurs)`:''}</h2><div class="loesungen-grid">${solutionsHTML(sheet.tasks)}</div></div>`);
   return pages;
 }
@@ -2423,7 +2498,7 @@ function pagesFit(pages){
   return ok;
 }
 function fitSheet(sheet, si){
-  const modes = S.sol==='unten' ? ['unten','seite'] : [S.sol];
+  const modes = isTest() ? ['test'] : S.sol==='unten' ? ['unten','seite'] : [S.sol];
   for(let pc=S.pages; pc<=S.pages+2; pc++){
     const order = modes.length===1 ? DENS.map(d=>[d,modes[0]])
       : [[0,'unten'],[1,'unten'],[2,'unten'],[0,'seite'],[1,'seite'],[2,'seite'],[3,'unten'],[3,'seite'],[4,'unten'],[4,'seite']].map(([d,m])=>[DENS[d],m]);
@@ -2442,7 +2517,7 @@ function generate(){
   saveState();
   const notice = [];
   if(!S.sel.length){ SHEETS=[]; renderPreview(); $('#notice').textContent='Bitte mindestens ein Thema anhaken.'; $('#sheetInfo').innerHTML=''; return; }
-  const titel = S.titel.trim() || autoTitel();
+  const titel = S.titel.trim() || (isTest() ? `Test: ${autoTitel()}` : autoTitel());
   const sub = [jgText(), S.lv==='mix'?'Niveau steigend (C → A)':S.lv==='abc'?'':`Niveau ${({1:'C',2:'B',3:'A'})[S.lv]}`].filter(Boolean).join(' · ');
   const kurse = S.lv==='abc' ? [['C',1],['B',2],['A',3]] : [[null, S.lv]];
   SHEETS = kurse.map(([kurs, lv]) => {
@@ -2461,7 +2536,7 @@ function layoutAll(){
   renderPreview();
   const sh = SHEETS[0]; if(!sh) return;
   const dn = {'':'normal','d-compact':'kompakt','d-tight':'eng','d-ultra':'sehr eng','d-extreme':'sehr klein'}[sh.dens];
-  const solTxt = sh.sol==='seite' ? (S.sol==='unten' ? 'Lösungen auf eigener Seite (unten war kein Platz)' : 'Lösungen auf eigener Seite') : sh.sol==='ohne' ? 'ohne Lösungen' : 'Lösungen unten';
+  const solTxt = sh.sol==='test' ? `Test · ${SHEETS.map(x=>pz(summe(x.tasks))+' P.').join(' / ')} · Lösungsblatt mit Punkten` : sh.sol==='seite' ? (S.sol==='unten' ? 'Lösungen auf eigener Seite (unten war kein Platz)' : 'Lösungen auf eigener Seite') : sh.sol==='ohne' ? 'ohne Lösungen' : 'Lösungen unten';
   const mehr = SHEETS.some(x=>x.pc>S.pages) ? ` · <b style="color:#b07a1e">${Math.max(...SHEETS.map(x=>x.pc))} statt ${S.pages} Seite${S.pages>1?'n':''} (sonst zu voll)</b>` : '';
   $('#sheetInfo').innerHTML = `<b>${sh.tasks.length} Aufgaben</b> · ${selectedItems().length} Themen · Schrift: ${dn} · ${solTxt}${mehr}${SHEETS.some(x=>!x.ok)?' · <b style="color:#c1604f">sehr voll – bitte weniger Aufgaben wählen</b>':''}`;
 }
@@ -2485,7 +2560,7 @@ function renderPreview(){
   SHEETS.forEach(sh => sh.pages.forEach((html, pi) => {
     nr++;
     const lab = document.createElement('div'); lab.className = 'page-label';
-    lab.textContent = `Seite ${nr}` + (sh.kurs ? ` · ${sh.kurs}-Kurs` : '') + (pi===sh.pages.length-1 && sh.sol==='seite' ? ' · Lösungen' : '');
+    lab.textContent = `Seite ${nr}` + (sh.kurs ? ` · ${sh.kurs}-Kurs` : '') + (pi===sh.pages.length-1 && sh.sol==='seite' ? ' · Lösungen' : '') + (pi===sh.pages.length-1 && sh.sol==='test' ? ' · Lösungsblatt (eigene PDF)' : '');
     const wrap = document.createElement('div'); wrap.className = 'preview-scale-wrap';
     wrap.innerHTML = `<div class="blatt ${S.fmt}">${html}</div>`;
     c.appendChild(lab); c.appendChild(wrap);
@@ -2501,14 +2576,17 @@ function scalePreview(){
 
 /* ============================= PDF ============================= */
 let libs = { h2c:false, jspdf:false };
-function libsReady(){ if(libs.h2c && libs.jspdf){ const b=$('#printBtn'); b.disabled=false; b.textContent='📄 Als PDF'; } }
-async function erzeugePDF(){
+function libsReady(){ if(libs.h2c && libs.jspdf){ const b=$('#printBtn'); b.disabled=false; b.textContent='📄 Als PDF'; $('#solPdfBtn').disabled=false; } }
+async function erzeugePDF(teil){
   if(!SHEETS.length) return;
   if(typeof html2canvas==='undefined' || !window.jspdf){ alert('Die PDF-Funktion lädt noch – bitte gleich noch einmal tippen.'); return; }
-  const btn=$('#printBtn'), old=btn.textContent; btn.disabled=true; btn.textContent='⏳ Erstelle PDF …';
+  const loes = teil==='loesung';
+  const btn=loes?$('#solPdfBtn'):$('#printBtn'), old=btn.textContent; btn.disabled=true; btn.textContent='⏳ Erstelle PDF …';
   const quer = S.fmt==='quer', W = quer?297:210, H = quer?210:297;
   const holder = document.createElement('div'); holder.style.cssText='position:fixed;left:-20000px;top:0;';
-  holder.innerHTML = SHEETS.flatMap(sh => sh.pages).map(p => `<div class="blatt ${S.fmt} pdf-page">${p}</div>`).join('');
+  // Im Testmodus: Test und Lösungsblatt als getrennte Dateien
+  const seiten = SHEETS.flatMap(sh => !isTest() ? sh.pages : loes ? sh.pages.slice(-1) : sh.pages.slice(0,-1));
+  holder.innerHTML = seiten.map(p => `<div class="blatt ${S.fmt} pdf-page">${p}</div>`).join('');
   document.body.appendChild(holder);
   try {
     if(document.fonts && document.fonts.ready) await document.fonts.ready;
@@ -2520,7 +2598,7 @@ async function erzeugePDF(){
       doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
     }
     const jg = [...new Set(S.sel.map(id=>id.split(':')[0]))].join('-');
-    doc.save(`mathe-warmup${jg?'-jg'+jg:''}${S.lv==='abc'?'-abc':''}.pdf`);
+    doc.save(`mathe-${isTest()?'test':'warmup'}${jg?'-jg'+jg:''}${S.lv==='abc'?'-abc':''}${loes?'-loesungsblatt':''}.pdf`);
   } catch(e){ console.error(e); alert('Die PDF konnte nicht erstellt werden: ' + e.message); }
   finally { holder.remove(); btn.disabled=false; btn.textContent=old; }
 }
@@ -2560,8 +2638,20 @@ $('#solSeg').addEventListener('click', e => { const b=e.target.closest('button')
 $('#anzahl').addEventListener('input', e => { S.n=+e.target.value; $('#anzahlDisplay').textContent=S.n; regen(); });
 $('#titel').addEventListener('input', e => { S.titel=e.target.value; regen(); });
 $('#genBtn').addEventListener('click', generate);
-$('#printBtn').addEventListener('click', erzeugePDF);
-$('#previewContainer').addEventListener('click', e => { const t=e.target.closest('.task'); if(!t) return; rerollTask(+t.dataset.s, +t.dataset.i); });
+$('#printBtn').addEventListener('click', () => erzeugePDF());
+$('#solPdfBtn').addEventListener('click', () => erzeugePDF('loesung'));
+$('#modeSeg').addEventListener('click', e => { const b=e.target.closest('button[data-m]'); if(!b) return; S.mode=b.dataset.m; renderSettings(); regen(); });
+$('#previewContainer').addEventListener('click', e => {
+  const t=e.target.closest('.task'); if(!t) return;
+  if(e.target.closest('.pts')) return changePoints(+t.dataset.s, +t.dataset.i);
+  rerollTask(+t.dataset.s, +t.dataset.i);
+});
+function changePoints(si, ti){
+  const sh = SHEETS[si]; if(!sh || !sh.tasks[ti]) return;
+  const t = sh.tasks[ti]; t.p = t.p>=8 ? 1 : t.p+1;
+  Object.assign(sh, fitSheet(sh, si)); renderPreview(); layoutInfoOnly();
+}
+function layoutInfoOnly(){ const sh=SHEETS[0]; if(!sh) return; const el=$('#sheetInfo'); el.innerHTML = el.innerHTML.replace(/Test · [^·]*·/, `Test · ${SHEETS.map(x=>pz(summe(x.tasks))+' P.').join(' / ')} ·`); }
 window.addEventListener('resize', scalePreview);
 window.addEventListener('orientationchange', () => setTimeout(scalePreview, 250));
 
@@ -2575,6 +2665,7 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => layou
   { sel: "#jgSeg", title: "1 · Jahrgang", text: "<p>Wähle den Jahrgang. Die Zahl am Knopf zeigt, wie viele Themen dort angehakt sind – du kannst auch Themen aus mehreren Jahrgängen mischen (Wiederholung).</p>" },
   { sel: "#kapList", title: "2 · Themen", text: "<p>Die Kapitel sind nach dem Curriculum sortiert. Klappe ein Kapitel auf und hake einzelne Unterthemen an – oder gleich das ganze Kapitel. <b>A</b> bzw. <b>A·B</b> markiert Inhalte, die nur für diese Kurse gelten.</p>" },
   { sel: "#lvSeg", title: "3 · Niveau", text: "<p>C, B oder A für ein einheitliches Niveau, <b>↗</b> für steigende Schwierigkeit – oder <b>ABC</b> für drei passende Blätter auf einmal.</p>" },
+  { sel: "#modeSeg", title: "Warm-up oder Test", text: "<p>Als <b>Test</b> stehen neben jeder Aufgabe passende Punkte, im Kopf Punkte- und Notenfeld – und es entsteht ein eigenes <b>Lösungsblatt mit Punkteverteilung</b> und Notenschlüssel.</p>" },
   { sel: "#anzahl", title: "4 · Blatt", text: "<p>Anzahl der Aufgaben und Überschrift. Unter „Weitere Einstellungen“ findest du Darstellungsformen, Seitenzahl, Format und Lösungen.</p>" },
   { sel: "#previewArea", title: "Vorschau", text: "<p>Die Vorschau aktualisiert sich sofort. <b>Tippe auf eine Aufgabe</b>, um nur diese auszutauschen. Die Schrift passt sich automatisch an das Blatt an.</p>" },
   { sel: "#printBtn", title: "PDF", text: "<p>Speichert alle Seiten als PDF – zum Drucken oder Teilen, auch auf dem iPad.</p>" }
