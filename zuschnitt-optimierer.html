@@ -57,9 +57,22 @@ svg#board{width:100%;height:auto;display:block;touch-action:none;user-select:non
 .fb.ok{background:var(--ok-bg);border-color:var(--ok)}
 .fb.no{background:var(--bad-bg);border-color:var(--bad)}
 .fb h3{font-size:22px;margin-bottom:6px}
+.cut{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px;background:var(--card)}
+.cut th,.cut td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+.cut th{font-size:13px;color:var(--muted)}
+@media print{
+  body{background:#fff!important}
+  header.top p,#sStart,.legend,.row,.stats,#jNote,#protect-legal{display:none!important}
+  #sPlay{border:0;box-shadow:none}
+  .fb{border:0;background:none!important;padding:0}
+  .cut{font-size:12px}
+}
 .stars{font-size:40px;letter-spacing:6px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:15px;color:var(--muted);margin-top:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Platz für Zurück-Link (oben links) und ?-Knopf (oben rechts) */
+body:has(#protect-back-link) header.top h1{padding-left:148px;padding-right:52px}
+@media (max-width:480px){body:has(#protect-back-link) header.top h1{padding-left:58px}}
 </style>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="buildspace">
@@ -139,7 +152,7 @@ var JOBS=[
   parts:[[70,40,1],[50,40,1],[120,20,1],[90,60,1],[30,30,2]],
   sol:[[0,0,0,70,40],[0,70,0,50,40],[0,0,40,120,20],[1,0,0,90,60],[1,90,0,30,30],[1,90,30,30,30]]},
  {id:"regal2",emoji:"🗄️",name:"Schrank mit Fächern",lvl:"Profi, Jg. 10",sheets:2,sw:120,sh:60,grain:false,
-  note:"Zwei Platten 120 cm × 60 cm. Die Teile füllen fast zwei ganze Platten. Plane zuerst auf dem Papier: Welche Teile ergeben zusammen 120 cm oder 60 cm?",
+  note:"Zwei Platten 120 cm × 60 cm. Die Teile füllen genau zwei ganze Platten. Plane zuerst auf dem Papier: Welche Teile ergeben zusammen 120 cm oder 60 cm?",
   parts:[[60,40,2],[40,60,2],[40,20,4],[30,20,2],[10,40,1]],
   sol:[[0,0,0,60,40],[0,60,0,60,40],[0,0,40,40,20],[0,40,40,40,20],[0,80,40,40,20],[1,0,0,40,60],[1,40,0,40,60],[1,80,0,30,20],[1,80,20,30,20],[1,110,0,10,40],[1,80,40,40,20]]}
 ];
@@ -324,10 +337,21 @@ $("#chkBtn").addEventListener("click",function(){
    '<p>Teilefläche: <b>'+usedArea+' cm²</b> von <b>'+area+' cm²</b> Plattenfläche ('+plates+' Platte'+(plates>1?"n":"")+').</p>'+
    '<p>Verschnitt = (Plattenfläche − Teilefläche) : Plattenfläche = ('+area+' − '+usedArea+') : '+area+' = <b>'+pc(waste)+'</b>.</p>'+
    (hint?'<p>Mit Lösungshilfe gibt es nur einen Stern. Versuche es noch einmal ohne.</p>':'')+
-   '<div class="row" style="margin-top:12px"><button class="btn primary" id="again">Nochmal</button><button class="btn" id="menu2">Anderer Auftrag</button></div></div>';
+   cutList()+
+   '<div class="row" style="margin-top:12px"><button class="btn primary" id="again">Nochmal</button><button class="btn" id="menu2">Anderer Auftrag</button><button class="btn" id="printPlan">🖨️ Zuschnittplan drucken</button></div></div>';
+  $("#printPlan").addEventListener("click",function(){try{window.print()}catch(e){}});
   $("#again").addEventListener("click",function(){startJob(J.id)});
   $("#menu2").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
 });
+/* Zuschnittliste für die Werkstatt: Maße und Lage jedes Teils, gemessen von der linken oberen Plattenecke */
+function cutList(){
+  var rows=parts.slice().sort(function(a,b){return a.s-b.s||(a.y-b.y)||(a.x-b.x)}).map(function(p,i){
+    var o=sheetOrigin(p.s);
+    return '<tr><td>'+(i+1)+'</td><td>'+p.w+' × '+p.h+' cm</td><td>Platte '+(p.s+1)+'</td><td>'+Math.round(p.x-o.x)+' cm / '+Math.round(p.y-o.y)+' cm</td>'+(J.grain?'':'<td>'+(p.w!==p.w0?'ja':'nein')+'</td>')+'</tr>';
+  }).join('');
+  return '<h3 style="margin-top:14px;font-size:20px">Zuschnittliste</h3><p class="muted" style="margin:0">Lage = Abstand der linken oberen Ecke des Teils vom linken und oberen Plattenrand.</p>'+
+   '<table class="cut"><tr><th>Nr.</th><th>Maß</th><th>Platte</th><th>Lage (links / oben)</th>'+(J.grain?'':'<th>gedreht</th>')+'</tr>'+rows+'</table>';
+}
 $("#jQuit").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
 function renderStart(){
   var b=$("#jobBox");b.innerHTML="";
