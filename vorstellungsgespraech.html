@@ -17,7 +17,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;overflow:hidden}
 .app{display:grid;grid-template-rows:minmax(190px,37%) 1fr;height:100%}
-@media (min-width:900px){.app{grid-template-rows:none;grid-template-columns:1.25fr 1fr}}
+@media (min-width:900px){.app{grid-template-rows:none;grid-template-columns:1.25fr 1fr}#panel .wrap>:nth-child(-n+2){padding-right:52px}}
 #stage{position:relative;overflow:hidden;background:#cdd6df;touch-action:pan-y}
 #stage canvas{display:block;width:100%;height:100%}
 #nameTag{position:absolute;left:10px;bottom:10px;background:rgba(20,26,33,.72);color:#fff;padding:5px 10px;border-radius:8px;font-size:13px;max-width:70%}
@@ -131,7 +131,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-function h(tag,props,...kids){const e=document.createElement(tag);for(const k in (props||{})){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k==="value")e.value=v;else if(k.slice(0,2)==="on")e[k]=v;else if(v===true)e.setAttribute(k,"");else e.setAttribute(k,v)}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
+function h(tag,props,...kids){const e=document.createElement(tag);for(const k in (props||{})){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k==="value")e.value=v;else if(k.slice(0,2)==="on")e[k]=v;else if(v===true)e.setAttribute(k,"");else e.setAttribute(k,v)}for(const c of kids.flat(Infinity)){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 
 /* ===== Chef-Charaktere ===== */
 const STYLES={
@@ -594,9 +594,9 @@ function saveCustom(code){try{const l=JSON.parse(localStorage.getItem("bg_custom
 function showMenu(){
  stopTimers();G=null;loadCustoms();
  const mm=customs.find(c=>SEL.job.id==="custom"&&c.firma===SEL.job.firma&&c.beruf===SEL.job.beruf);if(mm)SEL.job=mm;const list=JOBS.concat(customs);if(!list.includes(SEL.job))SEL.job=list[0];
- const codeIn=h("input",{type:"text",placeholder:"Code deiner Lehrkraft",autocapitalize:"off",autocomplete:"off","aria-label":"Szenario-Code"});const codeMsg=h("div",{class:"msg"});
+ const codeIn=h("input",{type:"text",placeholder:"Code oder Link deiner Lehrkraft",autocapitalize:"off",autocomplete:"off","aria-label":"Szenario-Code"});const codeMsg=h("div",{class:"msg"});
  const codeBox=h("div",{class:"card",style:"display:none"},h("label",{style:"margin-top:0"},"Code eingeben"),codeIn,h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn",onclick:async()=>{codeMsg.className="msg";codeMsg.textContent="Lade …";try{const j=await resolveCode(codeIn.value);saveCustom(encodeCode(j));SEL.job=j;codeMsg.className="msg ok";codeMsg.textContent="Szenario geladen: "+j.beruf+" bei "+j.firma;showMenu()}catch(e){codeMsg.className="msg err";codeMsg.textContent=e.message||"Der Code ist ungültig."}}},"Szenario laden")),codeMsg);
- const nameIn=h("input",{type:"text",placeholder:"Dein Name (für das PDF, optional)",value:SEL.name,maxlength:"40","aria-label":"Dein Name",oninput:()=>{SEL.name=nameIn.value}});
+ const nameIn=h("input",{type:"text",placeholder:"Vorname oder Kürzel (für das PDF, optional)",value:SEL.name,maxlength:"40","aria-label":"Dein Name",oninput:()=>{SEL.name=nameIn.value}});
  const jobBtns=[];
  const jobGrid=h("div",{class:"jobs"},list.map(j=>{const cust=j.id==="custom";const b=h("button",{class:"job","aria-pressed":String(j===SEL.job),onclick:()=>{SEL.job=j;jobBtns.forEach(x=>x.b.setAttribute("aria-pressed",String(x.j===j)));setPerson(j.chef,j);say3d(fmt(STYLES[j.chef.style].greet.split(".")[0]+".",j))}},
   h("span",{class:"ic"},j.icon||"⭐"),h("span",null,h("b",null,j.beruf),h("span",{class:"small mute"},j.firma+(j.ort?" · "+j.ort:"")),h("br"),h("span",{class:"tagc"},"Chef: "+STYLES[j.chef.style].lab+(cust?" · eigenes Szenario":""))));jobBtns.push({b,j});return b}));
@@ -723,9 +723,8 @@ async function makePDF(btn){
    a.notes.forEach(x=>para((x.ok?"+ ":"- ")+x.msg,9,"normal",x.ok?[27,138,90]:[196,54,74],3));
    if(a.best)para("Besser waere: ".replace("ae","ä")+a.best,9.5,"normal",[42,93,159]);y+=1});
   const pages=doc.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(140,150,160);doc.text("Vorstellungsgespraech-Simulator - Seite "+i+" von "+pages,L,292)}
-  const fn="Vorstellungsgespraech_"+pt(G.job.firma).replace(/[^A-Za-z0-9]+/g,"_")+".pdf";const blob=doc.output("blob");
-  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use("downloads")}catch(e){}
-  if(dl){await dl.save({filename:fn,data:blob});msg.className="msg ok";msg.textContent="PDF gespeichert."}else{doc.save(fn);msg.className="msg ok";msg.textContent="PDF wurde erstellt. Falls kein Download startet, öffne die Seite im Browser."}
+  const fn="Vorstellungsgespraech_"+pt(G.job.firma).replace(/[^A-Za-z0-9]+/g,"_")+".pdf";
+  doc.save(fn);msg.className="msg ok";msg.textContent="PDF wurde erstellt. Auf dem iPad: im Teilen-Menü „In Dateien sichern“ wählen.";
  }catch(e){msg.className="msg err";msg.textContent=(e&&e.code==="declined")?"Download abgebrochen.":"PDF konnte nicht erstellt werden: "+((e&&e.message)||"Fehler")}
  btn.disabled=false}
 /* ===== Szenario-Codes ===== */
@@ -744,14 +743,10 @@ function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-")
 function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return decodeURIComponent(escape(atob(s)))}
 function encodeCode(job){return "BG1-"+b64e(JSON.stringify(job._sc))}
 function decodeCode(code){code=String(code).trim();if(code.indexOf("BG1-")!==0)throw new Error("Ungültiger Code.");return toJob(JSON.parse(b64d(code.slice(4))))}
-async function getDb(){try{if(window.claude&&claude.use)return await claude.use("db")}catch(e){}return null}
-async function resolveCode(input){const c=String(input||"").trim();if(!c)throw new Error("Bitte gib einen Code ein.");
- if(c.indexOf("BG1-")===0)return decodeCode(c);
- if(/^[A-Za-z0-9]{6}$/.test(c)){const db=await getDb();if(!db)throw new Error("Kurzcodes brauchen eine Anmeldung. Bitte nutze den langen Code (beginnt mit BG1-).");
-  const snap=await db.doc("szenarien/"+c.toUpperCase()).get();if(!snap.exists)throw new Error("Zu diesem Kurzcode gibt es kein Szenario.");return decodeCode(snap.data().code)}
- throw new Error("Ungültiger Code.")}
-async function shortCode(code){const db=await getDb();if(!db)return null;const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let id="";for(let i=0;i<6;i++)id+=A[Math.floor(Math.random()*A.length)];
- try{await db.doc("szenarien/"+id).set({code,ts:Date.now()});return id}catch(e){return null}}
+function shareLink(code){return location.origin+location.pathname+"#s="+code}
+async function resolveCode(input){const raw=String(input||"").trim();if(!raw)throw new Error("Bitte gib einen Code ein oder füge den Link ein.");
+ const m=raw.match(/BG1-[A-Za-z0-9_-]+/);if(!m)throw new Error("Ungültiger Code. Er beginnt mit BG1- (oder füge den ganzen Link ein).");
+ try{return decodeCode(m[0])}catch(e){throw new Error(e&&e.message&&e.message.indexOf("Szenario")>-1?e.message:"Der Code ist unvollständig. Bitte kopiere ihn noch einmal ganz.")}}
 
 /* ===== Szenario-Editor ===== */
 const SKIN=["#f1d0b5","#e3b58f","#c68d63","#8d5a3b","#5c3b28"],HAIR=["#1e1e1e","#4a3426","#8a5a2b","#c9a45c","#8a8d91","#b5472f"],CLOTH=["#2f4858","#2d3b55","#5a8f69","#8a4a5e","#4d6fd1","#f2f5f7","#d68c2f","#3b3b3b"],WALL=["#c9d3dd","#d9e8d2","#d5dcf0","#efe2c9","#f0dfcf","#e6dcea"];
@@ -768,8 +763,11 @@ function showEditor(){
   const o=Object.assign({},E,{fach:E.fach.q.trim()?E.fach:null});try{const j=toJob(o);msg.textContent="";return j}catch(e){msg.textContent=e.message;return null}};
  const gen=h("button",{class:"btn",onclick:async()=>{const j=build();if(!j)return;const code=encodeCode(j);saveCustom(code);msg.className="msg ok";msg.textContent="Code erzeugt und auf diesem Gerät gespeichert.";
   const ta=h("textarea",{class:"codebox",readonly:true,"aria-label":"Langer Code"},code);const cp=h("button",{class:"btn soft",onclick:async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Kopiert ✓"}catch(e){ta.select();try{document.execCommand("copy");cp.textContent="Kopiert ✓"}catch(_){cp.textContent="Bitte markieren & kopieren"}}}},"Code kopieren");
-  const sc=h("div",{class:"msg"},"Kurzcode wird erzeugt …");out.replaceChildren(h("div",{class:"card"},h("h3",null,"Code für Schüler/innen"),h("p",{class:"small mute"},"Schüler/innen geben diesen Code auf der Startseite unter „Code eingeben“ ein."),ta,h("div",{class:"row",style:"margin-top:8px"},cp)," ",sc));
-  const s=await shortCode(code);sc.textContent=s?"Kurzcode (nur für angemeldete Personen in dieser Klasse): "+s:"Ein Kurzcode ist hier nicht verfügbar. Nutze den langen Code.";if(s)sc.style.fontWeight="700"}},"Code erzeugen");
+  const link=shareLink(code);
+  const cpl=h("button",{class:"btn",onclick:async()=>{try{await navigator.clipboard.writeText(link);cpl.textContent="Link kopiert ✓"}catch(e){cpl.textContent="Kopieren nicht möglich"}}},"Link kopieren");
+  const shb=navigator.share?h("button",{class:"btn soft",onclick:async()=>{try{await navigator.share({title:"Vorstellungsgespräch: "+j.beruf,text:"Übe dein Vorstellungsgespräch als "+j.beruf+" bei "+j.firma+":",url:link})}catch(e){}}},"Teilen …"):null;
+  out.replaceChildren(h("div",{class:"card"},h("h3",null,"Für Schüler/innen freigeben"),h("p",{class:"small mute"},"Am einfachsten: Link teilen (z. B. per AirDrop, Schulportal oder Edumap). Wer den Link öffnet, hat das Szenario sofort ausgewählt."),
+   h("div",{class:"row",style:"margin-top:8px"},cpl,shb),h("p",{class:"small mute",style:"margin-top:12px"},"Oder den Code unter „Code eingeben“ einfügen lassen:"),ta,h("div",{class:"row",style:"margin-top:8px"},cp)))}},"Code erzeugen");
  const test=h("button",{class:"btn ghost",onclick:()=>{const j=build();if(j){SEL.job=j;startGame(j,"2",SEL.name)}}},"Selbst testen");
  setPanel(h("h1",null,"Eigenes Szenario"),h("p",{class:"mute"},"Lege Betrieb, Beruf, Chef und Testfrage fest. Danach bekommst du einen Code zum Teilen."),
   h("div",{class:"row"},h("button",{class:"btn soft",onclick:()=>showMenu()},"← Zurück")),
@@ -791,7 +789,11 @@ function showEditor(){
 /* ===== Start ===== */
 $("#voiceBtn").onclick=e=>{voiceOn=!voiceOn;e.currentTarget.textContent=voiceOn?"🔊":"🔇";e.currentTarget.setAttribute("aria-pressed",String(voiceOn));if(!voiceOn&&window.speechSynthesis)try{speechSynthesis.cancel()}catch(_){}else say3d("Hallo, ich bin dein Gesprächspartner.")};
 if(!window.speechSynthesis)$("#voiceBtn").style.display="none";
-init3d();showMenu();
+init3d();
+(function(){const m=(location.hash||"").match(/^#s=(BG1-[A-Za-z0-9_-]+)/);if(!m)return;
+ try{const j=decodeCode(m[0].slice(3));saveCustom(m[0].slice(3));SEL.job=j;loadCustoms();const c=customs.find(x=>x.firma===j.firma&&x.beruf===j.beruf);if(c)SEL.job=c}catch(e){}
+ try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}})();
+showMenu();
 
 </script>
 <script>window.TOUR = {
