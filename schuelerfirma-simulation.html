@@ -28,6 +28,17 @@ button,input,select{font:inherit;color:inherit}
 .app{max-width:920px;margin:0 auto;padding:20px 16px 60px}
 header.top{margin-bottom:16px}
 header.top h1{font-size:clamp(30px,6vw,44px)}
+/* Platz für Zurück-Link (oben links) und ?-Knopf (oben rechts) */
+body:has(#protect-back-link) header.top h1{padding-left:148px;padding-right:52px}
+@media (max-width:480px){body:has(#protect-back-link) header.top h1{padding-left:58px}}
+.refl{margin-top:18px}.refl ol{margin:8px 0 0;padding-left:22px}.refl li{margin-top:6px}
+@media print{
+  body{background:#fff!important}
+  header.top p,#sStart,#sPlay,#quiz,.row,.noprint,#protect-legal{display:none!important}
+  #sEnd{display:block!important;border:0;box-shadow:none}
+  #endBook{display:table!important}
+  .scroll{overflow:visible!important}
+}
 header.top p{color:var(--muted);margin-top:6px;max-width:42em}
 .card{background:var(--card);border:2.5px solid var(--ink);border-radius:16px;padding:18px 20px}
 .card+.card{margin-top:18px}
@@ -130,8 +141,15 @@ svg.chart{width:100%;height:auto;display:block}
     <div style="text-align:center"><div class="stars" id="eStars" aria-hidden="true"></div><h2 id="eTitle" style="margin-top:6px"></h2><p class="muted" id="eText" style="margin-top:6px"></p></div>
     <h3 style="margin-top:20px;font-size:20px">Dein Verlauf</h3>
     <svg class="chart" id="chart" viewBox="0 0 640 260" role="img" aria-label="Kassenstand pro Monat"></svg>
+    <h3 style="margin-top:20px;font-size:20px">Kassenbuch</h3>
+    <div class="scroll"><table id="endBook"></table></div>
     <div class="q" id="quiz"></div>
-    <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="eAgain">Nochmal mit diesem Produkt</button><button class="btn" id="eMenu">Anderes Produkt</button></div>
+    <div class="refl card" style="box-shadow:none"><h3 style="font-size:20px">Zum Nachdenken (für eure Projektmappe)</h3><ol>
+      <li>In welchem Monat hattest du den größten Gewinn? Was hast du da anders gemacht?</li>
+      <li>Wann hast du zu viel oder zu wenig produziert? Woran hättest du das vorher erkennen können?</li>
+      <li>Hat sich deine Werbung gelohnt? Vergleiche Werbekosten und zusätzlichen Umsatz.</li>
+      <li>Was würdest du in einer echten Schülerfirma als Erstes ausprobieren?</li></ol></div>
+    <div class="row" style="justify-content:center;margin-top:18px"><button class="btn primary" id="eAgain">Nochmal mit diesem Produkt</button><button class="btn" id="eMenu">Anderes Produkt</button><button class="btn" id="ePrint">🖨️ Auswertung drucken / als PDF</button></div>
   </section>
 </div>
 
@@ -220,7 +238,8 @@ function newMonth(){
   var mp=maxProd(P,G.cash);
   var ipr=$("#inProd");ipr.min=0;ipr.max=Math.max(mp,1);ipr.step=1;
   ipr.value=Math.min(parseInt(ipr.value||"0",10)||Math.round(P.base*0.8),mp);
-  $("#hProd").textContent="Höchstens "+mp+" Stück: Du kannst nur Material bezahlen, das deine Kasse hergibt (Kapazität "+CAP+").";
+  ipr.disabled=mp===0;
+  $("#hProd").textContent=mp===0?"Die Kasse ist leer: Du kannst diesen Monat kein Material kaufen. Verkaufe dein Lager.":"Höchstens "+mp+" Stück: Du kannst nur Material bezahlen, das deine Kasse hergibt (Kapazität "+CAP+").";
   $("#decide").hidden=false;$("#result").innerHTML="";
   upd();
 }
@@ -230,11 +249,14 @@ function upd(){
   var gps=price-P.mat,be=gps>0?Math.ceil((P.fix+ad)/gps):null;
   $("#hPrice").textContent="Preis minus Material = "+eur(gps)+" Stückgewinn vor Fixkosten.";
   $("#pre").innerHTML="<b>Deckungsbeitrag pro Stück:</b> "+eur(price)+" − "+eur(P.mat)+" = <b class='"+(gps>0?"good":"bad")+"'>"+eur(gps)+"</b><br><b>Break-even:</b> "+(be!==null?"Du musst mindestens <b>"+be+" Stück</b> verkaufen, damit Fixkosten ("+eur(P.fix)+") und Werbung ("+eur(ad)+") gedeckt sind.":"<span class='bad'>Dein Preis liegt unter den Materialkosten, du machst mit jedem Stück Verlust.</span>");
+  var need=Math.min(prod,maxProd(P,G.cash))*P.mat+ad;if(need>G.cash+1e-9)$("#pre").innerHTML+="<br><span class='bad'><b>Achtung:</b> Material ("+eur(Math.min(prod,maxProd(P,G.cash))*P.mat)+") und Werbung ("+eur(ad)+") kosten zusammen mehr, als in der Kasse ist ("+eur(G.cash)+"). Es wird zuerst Material gekauft, die Werbung wird gekürzt.</span>";
 }
 ["#inPrice","#inProd","#inAd"].forEach(function(s){$(s).addEventListener("input",function(){if(G)upd()})});
 $("#goBtn").addEventListener("click",function(){
   var P=G.P,dec={price:+$("#inPrice").value,prod:+$("#inProd").value,ad:+$("#inAd").value};
-  if(dec.ad>G.cash+0){dec.ad=Math.max(0,Math.floor(G.cash/5)*5)}
+  dec.prod=Math.min(dec.prod,maxProd(P,G.cash));                     /* nur so viel Material, wie die Kasse hergibt */
+  var rest=Math.max(0,G.cash-dec.prod*P.mat);
+  if(dec.ad>rest){dec.ad=Math.floor(rest/5)*5}                      /* Werbung nur aus dem Rest der Kasse */
   var r=settle(P,{stock:G.stock},dec,G.events[G.m],G.noise[G.m]);
   G.cash=G.cash+r.rev-r.cost;G.stock=r.keep;
   G.log.push({m:G.m+1,price:dec.price,prod:r.prod,ad:dec.ad,demand:r.demand,sold:r.sold,rev:r.rev,cost:r.cost,profit:r.profit,cash:G.cash});
@@ -246,6 +268,7 @@ function showResult(r,dec){
   h+='<li>Nachfrage: <b>'+r.demand+' Stück</b>, verkauft: <b>'+r.sold+' Stück</b> zu '+eur(dec.price)+' = <b>'+eur(r.rev)+'</b> Umsatz</li>';
   h+='<li>Kosten: Material '+eur(r.matCost)+' + Fixkosten '+eur(G.P.fix)+' + Werbung '+eur(dec.ad)+(r.storeCost>0?' + Lager '+eur(r.storeCost):'')+' = <b>'+eur(r.cost)+'</b></li>';
   h+='<li><b class="'+(r.profit>=0?"good":"bad")+'">'+(r.profit>=0?"Gewinn: ":"Verlust: ")+eur(Math.abs(r.profit))+'</b> (Umsatz − Kosten)</li>';
+  if(G.cash<0)h+='<li class="bad"><b>Achtung: Die Kasse ist im Minus ('+eur(G.cash)+').</b> Die Fixkosten müssen trotzdem bezahlt werden. Im nächsten Monat kannst du kein Material kaufen. Eine echte Firma müsste jetzt einen Kredit aufnehmen oder schließen.</li>';
   if(r.lost>0)h+='<li>Es wurde Kundschaft abgewiesen: <b>'+r.lost+' Stück</b> hättest du noch verkaufen können. Zu wenig produziert?</li>';
   if(r.spoil>0)h+='<li class="bad">'+r.spoil+' Stück sind verdorben und müssen weggeworfen werden. Zu viel produziert?</li>';
   else if(r.keep>0)h+='<li>'+r.keep+' Stück bleiben im Lager und kosten '+eur(r.storeCost)+' Lagerkosten.</li>';
@@ -267,8 +290,8 @@ function finish(){
   var goal=optProfit(G.P)*MONTHS,st=gain>=goal*0.7?3:gain>=goal*0.4?2:gain>0?1:0;
   $("#eStars").textContent="★".repeat(st)+"☆".repeat(3-st);
   $("#eTitle").textContent="Endkasse: "+eur(end);
-  $("#eText").textContent=(gain>=0?"Gewinn über 8 Monate: ":"Verlust über 8 Monate: ")+eur(Math.abs(gain))+(rec?" (neuer persönlicher Rekord)":"")+". "+(st===3?"Eine erfolgreiche Firma!":st===2?"Solide geführt.":st===1?"Im Plus, da geht noch mehr.":"Die Firma schreibt rote Zahlen. Schau dir Preise und Mengen im Kassenbuch an.");
-  drawChart();buildQuiz();
+  $("#eText").textContent=(gain>=0?"Gewinn über 8 Monate: ":"Verlust über 8 Monate: ")+eur(Math.abs(gain))+(rec&&prev!==null?" (neuer persönlicher Rekord)":"")+". "+(st===3?"Eine erfolgreiche Firma!":st===2?"Solide geführt.":st===1?"Im Plus, da geht noch mehr.":"Die Firma schreibt rote Zahlen. Schau dir Preise und Mengen im Kassenbuch an.");
+  drawChart();buildQuiz();$("#endBook").innerHTML=$("#book").innerHTML;
 }
 function drawChart(){
   var H=G.cashHist,W=640,Ht=260,pl=56,pr=16,pt=16,pb=34,mn=Math.min.apply(null,H.concat([0])),mx=Math.max.apply(null,H.concat([START]));
@@ -296,6 +319,7 @@ function buildQuiz(){
 }
 $("#pQuit").addEventListener("click",function(){$("#sPlay").hidden=true;$("#sStart").hidden=false;renderStart()});
 $("#eAgain").addEventListener("click",function(){begin(G.key)});
+$("#ePrint").addEventListener("click",function(){try{window.print()}catch(e){}});
 $("#eMenu").addEventListener("click",function(){$("#sEnd").hidden=true;$("#sStart").hidden=false;renderStart()});
 renderStart();
 window.__sf={optProfit:optProfit,PRODUCTS:PRODUCTS,demand:demand,settle:settle,maxProd:maxProd,G:function(){return G}};
