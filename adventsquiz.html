@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Adventskalender-Quiz</title>
+<link rel="stylesheet" href="assets/fonts/fredoka.css">
+<link rel="stylesheet" href="assets/fonts/nunito.css">
+<style>
+/* VOICE: warm, verspielt, klar lesbar am Beamer für Zehnjährige
+   IDEA: ein Adventskalender – 24 Türchen, die die Klasse reihum öffnet
+   PICTURE: das Türchenraster füllt den Bildschirm, darunter die Teamwertung
+   COLOUR and TYPE: Nachthimmel, Türen in Weihnachtsrot, Tannengrün, Schulblau; Kerzengold als Akzent; Fredoka + Nunito
+   LAYOUT: Kopfzeile, Raster, Wertung – Fragen als Vollbild-Ebene mit großen Antwortkarten */
+:root{color-scheme:dark;--night:#0B1A33;--night2:#15305A;--gold:#F2C14E;--cream:#FFF6E0;--red:#B3262E;--fir:#1F6B4F;--blue:#2E6099;--ok:#2FA36B;--no:#C8414B;--ink:#FFF6E0}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;color:var(--ink);font:17px/1.5 Nunito,system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column;height:100dvh;
+background:radial-gradient(1.5px 1.5px at 12% 18%,#fff9,transparent),radial-gradient(1px 1px at 33% 8%,#fff8,transparent),radial-gradient(1.5px 1.5px at 58% 14%,#fffa,transparent),radial-gradient(1px 1px at 81% 6%,#fff8,transparent),radial-gradient(1.5px 1.5px at 92% 26%,#fff7,transparent),radial-gradient(1px 1px at 4% 46%,#fff6,transparent),radial-gradient(ellipse at 50% 120%,var(--night2),transparent 70%),var(--night)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+h1,h2,.f{font-family:Fredoka,Nunito,sans-serif;font-weight:600;line-height:1.05;margin:0}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px max(2vw,14px)}
+.top h1{font-size:clamp(24px,2.6vw,36px);display:flex;align-items:center;gap:10px}
+.top h1 svg{width:1.1em;height:1.1em;fill:var(--gold)}
+.top small{font:700 15px Nunito;opacity:.7;margin-left:4px}
+.sp{flex:1}
+.ghost{background:#ffffff14;border:2px solid #ffffff26;border-radius:999px;padding:8px 16px;min-height:44px;font-weight:700}
+.ghost:hover{background:#ffffff24}
+.turnbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:0 max(2vw,14px) 10px}
+#turn{font:500 clamp(19px,1.9vw,28px) Fredoka,sans-serif}
+#left{opacity:.7;font-weight:700}
+.pill{display:inline-block;background:var(--c);color:#13203A;border-radius:999px;padding:2px 14px;font-weight:600}
+#doors{flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:clamp(8px,1.1vw,16px);padding:0 max(2vw,14px)}
+.door{position:relative;border:0;border-radius:14px;color:var(--cream);font:600 clamp(26px,3.6vw,58px)/1 Fredoka,sans-serif;box-shadow:inset 0 0 0 3px #ffffff22,0 6px 0 #00000059;transform-origin:left center;transition:transform .42s ease,filter .2s;overflow:hidden}
+.door::before{content:"";position:absolute;inset:8px;border:2px dashed #F2C14E59;border-radius:9px;pointer-events:none}
+.door .num{position:absolute;left:14%;top:14%}
+.door svg{position:absolute;right:9%;bottom:9%;width:30%;height:auto;max-height:42%;fill:var(--gold);opacity:.6}
+.t0{background:linear-gradient(160deg,#C9353D,var(--red))}.t1{background:linear-gradient(160deg,#28805F,var(--fir))}.t2{background:linear-gradient(160deg,#3A73B0,var(--blue))}
+.door:not(.open):hover{filter:brightness(1.12);transform:translateY(-3px)}
+.door.opening{transform:perspective(900px) rotateY(-78deg)}
+.door.open{background:#0E2141;box-shadow:inset 0 0 0 2px #ffffff1a;cursor:default}
+.door.open::before{border-color:#ffffff14}
+.door.open .num{font-size:.5em;opacity:.35}
+.got{position:absolute;inset:auto 10% 14% 10%;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.got i{width:16px;height:16px;border-radius:50%;display:block}
+.got em{font:600 18px Fredoka;font-style:normal;color:var(--gold);margin-left:4px}
+#score{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:12px max(2vw,14px) 14px}
+.team{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-radius:999px;background:#ffffff12;border:3px solid transparent}
+.team.cur{border-color:var(--c);background:#ffffff1f}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--c);flex:none}
+.tn{font-weight:800;font-size:clamp(15px,1.3vw,19px)}
+.team b{font:600 clamp(24px,2.2vw,32px) Fredoka;min-width:1.4em;text-align:right;color:var(--c)}
+.pm{width:36px;height:36px;border-radius:50%;border:0;background:#ffffff1a;font-weight:800;font-size:18px}
+.pm:hover{background:#ffffff33}
+.ov{position:fixed;inset:0;display:none;z-index:10;overflow:auto;padding:clamp(16px,3vw,44px);background:radial-gradient(ellipse at 50% -10%,var(--night2),transparent 60%),var(--night)}
+.ov.on{display:flex;flex-direction:column}
+.card{background:var(--cream);color:#1B2F4A;border-radius:22px;padding:clamp(20px,3vw,40px);max-width:860px;width:100%;margin:auto;box-shadow:0 20px 60px #0008}
+.card h2{font-size:clamp(30px,3.4vw,46px);color:#1E4472}
+.card p{margin:.6em 0 1.2em;max-width:62ch}
+.lbl{font-weight:800;margin:18px 0 8px;display:block}
+.segs{display:flex;flex-wrap:wrap;gap:8px}
+.seg{min-width:56px;min-height:46px;border-radius:12px;border:2px solid #2E609955;background:#fff;color:#1E4472;font-weight:800;padding:0 14px}
+.seg.on{background:#2E6099;color:#fff;border-color:#2E6099}
+#names{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.nm{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #2E609933;border-radius:12px;padding:0 12px}
+.nm input{border:0;background:none;font:700 17px Nunito;color:#1B2F4A;padding:11px 0;width:100%;outline:none}
+.nm:focus-within{border-color:#2E6099}
+.row{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px;align-items:center}
+.cta{background:var(--gold);color:#13203A;border:0;border-radius:999px;padding:12px 28px;min-height:52px;font:600 clamp(19px,1.6vw,24px) Fredoka,sans-serif;box-shadow:0 5px 0 #a87d1f}
+.cta:active{transform:translateY(3px);box-shadow:0 2px 0 #a87d1f}
+.sec{background:none;border:2px solid #2E6099;color:#1E4472;border-radius:999px;padding:10px 22px;min-height:52px;font-weight:800}
+.note{font-size:14px;opacity:.75;margin-top:18px}
+.qhead{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;max-width:1240px;width:100%;margin:0 auto}
+.chip{background:#ffffff1f;border-radius:999px;padding:4px 14px;font-weight:800}
+.chip.p{background:var(--gold);color:#13203A}
+#qDoor{opacity:.7;font-weight:700}
+.who{font:500 clamp(17px,1.5vw,22px) Fredoka}
+.qmain{display:flex;gap:24px;align-items:center;max-width:1240px;width:100%;margin:clamp(18px,3vh,40px) auto clamp(16px,2.5vh,30px)}
+#qText{flex:1;font:600 clamp(28px,3.5vw,54px)/1.15 Fredoka,sans-serif;text-wrap:balance}
+.timer{--p:360deg;flex:none;width:clamp(96px,9vw,130px);aspect-ratio:1;border-radius:50%;border:0;display:grid;place-content:center;text-align:center;background:radial-gradient(closest-side,var(--night) 78%,transparent 80%),conic-gradient(var(--gold) var(--p),#ffffff1f 0)}
+.timer.low{background:radial-gradient(closest-side,var(--night) 78%,transparent 80%),conic-gradient(var(--no) var(--p),#ffffff1f 0)}
+#tNum{font:600 clamp(32px,3vw,44px)/1 Fredoka}
+#tLbl{font-size:13px;font-weight:800;opacity:.75}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(10px,1.4vw,18px);max-width:1240px;width:100%;margin:0 auto}
+.opt{display:flex;align-items:center;gap:16px;text-align:left;border:3px solid transparent;border-radius:18px;background:#ffffff14;padding:clamp(12px,1.6vw,22px);font:600 clamp(20px,2.1vw,32px)/1.2 Fredoka,sans-serif;transition:background .2s,opacity .2s}
+.opt:hover{background:#ffffff24}
+.let{flex:none;width:1.7em;height:1.7em;border-radius:50%;display:grid;place-items:center;background:var(--cream);color:#13203A;font-size:.85em}
+.opt.sel{border-color:var(--gold);background:#F2C14E2e}
+.opt.ok{background:var(--ok);border-color:#bff0d5}
+.opt.no{background:var(--no);opacity:.9}
+.opt.dim{opacity:.35}
+.act{grid-column:1/-1;background:#ffffff14;border-radius:18px;padding:clamp(16px,2vw,28px);font-size:clamp(20px,2vw,28px)}
+.act p{margin:0 0 .5em}.act .hint{color:var(--gold);font-weight:800;margin:0}
+.expl{max-width:1240px;width:100%;margin:clamp(14px,2vh,24px) auto 0;background:var(--cream);color:#1B2F4A;border-radius:18px;padding:clamp(14px,1.8vw,24px) clamp(16px,2vw,28px);font-size:clamp(17px,1.6vw,23px)}
+.expl strong{font-family:Fredoka;color:#8A4B00;margin-right:8px}
+.award{max-width:1240px;width:100%;margin:16px auto 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.al{font:500 clamp(18px,1.6vw,24px) Fredoka;margin-right:6px}
+.aw{display:flex;align-items:center;gap:8px;border-radius:999px;border:3px solid #ffffff33;background:none;padding:8px 16px;min-height:48px;font-weight:800;font-size:clamp(15px,1.3vw,19px)}
+.aw.on{background:var(--c);border-color:var(--c);color:#13203A}
+.aw.on .dot{background:#13203A}
+.aw.all{--c:var(--cream)}
+.qfoot{max-width:1240px;width:100%;margin:auto auto 0;padding-top:22px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.keys{opacity:.55;font-size:14px;font-weight:700}
+.endwrap{margin:auto;text-align:center;max-width:900px;width:100%}
+.endwrap h2{font-size:clamp(40px,6vw,84px);color:var(--gold)}
+.endwrap>p{font-size:clamp(18px,1.8vw,24px);opacity:.85}
+.endwrap svg{width:clamp(80px,10vw,130px);fill:var(--gold);margin-bottom:10px}
+.rank{list-style:none;padding:0;margin:28px auto;display:grid;gap:10px;max-width:640px}
+.rank li{display:flex;align-items:center;gap:16px;background:#ffffff14;border-radius:16px;padding:12px 20px;font:600 clamp(20px,2.2vw,30px) Fredoka;border-left:8px solid var(--c)}
+.rank li.w{background:#F2C14E2e}
+.rank .pl{width:2em;opacity:.7}.rank .sc{margin-left:auto;color:var(--c)}
+.small .card{max-width:520px}
+@media(max-width:760px){
+body{overflow:auto;height:auto;min-height:100dvh}
+#doors{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:none}
+.door{aspect-ratio:1}
+.opts{grid-template-columns:minmax(0,1fr)}
+.qmain{flex-direction:column-reverse;align-items:flex-start}
+.keys{display:none}}
+@media(prefers-reduced-motion:reduce){.door,.opt{transition:none}.door:not(.open):hover{transform:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i0" viewBox="0 0 24 24"><polygon points="12,2 14.9,8.6 22,9.3 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.3 9.1,8.6"/></symbol>
+<symbol id="i1" viewBox="0 0 24 24"><path d="M12 2 18 10h-3l5 7H4l5-7H6Zm-1.5 15h3v5h-3Z"/></symbol>
+<symbol id="i2" viewBox="0 0 24 24"><path d="M10 9h4v13h-4Zm2-7c2 3 2 5 0 6-2-1-2-3 0-6Z"/></symbol>
+<symbol id="i3" viewBox="0 0 24 24"><path d="M12 3c-4 0-6 3-6 7v5l-2 3h16l-2-3v-5c0-4-2-7-6-7Zm-2 16a2 2 0 0 0 4 0Z"/></symbol>
+</svg>
+
+<header class="top">
+  <h1><svg viewBox="0 0 24 24"><use href="#i0"/></svg>Adventsquiz <small>Religion · Klasse 5</small></h1>
+  <span class="sp"></span>
+  <button class="ghost" id="bFull">Vollbild</button>
+  <button class="ghost" id="bSound" aria-pressed="true">Ton an</button>
+  <button class="ghost" id="bEnd">Auswertung</button>
+  <button class="ghost" id="bNew">Neues Spiel</button>
+</header>
+<div class="turnbar"><div id="turn"></div><div id="left"></div></div>
+<main id="doors" aria-label="Adventskalender mit 24 Türchen"></main>
+<footer id="score" aria-label="Punktestand"></footer>
+
+<section class="ov" id="setup" aria-label="Spiel einrichten">
+  <div class="card">
+    <h2>Adventsquiz einrichten</h2>
+    <p>24 Türchen mit Fragen zu Advent, Bibel, Bräuchen und Festen – dazu drei Aktionstüren. Die Teams öffnen reihum ein Türchen. Nur du bedienst das Spiel, am besten am Beamer im Vollbild. Bei jedem neuen Spiel werden die Fragen neu gemischt.</p>
+    <span class="lbl">Anzahl der Teams</span><div class="segs" id="nTeams"></div>
+    <span class="lbl">Teamnamen</span><div id="names"></div>
+    <span class="lbl">Bedenkzeit pro Frage</span><div class="segs" id="tSel"></div>
+    <div class="row"><button class="cta" id="bStart">Spiel starten</button><button class="sec" id="resume" hidden>Gespeichertes Spiel fortsetzen</button></div>
+    <p class="note">Tastatur: A–D (bzw. W/F) Antwort markieren · Leertaste Lösung zeigen / weiter · 1–6 Punkte an Team · T Timer · Esc zurück</p>
+  </div>
+</section>
+
+<section class="ov" id="qv" aria-live="polite">
+  <div class="qhead"><span class="chip" id="qCat"></span><span class="chip p" id="qPts"></span><span id="qDoor"></span><span class="sp"></span><span class="who" id="qWho"></span><button class="ghost" id="qBack">Zurück</button></div>
+  <div class="qmain"><div id="qText"></div><button class="timer" id="timer" aria-label="Timer starten oder pausieren"><span id="tNum">30</span><span id="tLbl">Start</span></button></div>
+  <div class="opts" id="opts"></div>
+  <div class="expl" id="expl" hidden></div>
+  <div class="award" id="award" hidden></div>
+  <div class="qfoot"><span class="keys" id="keys"></span><button class="cta" id="qGo">Lösung zeigen</button></div>
+</section>
+
+<section class="ov" id="end">
+  <div class="endwrap">
+    <svg viewBox="0 0 24 24"><use href="#i0"/></svg>
+    <h2>Frohe Weihnachten!</h2>
+    <p id="endSub"></p>
+    <ol class="rank" id="rank"></ol>
+    <div class="row" style="justify-content:center"><button class="ghost" id="bBack">Zurück zum Kalender</button><button class="cta" id="bAgain">Neues Spiel</button></div>
+  </div>
+</section>
+
+<section class="ov small" id="conf">
+  <div class="card"><h2>Neues Spiel?</h2><p>Der aktuelle Spielstand geht dabei verloren.</p>
+  <div class="row"><button class="sec" id="cNo">Abbrechen</button><button class="cta" id="cYes">Neues Spiel einrichten</button></div></div>
+</section>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Bei Multiple Choice steht die richtige Antwort immer zuerst – sie wird beim Spielstart gemischt. */
+const Q=[
+{c:'Advent',p:1,q:'Was bedeutet das Wort „Advent“?',o:['Ankunft','Warten auf Schnee','Lichterfest','Geschenkezeit'],e:'„Advent“ kommt vom lateinischen „adventus“ und heißt Ankunft. Christinnen und Christen bereiten sich auf die Ankunft – die Geburt – von Jesus vor.'},
+{c:'Advent',p:1,q:'Wie viele Adventssonntage gibt es vor Weihnachten?',o:['4','3','5','24'],e:'Es gibt vier Adventssonntage. Deshalb hat der Adventskranz meistens vier Kerzen – jeden Sonntag wird eine mehr angezündet.'},
+{c:'Advent',p:2,q:'Wer hat den ersten Adventskranz gebaut?',o:['Johann Hinrich Wichern','Martin Luther','Franz von Assisi','Der heilige Nikolaus'],e:'Johann Hinrich Wichern leitete in Hamburg ein Haus für arme Kinder. 1839 fragten die Kinder ständig, wann endlich Weihnachten ist. Er steckte Kerzen auf ein altes Wagenrad: kleine für die Werktage, große für die Sonntage.'},
+{c:'Advent',p:2,q:'Welche Farbe hat die Adventszeit in der Kirche?',o:['Violett','Grün','Gold','Rot'],e:'Violett ist die Farbe der Besinnung und Vorbereitung. Viele Altartücher und Gewänder sind im Advent violett. An Weihnachten wechselt die Farbe zu Weiß.'},
+{c:'Kirchenjahr',p:2,tf:1,q:'Mit dem 1. Advent beginnt das neue Kirchenjahr.',o:['Wahr','Falsch'],a:0,e:'Stimmt! Das Kirchenjahr startet nicht am 1. Januar, sondern am 1. Advent.'},
+{c:'Heilige',p:1,q:'An welchem Tag ist Nikolaustag?',o:['6. Dezember','1. Dezember','13. Dezember','24. Dezember'],e:'Am 6. Dezember denken wir an den heiligen Nikolaus. Am Abend davor stellen viele Kinder ihre Stiefel raus.'},
+{c:'Heilige',p:2,q:'Wer war der heilige Nikolaus?',o:['Ein Bischof in Myra','Ein König in Bethlehem','Ein Hirte bei Jesus','Ein Mönch in Rom'],e:'Nikolaus lebte vor etwa 1700 Jahren als Bischof in Myra – das liegt in der heutigen Türkei. Er half armen Menschen und besonders Kindern.'},
+{c:'Bräuche',p:2,q:'Am 4. Dezember stellt man Kirschzweige ins Wasser, damit sie an Weihnachten blühen. Wie heißen sie?',o:['Barbarazweige','Luciazweige','Adventsäste','Nikolausruten'],e:'Der 4. Dezember ist der Gedenktag der heiligen Barbara. Blühen die Zweige an Weihnachten, ist das ein Zeichen für Hoffnung und neues Leben mitten im Winter.'},
+{c:'Weltweit',p:2,q:'In Schweden tragen Mädchen am 13. Dezember einen Kranz mit Lichtern auf dem Kopf. Wer wird gefeiert?',o:['Die heilige Lucia','Die heilige Barbara','Maria','Die heilige Elisabeth'],e:'Lucia bedeutet „die Leuchtende“. In der dunkelsten Zeit des Jahres bringt sie Licht.'},
+{c:'Bibel',p:1,q:'In welchem Ort wurde Jesus geboren?',o:['Bethlehem','Nazareth','Jerusalem','Rom'],e:'Maria und Josef wohnten in Nazareth, mussten aber nach Bethlehem reisen. Dort wurde Jesus geboren.'},
+{c:'Bibel',p:2,q:'Warum mussten Maria und Josef nach Bethlehem reisen?',o:['Der Kaiser ließ alle Menschen zählen','Sie machten Urlaub','Sie flohen vor König Herodes','Sie wollten dort heiraten'],e:'Kaiser Augustus befahl eine Volkszählung. Jeder musste in die Stadt seiner Vorfahren. Josef stammte aus der Familie von König David – und Davids Stadt war Bethlehem (Lukas 2).'},
+{c:'Bibel',p:2,q:'Wo steht die Weihnachtsgeschichte mit den Hirten und der Krippe?',o:['Im Lukas-Evangelium','Im Buch Genesis','In den Psalmen','Im Brief an die Römer'],e:'Die Geschichte mit Hirten, Engeln und Krippe steht bei Lukas im 2. Kapitel. Von den Sterndeutern erzählt dagegen Matthäus.'},
+{c:'Bibel',p:1,q:'Wer erzählte den Hirten auf dem Feld von der Geburt Jesu?',o:['Ein Engel','König Herodes','Josef','Die Sterndeuter'],e:'Ein Engel erschien den Hirten und sagte: Fürchtet euch nicht! Heute ist euch der Retter geboren.'},
+{c:'Bibel',p:1,q:'Was ist eine Krippe eigentlich?',o:['Ein Futtertrog für Tiere','Ein Kinderbett','Ein kleiner Stall','Eine Kiste für Geschenke'],e:'Eine Krippe ist ein Futtertrog. Weil in der Herberge kein Platz war, legte Maria ihr Kind hinein (Lukas 2,7).'},
+{c:'Bibel',p:3,tf:1,q:'In der Bibel steht, dass genau drei Könige zum Jesuskind kamen.',o:['Wahr','Falsch'],a:1,e:'Falsch! Matthäus erzählt von „Sterndeutern aus dem Osten“ – ohne Zahl. Die Zahl drei kommt von den drei Geschenken. Dass es Könige waren, wurde erst später erzählt.'},
+{c:'Bibel',p:2,tf:1,q:'In der Bibel steht, dass Ochs und Esel an der Krippe standen.',o:['Wahr','Falsch'],a:1,e:'Falsch! Lukas erwähnt nur die Krippe. Ochs und Esel kamen erst später in die Krippen – angeregt von einem Vers beim Propheten Jesaja.'},
+{c:'Bibel',p:2,q:'Welche Geschenke brachten die Sterndeuter?',o:['Gold, Weihrauch und Myrrhe','Gold, Silber und Kupfer','Brot, Wein und Öl','Decke, Milch und Honig'],e:'Gold ist ein Geschenk für einen König, Weihrauch steht für Gott, Myrrhe war eine wertvolle Heilsalbe.'},
+{c:'Bibel',p:3,q:'Wohin floh die Heilige Familie vor König Herodes?',o:['Nach Ägypten','Nach Rom','Nach Nazareth','Nach Griechenland'],e:'Herodes hatte Angst um seine Macht. Ein Engel warnte Josef im Traum, und die Familie floh nach Ägypten (Matthäus 2).'},
+{c:'Bibel',p:2,q:'Welcher Engel sagte Maria, dass sie ein Kind bekommen wird?',o:['Gabriel','Michael','Raphael','Uriel'],e:'Der Engel Gabriel besuchte Maria in Nazareth und kündigte ihr die Geburt von Jesus an (Lukas 1).'},
+{c:'Bibel',p:3,q:'Jesus wird auch „Immanuel“ genannt. Was bedeutet das?',o:['Gott mit uns','König der Welt','Licht der Nacht','Sohn des Zimmermanns'],e:'Immanuel ist Hebräisch und heißt „Gott mit uns“. Christen glauben: In Jesus kommt Gott den Menschen ganz nah.'},
+{c:'Bräuche',p:3,q:'Wer stellte der Überlieferung nach die erste Krippe mit echten Tieren auf?',o:['Franz von Assisi','Martin Luther','Der heilige Nikolaus','Johann Hinrich Wichern'],e:'Franz von Assisi feierte 1223 in Greccio (Italien) Weihnachten mit einer Krippe, einem echten Ochsen und Esel. Seitdem gibt es den Brauch der Weihnachtskrippe.'},
+{c:'Bräuche',p:2,q:'Die Sternsinger schreiben „C+M+B“ an die Tür. Was bedeutet das?',o:['Christus segne dieses Haus','Christkind macht Besuch','Chor, Musik, Bescherung','Christen mögen Backwaren'],e:'Lateinisch „Christus mansionem benedicat“ heißt „Christus segne dieses Haus“. Viele deuten die Buchstaben auch als Caspar, Melchior und Balthasar. Die Sternsinger sammeln Geld für Kinder in Not.'},
+{c:'Bräuche',p:2,q:'Wer bringt seit Martin Luther in evangelischen Familien die Weihnachtsgeschenke?',o:['Das Christkind','Der Weihnachtsmann','Der Nikolaus','Knecht Ruprecht'],e:'Luther wollte, dass Jesus Christus im Mittelpunkt steht und nicht ein Heiliger wie Nikolaus. Darum brachte nun der „Heilige Christ“ an Weihnachten die Gaben – daraus wurde das Christkind.'},
+{c:'Bräuche',p:1,q:'Wofür steht der immergrüne Tannenbaum?',o:['Leben und Hoffnung','Reichtum','Kälte und Schnee','Den Wald schützen'],e:'Tannen bleiben auch im Winter grün. Deshalb sind sie ein Zeichen für Leben und Hoffnung – auch wenn draußen alles kahl ist.'},
+{c:'Weltweit',p:1,q:'Warum feiern viele Menschen in Australien Weihnachten am Strand?',o:['Dort ist im Dezember Sommer','Dort gibt es keine Kirchen','Der Weihnachtsmann kommt per Boot','Das ist dort Pflicht'],e:'Australien liegt auf der Südhalbkugel. Wenn bei uns Winter ist, ist dort Sommer.'},
+{c:'Weltweit',p:2,q:'In Italien bringt in der Nacht zum 6. Januar eine Frau auf einem Besen Geschenke. Wie heißt sie?',o:['Befana','Lucia','Frau Holle','Barbara'],e:'La Befana fliegt auf ihrem Besen von Haus zu Haus. Brave Kinder bekommen Süßigkeiten – freche der Sage nach ein Stück Kohle.'},
+{c:'Andere Religionen',p:2,q:'Welches Fest feiern Jüdinnen und Juden im Dezember acht Tage lang mit Lichtern?',o:['Chanukka','Ramadan','Ostern','Diwali'],e:'Chanukka erinnert an die Wiedereinweihung des Tempels in Jerusalem. An acht Abenden wird am Leuchter jeweils ein Licht mehr angezündet.'},
+{c:'Feste',p:1,tf:1,q:'Das Wort „Weihnachten“ bedeutet „heilige Nächte“.',o:['Wahr','Falsch'],a:0,e:'Stimmt! Es kommt vom alten Ausdruck „ze den wîhen nahten“ – in den heiligen (geweihten) Nächten.'},
+{c:'Feste',p:2,q:'Das Lied „Stille Nacht“ wurde 1818 zum ersten Mal gesungen. In welchem Land?',o:['Österreich','USA','Schweden','Israel'],e:'An Heiligabend 1818 erklang es zum ersten Mal in Oberndorf bei Salzburg. Heute wird es auf der ganzen Welt in sehr vielen Sprachen gesungen.'}
+];
+const ACT=[
+{k:'a',c:'Aktionstür',p:1,t:'Engelschor',q:'Die ganze Klasse singt gemeinsam eine Strophe eines Weihnachtsliedes.',hint:'Klappt es? Dann bekommen alle Teams 1 Punkt.',pre:'all'},
+{k:'a',c:'Aktionstür',p:2,t:'Standbild',q:'Euer Team stellt ohne Worte eine Szene der Weihnachtsgeschichte dar – zum Beispiel die Hirten auf dem Feld, die Herbergssuche oder die Sterndeuter.',hint:'Errät die Klasse die Szene, gibt es 2 Punkte.',pre:''},
+{k:'a',c:'Glückstür',p:2,t:'Goldstern!',q:'Ihr habt den Goldstern gefunden.',hint:'Euer Team bekommt 2 Punkte geschenkt.',pre:'self'}
+];
+const COL=['#F2C14E','#6FBDF7','#F2789F','#5ED3A8','#B79CF2','#F59A4E'];
+const NAMES=['Engel','Hirten','Sterne','Schafe','Kerzen','Könige'];
+const KEY='adventsquiz-kl5-v1';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let S=null,cur=null,tm=null,tLeft=0,ac=null,setN=4,setT=30,setNames=NAMES.slice();
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');return s&&s.doors&&s.teams?s:null}catch(e){return null}}
+function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function prep(q){if(q.tf)return{...q,k:'q'};const o=shuf([0,1,2,3]);return{...q,k:'q',o:o.map(i=>q.o[i]),a:o.indexOf(0)}}
+const pts=p=>p===1?'1 Punkt':p+' Punkte';
+const show=(id,on)=>$(id).classList.toggle('on',on);
+
+function tone(f,d,type){if(S&&!S.sound)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.22,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d+.05)}catch(e){}}
+const chime=()=>[784,988,1175].forEach((f,i)=>setTimeout(()=>tone(f,.6),i*120));
+const buzz=()=>tone(180,.5,'triangle');
+const gong=()=>{tone(392,1.2);setTimeout(()=>tone(294,1.4),160)};
+
+function renderSetup(){
+  $('#nTeams').innerHTML=[2,3,4,5,6].map(n=>`<button class="seg${n===setN?' on':''}" data-n="${n}">${n}</button>`).join('');
+  $('#names').innerHTML=setNames.slice(0,setN).map((n,i)=>`<label class="nm" style="--c:${COL[i]}"><span class="dot"></span><input id="nm${i}" value="${esc(n)}" maxlength="18" aria-label="Name von Team ${i+1}"></label>`).join('');
+  $('#tSel').innerHTML=[0,20,30,45,60].map(t=>`<button class="seg${t===setT?' on':''}" data-t="${t}">${t?t+' s':'ohne'}</button>`).join('');
+  $('#resume').hidden=!load();
+}
+function openSetup(){renderSetup();show('#setup',true)}
+function start(){
+  const doors=shuf([...shuf(Q).slice(0,21).map(prep),...ACT.map(a=>({...a}))]).map(d=>({...d,done:false,by:[]}));
+  S={teams:setNames.slice(0,setN).map((n,i)=>({n:n.trim()||'Team '+(i+1),s:0,c:COL[i]})),timer:setT,turn:0,sound:S?S.sound:true,doors};
+  save();show('#setup',false);show('#end',false);render();
+}
+
+function render(){
+  if(!S)return;
+  $('#doors').innerHTML=S.doors.map((d,i)=>d.done
+    ?`<button class="door open" disabled aria-label="Türchen ${i+1}, schon geöffnet"><span class="num">${i+1}</span><span class="got">${d.by.map(t=>`<i style="background:${S.teams[t].c}"></i>`).join('')}${d.by.length?`<em>+${d.p}</em>`:''}</span></button>`
+    :`<button class="door t${(i*5+Math.floor(i/6))%3}" data-i="${i}" aria-label="Türchen ${i+1}"><span class="num">${i+1}</span><svg viewBox="0 0 24 24"><use href="#i${(i*7)%4}"/></svg></button>`).join('');
+  const t=S.teams[S.turn];
+  $('#turn').innerHTML=`<span class="pill" style="--c:${t.c}">${esc(t.n)}</span> ist dran – wählt ein Türchen!`;
+  const left=S.doors.filter(d=>!d.done).length;
+  $('#left').textContent=left?`${left} von 24 Türchen noch zu`:'Alle Türchen sind offen';
+  $('#bSound').textContent=S.sound?'Ton an':'Ton aus';$('#bSound').setAttribute('aria-pressed',S.sound);
+  $('#score').innerHTML=S.teams.map((t,i)=>`<div class="team${i===S.turn?' cur':''}" style="--c:${t.c}"><span class="dot"></span><span class="tn">${esc(t.n)}</span><b>${t.s}</b><button class="pm" data-t="${i}" data-d="-1" aria-label="${esc(t.n)}: Punkt abziehen">−</button><button class="pm" data-t="${i}" data-d="1" aria-label="${esc(t.n)}: Punkt dazu">+</button></div>`).join('');
+}
+
+function showQ(i){
+  const d=S.doors[i],t=S.teams[S.turn];
+  cur={i,sel:null,rev:false,aw:new Set()};
+  $('#qCat').textContent=d.c;$('#qPts').textContent=pts(d.p);$('#qDoor').textContent='Türchen '+(i+1);
+  $('#qWho').innerHTML=`<span class="pill" style="--c:${t.c}">${esc(t.n)}</span> ${d.k==='a'?'ist dran':'antwortet'}`;
+  $('#qText').textContent=d.k==='a'?d.t:d.q;
+  $('#expl').hidden=true;$('#award').hidden=true;$('#qBack').hidden=false;
+  $('#timer').hidden=!(S.timer&&d.k==='q');tLeft=S.timer;stopT();drawT();
+  if(d.k==='a'){
+    $('#opts').innerHTML=`<div class="act"><p>${d.q}</p><p class="hint">${d.hint}</p></div>`;
+    cur.rev=true;
+    if(d.pre==='all')S.teams.forEach((_,j)=>cur.aw.add(j));
+    if(d.pre==='self')cur.aw.add(S.turn);
+    showAward();$('#qGo').textContent='Weiter';
+    $('#keys').textContent='1–6 Team an/aus · Leertaste weiter · Esc zurück';
+    if(d.pre==='self')chime();
+  }else{
+    $('#opts').innerHTML=d.o.map((o,j)=>`<button class="opt" data-j="${j}"><span class="let">${d.tf?(j?'F':'W'):'ABCD'[j]}</span><span>${o}</span></button>`).join('');
+    $('#qGo').textContent='Lösung zeigen';
+    $('#keys').textContent=(d.tf?'W/F':'A–D')+' Antwort markieren · Leertaste auflösen · T Timer · Esc zurück';
+  }
+  show('#qv',true);$('#qGo').focus();
+}
+function pick(j){if(!cur||cur.rev)return;cur.sel=cur.sel===j?null:j;document.querySelectorAll('.opt').forEach((b,k)=>b.classList.toggle('sel',k===cur.sel));tone(520,.12)}
+function reveal(){
+  const d=S.doors[cur.i];stopT();cur.rev=true;
+  document.querySelectorAll('.opt').forEach((b,k)=>{b.classList.remove('sel');b.classList.add(k===d.a?'ok':k===cur.sel?'no':'dim')});
+  if(cur.sel===d.a){cur.aw.add(S.turn);chime()}else if(cur.sel!==null)buzz();else tone(660,.4);
+  $('#expl').innerHTML=`<strong>Gut zu wissen:</strong>${d.e}`;$('#expl').hidden=false;
+  showAward();$('#qBack').hidden=true;$('#qGo').textContent='Weiter';
+  $('#keys').textContent='1–6 Team an/aus · Leertaste weiter';
+}
+function showAward(){
+  const d=S.doors[cur.i];
+  $('#award').innerHTML=`<span class="al">Wer bekommt ${pts(d.p)}?</span>`+S.teams.map((t,i)=>`<button class="aw${cur.aw.has(i)?' on':''}" data-t="${i}" style="--c:${t.c}" aria-pressed="${cur.aw.has(i)}"><span class="dot"></span>${esc(t.n)}</button>`).join('')+`<button class="aw all${cur.aw.size===S.teams.length?' on':''}" data-t="all">Alle</button>`;
+  $('#award').hidden=false;
+}
+function toggleAw(t){
+  if(t==='all'){if(cur.aw.size===S.teams.length)cur.aw.clear();else S.teams.forEach((_,i)=>cur.aw.add(i))}
+  else if(t<S.teams.length){cur.aw.has(t)?cur.aw.delete(t):cur.aw.add(t)}
+  showAward();
+}
+function next(){
+  if(!cur)return;
+  if(!cur.rev){reveal();return}
+  const d=S.doors[cur.i];d.done=true;d.by=[...cur.aw].sort((a,b)=>a-b);
+  d.by.forEach(t=>S.teams[t].s+=d.p);
+  S.turn=(S.turn+1)%S.teams.length;save();closeQ();render();
+  if(S.doors.every(x=>x.done))setTimeout(showEnd,350);
+}
+function closeQ(){stopT();show('#qv',false);cur=null}
+
+function drawT(){const T=S.timer||1;$('#timer').style.setProperty('--p',Math.max(0,tLeft/T*360)+'deg');$('#tNum').textContent=tLeft;$('#timer').classList.toggle('low',tLeft<=5)}
+function stopT(){clearInterval(tm);tm=null;$('#tLbl').textContent=tLeft<=0?'Neu':tLeft<(S?S.timer:0)?'Weiter':'Start'}
+function toggleT(){
+  if(!S.timer||!cur||cur.rev)return;
+  if(tm){stopT();return}
+  if(tLeft<=0){tLeft=S.timer;drawT()}
+  $('#tLbl').textContent='Pause';
+  tm=setInterval(()=>{tLeft--;drawT();if(tLeft>0&&tLeft<=3)tone(880,.12);if(tLeft<=0){stopT();gong()}},1000);
+}
+
+function showEnd(){
+  if(!S)return;
+  const r=S.teams.map(t=>t).sort((a,b)=>b.s-a.s);let place=0,last=null;
+  $('#rank').innerHTML=r.map((t,i)=>{if(t.s!==last){place=i+1;last=t.s}return`<li class="${place===1?'w':''}" style="--c:${t.c}"><span class="pl">${place}.</span><span>${esc(t.n)}</span><span class="sc">${t.s}</span></li>`}).join('');
+  const win=r.filter(t=>t.s===r[0].s);
+  $('#endSub').textContent=win.length>1?'Gleichstand an der Spitze – gemeinsam gewonnen!':`Team ${win[0].n} hat die meisten Punkte gesammelt.`;
+  show('#end',true);chime();
+}
+
+$('#nTeams').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(b){setN=+b.dataset.n;renderSetup()}});
+$('#tSel').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b){setT=+b.dataset.t;renderSetup()}});
+$('#names').addEventListener('input',e=>{if(e.target.id)setNames[+e.target.id.slice(2)]=e.target.value});
+$('#bStart').addEventListener('click',start);
+$('#resume').addEventListener('click',()=>{S=load();show('#setup',false);render()});
+$('#doors').addEventListener('click',e=>{
+  const b=e.target.closest('.door[data-i]');if(!b||cur)return;
+  const i=+b.dataset.i;b.classList.add('opening');tone(660,.2);
+  setTimeout(()=>showQ(i),reduce?0:420);
+});
+$('#score').addEventListener('click',e=>{const b=e.target.closest('.pm');if(!b)return;const t=S.teams[+b.dataset.t];t.s=Math.max(0,t.s+ +b.dataset.d);save();render()});
+$('#opts').addEventListener('click',e=>{const b=e.target.closest('.opt');if(b)pick(+b.dataset.j)});
+$('#award').addEventListener('click',e=>{const b=e.target.closest('.aw');if(b)toggleAw(b.dataset.t==='all'?'all':+b.dataset.t)});
+$('#qGo').addEventListener('click',next);
+$('#qBack').addEventListener('click',()=>{closeQ();render()});
+$('#timer').addEventListener('click',toggleT);
+$('#bFull').addEventListener('click',()=>{try{const p=document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();p&&p.catch&&p.catch(()=>{})}catch(e){}});
+$('#bSound').addEventListener('click',()=>{if(!S)return;S.sound=!S.sound;save();render();tone(660,.15)});
+$('#bEnd').addEventListener('click',showEnd);
+$('#bNew').addEventListener('click',()=>show('#conf',true));
+$('#cNo').addEventListener('click',()=>show('#conf',false));
+$('#cYes').addEventListener('click',()=>{show('#conf',false);show('#end',false);openSetup()});
+$('#bBack').addEventListener('click',()=>show('#end',false));
+$('#bAgain').addEventListener('click',()=>{show('#end',false);openSetup()});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||$('#setup').classList.contains('on')||$('#conf').classList.contains('on'))return;
+  if(!cur)return;
+  const k=e.key.toLowerCase(),d=S.doors[cur.i];
+  if(k===' '||k==='enter'){e.preventDefault();next();return}
+  if(k==='escape'&&!(cur.rev&&d.k==='q')){closeQ();render();return}
+  if(k==='t'){toggleT();return}
+  if(!cur.rev){
+    let j=-1;
+    if(d.tf){j=k==='w'||k==='1'||k==='a'?0:k==='f'||k==='2'||k==='b'?1:-1}
+    else{j='abcd'.indexOf(k);if(j<0&&'1234'.includes(k)&&k)j=+k-1}
+    if(j>=0){e.preventDefault();pick(j)}
+  }else if(/^[1-6]$/.test(k)){toggleAw(+k-1)}
+});
+
+S=load();
+if(S)render();else openSetup();
+}
+</script>
+<script>window.TOUR = { steps: [
+  { title: "Willkommen", text: "<p>Ein Adventskalender-Quiz fürs Plenum: Nur du brauchst ein Gerät, am besten am Beamer. Die Teams öffnen reihum ein Türchen und beantworten Fragen zu Advent, Bibel und Weihnachtsbräuchen.</p>" },
+  { sel: "#nTeams", title: "Teams", text: "<p>Wähle 2 bis 6 Teams.</p>" },
+  { sel: "#names", title: "Teamnamen", text: "<p>Die Namen kannst du anpassen – zum Beispiel mit der Klasse zusammen aussuchen.</p>" },
+  { sel: "#tSel", title: "Bedenkzeit", text: "<p>Optionaler Timer pro Frage. Du startest ihn in der Frage per Klick oder mit der Taste T.</p>" },
+  { sel: "#bStart", title: "Los geht's", text: "<p>In der Frage markierst du die Antwort des Teams (A–D), zeigst die Lösung (Leertaste) und tippst an, welche Teams Punkte bekommen. Drei Türchen sind Aktionstüren.</p>" }
+]};</script>
+<script defer src="tour.js"></script>
+<script defer data-category="schule" src="protect.js"></script>
+</body>
+</html>

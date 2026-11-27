@@ -1405,4 +1405,16 @@ const posts = [
     titleEn: "Locker Room – HSG Wettenberg",
     excerptEn: "Training sessions, matches and events for every team: accept or decline with one tap via a link, response deadlines, squad nominations, waiting list, tasks (driving, washing kits), car pools, absences, a team board with polls, attendance and stats. Imports fixtures from nuLiga and links up with Hall Duty and the Penalty Fund – installable as an app."
    },
+   {
+    title: "Adventskalender-Quiz",
+    excerpt: "Religionsquiz für die Advents- und Weihnachtszeit im Plenum: Teams öffnen reihum Türchen eines Adventskalenders und beantworten Fragen zu Advent, Weihnachtsgeschichte, Heiligen, Bräuchen weltweit und Chanukka – mit Erklärung zu jeder Lösung, Timer, Aktionstüren und Punktestand. Nur die Lehrkraft braucht ein Gerät.",
+    date: "2026-11-27",
+    category: "schule",
+    subcategory: "weiterefaecher",
+    url: "adventsquiz.html",
+    emoji: "🎄",
+    tags: ["spiel", "gruppenarbeit", "klassenquiz", "jg5", "jg6"],
+    titleEn: "Advent Calendar Quiz",
+    excerptEn: "Religious education quiz for Advent and Christmas in front of the whole class: teams take turns opening doors of an Advent calendar and answer questions on Advent, the Nativity story, saints, customs around the world and Hanukkah – with an explanation for every answer, timer, action doors and scoreboard. Only the teacher needs a device."
+   },
 ];
