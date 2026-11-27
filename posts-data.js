@@ -553,7 +553,7 @@ const posts = [
    },
    {
     title: "Werkstatt-Check: Sicherheit und Werkzeuge",
-    excerpt: "Gefahren in der Werkstatt finden, Werkzeuge ihrem Einsatz zuordnen und Sicherheitszeichen testen. Drei Spiele in einem.",
+    excerpt: "Gefahren in der Werkstatt finden, Werkzeuge zuordnen, Sicherheitszeichen und Werkstattregeln testen. Vier Spiele und ein Werkstatt-Führerschein zum Ausdrucken.",
     date: "2026-10-03",
     category: "schule",
     subcategory: "arbeitslehre",
@@ -561,7 +561,7 @@ const posts = [
     emoji: "🛠️",
     tags: ["spiel", "werkstatt", "einzelarbeit", "jg7", "jg8"],
     titleEn: "Workshop Check: Safety and Tools",
-    excerptEn: "Find hazards in the workshop, match tools to their use and test safety signs. Three games in one."
+    excerptEn: "Find hazards in the workshop, match tools, test safety signs and workshop rules. Four games and a printable workshop licence."
    },
    {
     title: "Escape-Room-Baukasten 3D",
